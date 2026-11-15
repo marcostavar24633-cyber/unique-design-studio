@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assessExportReadiness } from "../src/export-readiness.js";
+import { createStudioProject } from "../src/studio-pipeline.js";
 
 const validHtml = `<!doctype html>
 <html lang="ru"><head>
@@ -40,4 +41,25 @@ test("blocks unsafe links through the underlying site audit", () => {
   const result = assessExportReadiness(validHtml.replace('href="#main"','href="javascript:alert(1)"'));
   assert.equal(result.ready,false);
   assert.ok(result.blockingIssues.some(item => item.code === "unsafe-links"));
+});
+
+test("generated site keeps its SEO metadata and project content through the export gate", () => {
+  const project = createStudioProject({
+    businessType:"магазин телескопов",
+    businessName:"Astro Shop",
+    audience:"любители астрономии",
+    primaryGoal:"purchase",
+    description:"Телескопы и оптика для наблюдений за планетами, Луной и звёздным небом.",
+    heroTitle:"Откройте Вселенную ближе",
+    heroAlt:"Телескоп для наблюдений за звёздным небом",
+    seoTitle:"Astro Shop — телескопы и оптика для наблюдений",
+    seoDescription:"Подберите телескоп для наблюдений за планетами и звёздами. Консультации и доставка по России.",
+    canonicalUrl:"https://astro.example/",
+    ogImage:"https://astro.example/social.jpg"
+  });
+  const result = assessExportReadiness(project.html,project.css);
+  assert.equal(result.ready,true,result.blockingIssues.map(item => item.code + ": " + item.detail).join("\\n"));
+  assert.ok(project.html.includes("Astro Shop — телескопы и оптика для наблюдений"));
+  assert.ok(project.html.includes("Откройте Вселенную ближе"));
+  assert.ok(project.html.includes("https://astro.example/"));
 });
