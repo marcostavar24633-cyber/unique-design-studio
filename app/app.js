@@ -101,6 +101,41 @@ function createEditorField(section, property, labelText, multiline = false) {
   return wrapper;
 }
 
+function createSectionImageField(section) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "section-field";
+  wrapper.append(document.createTextNode("Изображение секции"));
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/png,image/jpeg,image/webp,image/gif";
+  file.addEventListener("change", async () => {
+    const selected = file.files?.[0];
+    if (!selected) return;
+    try {
+      const src = await readImage(selected);
+      const target = currentInput.contentBySection[section.id] ||= {};
+      target.image = { ...(target.image || {}), src, alt:target.image?.alt || "" };
+      renderCurrentProject();
+      notice.textContent = "Изображение секции добавлено и встроено в HTML.";
+    } catch (error) {
+      notice.textContent = error.message;
+      file.value = "";
+    }
+  });
+  wrapper.append(file);
+  const alt = document.createElement("input");
+  alt.type = "text";
+  alt.placeholder = "Alt — краткое описание изображения";
+  alt.value = section.content?.image?.alt || "";
+  alt.addEventListener("input", () => {
+    const target = currentInput.contentBySection[section.id] ||= {};
+    target.image = { ...(target.image || {}), alt:alt.value };
+    renderCurrentProject();
+  });
+  wrapper.append(alt);
+  return wrapper;
+}
+
 function buildSectionEditor(project) {
   const panel = document.querySelector("#section-editor");
   const fields = document.querySelector("#section-fields");
@@ -119,6 +154,7 @@ function buildSectionEditor(project) {
     content.append(createEditorField(section, "points", "Список пунктов — каждый с новой строки", true));
     content.append(createEditorField(section, "ctaLabel", "Текст кнопки"));
     content.append(createEditorField(section, "ctaHref", "Ссылка кнопки"));
+    content.append(createSectionImageField(section));
     card.append(content);
     fields.append(card);
   });
