@@ -145,18 +145,18 @@ export function renderHtmlPage(input = {}) {
   }).join("\n");
   const contacts = input.contacts && typeof input.contacts === "object" ? input.contacts : {};
   const contactParts = [];
-  if (contacts.phone && /^[+()\\d\\s.-]{6,30}$/.test(String(contacts.phone))) {
+  if (contacts.phone && /^[+()\d\s.-]{6,30}$/.test(String(contacts.phone))) {
     const phone = String(contacts.phone).trim();
-    contactParts.push(element("a", { href:"tel:" + phone.replace(/[^+\\d]/g,"") }, escapeHtml(phone)));
+    contactParts.push(element("a", { href:"tel:" + phone.replace(/[^+\d]/g,"") }, escapeHtml(phone)));
   }
-  if (contacts.email && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(contacts.email))) {
+  if (contacts.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(contacts.email))) {
     const email = String(contacts.email).trim();
     contactParts.push(element("a", { href:"mailto:" + email }, escapeHtml(email)));
   }
   for (const key of ["address","hours"]) if (contacts[key]) contactParts.push(element("span", {}, escapeHtml(contacts[key])));
   const contactBlock = contactParts.length ? element("div", { class:"uds-footer__contacts" }, contactParts.join("")) : "";
   const socialItems = Array.isArray(input.socialLinks) ? input.socialLinks.slice(0,12).map(item => {
-    const href = typeof item?.href === "string" && /^https:\\/\\//i.test(item.href.trim()) ? safeUrl(item.href) : null;
+    const href = typeof item?.href === "string" && /^https:\/\//i.test(item.href.trim()) ? safeUrl(item.href) : null;
     return href ? element("a", { href, rel:"noopener noreferrer", target:"_blank" }, escapeHtml(item.label || "Соцсеть")) : "";
   }).filter(Boolean).join("") : "";
   const socialBlock = socialItems ? element("nav", { class:"uds-social", "aria-label":"Социальные сети" }, socialItems) : "";
