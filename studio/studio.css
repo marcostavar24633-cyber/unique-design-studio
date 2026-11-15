@@ -67,3 +67,12 @@ button.wide{width:100%;min-height:44px}
 .spec-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .spec{white-space:pre-wrap;font:13px/1.6 ui-monospace,"Cascadia Code",Consolas,monospace;max-width:920px;margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow-wrap:anywhere}
 .chips-src a{color:var(--accent)}
+
+/* Загрузка и управление фотографиями в редакторе */
+.media-preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.media-preview--grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.media-preview figure{display:grid;gap:6px;align-content:start;min-width:0;margin:0;padding:8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.media-preview img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;background:var(--bg)}
+.media-preview figcaption{overflow-wrap:anywhere;color:var(--muted);font-size:12px}
+.media-preview button{min-height:32px;padding:4px 8px;font-size:12px}
+.field input[type=file]{width:100%;min-width:0;padding:8px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--card);font-size:13px}
