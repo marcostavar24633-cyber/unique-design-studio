@@ -111,6 +111,6 @@ test('отдельные focal points для hero, галереи и карто�
   assert.match(r.html, /--ds-crop-desktop:24% 36%/);
   assert.match(r.html, /--ds-crop-tablet:50% 42%/);
   assert.match(r.html, /--ds-crop-mobile:72% 60%/);
-  assert.match(r.html, /object-position:var\\(--ds-crop-mobile/);
+  assert.ok(r.html.includes('object-position:var(--ds-crop-mobile'));
   assert.match(r.html, /--ds-crop-desktop:35% 45%/);
 });
