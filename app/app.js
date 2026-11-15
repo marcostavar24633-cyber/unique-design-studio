@@ -139,6 +139,122 @@ function createSectionImageField(section) {
   return wrapper;
 }
 
+
+function buildCardEditor(section) {
+  const wrap = document.createElement("div");
+  wrap.className = "card-editor";
+  const heading = document.createElement("strong");
+  heading.textContent = "Карточки товаров / услуг";
+  wrap.append(heading);
+  const list = document.createElement("div");
+  list.className = "card-editor-list";
+  const renderCards = () => {
+    list.replaceChildren();
+    const cards = currentInput.contentBySection[section.id]?.items || [];
+    cards.forEach((item,index) => {
+      const card = document.createElement("div");
+      card.className = "item-editor-card";
+      const top = document.createElement("div");
+      top.className = "item-editor-top";
+      const title = document.createElement("strong");
+      title.textContent = "Карточка " + (index + 1);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Удалить";
+      remove.className = "danger-action";
+      remove.addEventListener("click",() => {
+        const target = currentInput.contentBySection[section.id];
+        target.items.splice(index,1);
+        renderCurrentProject();
+        renderCards();
+      });
+      top.append(title,remove);
+      card.append(top);
+      const fields = [
+        ["title","Название"],
+        ["description","Описание"],
+        ["price","Цена / стоимость"]
+      ];
+      fields.forEach(([key,label]) => {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = label;
+        input.value = typeof item[key] === "string" ? item[key] : "";
+        input.setAttribute("aria-label",label);
+        input.addEventListener("input",() => {
+          item[key] = input.value;
+          renderCurrentProject();
+        });
+        card.append(input);
+      });
+      const linkLabel = document.createElement("input");
+      linkLabel.type = "text";
+      linkLabel.placeholder = "Текст ссылки";
+      linkLabel.value = item.link?.label || "";
+      linkLabel.addEventListener("input",() => {
+        item.link = {...(item.link || {}),label:linkLabel.value};
+        renderCurrentProject();
+      });
+      const linkHref = document.createElement("input");
+      linkHref.type = "text";
+      linkHref.placeholder = "Ссылка (например, #contacts или https://...)";
+      linkHref.value = item.link?.href || "";
+      linkHref.addEventListener("input",() => {
+        item.link = {...(item.link || {}),href:linkHref.value};
+        renderCurrentProject();
+      });
+      card.append(linkLabel,linkHref);
+      const imageLabel = document.createElement("label");
+      imageLabel.className = "section-field";
+      imageLabel.append(document.createTextNode("Фото карточки"));
+      const imageInput = document.createElement("input");
+      imageInput.type = "file";
+      imageInput.accept = "image/png,image/jpeg,image/webp,image/gif";
+      imageInput.addEventListener("change",async () => {
+        const file = imageInput.files?.[0];
+        if (!file) return;
+        try {
+          item.image = {...(item.image || {}),src:await readImage(file),alt:item.image?.alt || item.title || ""};
+          renderCurrentProject();
+          notice.textContent = "Изображение карточки добавлено.";
+        } catch (error) {
+          notice.textContent = error.message;
+          imageInput.value = "";
+        }
+      });
+      imageLabel.append(imageInput);
+      const alt = document.createElement("input");
+      alt.type = "text";
+      alt.placeholder = "Alt — описание изображения";
+      alt.value = item.image?.alt || "";
+      alt.addEventListener("input",() => {
+        item.image = {...(item.image || {}),alt:alt.value};
+        renderCurrentProject();
+      });
+      card.append(imageLabel,alt);
+      list.append(card);
+    });
+  };
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "download-button";
+  add.textContent = "+ Добавить карточку";
+  add.addEventListener("click",() => {
+    const target = currentInput.contentBySection[section.id] ||= {};
+    target.items ||= [];
+    if (target.items.length >= 24) {
+      notice.textContent = "В одной секции можно разместить не более 24 карточек.";
+      return;
+    }
+    target.items.push({title:"Новый товар или услуга",description:"",price:"",link:{label:"Подробнее",href:"#"}});
+    renderCurrentProject();
+    renderCards();
+  });
+  wrap.append(list,add);
+  renderCards();
+  return wrap;
+}
+
 function buildSectionEditor(project) {
   const panel = document.querySelector("#section-editor");
   const fields = document.querySelector("#section-fields");
@@ -178,6 +294,7 @@ function buildSectionEditor(project) {
     content.append(createEditorField(section, "ctaLabel", "Текст кнопки"));
     content.append(createEditorField(section, "ctaHref", "Ссылка кнопки"));
     content.append(createSectionImageField(section));
+    content.append(buildCardEditor(section));
     card.append(content);
     fields.append(card);
   });
