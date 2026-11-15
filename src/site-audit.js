@@ -55,7 +55,7 @@ export function auditSiteHtml(html = "", css = "") {
   const emptyLinks = links.filter(link => !link.href || !link.href.trim()).length;
   const externalBlankUnsafe = links.filter(link => link.target === "_blank" && !/\bnoopener\b/i.test(link.rel || "")).length;
   const unlabeledLinks = links.filter(link => !link["aria-label"] && !link.title && !link.text).length;
-  const buttons = [...source.matchAll(/<button\\b([^>]*)>([\\s\\S]*?)<\\/button>/gi)].map(match => ({...attrs("<button " + match[1] + ">"),text:match[2].replace(/<[^>]+>/g,"").trim()}));
+  const buttons = [...source.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi)].map(match => ({...attrs("<button " + match[1] + ">"),text:match[2].replace(/<[^>]+>/g,"").trim()}));
   const unlabeledButtons = buttons.filter(button => !button["aria-label"] && !button.title && !button.text).length;
   const forms = [...source.matchAll(/<form\b[^>]*>/gi)].map(match => attrs(match[0]));
   const demoForms = forms.filter(form => form["data-uds-demo-form"] === "true").length;
