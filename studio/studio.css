@@ -76,3 +76,17 @@ button.wide{width:100%;min-height:44px}
 .media-preview figcaption{overflow-wrap:anywhere;color:var(--muted);font-size:12px}
 .media-preview button{min-height:32px;padding:4px 8px;font-size:12px}
 .field input[type=file]{width:100%;min-width:0;padding:8px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--card);font-size:13px}
+
+/* Image Intelligence */
+.audit-section-title{margin:24px 0 12px;font-size:18px}
+.image-audit-grid{display:grid;gap:12px;margin-top:12px}
+.image-audit-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:12px;min-width:0}
+.image-audit-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.image-audit-body{display:grid;grid-template-columns:minmax(100px,180px) minmax(0,1fr);gap:14px;align-items:start}
+.image-audit-body>img{display:block;width:100%;max-height:150px;object-fit:contain;border-radius:6px;background:var(--bg)}
+.image-audit-body>div{min-width:0}
+.image-audit-warning,.image-audit-tip,.image-audit-ok{font-size:13px;line-height:1.45;margin:8px 0 0}
+.image-audit-warning{color:var(--danger,#b45309)}
+.image-audit-tip{color:var(--muted)}
+.image-audit-ok{color:var(--success,#15803d)}
+@media(max-width:520px){.image-audit-body{grid-template-columns:1fr}.image-audit-body>img{max-width:220px;max-height:140px}}

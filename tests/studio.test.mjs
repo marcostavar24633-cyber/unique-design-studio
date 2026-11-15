@@ -22,5 +22,13 @@ test('код веб-редактора синтаксически коррект
     "data-remove-image",
     "FileReader",
     "createImageBitmap(file)",
+    "let imageAuditRun = 0",
+    "function collectImageAssets()",
+    "function inspectImage(asset)",
+    "async function renderImageIntelligence()",
+    "Проверяем разрешение, пропорции, яркость и детализацию",
+    "image-audit-warning",
+    "image-audit-tip",
+    "image-intelligence",
   ]) assert.ok(source.includes(marker), marker);
 });
