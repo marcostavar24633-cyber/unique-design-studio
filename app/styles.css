@@ -67,3 +67,6 @@ form{display:grid;gap:15px}label{display:grid;gap:7px;color:#c7c8cc;font-size:12
 .history-toolbar>span{margin-right:auto;color:#858b96;font:600 9px Manrope;letter-spacing:.13em}
 .history-toolbar .download-button{padding:8px 10px;font-size:10px}
 .history-toolbar .download-button:disabled{opacity:.35;cursor:not-allowed}
+
+.toolbar-actions{flex-wrap:wrap}
+@media(max-width:680px){.toolbar-actions .download-button{flex:1;justify-content:center}}
