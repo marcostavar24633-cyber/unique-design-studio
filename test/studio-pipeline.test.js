@@ -62,3 +62,28 @@ test("respects a user-defined section order", () => {
   assert.deepEqual(project.layoutPlan.sections.map(section => section.id),["contact","benefits","hero-product"]);
   assert.ok(project.html.indexOf("Контакты") < project.html.indexOf("Преимущества"));
 });
+
+
+test("passes editable brand, navigation, contact and social data into exported HTML", () => {
+  const project = createStudioProject({
+    businessType:"мастерская мебели",
+    businessName:"Wood Lab",
+    brandName:"WOOD / LAB",
+    footerText:"Производство в Ульяновске",
+    navigation:[{label:"Каталог",href:"#catalog"}],
+    contacts:{phone:"+7 900 123-45-67",email:"hello@example.com",address:"Ульяновск",hours:"Пн–Пт 9:00–18:00"},
+    socialLinks:[{label:"Telegram",href:"https://t.me/woodlab"}],
+    sectionOrder:["hero-product","catalog"],
+    contentBySection:{
+      "hero-product":{title:"Мебель на заказ"},
+      catalog:{title:"Каталог"}
+    }
+  });
+  assert.match(project.html,/WOOD \/ LAB/);
+  assert.match(project.html,/href="#catalog"/);
+  assert.match(project.html,/tel:\+79001234567/);
+  assert.match(project.html,/mailto:hello@example\.com/);
+  assert.match(project.html,/Ульяновск/);
+  assert.match(project.html,/https:\/\/t\.me\/woodlab/);
+  assert.match(project.html,/Производство в Ульяновске/);
+});
