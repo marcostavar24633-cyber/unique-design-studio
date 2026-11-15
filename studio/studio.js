@@ -226,13 +226,92 @@ function renderConcept() {
   ])}</div>`;
 }
 
+let imageAuditRun = 0;
+function collectImageAssets() {
+  const out = [];
+  const hero = state.raw.images?.hero;
+  if (hero) out.push({ role: 'hero', label: 'Первый экран', src: hero });
+  (state.raw.gallery || []).forEach((g, i) => { if (g?.src) out.push({ role: 'gallery', label: g.caption || `Галерея ${i + 1}`, src: g.src }); });
+  (state.raw.services || []).forEach((s, i) => {
+    const src = Array.isArray(s) ? s[3] : s?.image;
+    if (src) out.push({ role: 'service', label: Array.isArray(s) ? s[0] : s.title || `Позиция ${i + 1}`, src });
+  });
+  return out;
+}
+function inspectImage(asset) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth, height = img.naturalHeight, ratio = width / Math.max(1, height);
+      const warnings = [], tips = [], minSide = Math.min(width, height);
+      if (asset.role === 'hero' && (width < 1200 || height < 650)) warnings.push('Для первого экрана разрешение может быть маловато; ориентир — от 1600 × 900 px.');
+      if (asset.role === 'gallery' && minSide < 700) warnings.push('Для галереи желательно не менее 700 px по короткой стороне.');
+      if (asset.role === 'service' && minSide < 600) warnings.push('Для карточки товара или услуги желательно не менее 600 px по короткой стороне.');
+      if (asset.role === 'hero') {
+        if (ratio < 1.25) tips.push('Широкий экран: кадр может выглядеть тесно. Подготовьте горизонтальную версию около 16:9.');
+        if (ratio > 2.1) tips.push('Мобильный экран: при заполнении блока по ширине верх и низ могут обрезаться. Проверьте важный объект в центральной безопасной зоне или подготовьте вертикальный кадр 4:5.');
+        else tips.push('Мобильный экран: проверьте, что главный объект остаётся в центральной части кадра; для портретного блока лучше отдельный кадр 4:5.');
+      } else if (asset.role === 'service') {
+        if (ratio < 0.78 || ratio > 1.35) tips.push('Карточка обычно лучше смотрится с квадратным кадром 1:1; при обрезке проверьте, что товар целиком виден.');
+      } else if (ratio < 0.72 || ratio > 1.8) tips.push('Галерея: необычные пропорции могут обрезаться в сетке. Проверьте кадрирование и главный объект.');
+      let brightness = null, detail = null;
+      if (asset.src.startsWith('data:image/')) {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 64; canvas.height = 64;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const pixels = ctx.getImageData(0, 0, 64, 64).data;
+            let sum = 0, count = 0, edges = 0, edgeCount = 0, prev = null;
+            for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+              const i = (y * 64 + x) * 4;
+              const l = .2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2];
+              sum += l; count++;
+              if (x && prev !== null) { edges += Math.abs(l - prev); edgeCount++; }
+              if (y) { const up = ((y - 1) * 64 + x) * 4; const ul = .2126 * pixels[up] + .7152 * pixels[up + 1] + .0722 * pixels[up + 2]; edges += Math.abs(l - ul); edgeCount++; }
+              prev = l;
+            }
+            brightness = count ? sum / count : null;
+            detail = edgeCount ? edges / edgeCount : null;
+          }
+        } catch { /* Проверка пикселей может быть недоступна для отдельных форматов. */ }
+      }
+      if (brightness !== null && brightness < 48) warnings.push('Кадр выглядит очень тёмным по средней яркости; проверьте детали в тенях.');
+      if (detail !== null && detail < 5) warnings.push('Мало мелких деталей на уменьшенной копии: возможна мягкость или расфокус. Проверьте фото визуально.');
+      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail });
+    };
+    img.onerror = () => resolve({ ...asset, error: 'Не удалось прочитать изображение. Проверьте ссылку или формат.', warnings: [], tips: [] });
+    img.src = asset.src;
+  });
+}
+async function renderImageIntelligence() {
+  const host = $('#image-intelligence');
+  if (!host) return;
+  const token = ++imageAuditRun;
+  const assets = collectImageAssets();
+  if (!assets.length) { host.innerHTML = '<p class="note">Фотографии пока не добавлены. Загрузите снимки в разделе «Изображения», чтобы проверить их качество и кадрирование.</p>'; return; }
+  host.innerHTML = '<p class="note">Проверяем разрешение, пропорции, яркость и детализацию загруженных фотографий…</p>';
+  const reports = await Promise.all(assets.map(inspectImage));
+  if (token !== imageAuditRun || !host.isConnected) return;
+  const warningCount = reports.reduce((n, r) => n + r.warnings.length, 0);
+  host.innerHTML = `<p class="summary ${warningCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний: ${warningCount}.</p>
+  <div class="image-audit-grid">${reports.map(r => `<article class="image-audit-card">
+    <div class="image-audit-head"><b>${esc(r.label)}</b><span class="note">${r.role === 'hero' ? 'Первый экран' : r.role === 'service' ? 'Карточка' : 'Галерея'}</span></div>
+    <div class="image-audit-body"><img src="${esc(r.src)}" alt="" loading="lazy"><div><b>${r.error ? 'Не удалось проверить' : `${r.width} × ${r.height} px`}</b><span class="note">${r.error ? esc(r.error) : `Пропорции: ${r.ratio.toFixed(2)}:1`}</span>
+    ${r.warnings.map(w => `<p class="image-audit-warning">${esc(w)}</p>`).join('')}${r.tips.map(t => `<p class="image-audit-tip">${esc(t)}</p>`).join('')}${!r.warnings.length && !r.tips.length && !r.error ? '<p class="image-audit-ok">Явных проблем по базовым параметрам не обнаружено.</p>' : ''}</div></div>
+  </article>`).join('')}</div>
+  <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
+}
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
   $('#view-audit').innerHTML = `<p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
+<h2 class="audit-section-title">Image Intelligence — проверка фотографий</h2><div id="image-intelligence" aria-live="polite"></div>
 <p class="note" style="margin-top:16px">Статическая проверка не заменяет просмотр на реальных устройствах: используйте переключатель ширины 320 / 768 в предпросмотре.</p>`;
+  renderImageIntelligence();
 }
 
 function renderRegistry() {
