@@ -1,4 +1,5 @@
 import { createStudioProject } from "../src/studio-pipeline.js";
+import { createHistoryManager } from "../src/history-manager.js";
 
 const form = document.querySelector("#project-form");
 const frame = document.querySelector("#preview-frame");
@@ -8,6 +9,8 @@ const deviceButtons = [...document.querySelectorAll("[data-device]")];
 let latestHtml = "";
 let currentInput = null;
 let currentProject = null;
+const projectHistory = createHistoryManager(20);
+let historyEditSnapshot = null;
 
 const SECTION_LABELS = {
   "hero-product":"Главное предложение","featured-products":"Избранные товары","category-navigation":"Категории",
@@ -30,6 +33,52 @@ const SECTION_LABELS = {
   "proof":"Подтверждение","offer-details":"Состав предложения","objection-handling":"Ответы на сомнения",
   "single-cta":"Следующий шаг"
 };
+
+function updateHistoryButtons() {
+  const undo = document.querySelector("#undo-project");
+  const redo = document.querySelector("#redo-project");
+  if (undo) undo.disabled = !projectHistory.canUndo;
+  if (redo) redo.disabled = !projectHistory.canRedo;
+}
+
+function recordHistory() {
+  if (!currentInput) return;
+  projectHistory.push(currentInput);
+  updateHistoryButtons();
+}
+
+function undoProject() {
+  if (!currentInput) return;
+  const previous = projectHistory.undo(currentInput);
+  if (!previous) return;
+  loadProjectInput(previous,currentInput.projectId || "");
+  notice.textContent = "Последнее изменение отменено.";
+  updateHistoryButtons();
+}
+
+function redoProject() {
+  if (!currentInput) return;
+  const next = projectHistory.redo(currentInput);
+  if (!next) return;
+  loadProjectInput(next,currentInput.projectId || "");
+  notice.textContent = "Изменение восстановлено.";
+  updateHistoryButtons();
+}
+
+document.addEventListener("focusin",event => {
+  if (currentInput && event.target.closest("#site-chrome-editor, #section-editor")) {
+    historyEditSnapshot = JSON.stringify(currentInput);
+  }
+});
+document.addEventListener("focusout",event => {
+  if (!historyEditSnapshot || !event.target.closest("#site-chrome-editor, #section-editor")) return;
+  const before = historyEditSnapshot;
+  historyEditSnapshot = null;
+  if (currentInput && before !== JSON.stringify(currentInput)) {
+    projectHistory.push(JSON.parse(before));
+    updateHistoryButtons();
+  }
+});
 
 function readForm() {
   const values = Object.fromEntries(new FormData(form).entries());
@@ -121,6 +170,7 @@ function createSectionImageField(section) {
     if (!selected) return;
     try {
       const src = await readImage(selected);
+      recordHistory();
       const target = currentInput.contentBySection[section.id] ||= {};
       target.image = { ...(target.image || {}), src, alt:target.image?.alt || "" };
       renderCurrentProject();
@@ -169,6 +219,7 @@ function buildCardEditor(section) {
       remove.className = "danger-action";
       remove.addEventListener("click",() => {
         const target = currentInput.contentBySection[section.id];
+        recordHistory();
         target.items.splice(index,1);
         renderCurrentProject();
         renderCards();
@@ -219,7 +270,9 @@ function buildCardEditor(section) {
         const file = imageInput.files?.[0];
         if (!file) return;
         try {
-          item.image = {...(item.image || {}),src:await readImage(file),alt:item.image?.alt || item.title || ""};
+          const imageSrc = await readImage(file);
+          recordHistory();
+          item.image = {...(item.image || {}),src:imageSrc,alt:item.image?.alt || item.title || ""};
           renderCurrentProject();
           notice.textContent = "Изображение карточки добавлено.";
         } catch (error) {
@@ -251,6 +304,7 @@ function buildCardEditor(section) {
       notice.textContent = "В одной секции можно разместить не более 24 карточек.";
       return;
     }
+    recordHistory();
     target.items.push({title:"Новый товар или услуга",description:"",price:"",link:{label:"Подробнее",href:"#"}});
     renderCurrentProject();
     renderCards();
@@ -304,13 +358,13 @@ function buildSiteChromeEditor() {
     const remove = document.createElement("button");
     remove.type = "button"; remove.className = "danger-action"; remove.textContent = "×";
     remove.setAttribute("aria-label","Удалить пункт меню");
-    remove.addEventListener("click",() => {currentInput.navigation.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
+    remove.addEventListener("click",() => {recordHistory();currentInput.navigation.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
     row.append(label,href,remove);
     navGroup.append(row);
   });
   const addNav = document.createElement("button");
   addNav.type = "button"; addNav.className = "download-button"; addNav.textContent = "+ Пункт меню";
-  addNav.addEventListener("click",() => {if(currentInput.navigation.length>=12)return;currentInput.navigation.push({label:"Новый раздел",href:"#top"});buildSiteChromeEditor();renderCurrentProject();});
+  addNav.addEventListener("click",() => {if(currentInput.navigation.length>=12)return;recordHistory();currentInput.navigation.push({label:"Новый раздел",href:"#top"});buildSiteChromeEditor();renderCurrentProject();});
   navGroup.append(addNav);
   root.append(navGroup);
   const contactGroup = document.createElement("div");
@@ -335,12 +389,12 @@ function buildSiteChromeEditor() {
     const href = document.createElement("input"); href.value=item.href||""; href.placeholder="https://...";
     href.addEventListener("input",() => {item.href=href.value;renderCurrentProject();});
     const remove = document.createElement("button"); remove.type="button"; remove.className="danger-action"; remove.textContent="×";
-    remove.addEventListener("click",() => {currentInput.socialLinks.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
+    remove.addEventListener("click",() => {recordHistory();currentInput.socialLinks.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
     row.append(label,href,remove); socialGroup.append(row);
   });
   const addSocial = document.createElement("button");
   addSocial.type="button"; addSocial.className="download-button"; addSocial.textContent="+ Социальная ссылка";
-  addSocial.addEventListener("click",() => {if(currentInput.socialLinks.length>=12)return;currentInput.socialLinks.push({label:"Telegram",href:""});buildSiteChromeEditor();renderCurrentProject();});
+  addSocial.addEventListener("click",() => {if(currentInput.socialLinks.length>=12)return;recordHistory();currentInput.socialLinks.push({label:"Telegram",href:""});buildSiteChromeEditor();renderCurrentProject();});
   socialGroup.append(addSocial);
   root.append(socialGroup);
   panel.hidden = false;
@@ -579,7 +633,7 @@ function addSection() {
     notice.textContent = "Эта секция уже добавлена или не выбрана.";
     return;
   }
-  currentInput.sectionOrder.push(id);
+  recordHistory();\n  currentInput.sectionOrder.push(id);
   currentInput.contentBySection[id] ||= {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
   renderCurrentProject();
   buildSectionEditor(currentProject);
@@ -613,6 +667,8 @@ async function importProjectJson(file) {
 }
 
 document.querySelector("#save-project").addEventListener("click",saveProject);
+document.querySelector("#undo-project").addEventListener("click",undoProject);
+document.querySelector("#redo-project").addEventListener("click",redoProject);
 document.querySelector("#load-project").addEventListener("click",() => {
   const id = document.querySelector("#saved-projects").value;
   const record = readSavedProjects().find(project => project.id === id);
