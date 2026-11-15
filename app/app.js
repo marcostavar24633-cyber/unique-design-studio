@@ -137,7 +137,7 @@ function renderCurrentProject() {
   document.querySelector("#section-count").textContent = String(currentProject.layoutPlan.sections.length);
   document.querySelector("#output-status").textContent = "HTML готов";
   document.querySelector("#output-detail").textContent = "Можно скачать и открыть локально.";
-  renderAuditReport(auditSiteHtml(latestHtml));
+  renderAuditReport(auditSiteHtml(latestHtml,currentProject.css));
 }
 
 function renderAuditReport(report) {
@@ -164,7 +164,11 @@ function renderAuditReport(report) {
     ["Description",report.metrics.descriptionLength + " симв."],
     ["H1",String(report.metrics.h1Count)],
     ["Изображения",String(report.metrics.imageCount)],
-    ["Без ALT",String(report.metrics.imagesMissingAlt)]
+    ["Без ALT",String(report.metrics.imagesMissingAlt)],
+    ["CSS",Math.round(report.metrics.cssBytes/1024) + " КБ"],
+    ["Mobile CSS",report.metrics.mobileBreakpoint ? "Есть" : "Нет"],
+    ["Focus",report.metrics.focusStyle ? "Есть" : "Нет"],
+    ["Reduced motion",report.metrics.reducedMotion ? "Есть" : "Нет"]
   ].forEach(([label,value]) => {
     const item = document.createElement("div");
     const name = document.createElement("small");
@@ -178,7 +182,7 @@ function renderAuditReport(report) {
   if (!report.issues.length) {
     const good = document.createElement("p");
     good.className = "audit-empty";
-    good.textContent = "Базовые проверки исходного HTML пройдены.";
+    good.textContent = "Статические проверки HTML и CSS пройдены. Реальное отображение ещё нужно проверить в браузере.";
     root.append(good);
     return;
   }
