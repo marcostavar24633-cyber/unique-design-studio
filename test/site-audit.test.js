@@ -72,3 +72,10 @@ test("returns a diagnostic report for empty input", () => {
   assert.ok(report.score < 100);
   assert.ok(report.errors >= 2);
 });
+
+
+test("flags buttons without an accessible name", () => {
+  const report = auditSiteHtml('<html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>A sufficiently long title for a page about products and services</title><meta name="description" content="A description long enough to provide a useful summary of the content and the value proposition for search visitors."></head><body><header></header><main><h1>Page</h1><button></button><button aria-label="Close"></button></main><footer></footer></body></html>',cleanCss);
+  assert.ok(report.issues.some(item => item.code === "unlabeled-buttons"));
+  assert.equal(report.metrics.unlabeledButtons,1);
+});
