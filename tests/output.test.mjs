@@ -132,3 +132,19 @@ test('SEO-аудит предупреждает о повторных и сла�
   assert.ok(ids.includes('seo-title-length'));
   assert.ok(ids.includes('seo-description-length'));
 });
+
+
+test('аудит производительности оценивает встроенные изображения и атрибуты загрузки', () => {
+  const largePhoto = 'data:image/webp;base64,' + 'A'.repeat(420_000);
+  const project = { ...full, architecture: 'editorial', images: { hero: largePhoto, heroAlt: 'Главное фото товара' } };
+  const r = generate(project);
+  const belowFold = '<img src="https://cdn.example.test/photo.webp" alt="Фото товара" decoding="async">';
+  const audited = auditSite(r.html + belowFold, r.concept, project);
+  const ids = audited.warnings.map(w => w.id);
+  assert.ok(ids.includes('performance-inline-images'));
+  assert.ok(ids.includes('performance-image-dimensions'));
+  assert.ok(ids.includes('performance-lazy-images'));
+  assert.match(r.html, /fetchpriority="high" decoding="async"/);
+  assert.ok(audited.checks.some(c => c.id === 'performance-document-size'));
+  assert.ok(audited.checks.some(c => c.id === 'performance-hero-priority' && c.level === 'ok'));
+});

@@ -84,6 +84,29 @@ export function auditSite(html, concept, input) {
   const kb = Math.round(html.length / 102.4) / 10;
   test(kb < 150, 'weight', `Вес HTML: ${kb} КБ`, `HTML весит ${kb} КБ — сократите встроенные изображения`, 'warn');
 
+  // Производительность: статические признаки, не реальные замеры Core Web Vitals.
+  const utf8Bytes = new TextEncoder().encode(html).length;
+  const inlineImages = imgs.map(i => i.attrs.src || '').filter(src => /^data:image\\//i.test(src));
+  const inlineBytes = inlineImages.reduce((sum, src) => {
+    const payload = (src.split(',')[1] || '').replace(/\\s/g, '');
+    const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+    return sum + Math.max(0, Math.floor(payload.length * 3 / 4) - padding);
+  }, 0);
+  const externalImages = imgs.filter(i => /^https?:\\/\\//i.test(i.attrs.src || '')).length;
+  const imageKb = Math.round(inlineBytes / 102.4) / 10;
+  const documentKb = Math.round(utf8Bytes / 102.4) / 10;
+  test(documentKb <= 250, 'performance-document-size', `Размер HTML: ${documentKb} КБ`, `HTML весит ${documentKb} КБ. Сократите встроенные данные и CSS; ориентир для автономного лендинга — до 250 КБ`, 'warn');
+  test(inlineBytes <= 250 * 1024, 'performance-inline-images', `Встроенные изображения: ${imageKb} КБ (${inlineImages.length})`, `Встроенные изображения занимают ${imageKb} КБ. Оптимизируйте фотографии или используйте внешнее CDN-хранилище`, 'warn');
+  const missingDimensions = imgs.filter(i => !i.attrs.width || !i.attrs.height);
+  test(!missingDimensions.length, 'performance-image-dimensions', 'У изображений заданы width и height', `У ${missingDimensions.length} изображений нет width/height. Задайте размеры или резервируйте место через aspect-ratio, чтобы снизить риск CLS`, 'warn');
+  const belowFoldWithoutLazy = imgs.slice(1).filter(i => i.attrs.loading !== 'lazy');
+  test(!belowFoldWithoutLazy.length, 'performance-lazy-images', 'Изображения после первого экрана загружаются лениво', `У ${belowFoldWithoutLazy.length} изображений после первого нет loading="lazy". Проверьте и включите отложенную загрузку`, 'warn');
+  const withoutAsyncDecode = imgs.filter(i => i.attrs.decoding !== 'async');
+  test(!withoutAsyncDecode.length, 'performance-image-decoding', 'Для изображений включён decoding="async"', `У ${withoutAsyncDecode.length} изображений нет decoding="async"`, 'warn');
+  const firstImage = imgs[0];
+  test(!firstImage || firstImage.attrs.fetchpriority === 'high', 'performance-hero-priority', 'Приоритет первого изображения повышен или изображений нет', 'Первое изображение не помечено fetchpriority="high"; проверьте, является ли оно LCP-элементом', 'warn');
+  if (externalImages) add('warn', 'performance-external-images', `Внешние изображения: ${externalImages}. Скорость и доступность зависят от стороннего хостинга`);
+
   // Ничего не выдумано
   const allowed = new Set(project.services.map(i => i.price).filter(Boolean));
   const shown = [...html.matchAll(/<p class="price">([^<]*)<\/p>/g)].map(m => m[1]);

@@ -45,6 +45,6 @@ test('код веб-редактора синтаксически коррект
     "data-service-alt",
     "data-copy-asset-prompt",
     "ALT-текст",
-    "Image SEO & Accessibility",
+    "Image SEO & Accessibility",\n    "Performance & Core Web Vitals",\n    "performance-inline-images",\n    "performance-lazy-images",\n    "performance-image-dimensions",
   ]) assert.ok(source.includes(marker), marker);
 });
