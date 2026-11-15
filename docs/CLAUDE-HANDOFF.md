@@ -39,6 +39,14 @@
 
 После создания handoff-документа и обновления README появились дополнительные commits. Поэтому перед работой обязательно заново проверь branch HEAD, PR head и последний workflow run; не используй SHA выше как гарантированно текущий.
 
+### Обновление 2026-11-15 (Claude)
+
+- Падение теста `generated site keeps its SEO metadata and project content through the export gate` исправлено по фактическому контракту: у `createStudioProject` нет поля `heroTitle`; текст первого экрана передаётся через `contentBySection[heroId]` (как в `app/app.js`). Тест теперь дополнительно проверяет canonical, OG image, `h1`, CTA, `alt` и встроенное локальное изображение. Код генератора не менялся.
+- Commit `f6820e1`, run `43753432745` — `success`, 60/60.
+- Добавлен `test/export-regression.test.js`: 10 ниш покрывают все 10 архитектур; для каждой проверяются readiness gate, SEO title/description, canonical, OG, `h1`, локальное изображение и заголовки всех секций; отдельный тест подтверждает, что устаревший ZIP не проходит проверку против последнего HTML, а новый — проходит. Локально `npm run check`: 72/72.
+- Проверка gate в `app/app.js` по коду: обе кнопки выключаются при `ready=false`, warnings не блокируют, `ensureExportReady()` пересобирает проект перед каждым скачиванием, ZIP строится из `latestHtml` и проверяется `verifyZipArchive` до download. Браузерная проверка UI не выполнялась.
+- Следующий шаг: пункт 3 раздела 9 — реальная браузерная проверка Desktop/Tablet/Mobile.
+
 ## 4. Текущий этап: pre-export readiness gate
 
 Задача — не позволять скачивать HTML или ZIP при критических ошибках и гарантировать, что ZIP содержит последнюю версию HTML.
