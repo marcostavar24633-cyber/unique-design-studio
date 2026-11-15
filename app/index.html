@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <title>UNIQUE DESIGN STUDIO — Preview</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="wordmark" href="./">UNIQUE <span>DESIGN STUDIO</span></a>
+    <div class="topbar-meta"><span class="status-dot"></span> Локальная студия <span class="version">PREVIEW 1.0</span></div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="panel-heading"><div><p class="eyebrow">PROJECT SETUP</p><h1>Новый проект</h1></div><span class="step">01 / 03</span></div>
+      <form id="project-form">
+        <label>Ниша или тип бизнеса<input name="businessType" required value="магазин телескопов и оптики" placeholder="Например, салон красоты"></label>
+        <label>Название проекта<input name="businessName" value="Astro" placeholder="Название бренда"></label>
+        <label>Целевая аудитория<input name="audience" value="начинающие астрономы и любители наблюдений" placeholder="Для кого сайт"></label>
+        <label>Главная цель<select name="primaryGoal"><option value="purchase">Продажа товаров</option><option value="booking">Запись / бронирование</option><option value="portfolio">Портфолио</option><option value="lead" selected>Получение заявок</option><option value="inform">Информирование</option></select></label>
+        <label>Краткое описание<textarea name="description" rows="3" placeholder="Опишите предложение компании">Подберите оптику для наблюдений — от первого телескопа до оборудования для опытных любителей.</textarea></label>
+        <div class="field-row">
+          <label>Палитра<select name="paletteId"><option value="">Автоматически</option><option value="porcelain-ink">Porcelain & Ink</option><option value="carbon-lime">Carbon & Lime</option><option value="technical-blue">Technical Blue</option><option value="terracotta-cream">Terracotta & Cream</option><option value="cocoa-rose">Cocoa & Rose</option><option value="warm-paper">Warm Paper</option><option value="electric-paper">Electric Paper</option><option value="gallery-noir">Gallery Noir</option></select></label>
+          <label>Форма<select name="shapeId"><option value="">Автоматически</option><option value="soft-geometry">Мягкая</option><option value="hard-editorial">Редакционная</option><option value="organic">Органическая</option><option value="technical">Техническая</option><option value="brutal">Бруталистская</option></select></label>
+        </div>
+        <button class="primary-button" type="submit"><span>Сгенерировать концепцию</span><span aria-hidden="true">↗</span></button>
+      </form>
+      <div class="sidebar-foot"><span>ENGINE STATUS</span><strong><i></i> Все модули локальные</strong><small>Без внешнего API. Контент и факты проверяются перед публикацией.</small></div>
+    </aside>
+    <section class="preview-area">
+      <div class="preview-toolbar">
+        <div><p class="eyebrow">LIVE CANVAS</p><h2 id="preview-title">Предпросмотр проекта</h2></div>
+        <div class="toolbar-actions">
+          <div class="device-switch" role="group" aria-label="Размер предпросмотра">
+            <button type="button" data-device="desktop" class="active" aria-pressed="true" title="Компьютер">▰</button>
+            <button type="button" data-device="tablet" aria-pressed="false" title="Планшет">▯</button>
+            <button type="button" data-device="mobile" aria-pressed="false" title="Телефон">▯</button>
+          </div>
+          <button type="button" class="download-button" id="download-html" disabled>Скачать HTML ↓</button>
+        </div>
+      </div>
+      <div class="canvas-shell">
+        <div class="canvas-topline"><span><i></i><i></i><i></i></span><span id="canvas-label">DESKTOP · 100%</span><span>PREVIEW</span></div>
+        <div class="canvas-stage"><iframe id="preview-frame" title="Предпросмотр сгенерированного сайта" sandbox="allow-same-origin" srcdoc="<!doctype html><html lang='ru'><body style='font:16px Arial;padding:10vw;color:#777;background:#f5f5f2'><h1>Здесь появится ваш сайт</h1><p>Заполните бриф и нажмите «Сгенерировать концепцию».</p></body></html>"></iframe></div>
+      </div>
+      <div class="inspector">
+        <div><p class="eyebrow">DESIGN DNA</p><strong id="dna-name">Ожидает генерации</strong><small id="dna-detail">Архитектура, палитра и композиция появятся здесь.</small></div>
+        <div><p class="eyebrow">PAGE STRUCTURE</p><strong id="section-count">—</strong><small>Секций в макете</small></div>
+        <div><p class="eyebrow">OUTPUT</p><strong id="output-status">Не создан</strong><small id="output-detail">HTML будет доступен для скачивания.</small></div>
+      </div>
+      <p class="notice" id="notice" role="status">Предпросмотр выполняется в браузере. Отправка форм и публикация пока не подключены.</p>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
