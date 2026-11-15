@@ -639,7 +639,8 @@ function addSection() {
     notice.textContent = "Эта секция уже добавлена или не выбрана.";
     return;
   }
-  recordHistory();\n  currentInput.sectionOrder.push(id);
+  recordHistory();
+  currentInput.sectionOrder.push(id);
   currentInput.contentBySection[id] ||= {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
   renderCurrentProject();
   buildSectionEditor(currentProject);
