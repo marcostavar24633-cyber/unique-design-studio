@@ -17,3 +17,14 @@ form{display:grid;gap:15px}label{display:grid;gap:7px;color:#c7c8cc;font-size:12
 
 .upload-field input[type="file"]{padding:9px;font-size:11px;cursor:pointer}
 .upload-field small{color:#858b96;font-size:10px;line-height:1.45;font-weight:400}
+
+.section-editor{border-top:1px solid #ffffff18;padding-top:18px;display:grid;gap:13px}
+.editor-heading h2{font:700 16px Manrope;margin:0 0 7px;letter-spacing:-.03em}
+.editor-heading small{display:block;color:#858b96;font-size:10px;line-height:1.5}
+#section-fields{display:grid;gap:8px}
+.section-editor-card{border:1px solid #ffffff1c;border-radius:7px;background:#1b1e25;overflow:hidden}
+.section-editor-card summary{padding:11px 12px;cursor:pointer;color:#e5e5e2;font-size:12px;font-weight:600;list-style-position:inside}
+.section-editor-card summary::marker{color:#b7ce8b}
+.section-editor-fields{padding:0 10px 12px;display:grid;gap:10px}
+.section-field{display:grid;gap:6px;color:#aeb2bb;font-size:10px;font-weight:600}
+.section-field input,.section-field textarea{font-size:12px;padding:9px 10px}
