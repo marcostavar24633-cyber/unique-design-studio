@@ -8,7 +8,8 @@ export { buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprint
 export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
 export { buildPrompt } from './prompt.js';
-export { exportProject, normalizeProject, resolveArchitecture, FORMAT_VERSION } from './project.js';
+export { autopilot, buildSpec, draftFromNiche, fromAiLanding } from './autopilot.js';
+export { exportProject, normalizeProject, resolveArchitecture, tierOf, FORMAT_VERSION, TIERS } from './project.js';
 export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES, WEB_FONTS } from './data.js';
 export { contrast } from './color.js';
 

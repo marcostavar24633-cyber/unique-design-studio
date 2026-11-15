@@ -48,6 +48,13 @@ function rankArchetypes(project, profile, s) {
   if (s.form) add('split-utility', 3, 'настроен приём заявок — инструмент действия можно вынести на первый экран');
   if (s.process >= 4 && s.about) add('storytelling', 2, 'есть история и этапы — материал для последовательного рассказа');
   if (!s.items && !s.gallery) add('minimal', 4, 'контента немного — лишние блоки только отвлекут от действия');
+  // Класс проекта: премиум и люкс тяготеют к журнальной подаче, крупному визуалу и тишине вокруг предложения.
+  if (project.tier === 'premium') { add('editorial', 3, 'премиум-класс — авторская журнальная подача'); add('immersive', 2); add('minimal', 1); }
+  if (project.tier === 'luxury') {
+    add('editorial', 5, 'люкс — редакционная подача, воздух и типографика вместо плотного каталога');
+    add('immersive', 4, 'люкс — крупный визуал и атмосфера'); add('minimal', 3); add('asymmetric', 2);
+    add('catalog', -3); add('product-first', -2); add('brutalist', -6); add('split-utility', -2);
+  }
   const arch = project.architecture;
   let ids = Object.keys(ARCHETYPES);
   if (arch.mode === 'family') ids = LEGACY_FAMILIES[arch.family];
@@ -109,10 +116,16 @@ function compose(project, profile, ranked, seed, avoid) {
     ? project.secondaryArchitecture
     : (ranked.find(r => r.id !== primary && r.score > 0) || {}).id || '';
   const placement = pick(stream(seed, 'placement'), Object.keys(arch.placements), avoid.placements);
-  const typePool = profile.types.filter(t => arch.types.includes(t));
+  // Премиум и люкс: контрастная дидона и старостильная антиква впереди нишевых характеров.
+  const tierTypes = { premium: ['serif-editorial', 'didone-contrast', 'geometric-clean'], luxury: ['didone-contrast', 'serif-editorial'] }[project.tier];
+  const tierPool = tierTypes ? tierTypes.filter(t => arch.types.includes(t)) : [];
+  const typePool = tierPool.length ? tierPool : profile.types.filter(t => arch.types.includes(t));
   const typeCharacter = pick(stream(seed, 'type'), typePool.length ? typePool : arch.types, avoid.types);
   const nav = pick(stream(seed, 'nav'), arch.navs, avoid.navs);
   let dirPool = profile.directions;
+  // Люкс: сдержанные «галерейные» и глубокие направления; тёмный фон с золотом по-прежнему не по умолчанию.
+  if (project.tier === 'luxury') dirPool = ['gallery-white', 'gallery-black', 'aubergine', 'night-sky', 'warm-paper', 'chestnut'];
+  if (project.tier === 'premium') dirPool = [...new Set([...profile.directions, 'gallery-white', 'aubergine', 'warm-paper'])];
   if (project.palette !== 'auto') {
     const byMode = dirPool.filter(d => DIRECTIONS[d].mode === project.palette);
     dirPool = byMode.length ? byMode : Object.keys(DIRECTIONS).filter(d => DIRECTIONS[d].mode === project.palette);
@@ -125,9 +138,11 @@ function compose(project, profile, ranked, seed, avoid) {
     const sorted = [...dirPool].sort((a, b) => dist(a) - dist(b));
     direction = sorted.find(d => !avoid.directions.includes(d)) || sorted[0];
   } else direction = pick(stream(seed, 'direction'), dirPool, avoid.directions);
-  const shape = pick(stream(seed, 'shape'), arch.shapes, avoid.shapes);
+  const tierShapes = project.tier === 'luxury' ? arch.shapes.filter(x => x !== 'round') : arch.shapes;
+  const shape = pick(stream(seed, 'shape'), tierShapes.length ? tierShapes : arch.shapes, avoid.shapes);
   const motif = pick(stream(seed, 'motif'), profile.motifs);
   const button = primary === 'brutalist' ? 'block'
+    : project.tier === 'luxury' ? pick(stream(seed, 'button'), ['outline', 'underline'])
     : pick(stream(seed, 'button'), primary === 'editorial' || primary === 'storytelling' ? ['solid', 'outline', 'underline'] : ['solid', 'solid', 'outline']);
   return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button };
 }
@@ -283,6 +298,8 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       ? `Архитектура ${arch.name} задана в проекте вручную: ${arch.summary}.`
       : `Выбрана архитектура ${arch.name}: ${arch.summary}. ${capitalize(profile.why)}.`,
     project.architecture.mode === 'family' ? `Выбор ограничен семейством «${project.architecture.family}», заданным в редакторе.` : '',
+    project.tier === 'luxury' ? 'Класс «люкс»: редакционная подача, контрастная антиква, сдержанная палитра, контурные кнопки и много воздуха.' : '',
+    project.tier === 'premium' ? 'Класс «премиум»: авторская типографика и спокойная палитра без перегруза.' : '',
     top && top.reasons.length ? `Сигналы контента: ${top.reasons.join('; ')}.` : '',
     secondary ? `Вспомогательная архитектура — ${secondary.name}: от неё взята подача блоков (${secondary.summary}).` : '',
     actions.length ? 'Композиция скорректирована антишаблонной проверкой — см. uniquenessCheck.' : '',
