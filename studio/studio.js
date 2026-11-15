@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, LEGACY_LABELS, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const $ = sel => document.querySelector(sel);
@@ -25,6 +25,7 @@ const GROUPS = [
   ]],
   ['Архитектура и стиль', true, [
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
+    ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
     ['brandCharacter', 'Характер бренда'],
@@ -87,6 +88,7 @@ function buildForm() {
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
@@ -184,6 +186,12 @@ $('#form').addEventListener('input', e => {
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
+  else if (t.dataset.special === 'brand') {
+    if (t.value) state.raw.brandProfile = t.value; else delete state.raw.brandProfile;
+    // С брендом шрифты по умолчанию веб: обновляем переключатель, чтобы он показывал фактическое значение.
+    const fontsSel = document.querySelector('[data-special="fonts"]');
+    if (fontsSel && !state.raw.fonts) fontsSel.value = normalizeProject(state.raw).fonts;
+  }
   else if (t.dataset.special === 'accent') { state.raw.accent = t.value; state.raw.accentLocked = true; }
   else if (t.dataset.special === 'accent-auto') {
     const color = t.closest('.row').querySelector('[type=color]');

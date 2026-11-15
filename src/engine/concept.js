@@ -2,6 +2,7 @@
 import { ARCHETYPES, BUTTONS, DIRECTIONS, GENERIC_NICHE, LEGACY_FAMILIES, MOTION_LABELS, NAV_LABELS, NICHES, ROLES, SHAPES, TYPES, WEB_FONTS } from './data.js';
 import { contrast, ensureContrast, hexToHsl, hslToHex, mix, readableOn, rgba } from './color.js';
 import { normalizeProject } from './project.js';
+import { BRAND_FONT_WEIGHTS, BRANDS } from './brands.js';
 import { between, hash, pick, stream, uniq } from './util.js';
 
 // ---------- Ниша ----------
@@ -65,10 +66,23 @@ export function buildPalette(directionId, seed, { accent = '' } = {}) {
   const bg = hslToHex(bh, bs, bl);
   const surface = dark ? hslToHex(bh, bs, bl + 5) : bl >= 97 ? hslToHex(bh, Math.min(bs + 4, 30), bl - 3.5) : hslToHex(bh, bs * 0.5, 99);
   const text = hslToHex(bh, Math.min(bs, 22), dark ? 93 : 11);
-  let muted = ensureContrast(mix(text, bg, 0.38), bg, 4.6);
-  muted = ensureContrast(muted, surface, 4.6);
   let ac = accent || hslToHex(...dir.ac.map(range => between(r, range)));
   if (!accent) ac = ensureContrast(ac, bg, 3.1);
+  return finishPalette(dark, bg, surface, text, mix(text, bg, 0.38), ac);
+}
+
+/** Фирменная палитра живого проекта (brands.js). Цвета бренда сохраняются,
+ *  а текст и вторичный текст при необходимости подтягиваются до контраста WCAG. */
+export function buildBrandPalette(brand, { accent = '' } = {}) {
+  const dark = brand.mode === 'dark';
+  let text = ensureContrast(brand.text, brand.bg, 7);
+  text = ensureContrast(text, brand.surface, 4.6);
+  return finishPalette(dark, brand.bg, brand.surface, text, brand.muted, accent || brand.accent);
+}
+
+function finishPalette(dark, bg, surface, text, mutedBase, ac) {
+  let muted = ensureContrast(mutedBase, bg, 4.6);
+  muted = ensureContrast(muted, surface, 4.6);
   let accentText = readableOn(ac, hslToHex(hexToHsl(ac)[0], 30, 8), '#ffffff');
   // На средних по светлоте акцентах тонированный тёмный не дотягивает до 4.5:1 — берём чистый чёрный или белый.
   if (contrast(accentText, ac) < 4.5) accentText = readableOn(ac, '#000000', '#ffffff');
@@ -223,7 +237,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
     ];
     for (const [key, avoidKey, fpKey, label, describe] of soft) {
       if (design[key] !== prev.fingerprint[fpKey]) continue;
-      if (key === 'direction' && project.accent) continue;
+      if (key === 'direction' && (project.accent || project.brandProfile)) continue;
       avoid[avoidKey].push(design[key]);
       const next = compose(project, profile, ranked, seed, avoid);
       if (next[key] !== design[key]) {
@@ -236,7 +250,10 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
 
   const arch = ARCHETYPES[design.primary];
   const type = TYPES[design.typeCharacter];
-  const palette = buildPalette(design.direction, seed, { accent: project.accent });
+  const brand = project.brandProfile ? BRANDS[project.brandProfile] : null;
+  // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
+  const finalPrint = { ...fingerprintOf(design), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
+  const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const order = sectionOrder(project, profile, arch, s);
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
   const itemsVariant = profile.id === 'cafe' ? 'menu'
@@ -273,8 +290,10 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
 
   const container = { compact: 1280, regular: 1200, airy: 1120 }[arch.rhythm];
   const [h1min, h1max] = arch.h1.map(v => Math.round(v * type.k * 100) / 100);
-  const web = project.fonts === 'web' ? WEB_FONTS[design.typeCharacter] : null;
-  const webFonts = web ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
+  // Гарнитуры: у бренда — его собственные, иначе — веб-пара характера типографики (если fonts: "web").
+  const web = brand ? [[brand.display, BRAND_FONT_WEIGHTS[brand.display]], [brand.body, BRAND_FONT_WEIGHTS[brand.body]]]
+    : project.fonts === 'web' ? WEB_FONTS[design.typeCharacter] : null;
+  const webFonts = web && project.fonts === 'web' ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
   const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
   return {
@@ -293,8 +312,12 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       primaryArchetype: design.primary,
       secondaryArchetype: design.secondary,
       selectionRationale: rationale,
-      colorDirection: `${capitalize(DIRECTIONS[design.direction].label)}${project.accent ? ` (акцент задан в проекте: ${project.accent})` : ''}`,
-      typographyDirection: capitalize(type.label) + (web ? `: ${web[0][0]}${web[1][0] !== web[0][0] ? ' и ' + web[1][0] : ''} (Google Fonts)` : ''),
+      colorDirection: brand
+        ? `Фирменная палитра «${brand.name}»: ${brand.note}${project.accent ? ` Акцент переопределён в проекте: ${project.accent}.` : ''}`
+        : `${capitalize(DIRECTIONS[design.direction].label)}${project.accent ? ` (акцент задан в проекте: ${project.accent})` : ''}`,
+      typographyDirection: brand
+        ? `Гарнитуры бренда: ${brand.display}${brand.body !== brand.display ? ' и ' + brand.body : ''}; иерархия — ${type.label}`
+        : capitalize(type.label) + (web ? `: ${web[0][0]}${web[1][0] !== web[0][0] ? ' и ' + web[1][0] : ''} (Google Fonts)` : ''),
       imageDirection: capitalize(profile.image),
       motionDirection: MOTION_LABELS[arch.motion],
     },
@@ -309,15 +332,16 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       templateReuseDetected: unresolved,
       repeatedPatterns: repeated,
       differentiationActions: actions,
-      comparedWith: near.map(n => ({ id: n.id, brand: n.brand || n.id, similarity: similarity(fingerprintOf(design), n.fingerprint) })),
-      fingerprint: fingerprintOf(design),
+      comparedWith: near.map(n => ({ id: n.id, brand: n.brand || n.id, similarity: similarity(finalPrint, n.fingerprint) })),
+      fingerprint: finalPrint,
     },
     visualSystem: {
       nicheId: profile.id, itemsLabel: profile.itemsLabel,
       archetype: design.primary, placement: design.placement, nav: design.nav,
       palette, direction: design.direction,
       typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max },
-      shape: { id: design.shape, ...SHAPES[design.shape] },
+      shape: brand ? { id: design.shape, ...SHAPES[design.shape], ...brand.radius, label: `скругления бренда «${brand.name}»` } : { id: design.shape, ...SHAPES[design.shape] },
+      brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },
       motion: arch.motion, motif: design.motif,

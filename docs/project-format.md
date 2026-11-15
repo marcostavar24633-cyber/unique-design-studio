@@ -23,7 +23,8 @@
 | `secondaryArchitecture` | Точный id вспомогательной архитектуры |
 | `palette` | `Светлая`, `Тёмная` или пусто (подбор по нише) |
 | `accent` | HEX-цвет акцента или пусто |
-| `fonts` | `system` (по умолчанию: системные шрифты, страница без внешних запросов) или `web` (Google Fonts с кириллицей под выбранный характер типографики, системный стек остаётся запасным) |
+| `fonts` | `system` (системные шрифты, страница без внешних запросов) или `web` (Google Fonts с кириллицей, системный стек остаётся запасным). По умолчанию `system`, а при заданном `brandProfile` — `web` |
+| `brandProfile` | Фирменный профиль живого проекта: `slopay-buket`, `penka`, `raki`, `photograf`, `doma-tech`, `hair`, `remont`, `rovno-otdelka` (см. `src/engine/brands.js` и `design-system/projects.md`). Задаёт цвета, гарнитуры и скругления; перекрывает `palette`. `accent` в проекте по-прежнему переопределяет акцент |
 
 Соответствие семейств: `catalog` → catalog, product-first; `editorial` → editorial; `immersive` → immersive; `service` → split-utility, storytelling, minimal; `modular` → modular-grid, asymmetric, brutalist.
 
