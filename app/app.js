@@ -39,6 +39,9 @@ function readForm() {
     audience:values.audience,
     primaryGoal:values.primaryGoal,
     description:values.description,
+    heroTitle:values.heroTitle,
+    ctaLabel:values.ctaLabel,
+    heroAlt:values.heroAlt,
     paletteId:values.paletteId || undefined,
     shapeId:values.shapeId || undefined,
     contentBySection:{}
@@ -147,6 +150,26 @@ function buildSectionEditor(project) {
     const summary = document.createElement("summary");
     summary.textContent = SECTION_LABELS[section.id] || SECTION_LABELS[section.key] || section.title || `Секция ${index + 1}`;
     card.append(summary);
+    const actions = document.createElement("div");
+    actions.className = "section-order-actions";
+    const moveUp = document.createElement("button");
+    moveUp.type = "button";
+    moveUp.textContent = "↑ Выше";
+    moveUp.disabled = index === 0;
+    moveUp.addEventListener("click", () => moveSection(index,-1));
+    const moveDown = document.createElement("button");
+    moveDown.type = "button";
+    moveDown.textContent = "↓ Ниже";
+    moveDown.disabled = index === project.layoutPlan.sections.length - 1;
+    moveDown.addEventListener("click", () => moveSection(index,1));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Удалить";
+    remove.className = "danger-action";
+    remove.disabled = project.layoutPlan.sections.length <= 1;
+    remove.addEventListener("click", () => removeSection(section.id));
+    actions.append(moveUp,moveDown,remove);
+    card.append(actions);
     const content = document.createElement("div");
     content.className = "section-editor-fields";
     content.append(createEditorField(section, "title", "Заголовок"));
@@ -183,10 +206,15 @@ async function generate(event) {
     for (const id of firstProject.concept.homepage.sectionOrder.slice(1)) {
       input.contentBySection[id] = {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
     }
+    input.sectionOrder = [...firstProject.concept.homepage.sectionOrder];
+    input.heroTitle = form.elements.heroTitle.value;
+    input.ctaLabel = form.elements.ctaLabel.value;
+    input.heroAlt = form.elements.heroAlt.value;
     currentInput = input;
     renderCurrentProject();
     buildSectionEditor(currentProject);
-    notice.textContent = "Концепция собрана. Редактируйте секции слева — предпросмотр и HTML обновляются автоматически.";
+    refreshProjectShelf();
+    notice.textContent = "Концепция собрана. Сохраните проект, чтобы вернуться к нему позже.";
     setDevice("desktop");
   } catch (error) {
     notice.textContent = "Не удалось собрать проект: " + error.message;
@@ -208,6 +236,203 @@ function setDevice(device) {
   });
   document.querySelector("#canvas-label").textContent = ({desktop:"DESKTOP · 100%",tablet:"TABLET · 768 PX",mobile:"MOBILE · 390 PX"})[device];
 }
+
+
+const PROJECTS_KEY = "unique-design-studio.projects.v1";
+const MAX_PROJECT_FILE_BYTES = 8 * 1024 * 1024;
+
+function readSavedProjects() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PROJECTS_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function refreshProjectShelf(selectedId = "") {
+  const select = document.querySelector("#saved-projects");
+  const projects = readSavedProjects();
+  select.replaceChildren();
+  if (!projects.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Нет сохранённых проектов";
+    select.append(option);
+  } else {
+    projects.forEach(project => {
+      const option = document.createElement("option");
+      option.value = project.id;
+      option.textContent = project.name + " · " + new Date(project.updatedAt).toLocaleDateString("ru-RU");
+      select.append(option);
+    });
+  }
+  if (selectedId && projects.some(project => project.id === selectedId)) select.value = selectedId;
+  document.querySelector("#load-project").disabled = !projects.length;
+  document.querySelector("#delete-project").disabled = !projects.length;
+  document.querySelector("#export-project").disabled = !currentInput;
+}
+
+function downloadBlob(content, type, filename) {
+  const blob = new Blob([content],{type});
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+
+function projectSnapshot() {
+  if (!currentInput) throw new Error("Сначала создайте или откройте проект.");
+  return {schemaVersion:"1.0.0",savedAt:new Date().toISOString(),input:JSON.parse(JSON.stringify(currentInput))};
+}
+
+function saveProject() {
+  if (!currentInput) {
+    notice.textContent = "Сначала сгенерируйте сайт, затем сохраните проект.";
+    return;
+  }
+  const projects = readSavedProjects();
+  currentInput.projectId ||= (crypto.randomUUID ? crypto.randomUUID() : "project-" + Date.now());
+  const record = {
+    id:currentInput.projectId,
+    name:currentInput.businessName || currentInput.businessType || "Без названия",
+    updatedAt:new Date().toISOString(),
+    snapshot:projectSnapshot()
+  };
+  const index = projects.findIndex(project => project.id === record.id);
+  if (index >= 0) projects[index] = record;
+  else projects.unshift(record);
+  try {
+    localStorage.setItem(PROJECTS_KEY,JSON.stringify(projects));
+    refreshProjectShelf(record.id);
+    notice.textContent = "Проект сохранён локально в этом браузере.";
+  } catch (error) {
+    notice.textContent = "Не удалось сохранить проект в браузере. Экспортируйте JSON: возможно, переполнено локальное хранилище.";
+    console.error(error);
+  }
+}
+
+function validateProjectInput(input) {
+  if (!input || typeof input !== "object" || typeof input.businessType !== "string" || !input.businessType.trim()) {
+    throw new Error("В JSON нет корректного поля businessType.");
+  }
+  if (!input.contentBySection || typeof input.contentBySection !== "object" || Array.isArray(input.contentBySection)) input.contentBySection = {};
+  if (!Array.isArray(input.sectionOrder) || !input.sectionOrder.length || input.sectionOrder.some(id => typeof id !== "string" || !/^[a-z0-9-]{1,80}$/i.test(id))) {
+    throw new Error("В проекте отсутствует корректный порядок секций.");
+  }
+  if (input.sectionOrder.length > 40 || new Set(input.sectionOrder).size !== input.sectionOrder.length) {
+    throw new Error("Список секций содержит дубликаты или превышает лимит 40.");
+  }
+  return input;
+}
+
+function syncFormFromProject(input) {
+  ["businessType","businessName","audience","primaryGoal","description","heroTitle","ctaLabel","heroAlt","paletteId","shapeId"].forEach(name => {
+    if (form.elements[name]) form.elements[name].value = input[name] || "";
+  });
+}
+
+function loadProjectInput(input, id = "") {
+  currentInput = validateProjectInput(input);
+  if (id) currentInput.projectId = id;
+  syncFormFromProject(currentInput);
+  renderCurrentProject();
+  buildSectionEditor(currentProject);
+  refreshProjectShelf(currentInput.projectId || "");
+  notice.textContent = "Проект открыт. Можно продолжать редактирование.";
+}
+
+function moveSection(index, direction) {
+  const order = currentInput.sectionOrder;
+  const target = index + direction;
+  if (target < 0 || target >= order.length) return;
+  [order[index],order[target]] = [order[target],order[index]];
+  renderCurrentProject();
+  buildSectionEditor(currentProject);
+  notice.textContent = "Порядок секций изменён.";
+}
+
+function removeSection(id) {
+  if (currentInput.sectionOrder.length <= 1) return;
+  currentInput.sectionOrder = currentInput.sectionOrder.filter(sectionId => sectionId !== id);
+  renderCurrentProject();
+  buildSectionEditor(currentProject);
+  notice.textContent = "Секция удалена со страницы.";
+}
+
+function addSection() {
+  const id = document.querySelector("#add-section-select").value;
+  if (!id || currentInput.sectionOrder.includes(id)) {
+    notice.textContent = "Эта секция уже добавлена или не выбрана.";
+    return;
+  }
+  currentInput.sectionOrder.push(id);
+  currentInput.contentBySection[id] ||= {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
+  renderCurrentProject();
+  buildSectionEditor(currentProject);
+  notice.textContent = "Секция добавлена в конец страницы.";
+}
+
+function exportProjectJson() {
+  try {
+    const snapshot = projectSnapshot();
+    const filename = (currentInput.businessName || currentInput.businessType).trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".uds.json";
+    downloadBlob(JSON.stringify(snapshot,null,2),"application/json;charset=utf-8",filename);
+    notice.textContent = "JSON-файл проекта подготовлен для скачивания.";
+  } catch (error) {
+    notice.textContent = error.message;
+  }
+}
+
+async function importProjectJson(file) {
+  if (!file) return;
+  if (file.size > MAX_PROJECT_FILE_BYTES) {
+    notice.textContent = "JSON-файл слишком большой. Максимальный размер — 8 МБ.";
+    return;
+  }
+  try {
+    const parsed = JSON.parse(await file.text());
+    loadProjectInput(validateProjectInput(parsed.input || parsed));
+    notice.textContent = "Проект импортирован. Нажмите «Сохранить проект», чтобы добавить его в локальную библиотеку.";
+  } catch (error) {
+    notice.textContent = "Не удалось импортировать проект: " + error.message;
+  }
+}
+
+document.querySelector("#save-project").addEventListener("click",saveProject);
+document.querySelector("#load-project").addEventListener("click",() => {
+  const id = document.querySelector("#saved-projects").value;
+  const record = readSavedProjects().find(project => project.id === id);
+  if (record) loadProjectInput(record.snapshot.input,id);
+});
+document.querySelector("#delete-project").addEventListener("click",() => {
+  const id = document.querySelector("#saved-projects").value;
+  const remaining = readSavedProjects().filter(project => project.id !== id);
+  localStorage.setItem(PROJECTS_KEY,JSON.stringify(remaining));
+  refreshProjectShelf();
+  notice.textContent = "Сохранённая копия удалена из локальной библиотеки.";
+});
+document.querySelector("#export-project").addEventListener("click",exportProjectJson);
+document.querySelector("#import-project").addEventListener("change",event => {
+  importProjectJson(event.target.files?.[0]);
+  event.target.value = "";
+});
+document.querySelector("#add-section").addEventListener("click",addSection);
+const addSectionSelect = document.querySelector("#add-section-select");
+Object.entries(SECTION_LABELS).forEach(([id,label]) => {
+  const option = document.createElement("option");
+  option.value = id;
+  option.textContent = label;
+  addSectionSelect.append(option);
+});
+document.querySelector("#saved-projects").addEventListener("change",event => {
+  const exists = readSavedProjects().some(project => project.id === event.target.value);
+  document.querySelector("#load-project").disabled = !exists;
+  document.querySelector("#delete-project").disabled = !exists;
+});
+refreshProjectShelf();
 
 form.addEventListener("submit",generate);
 deviceButtons.forEach(button => button.addEventListener("click",() => setDevice(button.dataset.device)));
