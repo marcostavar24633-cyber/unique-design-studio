@@ -86,9 +86,9 @@ export function auditSite(html, concept, input) {
 
   // Производительность: статические признаки, не реальные замеры Core Web Vitals.
   const utf8Bytes = new TextEncoder().encode(html).length;
-  const inlineImages = imgs.map(i => i.attrs.src || '').filter(src => /^data:image\\//i.test(src));
+  const inlineImages = imgs.map(i => i.attrs.src || '').filter(src => src.startsWith('data:image/'));
   const inlineBytes = inlineImages.reduce((sum, src) => {
-    const payload = (src.split(',')[1] || '').replace(/\\s/g, '');
+    const payload = (src.split(',')[1] || '').replace(/\s/g, '');
     const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
     return sum + Math.max(0, Math.floor(payload.length * 3 / 4) - padding);
   }, 0);
