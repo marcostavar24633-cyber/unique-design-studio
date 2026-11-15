@@ -62,3 +62,77 @@ export function createZip(entries) {
   for (const part of [...localParts,...centralParts,end]) { output.set(part,offset); offset += part.length; }
   return output;
 }
+
+
+/** Verify the STORE-only ZIP structure and CRC32 checksums before download. */
+export function verifyZipArchive(input, expectedNames = []) {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input || []);
+  const errors = [];
+  const names = [];
+  if (bytes.length < 22) return {valid:false,entries:names,errors:["Archive is too small"]};
+  const view = new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  let offset = 0;
+  const localOffsets = [];
+  while (offset + 4 <= bytes.length && view.getUint32(offset,true) === 0x04034b50) {
+    if (offset + 30 > bytes.length) {
+      errors.push("Truncated local file header");
+      break;
+    }
+    const flags = view.getUint16(offset + 6,true);
+    const method = view.getUint16(offset + 8,true);
+    const crc = view.getUint32(offset + 14,true);
+    const compressedSize = view.getUint32(offset + 18,true);
+    const size = view.getUint32(offset + 22,true);
+    const nameLength = view.getUint16(offset + 26,true);
+    const extraLength = view.getUint16(offset + 28,true);
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + compressedSize;
+    if ((flags & 0x0008) || method !== 0 || compressedSize !== size || dataEnd > bytes.length) {
+      errors.push("Unsupported or truncated local entry");
+      break;
+    }
+    const name = new TextDecoder().decode(bytes.subarray(nameStart,nameStart + nameLength));
+    const data = bytes.subarray(dataStart,dataEnd);
+    if (crc32(data) !== crc) errors.push("CRC32 mismatch: " + name);
+    names.push(name);
+    localOffsets.push(offset);
+    offset = dataEnd;
+  }
+  const centralStart = offset;
+  let centralCount = 0;
+  while (offset + 4 <= bytes.length && view.getUint32(offset,true) === 0x02014b50) {
+    if (offset + 46 > bytes.length) {
+      errors.push("Truncated central directory header");
+      break;
+    }
+    const nameLength = view.getUint16(offset + 28,true);
+    const extraLength = view.getUint16(offset + 30,true);
+    const commentLength = view.getUint16(offset + 32,true);
+    const localOffset = view.getUint32(offset + 42,true);
+    const name = new TextDecoder().decode(bytes.subarray(offset + 46,offset + 46 + nameLength));
+    if (localOffsets[centralCount] !== localOffset || names[centralCount] !== name) {
+      errors.push("Central directory does not match local entry: " + name);
+    }
+    centralCount++;
+    offset += 46 + nameLength + extraLength + commentLength;
+  }
+  if (offset + 22 !== bytes.length || view.getUint32(offset,true) !== 0x06054b50) {
+    errors.push("Missing or malformed end-of-central-directory record");
+  } else {
+    const diskEntries = view.getUint16(offset + 8,true);
+    const totalEntries = view.getUint16(offset + 10,true);
+    const centralSize = view.getUint32(offset + 12,true);
+    const centralOffset = view.getUint32(offset + 16,true);
+    if (diskEntries !== names.length || totalEntries !== names.length || centralCount !== names.length) {
+      errors.push("ZIP entry counts do not match");
+    }
+    if (centralOffset !== centralStart || centralSize !== offset - centralStart) {
+      errors.push("ZIP central directory size or offset is invalid");
+    }
+  }
+  for (const expected of expectedNames) {
+    if (!names.includes(expected)) errors.push("Missing expected entry: " + expected);
+  }
+  return {valid:errors.length === 0,entries:names,errors};
+}
