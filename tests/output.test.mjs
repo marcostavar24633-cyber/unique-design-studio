@@ -105,3 +105,12 @@ test('загруженные фотографии сохраняются в пр
   assert.equal(exported.gallery[0].src, photo);
   assert.equal(exported.services[0][3], photo);
 });
+
+test('отдельные focal points для hero, галереи и карточек применяются на разных ширинах', () => {
+  const r = generate({ ...full, images: { hero: 'data:image/webp;base64,AA==', heroAlt: 'Фото' }, imageArtDirection: { hero: { desktop: { x: 24, y: 36 }, tablet: { x: 50, y: 42 }, mobile: { x: 72, y: 60 } }, services: { 0: { desktop: { x: 35, y: 45 }, mobile: { x: 75, y: 85 } } } } });
+  assert.match(r.html, /--ds-crop-desktop:24% 36%/);
+  assert.match(r.html, /--ds-crop-tablet:50% 42%/);
+  assert.match(r.html, /--ds-crop-mobile:72% 60%/);
+  assert.match(r.html, /object-position:var\\(--ds-crop-mobile/);
+  assert.match(r.html, /--ds-crop-desktop:35% 45%/);
+});

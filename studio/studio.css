@@ -90,3 +90,14 @@ button.wide{width:100%;min-height:44px}
 .image-audit-tip{color:var(--muted)}
 .image-audit-ok{color:var(--success,#15803d)}
 @media(max-width:520px){.image-audit-body{grid-template-columns:1fr}.image-audit-body>img{max-width:220px;max-height:140px}}
+
+/* Smart Crop & Art Direction controls */
+.crop-editor{margin-top:8px;padding:9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.crop-editor summary{cursor:pointer;font-size:12px;font-weight:650}
+.crop-editor__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.crop-editor fieldset{min-width:0;margin:0;padding:7px;border:1px solid var(--line);border-radius:8px}
+.crop-editor legend{font-size:11px;font-weight:650}
+.crop-editor label{display:grid;gap:4px;margin:7px 0;font-size:11px}
+.crop-editor output{font-variant-numeric:tabular-nums;color:var(--accent)}
+.crop-editor input[type=range]{width:100%;min-width:0;padding:0;accent-color:var(--accent)}
+@media(max-width:520px){.crop-editor__grid{grid-template-columns:1fr}}

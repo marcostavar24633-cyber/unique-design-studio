@@ -30,5 +30,9 @@ test('код веб-редактора синтаксически коррект
     "image-audit-warning",
     "image-audit-tip",
     "image-intelligence",
+    "function cropEditor(role, index = 0)",
+    "function writeCrop(role, index, viewport, axis, value)",
+    "data-crop-viewport",
+    "Кадрирование для экранов",
   ]) assert.ok(source.includes(marker), marker);
 });
