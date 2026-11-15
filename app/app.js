@@ -6,6 +6,8 @@ const downloadButton = document.querySelector("#download-html");
 const notice = document.querySelector("#notice");
 const deviceButtons = [...document.querySelectorAll("[data-device]")];
 let latestHtml = "";
+let currentInput = null;
+let currentProject = null;
 
 const SECTION_LABELS = {
   "hero-product":"Главное предложение","featured-products":"Избранные товары","category-navigation":"Категории",
@@ -54,6 +56,69 @@ function readImage(file) {
   });
 }
 
+function renderCurrentProject() {
+  currentProject = createStudioProject(currentInput);
+  latestHtml = currentProject.html;
+  frame.srcdoc = latestHtml;
+  downloadButton.disabled = false;
+  document.querySelector("#preview-title").textContent = currentInput.businessName || currentInput.businessType;
+  document.querySelector("#dna-name").textContent = currentProject.concept.designDNA.primaryArchetypeLabel;
+  document.querySelector("#dna-detail").textContent = [
+    currentProject.visualIdentity.palette.name,
+    currentProject.visualIdentity.typography.display,
+    currentProject.visualIdentity.geometry.id
+  ].join(" · ");
+  document.querySelector("#section-count").textContent = String(currentProject.layoutPlan.sections.length);
+  document.querySelector("#output-status").textContent = "HTML готов";
+  document.querySelector("#output-detail").textContent = "Можно скачать и открыть локально.";
+}
+
+function createEditorField(section, property, labelText, multiline = false) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "section-field";
+  wrapper.append(document.createTextNode(labelText));
+  const control = document.createElement(multiline ? "textarea" : "input");
+  if (multiline) control.rows = property === "points" ? 3 : 2;
+  else control.type = "text";
+  const value = section.content?.[property];
+  control.value = property === "points" && Array.isArray(value)
+    ? value.map(item => typeof item === "string" ? item : item.label || "").join("\n")
+    : (typeof value === "string" ? value : "");
+  control.dataset.sectionId = section.id;
+  control.dataset.property = property;
+  control.addEventListener("input", () => {
+    const target = currentInput.contentBySection[section.id] ||= {};
+    target[property] = property === "points"
+      ? control.value.split("\n").map(item => item.trim()).filter(Boolean)
+      : control.value;
+    renderCurrentProject();
+  });
+  wrapper.append(control);
+  return wrapper;
+}
+
+function buildSectionEditor(project) {
+  const panel = document.querySelector("#section-editor");
+  const fields = document.querySelector("#section-fields");
+  fields.replaceChildren();
+  project.layoutPlan.sections.forEach((section, index) => {
+    const card = document.createElement("details");
+    card.className = "section-editor-card";
+    if (index === 0) card.open = true;
+    const summary = document.createElement("summary");
+    summary.textContent = SECTION_LABELS[section.id] || SECTION_LABELS[section.key] || section.title || `Секция ${index + 1}`;
+    card.append(summary);
+    const content = document.createElement("div");
+    content.className = "section-editor-fields";
+    content.append(createEditorField(section, "title", "Заголовок"));
+    content.append(createEditorField(section, "description", "Описание", true));
+    content.append(createEditorField(section, "points", "Список пунктов — каждый с новой строки", true));
+    card.append(content);
+    fields.append(card);
+  });
+  panel.hidden = false;
+}
+
 async function generate(event) {
   event.preventDefault();
   if (!form.reportValidity()) return;
@@ -76,21 +141,10 @@ async function generate(event) {
     for (const id of firstProject.concept.homepage.sectionOrder.slice(1)) {
       input.contentBySection[id] = {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
     }
-    const project = createStudioProject(input);
-    latestHtml = project.html;
-    frame.srcdoc = latestHtml;
-    downloadButton.disabled = false;
-    document.querySelector("#preview-title").textContent = input.businessName || input.businessType;
-    document.querySelector("#dna-name").textContent = project.concept.designDNA.primaryArchetypeLabel;
-    document.querySelector("#dna-detail").textContent = [
-      project.visualIdentity.palette.name,
-      project.visualIdentity.typography.display,
-      project.visualIdentity.geometry.id
-    ].join(" · ");
-    document.querySelector("#section-count").textContent = String(project.layoutPlan.sections.length);
-    document.querySelector("#output-status").textContent = "HTML готов";
-    document.querySelector("#output-detail").textContent = "Можно скачать и открыть локально.";
-    notice.textContent = "Концепция собрана локально. Тексты секций, реальные изображения, контакты и обработчик форм требуют заполнения перед публикацией.";
+    currentInput = input;
+    renderCurrentProject();
+    buildSectionEditor(currentProject);
+    notice.textContent = "Концепция собрана. Редактируйте секции слева — предпросмотр и HTML обновляются автоматически.";
     setDevice("desktop");
   } catch (error) {
     notice.textContent = "Не удалось собрать проект: " + error.message;
