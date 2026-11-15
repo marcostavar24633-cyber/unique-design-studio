@@ -46,3 +46,12 @@ test("provides responsive component CSS and focus styles", () => {
   assert.match(css,/prefers-reduced-motion/);
   assert.match(css,/min-height: 48px/);
 });
+
+test("embeds safe raster data images but rejects SVG data images", () => {
+  const safePlan = {shell:"focused",sections:[{id:"hero",key:"hero",component:"product-hero",content:{title:"Фото",image:{src:"data:image/png;base64,iVBORw0KGgo=",alt:"Загруженное фото"}}}]};
+  const safeHtml = renderHtmlPage({layoutPlan:safePlan});
+  assert.match(safeHtml,/src="data:image\/png;base64,iVBORw0KGgo="/);
+  const unsafePlan = {shell:"focused",sections:[{id:"hero",key:"hero",component:"product-hero",content:{title:"Фото",image:{src:"data:image\/svg+xml;base64,PHN2Zy8+",alt:"bad"}}}]};
+  const unsafeHtml = renderHtmlPage({layoutPlan:unsafePlan});
+  assert.doesNotMatch(unsafeHtml,/data:image\/svg\+xml/);
+});
