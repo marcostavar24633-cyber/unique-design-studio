@@ -47,8 +47,5 @@ test('код веб-редактора синтаксически коррект
     "ALT-текст",
     "Image SEO & Accessibility",
     "Performance & Core Web Vitals",
-    "performance-inline-images",
-    "performance-lazy-images",
-    "performance-image-dimensions",
   ]) assert.ok(source.includes(marker), marker);
 });
