@@ -1,7 +1,7 @@
 import { createStudioProject } from "../src/studio-pipeline.js";
 import { createHistoryManager } from "../src/history-manager.js";
-import { createZip } from "../src/zip-export.js";
-import { auditSiteHtml } from "../src/site-audit.js";
+import { createZip, verifyZipArchive } from "../src/zip-export.js";
+import { assessExportReadiness } from "../src/export-readiness.js";
 
 const form = document.querySelector("#project-form");
 const frame = document.querySelector("#preview-frame");
@@ -11,6 +11,7 @@ const deviceButtons = [...document.querySelectorAll("[data-device]")];
 let latestHtml = "";
 let currentInput = null;
 let currentProject = null;
+let currentExportReady = false;
 const projectHistory = createHistoryManager(20);
 let historyEditSnapshot = null;
 
@@ -125,8 +126,6 @@ function renderCurrentProject() {
   currentProject = createStudioProject(currentInput);
   latestHtml = currentProject.html;
   frame.srcdoc = latestHtml;
-  downloadButton.disabled = false;
-  document.querySelector("#download-zip").disabled = false;
   document.querySelector("#preview-title").textContent = currentInput.businessName || currentInput.businessType;
   document.querySelector("#dna-name").textContent = currentProject.concept.designDNA.primaryArchetypeLabel;
   document.querySelector("#dna-detail").textContent = [
@@ -135,9 +134,15 @@ function renderCurrentProject() {
     currentProject.visualIdentity.geometry.id
   ].join(" · ");
   document.querySelector("#section-count").textContent = String(currentProject.layoutPlan.sections.length);
-  document.querySelector("#output-status").textContent = "HTML готов";
-  document.querySelector("#output-detail").textContent = "Можно скачать и открыть локально.";
-  renderAuditReport(auditSiteHtml(latestHtml,currentProject.css));
+  const readiness = assessExportReadiness(latestHtml,currentProject.css);
+  currentExportReady = readiness.ready;
+  downloadButton.disabled = !currentExportReady;
+  document.querySelector("#download-zip").disabled = !currentExportReady;
+  document.querySelector("#output-status").textContent = currentExportReady ? "Готов к экспорту" : "Экспорт заблокирован";
+  document.querySelector("#output-detail").textContent = currentExportReady
+    ? (readiness.warnings ? "Можно скачать; есть " + readiness.warnings + " предупреждений." : "Критических ошибок нет. HTML и ZIP доступны.")
+    : "Критических ошибок: " + readiness.errors + ". Исправьте их перед скачиванием.";
+  renderAuditReport(readiness.report);
 }
 
 function renderAuditReport(report) {
@@ -626,7 +631,7 @@ function refreshProjectShelf(selectedId = "") {
   document.querySelector("#load-project").disabled = !projects.length;
   document.querySelector("#delete-project").disabled = !projects.length;
   document.querySelector("#export-project").disabled = !currentInput;
-  document.querySelector("#download-zip").disabled = !currentInput;
+  document.querySelector("#download-zip").disabled = !currentInput || !currentExportReady;
 }
 
 function downloadBlob(content, type, filename) {
@@ -639,8 +644,30 @@ function downloadBlob(content, type, filename) {
   setTimeout(() => URL.revokeObjectURL(url),1000);
 }
 
+function ensureExportReady() {
+  if (!currentInput) {
+    notice.textContent = "Сначала создайте или откройте проект.";
+    return false;
+  }
+  try {
+    // Rebuild from the latest editable project state and re-run the gate for every download.
+    renderCurrentProject();
+    return currentExportReady;
+  } catch (error) {
+    currentExportReady = false;
+    downloadButton.disabled = true;
+    document.querySelector("#download-zip").disabled = true;
+    notice.textContent = "Не удалось проверить экспорт: " + error.message;
+    return false;
+  }
+}
+
 function exportProjectZip() {
-  if (!latestHtml || !currentInput) return;
+  if (!ensureExportReady()) {
+    const report = assessExportReadiness(latestHtml,currentProject?.css || "");
+    notice.textContent = "Скачивание ZIP заблокировано: критических ошибок — " + report.errors + ". Исправьте ошибки в отчёте аудита.";
+    return;
+  }
   const instructions = [
     "UNIQUE DESIGN STUDIO — ЭКСПОРТ САЙТА",
     "",
@@ -652,13 +679,19 @@ function exportProjectZip() {
     "",
     "Для публикации загрузите index.html на выбранный статический хостинг."
   ].join("\n");
-  const archive = createZip([
-    {name:"index.html",content:latestHtml},
-    {name:"README.txt",content:instructions}
-  ]);
-  const filename = (currentInput.businessName || currentInput.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".zip";
-  downloadBlob(archive,"application/zip",filename);
-  notice.textContent = "ZIP-архив сайта подготовлен: index.html и инструкция README.txt.";
+  try {
+    const archive = createZip([
+      {name:"index.html",content:latestHtml},
+      {name:"README.txt",content:instructions}
+    ]);
+    const integrity = verifyZipArchive(archive,["index.html","README.txt"]);
+    if (!integrity.valid) throw new Error(integrity.errors.join("; "));
+    const filename = (currentInput.businessName || currentInput.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".zip";
+    downloadBlob(archive,"application/zip",filename);
+    notice.textContent = "ZIP проверен: index.html и README.txt на месте, структура и CRC32 корректны.";
+  } catch (error) {
+    notice.textContent = "ZIP не скачан: проверка целостности не пройдена. " + error.message;
+  }
 }
 
 function projectSnapshot() {
@@ -824,7 +857,12 @@ form.addEventListener("submit",generate);
 deviceButtons.forEach(button => button.addEventListener("click",() => setDevice(button.dataset.device)));
 document.querySelector("#download-zip").addEventListener("click",exportProjectZip);
 downloadButton.addEventListener("click",() => {
-  if (!latestHtml) return;
-  const filename = (currentInput?.businessName || currentInput?.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".html";
+  if (!ensureExportReady()) {
+    const report = assessExportReadiness(latestHtml,currentProject?.css || "");
+    notice.textContent = "Скачивание HTML заблокировано: критических ошибок — " + report.errors + ". Исправьте ошибки в отчёте аудита.";
+    return;
+  }
+  const filename = (currentInput.businessName || currentInput.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".html";
   downloadBlob(latestHtml,"text/html;charset=utf-8",filename);
+  notice.textContent = "HTML проверен и подготовлен к скачиванию.";
 });
