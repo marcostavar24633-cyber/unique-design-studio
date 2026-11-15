@@ -20,7 +20,13 @@
         <label>Название проекта<input name="businessName" value="Astro" placeholder="Название бренда"></label>
         <label>Целевая аудитория<input name="audience" value="начинающие астрономы и любители наблюдений" placeholder="Для кого сайт"></label>
         <label>Главная цель<select name="primaryGoal"><option value="purchase">Продажа товаров</option><option value="booking">Запись / бронирование</option><option value="portfolio">Портфолио</option><option value="lead" selected>Получение заявок</option><option value="inform">Информирование</option></select></label>
+        <label>Заголовок первого экрана<input name="heroTitle" value="Откройте Вселенную ближе" placeholder="Главный заголовок"></label>
         <label>Краткое описание<textarea name="description" rows="3" placeholder="Опишите предложение компании">Подберите оптику для наблюдений — от первого телескопа до оборудования для опытных любителей.</textarea></label>
+        <div class="field-row">
+          <label>Текст кнопки<input name="ctaLabel" value="Выбрать телескоп"></label>
+          <label>Alt изображения<input name="heroAlt" value="Телескоп для наблюдений" placeholder="Описание фото"></label>
+        </div>
+        <label class="upload-field">Изображение первого экрана<input name="heroImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><small>PNG, JPG, WebP или GIF · до 2 МБ. Изображение будет встроено в HTML.</small></label>
         <div class="field-row">
           <label>Палитра<select name="paletteId"><option value="">Автоматически</option><option value="porcelain-ink">Porcelain & Ink</option><option value="carbon-lime">Carbon & Lime</option><option value="technical-blue">Technical Blue</option><option value="terracotta-cream">Terracotta & Cream</option><option value="cocoa-rose">Cocoa & Rose</option><option value="warm-gallery">Warm Gallery</option><option value="midnight-cinema">Midnight Cinema</option><option value="deep-ocean">Deep Ocean</option><option value="signal-red">Signal Red</option><option value="acid-black">Acid Black</option><option value="stone-monochrome">Stone Monochrome</option><option value="soft-lilac">Soft Lilac</option><option value="forest-night">Forest Night</option><option value="electric-paper">Electric Paper</option><option value="gallery-noir">Gallery Noir</option></select></label>
           <label>Форма<select name="shapeId"><option value="">Автоматически</option><option value="soft-geometry">Мягкая</option><option value="hard-editorial">Редакционная</option><option value="organic">Органическая</option><option value="technical">Техническая</option><option value="brutal">Бруталистская</option></select></label>
