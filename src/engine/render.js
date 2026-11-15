@@ -48,8 +48,15 @@ const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${e
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
 const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>`;
 
+function artStyle(p, role, index = 0) {
+  const root = p.passthrough?.imageArtDirection || {};
+  const entry = role === 'hero' ? root.hero : root[role]?.[index];
+  const point = key => { const v = entry && entry[key] || {}; const x = Math.max(0, Math.min(100, Number(v.x) || 50)); const y = Math.max(0, Math.min(100, Number(v.y) || 50)); return x + '% ' + y + '%'; };
+  return 'class="ds-media ds-art" style="--ds-crop-desktop:' + point('desktop') + ';--ds-crop-tablet:' + point('tablet') + ';--ds-crop-mobile:' + point('mobile') + '"';
+}
+
 function visual(c, variant = 0) {
-  if (c.p.images.hero && !variant) return `<img class="ds-media" src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
+  if (c.p.images.hero && !variant) return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
   return motifSvg(c.vs, variant);
 }
 
@@ -146,7 +153,7 @@ const SECTION = {
   items(c) {
     const v = c.vs.variants.items;
     const li = c.p.services.map((i, n) => {
-      const media = i.image ? `<div class="item__media"><img class="ds-media" src="${esc(i.image)}" alt="${esc(i.title)}" loading="lazy" decoding="async"></div>` : '';
+      const media = i.image ? `<div class="item__media"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.title)}" loading="lazy" decoding="async"></div>` : '';
       return `<li class="item" id="item-${n}" data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}</div></li>`;
     }).join('');
     return wrap(c, 'items', `<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);
@@ -160,7 +167,7 @@ const SECTION = {
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
   gallery(c) {
-    const li = c.p.gallery.map(g => `<li data-reveal><figure><img src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure></li>`).join('');
+    const li = c.p.gallery.map(g => `<li data-reveal><figure><img ${artStyle(c.p, "gallery", c.p.gallery.indexOf(g))} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure></li>`).join('');
     return wrap(c, 'gallery', `<ul class="gallery" role="list">${li}</ul>`);
   },
   faq(c) {
@@ -204,6 +211,7 @@ export function renderCss(concept) {
   const used = concept.homepage.sectionOrder;
   return [
     CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype],
+    '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
