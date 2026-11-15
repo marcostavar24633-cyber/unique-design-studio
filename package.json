@@ -1,0 +1,12 @@
+{
+  "name": "unique-design-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Генератор уникальных главных страниц: Design Brief, Design DNA, антишаблонная проверка, HTML и экспорт в Landing Studio",
+  "main": "engine/design-engine.js",
+  "scripts": {
+    "test": "node --test tests/",
+    "examples": "node scripts/build-examples.cjs"
+  },
+  "engines": { "node": ">=18" }
+}

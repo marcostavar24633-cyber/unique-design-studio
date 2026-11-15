@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ПЕНКА — Кофейня / заведение</title>
+<meta name="description" content="ПЕНКА — кофейня / заведение. Посмотреть меню и прийти или заказать навынос — за несколько шагов.">
+<meta name="generator" content="Unique Design Engine · Modular Grid">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#f7f5f3;--surface:#ffffff;--text:#241d14;--muted:#655c53;--accent:#8f622d;--accent-text:#ffffff;--line:#dcd7d0;--soft:#ece6df;--r:20px;--f-display:"Jost",Georgia,serif;--f-body:"Jost",system-ui,sans-serif;--gutter:clamp(16px,4vw,56px);--ease:cubic-bezier(.2,.75,.2,1);color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 17px/1.6 var(--f-body);overflow-x:hidden}
+img{max-width:100%;display:block}
+h1,h2,h3{font-family:var(--f-display);line-height:1.08;margin:0;text-wrap:balance;font-weight:600;overflow-wrap:break-word;hyphens:auto}
+.hero>*{min-width:0}
+h2{font-size:clamp(28px,4.4vw,48px)}
+h3{font-size:20px;line-height:1.25}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.skip{position:absolute;left:8px;top:-60px;background:var(--accent);color:var(--accent-text);padding:10px 14px;z-index:100;border-radius:6px}
+.skip:focus{top:8px}
+.wrap{width:min(1200px,100%);margin-inline:auto;padding-inline:var(--gutter)}
+.eyebrow{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lead{font-size:clamp(18px,2vw,21px);color:var(--muted);max-width:60ch}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 24px;background:var(--accent);color:var(--accent-text);border:2px solid var(--accent);border-radius:var(--r);font:600 16px/1.2 var(--f-body);text-decoration:none;cursor:pointer;transition:transform .18s var(--ease)}
+.btn:hover{transform:translateY(-2px)}
+.btn--ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.tbd{color:var(--muted);font-style:italic}
+.ph{position:relative;background:linear-gradient(135deg,var(--soft),var(--surface));border:1px solid var(--line);border-radius:var(--r);display:flex;align-items:flex-end;padding:14px;min-height:160px;overflow:hidden}
+.ph span{font-size:13px;color:var(--muted);background:var(--surface);padding:4px 8px;border-radius:4px;position:relative}
+.ph::before{content:"";position:absolute;inset:18% 22%;border:1px solid var(--line);border-radius:calc(var(--r) + 40px)}
+section.s{padding-block:clamp(56px,8vw,112px)}
+.s-head{display:grid;gap:12px;margin-bottom:clamp(28px,4vw,48px);max-width:720px}
+.grid{display:grid;gap:clamp(14px,2vw,24px);grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:24px;display:grid;gap:8px;align-content:start;min-width:0}
+.card p{color:var(--muted)}
+.steps{counter-reset:st;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));list-style:none;padding:0;margin:0}
+.steps li{counter-increment:st;border-top:2px solid var(--text);padding-top:16px;display:grid;gap:6px}
+.steps li::before{content:counter(st,decimal-leading-zero);font:600 14px var(--f-body);color:var(--accent)}
+.steps p{color:var(--muted)}
+.faq details{border-bottom:1px solid var(--line);padding:18px 0}
+.faq summary{cursor:pointer;font-weight:600;font-size:18px;list-style-position:outside}
+.faq details p{margin-top:10px;color:var(--muted)}
+.proof{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.proof li{display:flex;gap:12px;align-items:baseline}
+.proof li::before{content:"";flex:none;width:10px;height:10px;border:2px solid var(--accent);border-radius:2px;transform:translateY(-1px)}
+.contact{display:grid;gap:32px;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start}
+form.f{display:grid;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,3vw,32px)}
+.f label{display:grid;gap:6px;font-size:14px;font-weight:600}
+.f input,.f textarea,.f select{width:100%;min-height:48px;padding:12px 14px;border:1px solid var(--line);border-radius:calc(var(--r) / 2);background:var(--bg);color:var(--text);font:inherit}
+.f .note{font-size:13px;color:var(--muted)}
+.f [role=status]{font-size:14px;color:var(--text);min-height:1.2em}
+.story{display:grid;gap:clamp(28px,5vw,64px)}
+.story article{display:grid;gap:10px;max-width:640px}
+.story article:nth-child(even){margin-left:auto}
+.story p{color:var(--muted)}
+footer.ft{border-top:1px solid var(--line);padding-block:28px;color:var(--muted);font-size:14px}
+footer.ft .wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+.nav-toggle{display:none}
+.reveal-ready .rv{opacity:0;transform:translateY(16px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.reveal-ready .rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal-ready .rv{opacity:1;transform:none}}
+.top .wrap{display:flex;align-items:center;gap:20px;min-height:68px;position:relative}
+.logo{font:700 20px var(--f-display);text-decoration:none;margin-right:auto}
+.nav-links{display:flex;gap:8px}.nav-links a{text-decoration:none;font-size:14px;border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(150px,auto);gap:14px;padding-block:clamp(18px,3vw,32px) clamp(48px,6vw,80px)}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,2.4vw,28px);display:grid;align-content:space-between;gap:12px;text-decoration:none;transition:transform .25s var(--ease);min-width:0}
+a.tile:hover{transform:translateY(-4px)}
+.tile.main{grid-column:span 2;grid-row:span 2;background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.tile.main h1{font-size:clamp(32px,4.4vw,60px)}
+.tile.main .btn{background:var(--accent-text);color:var(--accent);border-color:var(--accent-text);justify-self:start}
+.tile.ph{min-height:0}
+.tile b{font:600 20px var(--f-display)}.tile small{color:var(--muted)}
+.hero.mir .tile.main{grid-column:3/5;grid-row:1/3}
+@media (max-width:860px){.hero{grid-template-columns:1fr 1fr}.hero.mir .tile.main,.tile.main{grid-column:1/-1;grid-row:auto}}
+@media (max-width:420px){.hero{grid-template-columns:1fr}}
+@media (max-width:760px){.nav-links{display:none!important}.nav-open .nav-links{display:flex!important;flex-direction:column;writing-mode:horizontal-tb;transform:none;position:absolute;left:0;right:0;top:100%;background:var(--bg);padding:16px var(--gutter);border-bottom:1px solid var(--line);z-index:40;gap:14px}.nav-open .nav-links a{border:0;padding:6px 0}.nav-toggle{display:inline-flex;min-height:40px;padding:8px 14px}.top .wrap,.side,.mast .wrap{position:relative}}
+</style>
+</head>
+<body class="arch-modular-grid">
+<a class="skip" href="#main">Перейти к содержанию</a>
+<header class="top"><div class="wrap"><a class="logo" href="#top">ПЕНКА</a><nav class="nav-links" id="nav" aria-label="Основная навигация"><a href="#items">Каталог</a><a href="#gallery">Работы</a><a href="#value">Почему мы</a><a href="#visit">Как добраться</a><a href="#contact">Контакты</a></nav><button class="btn btn--ghost nav-toggle" type="button" aria-expanded="false" aria-controls="nav">Меню</button></div></header>
+<main id="main"><section class="wrap hero" id="top"><div class="tile main"><p class="eyebrow" style="color:inherit">Кофейня / заведение</p><h1>Кофе и выпечка по соседству</h1><p>ПЕНКА — кофейня / заведение. Посмотреть меню и прийти или заказать навынос — за несколько шагов.</p><a class="btn" href="#contact">Посмотреть меню</a></div>
+<a class="tile" href="#items"><b>Эспрессо-напитки</b><small>Классика на зерне обжарки, которую вы выберете</small></a><a class="tile" href="#items"><b>Альтернатива</b><small>Фильтр, воронка, аэропресс</small></a><a class="tile" href="#items"><b>Выпечка</b><small>Свежая каждый день</small></a><div class="tile ph" role="img" aria-label="Место для фото"><span>Фото: Эспрессо-напитки</span></div></section>
+<section class="s rv" id="items"><div class="wrap"><div class="s-head"><p class="eyebrow">Кофейня / заведение</p><h2>Меню</h2></div><div class="grid"><article class="card"><h3>Эспрессо-напитки</h3><p>Классика на зерне обжарки, которую вы выберете</p><p class="tbd">Цена — уточнить</p></article><article class="card"><h3>Альтернатива</h3><p>Фильтр, воронка, аэропресс</p><p class="tbd">Цена — уточнить</p></article><article class="card"><h3>Выпечка</h3><p>Свежая каждый день</p><p class="tbd">Цена — уточнить</p></article><article class="card"><h3>Завтраки</h3><p>Если есть кухня — уточнить состав</p><p class="tbd">Цена — уточнить</p></article></div></div></section>
+<section class="s rv" id="gallery"><div class="wrap"><div class="s-head"><p class="eyebrow">Работы</p><h2>Примеры</h2><p class="lead">Замените заглушки реальными фото — это главное доказательство качества.</p></div><div class="grid"><div class="ph" role="img" aria-label="Место для фото: Эспрессо-напитки" style="min-height:260px"><span>Фото: Эспрессо-напитки</span></div><div class="ph" role="img" aria-label="Место для фото: Альтернатива" style="min-height:260px"><span>Фото: Альтернатива</span></div><div class="ph" role="img" aria-label="Место для фото: Выпечка" style="min-height:260px"><span>Фото: Выпечка</span></div><div class="ph" role="img" aria-label="Место для фото: Завтраки" style="min-height:260px"><span>Фото: Завтраки</span></div></div></div></section>
+<section class="s rv" id="value"><div class="wrap"><div class="s-head"><p class="eyebrow">Почему выбирают</p><h2>Что важно знать до заказа</h2></div><div class="grid"><article class="card"><h3>Понятно до заказа</h3><p>Состав, сроки и условия описаны заранее — уточните их у владельца и замените этот текст.</p></article><article class="card"><h3>Реальные примеры</h3><p>Здесь должны быть ваши настоящие фото и работы, а не стоковые изображения.</p></article><article class="card"><h3>Удобная связь</h3><p>Ответ в мессенджере или по телефону — укажите реальные контакты.</p></article></div></div></section>
+<section class="s rv" id="visit"><div class="wrap"><div class="s-head"><p class="eyebrow">Визит</p><h2>Как нас найти</h2></div><ul class="proof"><li class="tbd">Адрес — уточнить</li><li class="tbd">Часы работы — уточнить</li><li class="tbd">Как добраться — уточнить</li></ul></div></section>
+<section class="s rv" id="faq"><div class="wrap"><div class="s-head"><p class="eyebrow">Вопросы</p><h2>Частые вопросы</h2></div><div class="faq"><details><summary>Сколько это стоит?</summary><p>Стоимость — уточнить у владельца. Генератор не придумывает цены.</p></details><details><summary>Какие сроки?</summary><p>Сроки зависят от задачи — указать реальные.</p></details><details><summary>Как оплатить?</summary><p>Способы оплаты — уточнить.</p></details><details><summary>Где вы находитесь?</summary><p>Адрес и зона работы — уточнить.</p></details></div></div></section>
+<section class="s rv" id="contact"><div class="wrap"><div class="contact"><div class="s-head"><p class="eyebrow">Связь</p><h2>Посмотреть меню</h2><p class="lead">Оставьте контакт — ответим удобным способом. Телефон, мессенджер и адрес владельца — <span class="tbd">уточнить</span>.</p></div>
+<form class="f" data-lead novalidate><label for="lead-name">Имя<input id="lead-name" name="name" autocomplete="name" required></label><label for="lead-phone">Телефон или мессенджер<input id="lead-phone" name="phone" autocomplete="tel" required></label><label for="lead-msg">Комментарий<textarea id="lead-msg" name="msg" rows="3"></textarea></label><button class="btn" type="submit">Посмотреть меню</button><p class="note">Нажимая кнопку, вы соглашаетесь на обработку персональных данных — текст согласия уточнить.</p><p role="status" aria-live="polite"></p></form></div></div></section>
+</main>
+<footer class="ft"><div class="wrap"><span>© ПЕНКА</span><span>Реквизиты и политика конфиденциальности — уточнить</span></div></footer>
+<script>(function(){var d=document;var t=d.querySelector('.nav-toggle');if(t){t.addEventListener('click',function(){var o=d.body.classList.toggle('nav-open');t.setAttribute('aria-expanded',o)})}
+d.querySelectorAll('.nav-links a').forEach(function(a){a.addEventListener('click',function(){d.body.classList.remove('nav-open');t&&t.setAttribute('aria-expanded','false')})});
+var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;if('IntersectionObserver' in window&&!rm){d.documentElement.classList.add('reveal-ready');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -10% 0px'});d.querySelectorAll('.rv').forEach(function(s){io.observe(s)})}
+var rail=d.querySelectorAll('.rail a');if(rail.length&&'IntersectionObserver' in window){var ro=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){rail.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id)})}})},{threshold:.4});rail.forEach(function(a){var s=d.querySelector(a.getAttribute('href'));s&&ro.observe(s)})}
+var pick='';d.querySelectorAll('[data-pick] input').forEach(function(i){if(i.checked)pick=i.value;i.addEventListener('change',function(){pick=i.value})});
+var s=d.querySelector('[data-search]');s&&s.addEventListener('submit',function(e){e.preventDefault();location.hash='items'});
+var f=d.querySelector('[data-lead]');f&&f.addEventListener('submit',function(e){e.preventDefault();var st=f.querySelector('[role=status]');var n=f.elements.name.value.trim(),p=f.elements.phone.value.trim();if(!n||!p){st.textContent='Укажите имя и телефон или мессенджер.';(n?f.elements.phone:f.elements.name).focus();return}st.textContent='Заявка подготовлена'+(pick?' («'+pick+'»)':'')+'. Подключите отправку в мессенджер или почту владельца — генератор не отправляет данные.'})})();</script>
+</body>
+</html>

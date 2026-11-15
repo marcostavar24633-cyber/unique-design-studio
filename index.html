@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unique Design Studio</title>
+<meta name="description" content="Генератор уникальных главных страниц: Design Brief, Design DNA, антишаблонная проверка и готовый HTML.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Рабочий стол студии: слева бриф и концепция, справа живое превью с переключением ширины. */
+:root{--bg:#f2f1ee;--panel:#ffffff;--ink:#16181d;--muted:#5b5f69;--line:#dcdad4;--accent:#3b3bd6;--accent-ink:#ffffff;--ok:#1d7a4c;--warn:#a6461d;--soft:#e8e7fb;
+--f-display:"Unbounded",system-ui,sans-serif;--f-body:"Onest",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#121318;--panel:#1b1c23;--ink:#ecebf3;--muted:#a3a5b3;--line:#2e2f3a;--accent:#9d9dff;--accent-ink:#121318;--ok:#5fcf95;--warn:#f0956b;--soft:#25264a;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header.app{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 20px;padding:18px max(16px,3vw);border-bottom:1px solid var(--line)}
+header.app h1{font:700 18px var(--f-display);letter-spacing:.02em;margin:0}
+header.app p{margin:0;color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);min-height:calc(100vh - 62px)}
+.side{border-right:1px solid var(--line);padding:20px max(16px,2vw);display:grid;gap:22px;align-content:start;overflow:auto;max-height:calc(100vh - 62px)}
+.stage{display:grid;grid-template-rows:auto 1fr;min-width:0}
+form{display:grid;gap:12px}
+label{display:grid;gap:5px;font-size:13px;font-weight:600}
+input,select,textarea{width:100%;min-height:42px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;font-weight:400}
+textarea{min-height:70px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:9px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 14px var(--f-body);cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+h2{font:500 13px var(--f-display);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px;color:var(--muted)}
+.arch{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:8px}
+.arch .name{font:700 20px/1.2 var(--f-display)}
+.arch .why{color:var(--muted)}
+dl.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted)}dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:6px;border:1px solid var(--line)}
+ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+ul.checks li{display:flex;gap:8px;align-items:baseline}
+.pill{font:500 11px var(--f-mono);padding:2px 7px;border-radius:99px;flex:none}
+.pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.pill.no{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.hist{display:grid;gap:6px;font-size:13px}
+.hist button{all:unset;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.hist button[aria-current="true"]{border-color:var(--accent)}
+.hist small{color:var(--muted);font-family:var(--f-mono)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px max(16px,2vw);border-bottom:1px solid var(--line)}
+.toolbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.toolbar .seg button{border:0;background:transparent;color:var(--ink);padding:8px 12px;font:500 13px var(--f-body);cursor:pointer}
+.toolbar .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.toolbar .sp{flex:1}
+.canvas{background:repeating-linear-gradient(45deg,transparent 0 10px,color-mix(in srgb,var(--line) 40%,transparent) 10px 11px);display:flex;justify-content:center;padding:16px;overflow:auto}
+iframe{border:1px solid var(--line);border-radius:10px;background:#fff;width:100%;height:100%;min-height:600px;transition:width .25s}
+pre{font:12px/1.5 var(--f-mono);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;max-height:320px;margin:0}
+details summary{cursor:pointer;font-weight:600;margin-bottom:8px}
+.note{font-size:13px;color:var(--muted)}
+[role=status]{font-size:13px;color:var(--ok);min-height:1em}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line);max-height:none}iframe{min-height:560px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="app"><h1>UNIQUE DESIGN STUDIO</h1><p>Бриф → ДНК дизайна → проверка на шаблонность → самостоятельная главная страница</p></header>
+<div class="layout">
+<aside class="side">
+  <section>
+    <h2>Бриф</h2>
+    <form id="brief">
+      <label for="f-brand">Бренд<input id="f-brand" name="brand" required value="Слопай букет"></label>
+      <label for="f-desc">Чем занимается бизнес<textarea id="f-desc" name="description" required>Съедобные букеты из ягод, мяса, раков и сладостей на заказ</textarea></label>
+      <div class="row2">
+        <label for="f-city">Город<input id="f-city" name="city" placeholder="необязательно" value="Ульяновск"></label>
+        <label for="f-tone">Тон
+          <select id="f-tone" name="tone"></select></label>
+      </div>
+      <label for="f-arch">Архитектура главной страницы
+        <select id="f-arch" name="architecture"></select></label>
+      <details><summary>Уточнить аудиторию и цель</summary>
+        <div style="display:grid;gap:12px">
+          <label for="f-aud">Аудитория<input id="f-aud" name="audience" placeholder="по умолчанию — гипотеза по нише"></label>
+          <label for="f-goal">Главное действие<input id="f-goal" name="goal" placeholder="например: заказать к дате"></label>
+          <label for="f-cta">Текст главной кнопки<input id="f-cta" name="cta" placeholder="например: Выбрать букет"></label>
+        </div>
+      </details>
+      <div class="btns"><button class="btn" type="submit">Собрать концепцию</button><button class="btn ghost" type="button" id="demo">Демо: 10 ниш подряд</button></div>
+      <p class="note">Каждая новая концепция сверяется с предыдущей: соседние проекты не получат одинаковый первый экран.</p>
+    </form>
+  </section>
+
+  <section id="out" hidden>
+    <h2>Design DNA</h2>
+    <div class="arch">
+      <div class="name" id="o-arch"></div>
+      <div class="why" id="o-why"></div>
+      <dl class="kv">
+        <dt>Hero</dt><dd id="o-hero"></dd>
+        <dt>Навигация</dt><dd id="o-nav"></dd>
+        <dt>Вторичная</dt><dd id="o-sec"></dd>
+        <dt>Шрифты</dt><dd id="o-type"></dd>
+        <dt>Палитра</dt><dd><div class="swatches" id="o-sw"></div></dd>
+        <dt>Секции</dt><dd id="o-order"></dd>
+        <dt>Визуал</dt><dd id="o-img"></dd>
+        <dt>Движение</dt><dd id="o-motion"></dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="out-check" hidden>
+    <h2>Проверка перед выдачей</h2>
+    <ul class="checks" id="o-checks"></ul>
+    <div id="o-uniq" style="margin-top:12px"></div>
+  </section>
+
+  <section id="out-brief" hidden>
+    <h2>Design Brief</h2>
+    <dl class="kv">
+      <dt>Бизнес</dt><dd id="b-type"></dd>
+      <dt>Аудитория</dt><dd id="b-aud"></dd>
+      <dt>Цель</dt><dd id="b-goal"></dd>
+      <dt>Характер</dt><dd id="b-char"></dd>
+      <dt>Приоритет</dt><dd id="b-prio"></dd>
+    </dl>
+    <p class="note" style="margin-top:10px"><b>Гипотезы:</b></p>
+    <ul class="note" id="b-ass" style="margin:4px 0 0;padding-left:18px"></ul>
+  </section>
+
+  <section id="out-export" hidden>
+    <h2>Экспорт</h2>
+    <div class="btns">
+      <button class="btn" type="button" id="dl-html">Скачать HTML</button>
+      <button class="btn ghost" type="button" id="dl-json">JSON для Landing Studio</button>
+      <button class="btn ghost" type="button" id="cp-prompt">Скопировать промт</button>
+    </div>
+    <p role="status" id="ex-status"></p>
+    <details><summary>Контракт концепции (JSON)</summary><pre id="o-json"></pre></details>
+  </section>
+
+  <section>
+    <h2>Проекты сессии</h2>
+    <div class="hist" id="hist"><p class="note">Пока пусто.</p></div>
+    <div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" id="clear">Очистить историю</button></div>
+  </section>
+</aside>
+
+<main class="stage">
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Ширина превью">
+      <button type="button" data-w="100%" aria-pressed="true">Десктоп</button>
+      <button type="button" data-w="768px" aria-pressed="false">Планшет</button>
+      <button type="button" data-w="390px" aria-pressed="false">Телефон</button>
+      <button type="button" data-w="320px" aria-pressed="false">320</button>
+    </div>
+    <span class="sp"></span>
+    <span class="note" id="o-meta"></span>
+  </div>
+  <div class="canvas"><iframe id="preview" title="Превью главной страницы" sandbox="allow-scripts allow-same-origin"></iframe></div>
+</main>
+</div>
+
+<script src="engine/design-engine.js"></script>
+<script>
+(function(){
+  const E = window.DesignEngine, $ = (id) => document.getElementById(id);
+  const KEY = "uds.history.v1";
+  let history = [], current = null;
+  try { history = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { history = []; }
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(history.slice(-30))); } catch (e) {} };
+
+  $("f-tone").innerHTML = Object.entries(E.TONES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join("");
+  $("f-arch").innerHTML = `<option value="auto">Автоматически по нише</option>` +
+    Object.entries(E.ARCHETYPES).map(([k, a]) => `<option value="${k}">${a.name}</option>`).join("");
+
+  function text(id, v) { $(id).textContent = v; }
+  function show(concept) {
+    current = concept;
+    const d = concept.designDNA, h = concept.homepage, b = concept.designBrief;
+    ["out", "out-check", "out-brief", "out-export"].forEach((id) => $(id).hidden = false);
+    text("o-arch", d.primaryArchetypeName + (d.mirrored ? " · зеркально" : ""));
+    text("o-why", d.selectionRationale);
+    text("o-hero", h.heroComposition); text("o-nav", h.navigationPattern);
+    text("o-sec", d.secondaryArchetypeName); text("o-type", d.typographyDirection);
+    text("o-order", h.sectionOrder.join(" → ")); text("o-img", d.imageDirection); text("o-motion", d.motionDirection);
+    $("o-sw").innerHTML = ["bg", "surface", "text", "muted", "accent", "soft"].map((k) => `<span class="sw" title="${k}: ${d.palette[k]}" style="background:${d.palette[k]}"></span>`).join("");
+    $("o-checks").innerHTML = concept.quality.checks.map((c) => `<li><span class="pill ${c.ok ? "ok" : "no"}">${c.ok ? "OK" : "ПРОВЕРИТЬ"}</span><span>${c.label}</span></li>`).join("");
+    const u = concept.uniquenessCheck;
+    $("o-uniq").innerHTML = (u.differentiationActions.length ? `<p class="note"><b>Что изменено ради уникальности:</b></p><ul class="note" style="margin:4px 0;padding-left:18px">${u.differentiationActions.map((x) => `<li>${x}</li>`).join("")}</ul>` : `<p class="note">Конфликтов с соседним проектом нет.</p>`) +
+      (u.repeatedPatterns.length ? `<p class="note"><b>Сходства с ранними проектами:</b> ${u.repeatedPatterns.join("; ")}</p>` : "");
+    text("b-type", b.businessType); text("b-aud", b.audience); text("b-goal", b.primaryGoal); text("b-char", b.brandCharacter);
+    text("b-prio", b.contentPriority.join(", "));
+    $("b-ass").innerHTML = b.assumptions.map((a) => `<li>${a}</li>`).join("");
+    $("o-json").textContent = JSON.stringify(E.contractOf(concept), null, 2);
+    $("preview").srcdoc = E.renderHomepage(concept);
+    text("o-meta", `${b.brand} · ${d.primaryArchetypeName}`);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (!history.length) { $("hist").innerHTML = `<p class="note">Пока пусто.</p>`; return; }
+    $("hist").innerHTML = history.map((c, i) => `<button type="button" data-i="${i}" aria-current="${c === current}"><span>${c.designBrief.brand}</span><small>${c.designDNA.primaryArchetype}</small></button>`).reverse().join("");
+  }
+  $("hist").addEventListener("click", (e) => { const btn = e.target.closest("button[data-i]"); if (btn) show(history[+btn.dataset.i]); });
+
+  function readForm() { return Object.fromEntries(new FormData($("brief")).entries()); }
+  $("brief").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const c = E.createConcept(readForm(), history);
+    history.push(c); persist(); show(c);
+  });
+
+  $("demo").addEventListener("click", () => {
+    const demo = [["Слопай букет", "съедобные букеты из ягод и мяса", "Ульяновск"], ["ПЕНКА", "кофейня на углу"], ["Photograf", "свадебный и семейный фотограф"], ["ДомА Тех", "интернет-магазин бытовой техники"], ["РАКОВАРНЯ 73", "живые и варёные раки с доставкой", "Ульяновск"], ["Hair", "парикмахерская и окрашивание"], ["Ровно", "ремонт и отделка квартир", "Ульяновск"], ["Звёздный", "магазин телескопов и оптики"], ["Право+", "налоговый юрист для малого бизнеса"], ["Шум", "фестиваль экспериментальной музыки"]];
+    demo.forEach(([brand, description, city]) => history.push(E.createConcept({ brand, description, city }, history)));
+    persist(); show(history[history.length - 1]);
+  });
+
+  $("clear").addEventListener("click", () => { history = []; persist(); renderHistory(); });
+
+  document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    $("preview").style.width = b.dataset.w;
+  }));
+
+  function download(name, content, type) {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    text("ex-status", "Файл " + name + " сохранён.");
+  }
+  const slug = () => (current.designBrief.brand.toLowerCase().replace(/[^a-zа-яё0-9]+/gi, "-").replace(/^-|-$/g, "") || "site");
+  $("dl-html").addEventListener("click", () => current && download(slug() + ".html", E.renderHomepage(current), "text/html"));
+  $("dl-json").addEventListener("click", () => current && download(slug() + ".landing-studio.json", JSON.stringify(E.toLandingStudioProject(current), null, 2), "application/json"));
+  $("cp-prompt").addEventListener("click", async () => {
+    if (!current) return;
+    try { await navigator.clipboard.writeText(E.toPrompt(current)); text("ex-status", "Промт скопирован."); }
+    catch (e) { $("o-json").textContent = E.toPrompt(current); text("ex-status", "Буфер недоступен — промт показан в блоке JSON ниже, выделите и скопируйте."); }
+  });
+
+  if (history.length) show(history[history.length - 1]); else renderHistory();
+})();
+</script>
+</body>
+</html>
