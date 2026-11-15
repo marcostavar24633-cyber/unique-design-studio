@@ -14,7 +14,7 @@ test('любая ниша собирается в проект без ошибо
     assert.ok(a.project.title && a.project.description && a.project.services.length >= 4, niche);
     assert.ok(a.analysis.segments.length >= 2 && a.analysis.objections.length && a.analysis.keywords.length, niche);
     assert.match(a.spec, /# ТЗ: главная страница/);
-    assert.match(a.spec, /## 8\. Что уточнить у владельца/);
+    assert.match(a.spec, /## 5\. План фотосъёмки/);\n    assert.equal(a.analysis.imagePrompts.length, 5, niche);\n    assert.match(a.analysis.imagePrompts[0], /Первый экран/);\n    assert.match(a.spec, /## 9\. Что уточнить у владельца/);
   }
 });
 
@@ -85,7 +85,7 @@ test('ответ AI-сервера превращается в проект и �
   assert.equal(project.designArchitecture, 'immersive');
   assert.equal(analysis.source, 'ai');
   assert.deepEqual(analysis.sources, [{ title: 'Источник', url: 'https://example.com/a' }], 'только https-источники');
-  assert.equal(analysis.seo.title, 'Гостевой дом у моря');
+  assert.equal(analysis.seo.title, 'Гостевой дом у моря');\n  assert.deepEqual(analysis.imagePrompts, ['утро на террасе']);
   const r = generate(project);
   assert.deepEqual(r.audit.errors, []);
   assert.equal(r.concept.visualSystem.palette.accent === '#ff0000', false);
