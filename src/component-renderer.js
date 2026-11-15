@@ -34,13 +34,13 @@ function safeImageUrl(value) {
   return safeUrl(src);
 }
 
-function renderImage(image, className = "uds-media") {
+function renderImage(image, className = "uds-media", priority = false) {
   if (!image || typeof image !== "object") return "";
   const src = safeImageUrl(image.src);
   if (!src) return "";
   return element("img", {
-    class:className, src, alt:String(image.alt ?? ""), loading:"lazy",
-    decoding:"async", width:image.width, height:image.height
+    class:className, src, alt:String(image.alt ?? ""), loading:priority ? "eager" : "lazy",
+    decoding:"async", fetchpriority:priority ? "high" : undefined, width:image.width, height:image.height
   });
 }
 
@@ -90,7 +90,7 @@ function renderHero(section) {
   const eyebrow = data.eyebrow ? element("p", { class:"uds-eyebrow" }, escapeHtml(data.eyebrow)) : "";
   const title = element("h1", { class:"uds-hero__title" }, escapeHtml(data.title || section.title || "Заголовок проекта"));
   const description = data.description ? element("p", { class:"uds-hero__description" }, escapeHtml(data.description)) : "";
-  const media = renderImage(data.image, "uds-hero__image");
+  const media = renderImage(data.image, "uds-hero__image", true);
   const cta = renderLink(data.cta);
   const secondary = renderLink(data.secondaryCta, "uds-text-link");
   return element("div", { class:"uds-hero" }, element("div", { class:"uds-hero__copy" }, eyebrow + title + description + element("div", { class:"uds-hero__actions" }, cta + secondary)) + media);
