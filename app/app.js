@@ -684,7 +684,7 @@ function exportProjectZip() {
       {name:"index.html",content:latestHtml},
       {name:"README.txt",content:instructions}
     ]);
-    const integrity = verifyZipArchive(archive,["index.html","README.txt"]);
+    const integrity = verifyZipArchive(archive,["index.html","README.txt"],{ "index.html":latestHtml, "README.txt":instructions });
     if (!integrity.valid) throw new Error(integrity.errors.join("; "));
     const filename = (currentInput.businessName || currentInput.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".zip";
     downloadBlob(archive,"application/zip",filename);
