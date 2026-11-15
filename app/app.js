@@ -44,6 +44,11 @@ function readForm() {
     heroAlt:values.heroAlt,
     paletteId:values.paletteId || undefined,
     shapeId:values.shapeId || undefined,
+    brandName:values.businessName || values.businessType,
+    footerText:values.businessName || values.businessType,
+    navigation:[],
+    contacts:{phone:"",email:"",address:"",hours:""},
+    socialLinks:[],
     contentBySection:{}
   };
 }
@@ -255,6 +260,92 @@ function buildCardEditor(section) {
   return wrap;
 }
 
+function buildSiteChromeEditor() {
+  const panel = document.querySelector("#site-chrome-editor");
+  const root = document.querySelector("#site-chrome-fields");
+  if (!currentInput) return;
+  currentInput.navigation ||= [];
+  currentInput.contacts ||= {phone:"",email:"",address:"",hours:""};
+  currentInput.socialLinks ||= [];
+  root.replaceChildren();
+  const field = (labelText,value,onInput,type="text",placeholder="") => {
+    const label = document.createElement("label");
+    label.className = "section-field";
+    label.append(document.createTextNode(labelText));
+    const input = document.createElement("input");
+    input.type = type;
+    input.value = value || "";
+    input.placeholder = placeholder;
+    input.addEventListener("input",() => onInput(input.value));
+    label.append(input);
+    return label;
+  };
+  const brand = field("Название в шапке",currentInput.brandName,value => {currentInput.brandName=value;renderCurrentProject();});
+  const footer = field("Текст в подвале",currentInput.footerText,value => {currentInput.footerText=value;renderCurrentProject();});
+  root.append(brand,footer);
+  const navGroup = document.createElement("div");
+  navGroup.className = "chrome-editor-group";
+  const navTitle = document.createElement("strong");
+  navTitle.textContent = "Навигация";
+  navGroup.append(navTitle);
+  currentInput.navigation.forEach((item,index) => {
+    const row = document.createElement("div");
+    row.className = "chrome-editor-row";
+    const label = document.createElement("input");
+    label.value = item.label || "";
+    label.placeholder = "Название пункта";
+    label.setAttribute("aria-label","Название пункта меню");
+    label.addEventListener("input",() => {item.label=label.value;renderCurrentProject();});
+    const href = document.createElement("input");
+    href.value = item.href || "";
+    href.placeholder = "#contacts или https://...";
+    href.setAttribute("aria-label","Ссылка пункта меню");
+    href.addEventListener("input",() => {item.href=href.value;renderCurrentProject();});
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.className = "danger-action"; remove.textContent = "×";
+    remove.setAttribute("aria-label","Удалить пункт меню");
+    remove.addEventListener("click",() => {currentInput.navigation.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
+    row.append(label,href,remove);
+    navGroup.append(row);
+  });
+  const addNav = document.createElement("button");
+  addNav.type = "button"; addNav.className = "download-button"; addNav.textContent = "+ Пункт меню";
+  addNav.addEventListener("click",() => {if(currentInput.navigation.length>=12)return;currentInput.navigation.push({label:"Новый раздел",href:"#top"});buildSiteChromeEditor();renderCurrentProject();});
+  navGroup.append(addNav);
+  root.append(navGroup);
+  const contactGroup = document.createElement("div");
+  contactGroup.className = "chrome-editor-group";
+  const contactTitle = document.createElement("strong");
+  contactTitle.textContent = "Контактная информация";
+  contactGroup.append(contactTitle);
+  [["phone","Телефон"],["email","Электронная почта"],["address","Адрес"],["hours","Время работы"]].forEach(([key,label]) => {
+    contactGroup.append(field(label,currentInput.contacts[key],value => {currentInput.contacts[key]=value;renderCurrentProject();},key==="email"?"email":"text"));
+  });
+  root.append(contactGroup);
+  const socialGroup = document.createElement("div");
+  socialGroup.className = "chrome-editor-group";
+  const socialTitle = document.createElement("strong");
+  socialTitle.textContent = "Социальные сети";
+  socialGroup.append(socialTitle);
+  currentInput.socialLinks.forEach((item,index) => {
+    const row = document.createElement("div");
+    row.className = "chrome-editor-row";
+    const label = document.createElement("input"); label.value=item.label||""; label.placeholder="Название (Telegram, VK...)";
+    label.addEventListener("input",() => {item.label=label.value;renderCurrentProject();});
+    const href = document.createElement("input"); href.value=item.href||""; href.placeholder="https://...";
+    href.addEventListener("input",() => {item.href=href.value;renderCurrentProject();});
+    const remove = document.createElement("button"); remove.type="button"; remove.className="danger-action"; remove.textContent="×";
+    remove.addEventListener("click",() => {currentInput.socialLinks.splice(index,1);buildSiteChromeEditor();renderCurrentProject();});
+    row.append(label,href,remove); socialGroup.append(row);
+  });
+  const addSocial = document.createElement("button");
+  addSocial.type="button"; addSocial.className="download-button"; addSocial.textContent="+ Социальная ссылка";
+  addSocial.addEventListener("click",() => {if(currentInput.socialLinks.length>=12)return;currentInput.socialLinks.push({label:"Telegram",href:"https://"});buildSiteChromeEditor();renderCurrentProject();});
+  socialGroup.append(addSocial);
+  root.append(socialGroup);
+  panel.hidden = false;
+}
+
 function buildSectionEditor(project) {
   const panel = document.querySelector("#section-editor");
   const fields = document.querySelector("#section-fields");
@@ -324,11 +415,13 @@ async function generate(event) {
       input.contentBySection[id] = {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
     }
     input.sectionOrder = [...firstProject.concept.homepage.sectionOrder];
+    input.navigation = firstProject.layoutPlan.sections.slice(1,6).map(section => ({label:SECTION_LABELS[section.id] || SECTION_LABELS[section.key] || section.title || "Раздел",href:"#" + section.key}));
     input.heroTitle = form.elements.heroTitle.value;
     input.ctaLabel = form.elements.ctaLabel.value;
     input.heroAlt = form.elements.heroAlt.value;
     currentInput = input;
     renderCurrentProject();
+    buildSiteChromeEditor();
     buildSectionEditor(currentProject);
     refreshProjectShelf();
     notice.textContent = "Концепция собрана. Сохраните проект, чтобы вернуться к нему позже.";
@@ -456,6 +549,7 @@ function loadProjectInput(input, id = "") {
   if (id) currentInput.projectId = id;
   syncFormFromProject(currentInput);
   renderCurrentProject();
+  buildSiteChromeEditor();
   buildSectionEditor(currentProject);
   refreshProjectShelf(currentInput.projectId || "");
   notice.textContent = "Проект открыт. Можно продолжать редактирование.";
