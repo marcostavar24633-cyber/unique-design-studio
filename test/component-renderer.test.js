@@ -45,6 +45,8 @@ test("provides responsive component CSS and focus styles", () => {
   assert.match(css,/:focus-visible/);
   assert.match(css,/prefers-reduced-motion/);
   assert.match(css,/min-height: 48px/);
+  assert.match(css,/:root \{\n/);
+  assert.equal(css.includes("\\n"),false);
 });
 
 test("embeds safe raster data images but rejects SVG data images", () => {
