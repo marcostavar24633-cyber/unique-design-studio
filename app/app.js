@@ -340,7 +340,7 @@ function buildSiteChromeEditor() {
   });
   const addSocial = document.createElement("button");
   addSocial.type="button"; addSocial.className="download-button"; addSocial.textContent="+ Социальная ссылка";
-  addSocial.addEventListener("click",() => {if(currentInput.socialLinks.length>=12)return;currentInput.socialLinks.push({label:"Telegram",href:"https://"});buildSiteChromeEditor();renderCurrentProject();});
+  addSocial.addEventListener("click",() => {if(currentInput.socialLinks.length>=12)return;currentInput.socialLinks.push({label:"Telegram",href:""});buildSiteChromeEditor();renderCurrentProject();});
   socialGroup.append(addSocial);
   root.append(socialGroup);
   panel.hidden = false;
