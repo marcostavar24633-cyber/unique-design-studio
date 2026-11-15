@@ -31,7 +31,8 @@ export function createStudioProject(input = {}) {
 
   const contentBySection = input.contentBySection && typeof input.contentBySection === "object"
     ? input.contentBySection : {};
-  const sections = concept.homepage.sectionOrder.map(id => ({
+  const sectionOrder = Array.isArray(input.sectionOrder) ? input.sectionOrder : concept.homepage.sectionOrder;
+  const sections = sectionOrder.map(id => ({
     id,
     title:contentBySection[id]?.title ?? null,
     content:contentBySection[id] ?? null
@@ -56,6 +57,7 @@ export function createStudioProject(input = {}) {
     concept,
     visualIdentity,
     layoutPlan,
+    sectionOrder:[...sectionOrder],
     css,
     html,
     metadata:{
