@@ -4,7 +4,7 @@ import { renderSite } from './render.js';
 import { auditSite } from './audit.js';
 import { exportProject, normalizeProject } from './project.js';
 
-export { buildConcept, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
+export { buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
 export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
 export { buildPrompt } from './prompt.js';
@@ -21,3 +21,4 @@ export function generate(input, { registry = [], neighbors = 2 } = {}) {
   const entry = registryEntry(project, concept);
   return { project, concept, html, audit, entry, registry: upsertRegistry(registry, entry), exported: exportProject(project, concept) };
 }
+export { BRANDS } from './brands.js';
