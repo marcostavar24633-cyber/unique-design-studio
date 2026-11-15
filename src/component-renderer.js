@@ -122,8 +122,12 @@ export function renderHtmlPage(input = {}) {
     throw new TypeError("A valid layoutPlan with sections is required");
   }
   const identity = input.visualIdentity ?? {};
-  const pageTitle = escapeHtml(input.title || input.businessName || "Unique Design Studio");
-  const description = escapeHtml(input.description || "Индивидуальная дизайн-концепция сайта");
+  const pageTitle = escapeHtml(input.seoTitle || input.title || input.businessName || "Unique Design Studio");
+  const description = escapeHtml(input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта");
+  const canonicalUrl = typeof input.canonicalUrl === "string" && /^https:\/\/[^\\s]+$/i.test(input.canonicalUrl.trim()) ? input.canonicalUrl.trim() : "";
+  const socialImage = typeof input.ogImage === "string" && /^https?:\/\/[^\\s]+$/i.test(input.ogImage.trim()) ? input.ogImage.trim() : "";
+  const ogTitle = escapeHtml(input.ogTitle || input.seoTitle || input.title || input.businessName || "Unique Design Studio");
+  const ogDescription = escapeHtml(input.ogDescription || input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта");
   const brand = escapeHtml(input.brandName || input.businessName || "Brand");
   const navItems = Array.isArray(input.navigation) ? input.navigation : [];
   const nav = navItems.length ? element("nav", { class:"uds-nav", "aria-label":"Основная навигация" },
@@ -168,6 +172,15 @@ export function renderHtmlPage(input = {}) {
       element("meta", { charset:"utf-8" }) +
       element("meta", { name:"viewport", content:"width=device-width, initial-scale=1" }) +
       element("meta", { name:"description", content:description }) +
+      element("meta", { property:"og:type", content:"website" }) +
+      element("meta", { property:"og:title", content:ogTitle }) +
+      element("meta", { property:"og:description", content:ogDescription }) +
+      (socialImage ? element("meta", { property:"og:image", content:socialImage }) : "") +
+      element("meta", { name:"twitter:card", content:socialImage ? "summary_large_image" : "summary" }) +
+      element("meta", { name:"twitter:title", content:ogTitle }) +
+      element("meta", { name:"twitter:description", content:ogDescription }) +
+      (socialImage ? element("meta", { name:"twitter:image", content:socialImage }) : "") +
+      (canonicalUrl ? element("link", { rel:"canonical", href:canonicalUrl }) : "") +
       element("title", {}, pageTitle) + style
     ) +
     element("body", {},
