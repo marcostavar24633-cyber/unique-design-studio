@@ -124,8 +124,10 @@ export function renderHtmlPage(input = {}) {
   const identity = input.visualIdentity ?? {};
   const pageTitle = input.seoTitle || input.title || input.businessName || "Unique Design Studio";
   const description = input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта";
-  const canonicalUrl = typeof input.canonicalUrl === "string" && /^https:\/\/[^\\s]+$/i.test(input.canonicalUrl.trim()) ? input.canonicalUrl.trim() : "";
-  const socialImage = typeof input.ogImage === "string" && /^https?:\/\/[^\\s]+$/i.test(input.ogImage.trim()) ? input.ogImage.trim() : "";
+  const canonicalCandidate = typeof input.canonicalUrl === "string" ? input.canonicalUrl.trim() : "";
+  const imageCandidate = typeof input.ogImage === "string" ? input.ogImage.trim() : "";
+  const canonicalUrl = canonicalCandidate.toLowerCase().startsWith("https://") && !canonicalCandidate.includes(" ") ? canonicalCandidate : "";
+  const socialImage = /^(https?):\/\//i.test(imageCandidate) && !imageCandidate.includes(" ") ? imageCandidate : "";
   const ogTitle = input.ogTitle || input.seoTitle || input.title || input.businessName || "Unique Design Studio";
   const ogDescription = input.ogDescription || input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта";
   const brand = input.brandName || input.businessName || "Brand";
