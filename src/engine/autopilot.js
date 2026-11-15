@@ -255,6 +255,27 @@ const TIER_COPY = {
 };
 
 /**
+ * Подсказки для реальной фотосъёмки. Это творческое направление, не утверждение о наличии
+ * у бизнеса конкретных товаров, помещений или сотрудников.
+ */
+function photoPlan(niche, direction, tier) {
+  const subject = niche.toLowerCase();
+  const look = direction || 'естественный свет, выразительная композиция и честные детали';
+  const finish = tier === 'luxury'
+    ? 'редакционная съёмка, мягкий направленный свет, точная композиция, много воздуха, естественная фактура, без визуального шума'
+    : tier === 'premium'
+      ? 'профессиональный естественный свет, аккуратный фон, внимание к фактуре и деталям, спокойная композиция'
+      : 'чистый естественный свет, понятный сюжет, живые цвета и аккуратный фон';
+  return [
+    `Первый экран: главный выразительный кадр для сайта о «${subject}». ${look}. Широкий горизонтальный кадр 16:9, главный объект смещён от центра, оставьте спокойное пространство под заголовок. ${finish}.`,
+    `Главный объект крупно: предмет, продукт или результат работы в нише «${subject}». Покажите материал, фактуру и реальные детали; вертикальный кадр 4:5, мягкий боковой свет, без надписей и водяных знаков.`,
+    `Процесс: руки мастера или ключевой этап работы в нише «${subject}». Снимите естественный момент с близкого расстояния, фон не отвлекает, вертикальный кадр 4:5. Не изображайте процесс, которого в действительности нет.`,
+    `Люди и взаимодействие: человек в естественной ситуации, связанной с «${subject}». Живой взгляд и спокойная эмоция, без постановочной стоковой улыбки; вертикальный кадр 4:5. Используйте только реальных людей с их согласием.`,
+    `Атмосфера и детали: пространство, инструменты или детали, которые помогают почувствовать «${subject}». Снимите несколько спокойных кадров с разной дистанции, горизонтальный и вертикальный форматы. ${finish}.`,
+  ];
+}
+
+/**
  * Собирает проект по одной нише.
  * @param {{niche:string, brand?:string, city?:string, details?:string, email?:string, phone?:string}} input
  * @returns {{project:object, analysis:object}}
@@ -321,7 +342,7 @@ export function draftFromNiche(input = {}) {
       title: `${cap(niche)}${inCity(city)} — ${brand || pack.cta.toLowerCase()}`.slice(0, 70),
       description: fill(pack.sub, ctx).slice(0, 160),
     },
-    imageDirection: profile.image,
+    imageDirection: profile.image,\n    imagePrompts: photoPlan(niche, profile.image, tier),
   };
   return { project, analysis };
 }
@@ -358,20 +379,20 @@ ${a.marketResearch ? `\n## Исследование рынка\n${a.marketResear
 - Изображения: ${d.imageDirection}
 - Движение: ${d.motionDirection}
 
-## 5. Структура страницы
+## 5. План фотосъёмки\n${li(a.imagePrompts)}\n\n## 6. Структура страницы
 ${h.sections.map((s, i) => `${i + 1}. **${s.id}** — ${s.role}`).join('\n')}
 
-## 6. SEO
+## 7. SEO
 - Title: ${a.seo ? a.seo.title : p.title}
 - Description: ${a.seo ? a.seo.description : p.description}
 - Ключевые запросы (проверить в Вордстате): ${(a.keywords || []).join(', ') || '—'}
 
-## 7. Технические требования
+## 8. Технические требования
 - Адаптивность от 320 px, без горизонтальной прокрутки
 - Доступность: семантика, видимый фокус, подписи полей, контраст WCAG AA, prefers-reduced-motion
 - Один основной CTA на экран; форма заявки работает только при указанных контактах или formAction
 
-## 8. Что уточнить у владельца
+## 9. Что уточнить у владельца
 ${li([...b.assumptions, 'Реальные позиции, цены и сроки', 'Фото работ или продукта (вместо графических мотивов)', 'Подтверждения доверия: опыт, документы, реальные отзывы со ссылкой на источник', 'Контакты, адрес, часы работы, реквизиты'])}
 `;
 }
@@ -412,7 +433,7 @@ export function fromAiLanding(landing, input = {}) {
     objections: list(l.objections), triggers: list(l.triggers), keywords: list(l.keywords), competitors: list(l.competitors),
     marketResearch: project.marketResearch,
     sources: project.researchSources.filter(s => s && /^https:\/\//i.test(s.url)).map(s => ({ title: String(s.title || s.url), url: String(s.url) })),
-    seo: { title: str(l.seoTitle) || project.title, description: str(l.seoDescription) || project.description },
+    seo: { title: str(l.seoTitle) || project.title, description: str(l.seoDescription) || project.description },\n    imagePrompts: list(l.imagePrompts),
   };
   return { project, analysis };
 }
