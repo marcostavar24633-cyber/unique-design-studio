@@ -342,7 +342,8 @@ export function draftFromNiche(input = {}) {
       title: `${cap(niche)}${inCity(city)} — ${brand || pack.cta.toLowerCase()}`.slice(0, 70),
       description: fill(pack.sub, ctx).slice(0, 160),
     },
-    imageDirection: profile.image,\n    imagePrompts: photoPlan(niche, profile.image, tier),
+    imageDirection: profile.image,
+    imagePrompts: photoPlan(niche, profile.image, tier),
   };
   return { project, analysis };
 }
@@ -433,7 +434,8 @@ export function fromAiLanding(landing, input = {}) {
     objections: list(l.objections), triggers: list(l.triggers), keywords: list(l.keywords), competitors: list(l.competitors),
     marketResearch: project.marketResearch,
     sources: project.researchSources.filter(s => s && /^https:\/\//i.test(s.url)).map(s => ({ title: String(s.title || s.url), url: String(s.url) })),
-    seo: { title: str(l.seoTitle) || project.title, description: str(l.seoDescription) || project.description },\n    imagePrompts: list(l.imagePrompts),
+    seo: { title: str(l.seoTitle) || project.title, description: str(l.seoDescription) || project.description },
+    imagePrompts: list(l.imagePrompts),
   };
   return { project, analysis };
 }
