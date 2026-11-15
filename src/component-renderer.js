@@ -143,7 +143,24 @@ export function renderHtmlPage(input = {}) {
       class:`uds-section uds-section--${section.key} uds-component--${section.component}`
     }, content);
   }).join("\n");
-  const footer = element("footer", { class:"uds-footer" }, element("p", {}, escapeHtml(input.footerText || brand)));
+  const contacts = input.contacts && typeof input.contacts === "object" ? input.contacts : {};
+  const contactParts = [];
+  if (contacts.phone && /^[+()\\d\\s.-]{6,30}$/.test(String(contacts.phone))) {
+    const phone = String(contacts.phone).trim();
+    contactParts.push(element("a", { href:"tel:" + phone.replace(/[^+\\d]/g,"") }, escapeHtml(phone)));
+  }
+  if (contacts.email && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(contacts.email))) {
+    const email = String(contacts.email).trim();
+    contactParts.push(element("a", { href:"mailto:" + email }, escapeHtml(email)));
+  }
+  for (const key of ["address","hours"]) if (contacts[key]) contactParts.push(element("span", {}, escapeHtml(contacts[key])));
+  const contactBlock = contactParts.length ? element("div", { class:"uds-footer__contacts" }, contactParts.join("")) : "";
+  const socialItems = Array.isArray(input.socialLinks) ? input.socialLinks.slice(0,12).map(item => {
+    const href = typeof item?.href === "string" && /^https:\\/\\//i.test(item.href.trim()) ? safeUrl(item.href) : null;
+    return href ? element("a", { href, rel:"noopener noreferrer", target:"_blank" }, escapeHtml(item.label || "Соцсеть")) : "";
+  }).filter(Boolean).join("") : "";
+  const socialBlock = socialItems ? element("nav", { class:"uds-social", "aria-label":"Социальные сети" }, socialItems) : "";
+  const footer = element("footer", { class:"uds-footer" }, element("p", {}, escapeHtml(input.footerText || brand)) + contactBlock + socialBlock);
   const css = input.css || "";
   const style = element("style", {}, css.replace(/<\/style/gi,"<\\/style"));
   const html = "<!doctype html>\n" + element("html", { lang:input.lang || "ru" },
@@ -194,6 +211,8 @@ body { margin: 0; min-width: 320px; background: var(--uds-color-bg, #fff); color
 .uds-quote { margin: 0; padding: 24px; border-left: 3px solid var(--uds-color-accent, currentColor); font-size: 1.25rem; }
 .uds-quote cite { display: block; margin-top: 12px; font-size: .9rem; }
 .uds-footer { padding-block: 28px; border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent); }
+.uds-footer__contacts, .uds-social { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 12px; }
+.uds-footer__contacts a, .uds-social a { color: inherit; text-underline-offset: .2em; }
 :focus-visible { outline: 3px solid var(--uds-color-accent, #315c52); outline-offset: 3px; }
 @media (max-width: 767px) {
   .uds-page { padding-inline: 18px; }
