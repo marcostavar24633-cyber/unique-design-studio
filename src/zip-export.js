@@ -65,7 +65,7 @@ export function createZip(entries) {
 
 
 /** Verify the STORE-only ZIP structure and CRC32 checksums before download. */
-export function verifyZipArchive(input, expectedNames = []) {
+export function verifyZipArchive(input, expectedNames = [], expectedContent = {}) {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input || []);
   const errors = [];
   const names = [];
@@ -95,6 +95,12 @@ export function verifyZipArchive(input, expectedNames = []) {
     const name = new TextDecoder().decode(bytes.subarray(nameStart,nameStart + nameLength));
     const data = bytes.subarray(dataStart,dataEnd);
     if (crc32(data) !== crc) errors.push("CRC32 mismatch: " + name);
+    if (Object.hasOwn(expectedContent,name)) {
+      const expected = bytesOf(expectedContent[name]);
+      if (expected.length !== data.length || expected.some((byte,index) => byte !== data[index])) {
+        errors.push("Content mismatch: " + name);
+      }
+    }
     names.push(name);
     localOffsets.push(offset);
     offset = dataEnd;
