@@ -2,8 +2,10 @@
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
+const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
+const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -286,15 +288,59 @@ function imageDataSize() {
   const values = [state.raw.images?.hero, ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image)];
   return values.filter(v => typeof v === 'string' && v.startsWith('data:image/')).reduce((n, v) => n + v.length, 0);
 }
-function readImage(file) {
+function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
-    if (!IMAGE_TYPES.has(file.type)) return reject(new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.'));
-    if (file.size > MAX_IMAGE_BYTES) return reject(new Error('Файл больше 1 МБ. Уменьшите изображение и повторите загрузку.'));
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Не удалось прочитать файл.'));
+    reader.onerror = () => reject(new Error('Не удалось прочитать обработанное изображение.'));
     reader.onload = () => resolve(String(reader.result || ''));
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(blob);
   });
+}
+function canvasBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+async function optimizeImage(file) {
+  if (!IMAGE_TYPES.has(file.type)) throw new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.');
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Исходный файл больше 8 МБ. Выберите изображение меньшего размера.');
+  const preserveOriginal = file.type === 'image/gif' || file.type === 'image/avif';
+  if (preserveOriginal) {
+    if (file.size > MAX_IMAGE_BYTES) throw new Error('GIF и AVIF сохраняются без преобразования, чтобы не потерять анимацию или особенности формата. Для этого файла нужен размер до 1 МБ.');
+    return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+  }
+  if (typeof createImageBitmap !== 'function') {
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Этот браузер не поддерживает оптимизацию изображений. Попробуйте современный Chrome, Edge или Firefox.');
+  }
+  let bitmap;
+  try { bitmap = await createImageBitmap(file); }
+  catch { 
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Не удалось открыть изображение для оптимизации. Проверьте файл или сохраните его как JPG/PNG.');
+  }
+  try {
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    const initialWidth = Math.max(1, Math.round(bitmap.width * scale));
+    const initialHeight = Math.max(1, Math.round(bitmap.height * scale));
+    const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
+    for (const edge of edges) {
+      const factor = Math.min(1, edge / Math.max(initialWidth, initialHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(initialWidth * factor));
+      canvas.height = Math.max(1, Math.round(initialHeight * factor));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Не удалось создать холст для оптимизации фотографии.');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+        const blob = await canvasBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') break;
+        if (blob.size <= MAX_IMAGE_BYTES) {
+          const data = await blobToDataUrl(blob);
+          return { data, originalBytes: file.size, finalBytes: blob.size, optimized: true, width: canvas.width, height: canvas.height };
+        }
+      }
+    }
+    throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
+  } finally { bitmap.close?.(); }
 }
 async function handleImageUpload(input) {
   const kind = input.dataset.upload, files = [...(input.files || [])];
@@ -306,14 +352,17 @@ async function handleImageUpload(input) {
   let added = 0;
   for (const file of files) {
     try {
-      const data = await readImage(file);
+      const optimized = await optimizeImage(file);
+      const data = optimized.data;
       const current = kind === 'hero' ? state.raw.images?.hero : kind === 'service' ? (Array.isArray(state.raw.services[target]) ? state.raw.services[target][3] : state.raw.services[target].image) : '';
       const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
       if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
-      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || file.name.replace(/\.[^.]+$/, '') };
-      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: file.name.replace(/\.[^.]+$/, ''), alt: file.name.replace(/\.[^.]+$/, '') }];
+      const imageName = file.name.replace(/\.[^.]+$/, '');
+      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || imageName };
+      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: imageName }];
       else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '']; cells[3] = data; state.raw.services[target] = cells; }
       added++;
+      if (optimized.optimized) toast('Фото оптимизировано: ' + (optimized.width + '×' + optimized.height) + ', ' + Math.round(optimized.finalBytes / 1024) + ' КБ вместо ' + Math.round(optimized.originalBytes / 1024) + ' КБ');
     } catch (err) { toast(err.message); }
   }
   if (added) { buildForm(); run(); toast(added === 1 ? 'Фотография добавлена в проект' : 'Добавлено фотографий: ' + added); }
