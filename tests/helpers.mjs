@@ -6,6 +6,8 @@ export const readJson = rel => JSON.parse(readFileSync(root + rel, 'utf8'));
 export const exampleIndex = readJson('examples/index.json');
 export const examples = exampleIndex.map(e => readJson('examples/' + e.file));
 export const example = id => examples.find(e => e.id === id);
+/** Пример без фирменного профиля — для проверок подбора палитры и шрифтов по нише. */
+export const unbranded = ex => { const { brandProfile, ...rest } = ex; return rest; };
 /** Проект с полным набором контента — для прогона всех архитектур. */
 export const full = {
   ...example('hair'),

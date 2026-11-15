@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, NICHES, buildConcept, buildPalette, buildPrompt, detectNiche, generate, normalizeProject } from '../src/engine/index.js';
-import { example, examples, full } from './helpers.mjs';
+import { example, examples, full, unbranded } from './helpers.mjs';
 
 test('контракт концепции содержит все поля спецификации (§8)', () => {
   for (const ex of examples) {
@@ -80,11 +80,14 @@ test('контраст палитры не ниже 4.5:1 для всех нап
 });
 
 test('выбор пользователя соблюдается: палитра, акцент, точная архитектура', () => {
-  const c = buildConcept({ ...example('penka'), palette: 'Тёмная', accent: '#ff5500', architecture: 'brutalist' });
+  // Без фирменного профиля: палитру и акцент задаёт сам проект.
+  const c = buildConcept({ ...unbranded(example('penka')), palette: 'Тёмная', accent: '#ff5500', architecture: 'brutalist' });
   assert.equal(c.visualSystem.palette.mode, 'dark');
   assert.equal(c.visualSystem.palette.accent, '#ff5500');
   assert.equal(c.designDNA.primaryArchetype, 'brutalist');
-  assert.equal(buildConcept({ ...example('raki') }).visualSystem.direction, 'graphite-coral');
+  assert.equal(buildConcept({ ...unbranded(example('raki')), palette: 'Тёмная', accent: '#f08a7b' }).visualSystem.direction, 'graphite-coral');
+  // С фирменным профилем акцент проекта всё равно переопределяет акцент бренда.
+  assert.equal(buildConcept({ ...example('penka'), accent: '#ff5500' }).visualSystem.palette.accent, '#ff5500');
 });
 
 test('промт для AI-помощника содержит выбранную концепцию (§11.3)', () => {
