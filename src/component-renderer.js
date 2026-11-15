@@ -122,13 +122,13 @@ export function renderHtmlPage(input = {}) {
     throw new TypeError("A valid layoutPlan with sections is required");
   }
   const identity = input.visualIdentity ?? {};
-  const pageTitle = escapeHtml(input.seoTitle || input.title || input.businessName || "Unique Design Studio");
-  const description = escapeHtml(input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта");
+  const pageTitle = input.seoTitle || input.title || input.businessName || "Unique Design Studio";
+  const description = input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта";
   const canonicalUrl = typeof input.canonicalUrl === "string" && /^https:\/\/[^\\s]+$/i.test(input.canonicalUrl.trim()) ? input.canonicalUrl.trim() : "";
   const socialImage = typeof input.ogImage === "string" && /^https?:\/\/[^\\s]+$/i.test(input.ogImage.trim()) ? input.ogImage.trim() : "";
-  const ogTitle = escapeHtml(input.ogTitle || input.seoTitle || input.title || input.businessName || "Unique Design Studio");
-  const ogDescription = escapeHtml(input.ogDescription || input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта");
-  const brand = escapeHtml(input.brandName || input.businessName || "Brand");
+  const ogTitle = input.ogTitle || input.seoTitle || input.title || input.businessName || "Unique Design Studio";
+  const ogDescription = input.ogDescription || input.seoDescription || input.description || "Индивидуальная дизайн-концепция сайта";
+  const brand = input.brandName || input.businessName || "Brand";
   const navItems = Array.isArray(input.navigation) ? input.navigation : [];
   const nav = navItems.length ? element("nav", { class:"uds-nav", "aria-label":"Основная навигация" },
     element("ul", {}, navItems.map((item,index) => {
