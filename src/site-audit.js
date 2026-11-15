@@ -50,10 +50,10 @@ export function auditSiteHtml(html = "", css = "") {
   const duplicateIds = [...new Set(ids.filter((id,index) => ids.indexOf(id) !== index))];
   const fragments = [...source.matchAll(/\bhref=["']#([^"'\s]+)["']/gi)].map(match => match[1]).filter(Boolean);
   const missingFragments = [...new Set(fragments.filter(id => !ids.includes(id)))];
-  const links = [...source.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)].map(match => ({...attrs("<a " + match[1] + ">"),text:match[2].replace(/<[^>]+>/g,"").trim()}));
+  const links = [...source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)].map(match => ({...attrs("<a " + match[1] + ">"),text:match[2].replace(/<[^>]+>/g,"").trim()}));
   const unsafeLinks = links.filter(link => link.href && /^(?:javascript|data|vbscript):/i.test(link.href.trim())).length;
   const emptyLinks = links.filter(link => !link.href || !link.href.trim()).length;
-  const externalBlankUnsafe = links.filter(link => link.target === "_blank" && !/\\bnoopener\\b/i.test(link.rel || "")).length;
+  const externalBlankUnsafe = links.filter(link => link.target === "_blank" && !/\bnoopener\b/i.test(link.rel || "")).length;
   const unlabeledLinks = links.filter(link => !link["aria-label"] && !link.title && !link.text).length;
   const forms = [...source.matchAll(/<form\b[^>]*>/gi)].map(match => attrs(match[0]));
   const demoForms = forms.filter(form => form["data-uds-demo-form"] === "true").length;
