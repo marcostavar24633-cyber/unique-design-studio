@@ -44,22 +44,41 @@ test("blocks unsafe links through the underlying site audit", () => {
 });
 
 test("generated site keeps its SEO metadata and project content through the export gate", () => {
-  const project = createStudioProject({
+  const input = {
     businessType:"магазин телескопов",
     businessName:"Astro Shop",
     audience:"любители астрономии",
     primaryGoal:"purchase",
     description:"Телескопы и оптика для наблюдений за планетами, Луной и звёздным небом.",
-    heroTitle:"Откройте Вселенную ближе",
-    heroAlt:"Телескоп для наблюдений за звёздным небом",
     seoTitle:"Astro Shop — телескопы и оптика для наблюдений",
     seoDescription:"Подберите телескоп для наблюдений за планетами и звёздами. Консультации и доставка по России.",
     canonicalUrl:"https://astro.example/",
     ogImage:"https://astro.example/social.jpg"
+  };
+  // Same contract as app/app.js: the hero copy is passed through contentBySection
+  // keyed by the first section id of the concept, not through a top-level heroTitle.
+  const concept = createStudioProject(input);
+  const heroId = concept.concept.homepage.sectionOrder[0];
+  const project = createStudioProject({
+    ...input,
+    sectionOrder:[...concept.concept.homepage.sectionOrder],
+    contentBySection:{
+      [heroId]:{
+        title:"Откройте Вселенную ближе",
+        description:input.description,
+        cta:{href:"#contact",label:"Подобрать телескоп"},
+        image:{src:"data:image/png;base64,iVBORw0KGgo=",alt:"Телескоп для наблюдений за звёздным небом"}
+      }
+    }
   });
   const result = assessExportReadiness(project.html,project.css);
-  assert.equal(result.ready,true,result.blockingIssues.map(item => item.code + ": " + item.detail).join("\\n"));
-  assert.ok(project.html.includes("Astro Shop — телескопы и оптика для наблюдений"));
-  assert.ok(project.html.includes("Откройте Вселенную ближе"));
-  assert.ok(project.html.includes("https://astro.example/"));
+  assert.equal(result.ready,true,result.blockingIssues.map(item => item.code + ": " + item.detail).join("\n"));
+  assert.ok(project.html.includes("<title>Astro Shop — телескопы и оптика для наблюдений</title>"));
+  assert.ok(project.html.includes("Подберите телескоп для наблюдений за планетами и звёздами."));
+  assert.ok(project.html.includes('rel="canonical" href="https://astro.example/"'));
+  assert.ok(project.html.includes("https://astro.example/social.jpg"));
+  assert.match(project.html,/<h1[^>]*>Откройте Вселенную ближе<\/h1>/);
+  assert.ok(project.html.includes("Подобрать телескоп"));
+  assert.ok(project.html.includes('alt="Телескоп для наблюдений за звёздным небом"'));
+  assert.ok(project.html.includes("data:image/png;base64,iVBORw0KGgo="));
 });
