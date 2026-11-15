@@ -133,8 +133,7 @@ export function renderHtmlPage(input = {}) {
     const content = body || (section.title ? element("h2", {}, escapeHtml(section.title)) : "");
     return element("section", {
       id:section.key,
-      class:`uds-section uds-section--${section.key} uds-component--${section.component}`,
-      "aria-labelledby":section.component.includes("hero") ? null : `uds-heading-${index}`
+      class:`uds-section uds-section--${section.key} uds-component--${section.component}`
     }, content);
   }).join("\n");
   const footer = element("footer", { class:"uds-footer" }, element("p", {}, escapeHtml(input.footerText || brand)));
@@ -156,8 +155,10 @@ export function renderHtmlPage(input = {}) {
   return html;
 }
 
-export function renderComponentCss() {
-  return `:root { color-scheme: light dark; font-family: var(--uds-font-body, Arial, sans-serif); color: var(--uds-color-text, #202020); background: var(--uds-color-bg, #fff); }
+export function renderComponentCss(identity = {}) {
+  const tokens = identity.cssVariables && typeof identity.cssVariables === "object" ? identity.cssVariables : identity;
+  const tokenCss = Object.entries(tokens).filter(([key,value]) => /^--[a-z0-9-]+$/i.test(key) && typeof value === "string" && !/[;{}]/.test(value)).map(([key,value]) => `  ${key}: ${value};`).join("\\n");
+  return `:root {\\n${tokenCss}\\n  color-scheme: light dark; font-family: var(--uds-font-body, Arial, sans-serif); color: var(--uds-color-text, #202020); background: var(--uds-color-bg, #fff); }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--uds-color-bg, #fff); color: var(--uds-color-text, #202020); }
 .uds-page { width: min(100%, var(--uds-layout-max, 1440px)); margin-inline: auto; padding-inline: var(--uds-layout-gutter, clamp(20px, 5vw, 80px)); }
