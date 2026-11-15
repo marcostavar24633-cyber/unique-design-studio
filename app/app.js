@@ -1,5 +1,6 @@
 import { createStudioProject } from "../src/studio-pipeline.js";
 import { createHistoryManager } from "../src/history-manager.js";
+import { createZip } from "../src/zip-export.js";
 
 const form = document.querySelector("#project-form");
 const frame = document.querySelector("#preview-frame");
@@ -118,6 +119,7 @@ function renderCurrentProject() {
   latestHtml = currentProject.html;
   frame.srcdoc = latestHtml;
   downloadButton.disabled = false;
+  document.querySelector("#download-zip").disabled = false;
   document.querySelector("#preview-title").textContent = currentInput.businessName || currentInput.businessType;
   document.querySelector("#dna-name").textContent = currentProject.concept.designDNA.primaryArchetypeLabel;
   document.querySelector("#dna-detail").textContent = [
@@ -537,6 +539,7 @@ function refreshProjectShelf(selectedId = "") {
   document.querySelector("#load-project").disabled = !projects.length;
   document.querySelector("#delete-project").disabled = !projects.length;
   document.querySelector("#export-project").disabled = !currentInput;
+  document.querySelector("#download-zip").disabled = !currentInput;
 }
 
 function downloadBlob(content, type, filename) {
@@ -547,6 +550,28 @@ function downloadBlob(content, type, filename) {
   anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+
+function exportProjectZip() {
+  if (!latestHtml || !currentInput) return;
+  const instructions = [
+    "UNIQUE DESIGN STUDIO — ЭКСПОРТ САЙТА",
+    "",
+    "1. Откройте index.html в браузере для локального просмотра.",
+    "2. Файл index.html содержит стили и загруженные в студию изображения.",
+    "3. Внешние изображения и внешние ссылки требуют подключения к интернету.",
+    "4. Перед публикацией проверьте тексты, цены, контакты, ссылки и мобильную версию.",
+    "5. Формы в текущем экспорте являются макетами и не отправляют заявки.",
+    "",
+    "Для публикации загрузите index.html на выбранный статический хостинг."
+  ].join("\n");
+  const archive = createZip([
+    {name:"index.html",content:latestHtml},
+    {name:"README.txt",content:instructions}
+  ]);
+  const filename = (currentInput.businessName || currentInput.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".zip";
+  downloadBlob(archive,"application/zip",filename);
+  notice.textContent = "ZIP-архив сайта подготовлен: index.html и инструкция README.txt.";
 }
 
 function projectSnapshot() {
@@ -710,6 +735,7 @@ refreshProjectShelf();
 
 form.addEventListener("submit",generate);
 deviceButtons.forEach(button => button.addEventListener("click",() => setDevice(button.dataset.device)));
+document.querySelector("#download-zip").addEventListener("click",exportProjectZip);
 downloadButton.addEventListener("click",() => {
   if (!latestHtml) return;
   const blob = new Blob([latestHtml],{type:"text/html;charset=utf-8"});
