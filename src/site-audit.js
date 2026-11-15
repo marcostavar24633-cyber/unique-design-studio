@@ -27,7 +27,7 @@ export function auditSiteHtml(html = "") {
   const h1 = [...source.matchAll(/<h1\b[^>]*>/gi)].length;
   const headings = [...source.matchAll(/<h([1-6])\b[^>]*>/gi)].map(match => Number(match[1]));
   const images = [...source.matchAll(/<img\b[^>]*>/gi)].map(match => match[0]);
-  const missingAlt = images.filter(tag => !/\balt=["'][^"']+["']/i.test(tag)).length;
+  const missingAlt = images.filter(tag => !/\balt=["'][^"']*["']/i.test(tag)).length;
   const emptyAlt = images.filter(tag => /\balt=["']\s*["']/i.test(tag)).length;
   const ids = [...source.matchAll(/\bid=["']([^"']+)["']/gi)].map(match => match[1]);
   const duplicateIds = [...new Set(ids.filter((id,index) => ids.indexOf(id) !== index))];
