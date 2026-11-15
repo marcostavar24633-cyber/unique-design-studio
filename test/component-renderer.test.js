@@ -40,7 +40,7 @@ test("rejects invalid page plans", () => {
 });
 
 test("provides responsive component CSS and focus styles", () => {
-  const css = renderComponentCss();
+  const css = renderComponentCss({cssVariables:{"--uds-color-bg":"#fafafa","--uds-radius-lg":"24px"}});
   assert.match(css,/@media \(max-width: 767px\)/);
   assert.match(css,/:focus-visible/);
   assert.match(css,/prefers-reduced-motion/);
