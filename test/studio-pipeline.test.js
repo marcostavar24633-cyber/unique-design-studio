@@ -98,7 +98,7 @@ test("passes editable SEO metadata into generated HTML", () => {
     canonicalUrl:"https://astro.example/",
     ogImage:"https://astro.example/cover.jpg"
   });
-  assert.match(project.html,/<title>Astro — телескопы и оптика для наблюдений<\\/title>/);
+  assert.ok(project.html.includes("<title>Astro — телескопы и оптика для наблюдений</title>"));
   assert.match(project.html,/name="description"/);
   assert.match(project.html,/rel="canonical"/);
   assert.match(project.html,/property="og:image"/);
