@@ -603,6 +603,7 @@ function syncFormFromProject(input) {
 function loadProjectInput(input, id = "", preserveHistory = false) {
   if (!preserveHistory) projectHistory.clear();
   currentInput = validateProjectInput(input);
+  updateHistoryButtons();
   if (id) currentInput.projectId = id;
   syncFormFromProject(currentInput);
   renderCurrentProject();
