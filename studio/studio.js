@@ -38,10 +38,10 @@ const GROUPS = [
   ]],
   ['Изображения', false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
-    ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG, PNG, WebP, GIF или AVIF. До 1 МБ на файл.'],
+    ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG/PNG/WebP: до 8 МБ до оптимизации, WebP до 1 МБ после. GIF/AVIF: до 1 МБ.'],
     ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись'],
-    ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. До 1 МБ каждый.'],
-    ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фотографию для её карточки.'],
+    ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. Автооптимизация WebP; до 8 МБ исходник, до 1 МБ результат.'],
+    ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фото (автооптимизация WebP, до 8 МБ исходник).'],
   ]],
   ['Каталог / услуги / меню', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
@@ -321,7 +321,7 @@ async function optimizeImage(file) {
     const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
     const initialWidth = Math.max(1, Math.round(bitmap.width * scale));
     const initialHeight = Math.max(1, Math.round(bitmap.height * scale));
-    const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
+    const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900, 720, 540, 360, 240].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
     for (const edge of edges) {
       const factor = Math.min(1, edge / Math.max(initialWidth, initialHeight));
       const canvas = document.createElement('canvas');
