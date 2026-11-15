@@ -738,11 +738,6 @@ deviceButtons.forEach(button => button.addEventListener("click",() => setDevice(
 document.querySelector("#download-zip").addEventListener("click",exportProjectZip);
 downloadButton.addEventListener("click",() => {
   if (!latestHtml) return;
-  const blob = new Blob([latestHtml],{type:"text/html;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = (form.elements.businessName.value || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".html";
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const filename = (currentInput?.businessName || currentInput?.businessType || "unique-design-site").trim().replace(/[^a-z0-9а-яё_-]+/gi,"-") + ".html";
+  downloadBlob(latestHtml,"text/html;charset=utf-8",filename);
 });
