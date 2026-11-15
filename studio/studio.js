@@ -91,6 +91,19 @@ function textToRows(text, path) {
   return rows;
 }
 
+function cropEditor(role, index = 0) {
+  const root = state.raw.imageArtDirection || {};
+  const entry = role === 'hero' ? root.hero : (root[role] || {})[index];
+  const viewports = [['desktop','Компьютер'],['tablet','Планшет'],['mobile','Телефон']];
+  return '<details class="crop-editor"><summary>Кадрирование для экранов</summary>' + viewports.map(([key,label]) => { const v = entry && entry[key] || {}; return '<fieldset><legend>' + label + '</legend>' + ['x','y'].map(axis => { const n = Math.max(0,Math.min(100,Number(v[axis]) || 50)); return '<label>' + (axis === 'x' ? 'По горизонтали' : 'По вертикали') + ' <output>' + n + '%</output><input type="range" min="0" max="100" value="' + n + '" data-crop="' + role + '" data-crop-index="' + index + '" data-crop-viewport="' + key + '" data-crop-axis="' + axis + '"></label>'; }).join('') + '</fieldset>'; }).join('') + '<p class="note">0% — левый/верхний край, 50% — центр, 100% — правый/нижний край.</p></details>';
+}
+function writeCrop(role, index, viewport, axis, value) {
+  const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
+  const bucket = role === 'hero' ? (root.hero || (root.hero = {})) : ((root[role] || (root[role] = {}))[index] || (root[role][index] = {}));
+  bucket[viewport] = bucket[viewport] || { x: 50, y: 50 };
+  bucket[viewport][axis] = Math.max(0, Math.min(100, Number(value) || 0));
+}
+
 function buildForm() {
   const arch = normalizeProject(state.raw).architecture;
   const archValue = arch.mode === 'exact' ? `exact:${arch.exact}` : arch.mode === 'family' ? `family:${arch.family}` : 'auto';
@@ -111,8 +124,8 @@ function buildForm() {
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
-    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><button type="button" data-remove-image="hero">Удалить фото</button></figure>` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
-    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><button type="button" data-remove-image="gallery:${i}">Удалить</button></figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
+    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><button type="button" data-remove-image="hero">Удалить фото</button></figure>${cropEditor("hero")}` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
+    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><button type="button" data-remove-image="gallery:${i}">Удалить</button>${cropEditor("gallery", i)}</figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
     else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<label for="${id}-target">Для какой позиции</label><select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><button type="button" data-remove-image="service:${i}">Удалить</button></figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
@@ -340,7 +353,8 @@ function download(name, text, type) {
 
 $('#form').addEventListener('input', e => {
   const t = e.target;
-  if (t.dataset.path) set(t.dataset.path, t.value);
+  if (t.dataset.crop) { writeCrop(t.dataset.crop, Number(t.dataset.cropIndex), t.dataset.cropViewport, t.dataset.cropAxis, t.value); const output = t.parentElement.querySelector('output'); if (output) output.value = t.value + '%'; }
+  else if (t.dataset.path) set(t.dataset.path, t.value);
   else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
   else if (t.dataset.special === 'arch') {
     const [mode, id] = t.value.split(':');
