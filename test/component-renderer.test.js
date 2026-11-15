@@ -99,3 +99,28 @@ test("escapes contact and social labels", () => {
   assert.match(html,/&lt;script&gt;/);
   assert.doesNotMatch(html,/<script>/);
 });
+
+
+test("renders escaped SEO, Open Graph, Twitter and canonical metadata", () => {
+  const html = renderHtmlPage({
+    layoutPlan:plan,
+    title:"Основной заголовок",
+    seoTitle:"Astro & Optics — телескопы",
+    seoDescription:"Подбор телескопов и оптики для наблюдений за звёздным небом.",
+    canonicalUrl:"https://astro.example/",
+    ogImage:"https://astro.example/social-cover.jpg"
+  });
+  assert.match(html,/<title>Astro &amp; Optics — телескопы<\\/title>/);
+  assert.match(html,/name="description" content="Подбор телескопов/);
+  assert.match(html,/property="og:title" content="Astro &amp; Optics/);
+  assert.match(html,/property="og:image" content="https:\\/\\/astro.example\\/social-cover.jpg"/);
+  assert.match(html,/name="twitter:card" content="summary_large_image"/);
+  assert.match(html,/rel="canonical" href="https:\\/\\/astro.example\\/"/);
+  assert.doesNotMatch(html,/&amp;amp;/);
+});
+
+test("does not render unsafe relative canonical or non-HTTP social image URLs", () => {
+  const html = renderHtmlPage({layoutPlan:plan,canonicalUrl:"//evil.example",ogImage:"javascript:alert(1)"});
+  assert.doesNotMatch(html,/rel="canonical"/);
+  assert.doesNotMatch(html,/property="og:image"/);
+});
