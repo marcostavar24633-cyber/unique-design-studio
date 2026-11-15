@@ -80,7 +80,7 @@ function createEditorField(section, property, labelText, multiline = false) {
   const control = document.createElement(multiline ? "textarea" : "input");
   if (multiline) control.rows = property === "points" ? 3 : 2;
   else control.type = "text";
-  const value = section.content?.[property];
+  const value = property === "ctaLabel" ? section.content?.cta?.label : property === "ctaHref" ? section.content?.cta?.href : section.content?.[property];
   control.value = property === "points" && Array.isArray(value)
     ? value.map(item => typeof item === "string" ? item : item.label || "").join("\n")
     : (typeof value === "string" ? value : "");
@@ -88,9 +88,13 @@ function createEditorField(section, property, labelText, multiline = false) {
   control.dataset.property = property;
   control.addEventListener("input", () => {
     const target = currentInput.contentBySection[section.id] ||= {};
-    target[property] = property === "points"
-      ? control.value.split("\n").map(item => item.trim()).filter(Boolean)
-      : control.value;
+    if (property === "ctaLabel" || property === "ctaHref") {
+      target.cta = { ...(target.cta || {}), [property === "ctaLabel" ? "label" : "href"]:control.value };
+    } else {
+      target[property] = property === "points"
+        ? control.value.split("\n").map(item => item.trim()).filter(Boolean)
+        : control.value;
+    }
     renderCurrentProject();
   });
   wrapper.append(control);
@@ -113,6 +117,8 @@ function buildSectionEditor(project) {
     content.append(createEditorField(section, "title", "Заголовок"));
     content.append(createEditorField(section, "description", "Описание", true));
     content.append(createEditorField(section, "points", "Список пунктов — каждый с новой строки", true));
+    content.append(createEditorField(section, "ctaLabel", "Текст кнопки"));
+    content.append(createEditorField(section, "ctaHref", "Ссылка кнопки"));
     card.append(content);
     fields.append(card);
   });
