@@ -12,9 +12,15 @@ test('код веб-редактора синтаксически коррект
     "data-upload=\"gallery\"",
     "data-upload=\"service\"",
     "image/jpeg,image/png,image/webp,image/gif,image/avif",
+    "MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024",
     "MAX_IMAGE_BYTES = 1024 * 1024",
     "MAX_IMAGE_DATA = 3_800_000",
+    "MAX_IMAGE_EDGE = 1800",
+    "async function optimizeImage(file)",
+    "canvasBlob(canvas, 'image/webp', quality)",
+    "image/webp",
     "data-remove-image",
     "FileReader",
+    "createImageBitmap(file)",
   ]) assert.ok(source.includes(marker), marker);
 });
