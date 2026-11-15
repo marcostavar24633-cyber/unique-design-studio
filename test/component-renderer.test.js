@@ -73,3 +73,27 @@ test("renders editable catalog data fields as escaped product cards", () => {
   assert.match(html,/https:\/\/example.com\/item/);
   assert.match(html,/alt="Телескоп"/);
 });
+
+
+test("renders validated contact details and HTTPS social links", () => {
+  const html = renderHtmlPage({
+    layoutPlan:plan,
+    contacts:{phone:"+7 900 123-45-67",email:"hello@example.com",address:"Ульяновск",hours:"Ежедневно 9:00–18:00"},
+    socialLinks:[{label:"Telegram",href:"https://t.me/example"},{label:"Unsafe",href:"javascript:alert(1)"}]
+  });
+  assert.match(html,/href="tel:\+79001234567"/);
+  assert.match(html,/href="mailto:hello@example\.com"/);
+  assert.match(html,/Ульяновск/);
+  assert.match(html,/Ежедневно 9:00/);
+  assert.match(html,/https:\/\/t\.me\/example/);
+  assert.doesNotMatch(html,/javascript:/);
+});
+
+test("escapes contact and social labels", () => {
+  const html = renderHtmlPage({
+    layoutPlan:plan,
+    socialLinks:[{label:"<script>",href:"https://example.com"}]
+  });
+  assert.match(html,/&lt;script&gt;/);
+  assert.doesNotMatch(html,/<script>/);
+});
