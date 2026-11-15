@@ -51,7 +51,7 @@ function undoProject() {
   if (!currentInput) return;
   const previous = projectHistory.undo(currentInput);
   if (!previous) return;
-  loadProjectInput(previous,currentInput.projectId || "");
+  loadProjectInput(previous,currentInput.projectId || "",true);
   notice.textContent = "Последнее изменение отменено.";
   updateHistoryButtons();
 }
@@ -60,7 +60,7 @@ function redoProject() {
   if (!currentInput) return;
   const next = projectHistory.redo(currentInput);
   if (!next) return;
-  loadProjectInput(next,currentInput.projectId || "");
+  loadProjectInput(next,currentInput.projectId || "",true);
   notice.textContent = "Изменение восстановлено.";
   updateHistoryButtons();
 }
@@ -474,6 +474,8 @@ async function generate(event) {
     input.ctaLabel = form.elements.ctaLabel.value;
     input.heroAlt = form.elements.heroAlt.value;
     currentInput = input;
+    projectHistory.clear();
+    updateHistoryButtons();
     renderCurrentProject();
     buildSiteChromeEditor();
     buildSectionEditor(currentProject);
@@ -598,7 +600,8 @@ function syncFormFromProject(input) {
   });
 }
 
-function loadProjectInput(input, id = "") {
+function loadProjectInput(input, id = "", preserveHistory = false) {
+  if (!preserveHistory) projectHistory.clear();
   currentInput = validateProjectInput(input);
   if (id) currentInput.projectId = id;
   syncFormFromProject(currentInput);
