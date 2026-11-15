@@ -1,6 +1,7 @@
 import { createStudioProject } from "../src/studio-pipeline.js";
 import { createHistoryManager } from "../src/history-manager.js";
 import { createZip } from "../src/zip-export.js";
+import { auditSiteHtml } from "../src/site-audit.js";
 
 const form = document.querySelector("#project-form");
 const frame = document.querySelector("#preview-frame");
@@ -89,6 +90,12 @@ function readForm() {
     audience:values.audience,
     primaryGoal:values.primaryGoal,
     description:values.description,
+    seoTitle:values.businessName || values.businessType,
+    seoDescription:values.description,
+    ogTitle:values.businessName || values.businessType,
+    ogDescription:values.description,
+    canonicalUrl:"",
+    ogImage:"",
     heroTitle:values.heroTitle,
     ctaLabel:values.ctaLabel,
     heroAlt:values.heroAlt,
@@ -130,6 +137,64 @@ function renderCurrentProject() {
   document.querySelector("#section-count").textContent = String(currentProject.layoutPlan.sections.length);
   document.querySelector("#output-status").textContent = "HTML готов";
   document.querySelector("#output-detail").textContent = "Можно скачать и открыть локально.";
+  renderAuditReport(auditSiteHtml(latestHtml));
+}
+
+function renderAuditReport(report) {
+  const root = document.querySelector("#site-audit");
+  if (!root) return;
+  root.replaceChildren();
+  const heading = document.createElement("div");
+  heading.className = "audit-summary";
+  const score = document.createElement("strong");
+  score.className = "audit-score";
+  score.textContent = report.score + "/100";
+  const copy = document.createElement("div");
+  const title = document.createElement("b");
+  title.textContent = report.errors ? "Нужны исправления" : report.warnings ? "Есть рекомендации" : "Критичных замечаний нет";
+  const detail = document.createElement("small");
+  detail.textContent = report.errors + " ошибок · " + report.warnings + " предупреждений";
+  copy.append(title,detail);
+  heading.append(score,copy);
+  root.append(heading);
+  const metrics = document.createElement("div");
+  metrics.className = "audit-metrics";
+  [
+    ["Title",report.metrics.titleLength + " симв."],
+    ["Description",report.metrics.descriptionLength + " симв."],
+    ["H1",String(report.metrics.h1Count)],
+    ["Изображения",String(report.metrics.imageCount)],
+    ["Без ALT",String(report.metrics.imagesMissingAlt)]
+  ].forEach(([label,value]) => {
+    const item = document.createElement("div");
+    const name = document.createElement("small");
+    name.textContent = label;
+    const number = document.createElement("strong");
+    number.textContent = value;
+    item.append(name,number);
+    metrics.append(item);
+  });
+  root.append(metrics);
+  if (!report.issues.length) {
+    const good = document.createElement("p");
+    good.className = "audit-empty";
+    good.textContent = "Базовые проверки исходного HTML пройдены.";
+    root.append(good);
+    return;
+  }
+  const list = document.createElement("ul");
+  list.className = "audit-issues";
+  report.issues.forEach(item => {
+    const row = document.createElement("li");
+    row.className = "audit-issue audit-issue--" + item.severity;
+    const label = document.createElement("strong");
+    label.textContent = (item.severity === "error" ? "Ошибка · " : "Совет · ") + item.title;
+    const description = document.createElement("small");
+    description.textContent = item.detail;
+    row.append(label,description);
+    list.append(row);
+  });
+  root.append(list);
 }
 
 function createEditorField(section, property, labelText, multiline = false) {
