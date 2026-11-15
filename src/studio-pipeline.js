@@ -47,6 +47,8 @@ export function createStudioProject(input = {}) {
     businessName:input.businessName || businessType,
     brandName:input.brandName || input.businessName || businessType,
     navigation:input.navigation || [],
+    contacts:input.contacts || {},
+    socialLinks:input.socialLinks || [],
     footerText:input.footerText,
     css,
     lang:input.lang || "ru"
