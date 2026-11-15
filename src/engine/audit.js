@@ -29,7 +29,7 @@ export function auditSite(html, concept, input) {
   test(/<title>[^<]+<\/title>/.test(html), 'title', 'Есть заголовок страницы <title>', 'Пустой или отсутствующий <title>');
   test(of('meta').some(t => t.attrs.name === 'viewport'), 'viewport', 'Есть meta viewport для мобильных', 'Нет meta viewport');
   test(of('meta').some(t => t.attrs.name === 'description' && t.attrs.content), 'description', 'Есть meta description', 'Нет описания: нишу и предложение сложно понять за первые секунды, страдает SEO', 'warn');
-  const pageTitle = (/<title>([\\s\\S]*?)<\\/title>/i.exec(html) || [,''])[1].trim();
+  const pageTitle = (html.match(/<title>[^<]*<\/title>/i)?.[0] || '').replace(/<\/?title>/gi, '').trim();
   const metaDescription = of('meta').find(t => t.attrs.name === 'description')?.attrs.content || '';
   if (pageTitle && (pageTitle.length < 30 || pageTitle.length > 60)) add('warn', 'seo-title-length', `Длина title — ${pageTitle.length} символов; ориентир для проверки — 30–60`);
   if (metaDescription && (metaDescription.length < 120 || metaDescription.length > 160)) add('warn', 'seo-description-length', `Длина meta description — ${metaDescription.length} символов; ориентир — 120–160`);
@@ -64,7 +64,7 @@ export function auditSite(html, concept, input) {
   const descriptiveAlts = imgs.map(i => i.attrs.alt || '').filter(Boolean);
   const repeatedAlts = descriptiveAlts.filter((alt, index) => descriptiveAlts.indexOf(alt) !== index);
   if (repeatedAlts.length) add('warn', 'img-alt-duplicates', `Повторяются ALT-описания: ${[...new Set(repeatedAlts)].slice(0, 3).join('; ')}. Уточните описания для разных изображений`);
-  const weakAlts = descriptiveAlts.filter(alt => alt.length < 8 || alt.length > 160 || /\\.(jpe?g|png|webp|gif|avif)$/i.test(alt) || /^img[_ -]?\\d+/i.test(alt));
+  const weakAlts = descriptiveAlts.filter(alt => alt.length < 8 || alt.length > 160 || /\.(jpe?g|png|webp|gif|avif)$/i.test(alt) || /^img[_ -]?\d+/i.test(alt));
   if (weakAlts.length) add('warn', 'img-alt-quality', `Есть ${weakAlts.length} ALT-описаний, похожих на имя файла, слишком коротких или длинных. Опишите смысл изображения кратко и конкретно`);
   const labelled = new Set(of('label').map(l => l.attrs.for).filter(Boolean));
   const controls = tags.filter(t => ['input', 'select', 'textarea'].includes(t.name) && t.attrs.type !== 'hidden');
