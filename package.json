@@ -1,0 +1,12 @@
+{
+  "name": "unique-design-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Design Director engine for generating differentiated website concepts",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/design-director.js && node --test"
+  },
+  "engines": { "node": ">=18" }
+}
