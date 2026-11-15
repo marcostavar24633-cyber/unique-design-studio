@@ -1,0 +1,44 @@
+[
+  {
+    "id": "doma-tech",
+    "brand": "ДомА Тех",
+    "niche": "интернет-магазин бытовой техники",
+    "file": "doma-tech.json"
+  },
+  {
+    "id": "photograf",
+    "brand": "Photograf",
+    "niche": "фотограф, портфолио",
+    "file": "photograf.json"
+  },
+  {
+    "id": "penka",
+    "brand": "ПЕНКА",
+    "niche": "кофейня",
+    "file": "penka.json"
+  },
+  {
+    "id": "raki",
+    "brand": "РАКОВАРНЯ 73",
+    "niche": "магазин живых и варёных раков",
+    "file": "raki.json"
+  },
+  {
+    "id": "hair",
+    "brand": "Hair",
+    "niche": "парикмахерская, салон",
+    "file": "hair.json"
+  },
+  {
+    "id": "telescopes",
+    "brand": "Зенит",
+    "niche": "магазин телескопов",
+    "file": "telescopes.json"
+  },
+  {
+    "id": "slopay-buket",
+    "brand": "Слопай букет",
+    "niche": "магазин съедобных букетов и подарочных наборов",
+    "file": "slopay-buket.json"
+  }
+]

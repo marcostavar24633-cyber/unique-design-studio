@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unique Design Studio</title>
+<meta name="description" content="Студия уникальных главных страниц: Design Brief, Design DNA, генерация HTML и антишаблонная проверка.">
+<link rel="stylesheet" href="studio.css">
+</head>
+<body>
+<header class="top">
+  <div class="top__brand"><span class="logo" aria-hidden="true"></span><strong>Unique Design Studio</strong></div>
+  <div class="top__actions">
+    <label class="vh" for="examples">Примеры проектов</label>
+    <select id="examples"><option value="">Примеры…</option></select>
+    <button type="button" id="new">Новый</button>
+    <button type="button" id="import">Импорт JSON</button>
+    <input type="file" id="file" accept="application/json,.json" hidden>
+    <button type="button" id="export">Экспорт JSON</button>
+    <button type="button" id="prompt">Промт для AI</button>
+    <button type="button" id="save">В реестр</button>
+    <button type="button" id="download" class="primary">Скачать HTML</button>
+  </div>
+</header>
+<div class="layout">
+  <aside class="panel" aria-label="Настройки проекта"><form id="form" autocomplete="off"></form></aside>
+  <main class="stage">
+    <div class="bar">
+      <div class="tabs" role="tablist" aria-label="Разделы результата">
+        <button role="tab" id="tab-preview" aria-controls="view-preview" aria-selected="true">Предпросмотр</button>
+        <button role="tab" id="tab-concept" aria-controls="view-concept" aria-selected="false" tabindex="-1">Концепция</button>
+        <button role="tab" id="tab-audit" aria-controls="view-audit" aria-selected="false" tabindex="-1">Проверка <span id="audit-badge" class="badge"></span></button>
+        <button role="tab" id="tab-registry" aria-controls="view-registry" aria-selected="false" tabindex="-1">Реестр <span id="registry-badge" class="badge"></span></button>
+      </div>
+      <div class="sizes" role="group" aria-label="Ширина предпросмотра">
+        <button type="button" data-w="320" aria-pressed="false">320</button>
+        <button type="button" data-w="768" aria-pressed="false">768</button>
+        <button type="button" data-w="" aria-pressed="true">Вся ширина</button>
+      </div>
+    </div>
+    <section id="view-preview" role="tabpanel" aria-labelledby="tab-preview" class="view view--preview"><iframe id="frame" title="Предпросмотр страницы" sandbox="allow-scripts"></iframe></section>
+    <section id="view-concept" role="tabpanel" aria-labelledby="tab-concept" class="view" hidden></section>
+    <section id="view-audit" role="tabpanel" aria-labelledby="tab-audit" class="view" hidden></section>
+    <section id="view-registry" role="tabpanel" aria-labelledby="tab-registry" class="view" hidden></section>
+  </main>
+</div>
+<p id="toast" class="toast" role="status" aria-live="polite"></p>
+<script type="module" src="studio.js"></script>
+</body>
+</html>
