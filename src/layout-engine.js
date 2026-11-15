@@ -88,8 +88,8 @@ function slug(value) {
   return String(value).toLowerCase().replace(/[^a-z0-9а-яё]+/gi, "-").replace(/^-|-$/g, "");
 }
 
-function archetypeOf(concept, identity) {
-  return identity?.archetype || concept?.designDNA?.primaryArchetype || concept?.primaryArchetype || "minimal";
+function archetypeOf(concept, identity, input) {
+  return input?.archetype || identity?.archetype || concept?.designDNA?.primaryArchetype || concept?.primaryArchetype || "minimal";
 }
 
 function resolveComponent(section) {
@@ -103,7 +103,7 @@ function resolveComponent(section) {
 export function createLayoutPlan(input = {}) {
   const concept = input.concept ?? input;
   const identity = input.visualIdentity ?? input.identity ?? null;
-  const archetype = archetypeOf(concept, identity);
+  const archetype = archetypeOf(concept, identity, input);
   const layout = ARCHETYPE_LAYOUTS[archetype] ?? ARCHETYPE_LAYOUTS.minimal;
   const sections = input.sections ?? concept?.homepage?.sectionOrder;
   if (!Array.isArray(sections) || sections.length === 0) {
