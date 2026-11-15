@@ -22,3 +22,11 @@ test("supports UTF-8 filenames and binary content", () => {
   assert.ok(zip instanceof Uint8Array);
   assert.equal(new DataView(zip.buffer).getUint32(0,true),0x04034b50);
 });
+
+
+test("writes the expected CRC32 checksum for stored file content", () => {
+  const zip = createZip([{name:"check.txt",content:"123456789"}]);
+  const view = new DataView(zip.buffer,zip.byteOffset,zip.byteLength);
+  assert.equal(view.getUint32(14,true),0xcbf43926);
+  assert.equal(view.getUint16(12,true),0x21);
+});
