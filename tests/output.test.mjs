@@ -87,3 +87,21 @@ test('ядро дизайн-системы подключено и синхро�
     assert.ok(tokens.includes(name) && html.split(CORE_CSS)[1].includes(`${name}:`), `профиль проекта переопределяет ${name}`);
   }
 });
+
+test('загруженные фотографии сохраняются в проекте и встраиваются в автономный HTML', () => {
+  const photo = 'data:image/png;base64,iVBORw0KGgo=';
+  const project = {
+    ...full,
+    images: { hero: photo, heroAlt: 'Главное фото проекта' },
+    gallery: [{ src: photo, alt: 'Фото в галерее', caption: 'Работа 1' }],
+    services: [['Позиция с фото', 'Описание', '1 500 ₽', photo]],
+  };
+  const { html, exported } = generate(project);
+  assert.ok(html.includes('alt="Главное фото проекта"'));
+  assert.ok(html.includes('alt="Фото в галерее"'));
+  assert.ok(html.includes('alt="Позиция с фото"'));
+  assert.ok((html.match(/src="data:image\/png;base64,iVBORw0KGgo="/g) || []).length >= 3);
+  assert.equal(exported.images.hero, photo);
+  assert.equal(exported.gallery[0].src, photo);
+  assert.equal(exported.services[0][3], photo);
+});
