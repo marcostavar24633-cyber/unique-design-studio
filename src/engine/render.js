@@ -92,7 +92,7 @@ const HERO = {
   'product-first'(c) {
     const it = c.p.services[0];
     const media = c.p.images.hero ? visual(c) : it && it.image
-      ? `<img class="ds-media" src="${esc(it.image)}" alt="${esc(it.title)}" fetchpriority="high" decoding="async">` : visual(c);
+      ? `<img class="ds-media" src="${esc(it.image)}" alt="${esc(it.alt || it.title)}" fetchpriority="high" decoding="async">` : visual(c);
     const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#item-0">Подробнее</a></div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },
@@ -153,7 +153,7 @@ const SECTION = {
   items(c) {
     const v = c.vs.variants.items;
     const li = c.p.services.map((i, n) => {
-      const media = i.image ? `<div class="item__media"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.title)}" loading="lazy" decoding="async"></div>` : '';
+      const media = i.image ? `<div class="item__media"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></div>` : '';
       return `<li class="item" id="item-${n}" data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}</div></li>`;
     }).join('');
     return wrap(c, 'items', `<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);

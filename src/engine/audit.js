@@ -29,6 +29,12 @@ export function auditSite(html, concept, input) {
   test(/<title>[^<]+<\/title>/.test(html), 'title', 'Есть заголовок страницы <title>', 'Пустой или отсутствующий <title>');
   test(of('meta').some(t => t.attrs.name === 'viewport'), 'viewport', 'Есть meta viewport для мобильных', 'Нет meta viewport');
   test(of('meta').some(t => t.attrs.name === 'description' && t.attrs.content), 'description', 'Есть meta description', 'Нет описания: нишу и предложение сложно понять за первые секунды, страдает SEO', 'warn');
+  const pageTitle = (/<title>([\\s\\S]*?)<\\/title>/i.exec(html) || [,''])[1].trim();
+  const metaDescription = of('meta').find(t => t.attrs.name === 'description')?.attrs.content || '';
+  if (pageTitle && (pageTitle.length < 30 || pageTitle.length > 60)) add('warn', 'seo-title-length', `Длина title — ${pageTitle.length} символов; ориентир для проверки — 30–60`);
+  if (metaDescription && (metaDescription.length < 120 || metaDescription.length > 160)) add('warn', 'seo-description-length', `Длина meta description — ${metaDescription.length} символов; ориентир — 120–160`);
+  test(of('meta').some(t => t.attrs.property === 'og:title' && t.attrs.content), 'og-title', 'Есть Open Graph title', 'Нет og:title для превью ссылок', 'warn');
+  test(of('meta').some(t => t.attrs.property === 'og:description' && t.attrs.content), 'og-description', 'Есть Open Graph description', 'Нет og:description для превью ссылок', 'warn');
   test(of('h1').length === 1, 'h1', 'Ровно один заголовок h1', `Заголовков h1: ${of('h1').length}, должен быть один`);
   test(of('main').length === 1 && of('nav').length >= 1, 'landmarks', 'Есть ориентиры main и nav', 'Нет семантических ориентиров main/nav');
   test(of('a').some(t => t.attrs.class === 'skip'), 'skip-link', 'Есть ссылка «Перейти к содержимому»', 'Нет skip-link');
@@ -55,6 +61,11 @@ export function auditSite(html, concept, input) {
   test(imgs.every(i => 'alt' in i.attrs), 'img-alt', `У всех изображений есть атрибут alt (${imgs.length})`, 'Есть изображения без атрибута alt');
   const emptyAlt = imgs.filter(i => 'alt' in i.attrs && !i.attrs.alt).length;
   if (emptyAlt) add('warn', 'img-alt-empty', `Изображений с пустым alt: ${emptyAlt}. Добавьте описание, если изображение несёт смысл`);
+  const descriptiveAlts = imgs.map(i => i.attrs.alt || '').filter(Boolean);
+  const repeatedAlts = descriptiveAlts.filter((alt, index) => descriptiveAlts.indexOf(alt) !== index);
+  if (repeatedAlts.length) add('warn', 'img-alt-duplicates', `Повторяются ALT-описания: ${[...new Set(repeatedAlts)].slice(0, 3).join('; ')}. Уточните описания для разных изображений`);
+  const weakAlts = descriptiveAlts.filter(alt => alt.length < 8 || alt.length > 160 || /\\.(jpe?g|png|webp|gif|avif)$/i.test(alt) || /^img[_ -]?\\d+/i.test(alt));
+  if (weakAlts.length) add('warn', 'img-alt-quality', `Есть ${weakAlts.length} ALT-описаний, похожих на имя файла, слишком коротких или длинных. Опишите смысл изображения кратко и конкретно`);
   const labelled = new Set(of('label').map(l => l.attrs.for).filter(Boolean));
   const controls = tags.filter(t => ['input', 'select', 'textarea'].includes(t.name) && t.attrs.type !== 'hidden');
   test(controls.every(c => (c.attrs.id && labelled.has(c.attrs.id)) || c.attrs['aria-label']), 'form-labels', `Поля форм подписаны (${controls.length})`, 'Есть поля формы без подписи <label>');

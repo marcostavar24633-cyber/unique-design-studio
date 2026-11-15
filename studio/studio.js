@@ -39,13 +39,13 @@ const GROUPS = [
   ['Изображения', false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
     ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG/PNG/WebP: до 8 МБ до оптимизации, WebP до 1 МБ после. GIF/AVIF: до 1 МБ.'],
-    ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись'],
+    ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись | ALT-текст (необязательно)'],
     ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. Автооптимизация WebP; до 8 МБ исходник, до 1 МБ результат.'],
     ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фото (автооптимизация WebP, до 8 МБ исходник).'],
   ]],
   ['Каталог / услуги / меню', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
-    ['services', 'Позиции', 'list', 'Одна позиция на строку: Название | Описание | Цена | URL картинки. Цена и картинка необязательны'],
+    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст. Последние поля необязательны'],
     ['categories', 'Категории', 'list', 'Одна категория на строку'],
   ]],
   ['О нас', false, [['aboutTitle', 'Заголовок'], ['aboutText', 'Текст', 'area']]],
@@ -68,8 +68,8 @@ function set(path, value) {
 }
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
-  if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption].filter(Boolean).join(' | ');
-  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image];
+  if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
+  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt];
   const cells = a.map(x => x ?? '');
   if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
@@ -80,12 +80,14 @@ function textToRows(text, path) {
   if (path === 'categories') return rows.map(r => r[0]);
   if (path === 'gallery') {
     const embedded = (state.raw.gallery || []).filter(g => String(g.src || '').startsWith('data:image/'));
-    return [...rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[1] || '' })), ...embedded];
+    return [...rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[2] || '' })), ...embedded];
   }
   if (path === 'services') return rows.map((row, i) => {
     const old = (state.raw.services || []).find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]);
     const image = Array.isArray(old) ? old[3] : old?.image;
+    const oldAlt = Array.isArray(old) ? old[4] : old?.alt;
     if (String(image || '').startsWith('data:image/')) row[3] = image;
+    if (!row[4] && oldAlt) row[4] = oldAlt;
     return row;
   });
   return rows;
@@ -124,9 +126,9 @@ function buildForm() {
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
-    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><button type="button" data-remove-image="hero">Удалить фото</button></figure>${cropEditor("hero")}` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
-    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><button type="button" data-remove-image="gallery:${i}">Удалить</button>${cropEditor("gallery", i)}</figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
-    else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<label for="${id}-target">Для какой позиции</label><select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><button type="button" data-remove-image="service:${i}">Удалить</button>${cropEditor("services", i)}</figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
+    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><label>ALT-текст <input type="text" data-hero-alt value="${esc(state.raw.images?.heroAlt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="hero">Удалить фото</button></figure>${cropEditor("hero")}` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
+    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-gallery-alt="${i}" value="${esc(g.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="gallery:${i}">Удалить</button>${cropEditor("gallery", i)}</figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
+    else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<label for="${id}-target">Для какой позиции</label><select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-service-alt="${i}" value="${esc(Array.isArray(s) ? s[4] || '' : s.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="service:${i}">Удалить</button>${cropEditor("services", i)}</figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
@@ -493,22 +495,28 @@ async function handleImageUpload(input) {
       const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
       if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
       const imageName = file.name.replace(/\.[^.]+$/, '');
-      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || imageName };
-      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: imageName }];
-      else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '']; cells[3] = data; state.raw.services[target] = cells; }
+      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || '' };
+      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: '' }];
+      else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '', row.image || '', row.alt || '']; cells[3] = data; cells[4] = cells[4] || cells[0]; state.raw.services[target] = cells; }
       added++;
       if (optimized.optimized) toast('Фото оптимизировано: ' + (optimized.width + '×' + optimized.height) + ', ' + Math.round(optimized.finalBytes / 1024) + ' КБ вместо ' + Math.round(optimized.originalBytes / 1024) + ' КБ');
     } catch (err) { toast(err.message); }
   }
   if (added) { buildForm(); run(); toast(added === 1 ? 'Фотография добавлена в проект' : 'Добавлено фотографий: ' + added); }
 }
-$('#form').addEventListener('change', e => { const input = e.target.closest('[data-upload]'); if (input) handleImageUpload(input); });
+$('#form').addEventListener('change', e => {
+  const input = e.target;
+  if (input.matches('[data-hero-alt]')) state.raw.images = { ...(state.raw.images || {}), heroAlt: input.value };
+  if (input.matches('[data-gallery-alt]')) { const g = state.raw.gallery[Number(input.dataset.galleryAlt)]; if (g) g.alt = input.value; }
+  if (input.matches('[data-service-alt]')) { const row = state.raw.services[Number(input.dataset.serviceAlt)]; if (row) { if (Array.isArray(row)) row[4] = input.value; else row.alt = input.value; } }
+  const upload = input.closest('[data-upload]'); if (upload) handleImageUpload(upload);
+});
 $('#form').addEventListener('click', e => {
   const b = e.target.closest('[data-remove-image]'); if (!b) return;
   const [kind, index] = b.dataset.removeImage.split(':');
-  if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: '' };
+  if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: '', heroAlt: '' };
   if (kind === 'gallery') state.raw.gallery.splice(Number(index), 1);
-  if (kind === 'service') { const row = state.raw.services[Number(index)]; if (Array.isArray(row)) row[3] = ''; else row.image = ''; }
+  if (kind === 'service') { const row = state.raw.services[Number(index)]; if (Array.isArray(row)) { row[3] = ''; row[4] = ''; } else { row.image = ''; row.alt = ''; } }
   buildForm(); run(); toast('Фотография удалена из проекта');
 });
 $('#form').addEventListener('submit', e => e.preventDefault());

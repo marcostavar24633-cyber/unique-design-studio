@@ -114,3 +114,21 @@ test('отдельные focal points для hero, галереи и карто�
   assert.ok(r.html.includes('object-position:var(--ds-crop-mobile'));
   assert.match(r.html, /--ds-crop-desktop:35% 45%/);
 });
+
+ 
+test('ALT-описания карточек товаров сохраняются при импорте и выводятся в HTML', () => {
+  const photo = 'data:image/webp;base64,AA==';
+  const { html, exported } = generate({ ...full, services: [['Телескоп', 'Оптическая труба', '9 900 ₽', photo, 'Телескоп-рефрактор на штативе']] });
+  assert.ok(html.includes('alt="Телескоп-рефрактор на штативе"'));
+  assert.equal(exported.services[0][4], 'Телескоп-рефрактор на штативе');
+});
+ 
+test('SEO-аудит предупреждает о повторных и слабых ALT и длине метаданных', () => {
+  const project = { ...full, title: 'Коротко', description: 'Описание', images: { hero: 'data:image/webp;base64,AA==', heroAlt: 'photo.jpg' }, gallery: [{ src: 'data:image/webp;base64,AA==', alt: 'photo.jpg' }] };
+  const r = generate(project);
+  const ids = r.audit.warnings.map(w => w.id);
+  assert.ok(ids.includes('img-alt-duplicates'));
+  assert.ok(ids.includes('img-alt-quality'));
+  assert.ok(ids.includes('seo-title-length'));
+  assert.ok(ids.includes('seo-description-length'));
+});

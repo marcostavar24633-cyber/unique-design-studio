@@ -40,5 +40,11 @@ test('код веб-редактора синтаксически коррект
     "точных повторов",
     "не может подтвердить соответствие сюжета нише",
     "asset-coverage-list",
+    "data-hero-alt",
+    "data-gallery-alt",
+    "data-service-alt",
+    "data-copy-asset-prompt",
+    "ALT-текст",
+    "Image SEO & Accessibility",
   ]) assert.ok(source.includes(marker), marker);
 });
