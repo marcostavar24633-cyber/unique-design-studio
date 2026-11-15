@@ -1,5 +1,5 @@
 // Design Brief → Design DNA → структура главной → антишаблонная проверка (§2–§9 спецификации).
-import { ARCHETYPES, BUTTONS, DIRECTIONS, GENERIC_NICHE, LEGACY_FAMILIES, MOTION_LABELS, NAV_LABELS, NICHES, ROLES, SHAPES, TYPES } from './data.js';
+import { ARCHETYPES, BUTTONS, DIRECTIONS, GENERIC_NICHE, LEGACY_FAMILIES, MOTION_LABELS, NAV_LABELS, NICHES, ROLES, SHAPES, TYPES, WEB_FONTS } from './data.js';
 import { contrast, ensureContrast, hexToHsl, hslToHex, mix, readableOn, rgba } from './color.js';
 import { normalizeProject } from './project.js';
 import { between, hash, pick, stream, uniq } from './util.js';
@@ -177,6 +177,40 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
     else if (design.placement !== before.placement) actions.push(`Изменено расположение основного визуала: «${ARCHETYPES[design.primary].placements[design.placement]}»`);
     else if (design.typeCharacter !== before.typeCharacter) actions.push(`Изменён характер типографической иерархии: ${TYPES[design.typeCharacter].label}`);
   }
+  // Баланс по всему реестру, а не только по соседям: если архитектуру уже заняли два и более проекта,
+  // а среди уместных для ниши есть менее занятая и почти такая же по оценке, — берём её.
+  if (project.architecture.mode !== 'exact' && others.length) {
+    const usage = {};
+    for (const e of others) usage[e.fingerprint.archetype] = (usage[e.fingerprint.archetype] || 0) + 1;
+    const cur = ranked.find(r => r.id === design.primary);
+    const used = usage[design.primary] || 0;
+    if (cur && used >= 2) {
+      const alt = ranked.find(r => r.id !== design.primary && r.score > 0 && r.score >= cur.score - 5
+        && (usage[r.id] || 0) < used && !avoid.archetypes.includes(r.id));
+      if (alt) {
+        const skip = ranked.slice(0, ranked.indexOf(alt)).map(r => r.id);
+        const trialAvoid = { ...avoid, archetypes: uniq([...avoid.archetypes, ...skip]) };
+        const trial = compose(project, profile, ranked, seed, trialAvoid);
+        if (trial.primary === alt.id && !near.some(n => tripleEqual(fingerprintOf(trial), n.fingerprint))) {
+          repeated.push(`Архитектура ${ARCHETYPES[design.primary].name} уже используется в ${used} проектах реестра`);
+          actions.push(`Для разнообразия реестра выбрана близкая по уместности архитектура ${ARCHETYPES[alt.id].name} вместо ${ARCHETYPES[design.primary].name}`);
+          avoid.archetypes = trialAvoid.archetypes;
+          design = trial;
+        }
+      }
+    }
+    // Тот же первый экран (архитектура + расположение визуала), что у любого более раннего проекта, — меняем расположение.
+    const twin = others.find(e => e.fingerprint.archetype === design.primary && e.fingerprint.placement === design.placement);
+    if (twin && Object.keys(ARCHETYPES[design.primary].placements).length > 1) {
+      const trial = compose(project, profile, ranked, seed, { ...avoid, placements: uniq([...avoid.placements, design.placement]) });
+      if (trial.primary === design.primary && trial.placement !== design.placement && !near.some(n => tripleEqual(fingerprintOf(trial), n.fingerprint))) {
+        repeated.push(`Первый экран совпадал с проектом «${twin.brand || twin.id}»: та же архитектура и расположение визуала`);
+        actions.push(`Изменено расположение основного визуала: «${ARCHETYPES[trial.primary].placements[trial.placement]}»`);
+        avoid.placements = uniq([...avoid.placements, design.placement]);
+        design = trial;
+      }
+    }
+  }
   const unresolved = near.some(n => tripleEqual(fingerprintOf(design), n.fingerprint));
 
   // Мягкие отличия от непосредственно предыдущего проекта: навигация, цвет, форма.
@@ -239,6 +273,9 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
 
   const container = { compact: 1280, regular: 1200, airy: 1120 }[arch.rhythm];
   const [h1min, h1max] = arch.h1.map(v => Math.round(v * type.k * 100) / 100);
+  const web = project.fonts === 'web' ? WEB_FONTS[design.typeCharacter] : null;
+  const webFonts = web ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
+  const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
   return {
     designBrief: {
@@ -257,7 +294,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       secondaryArchetype: design.secondary,
       selectionRationale: rationale,
       colorDirection: `${capitalize(DIRECTIONS[design.direction].label)}${project.accent ? ` (акцент задан в проекте: ${project.accent})` : ''}`,
-      typographyDirection: capitalize(type.label),
+      typographyDirection: capitalize(type.label) + (web ? `: ${web[0][0]}${web[1][0] !== web[0][0] ? ' и ' + web[1][0] : ''} (Google Fonts)` : ''),
       imageDirection: capitalize(profile.image),
       motionDirection: MOTION_LABELS[arch.motion],
     },
@@ -279,7 +316,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       nicheId: profile.id, itemsLabel: profile.itemsLabel,
       archetype: design.primary, placement: design.placement, nav: design.nav,
       palette, direction: design.direction,
-      typography: { id: design.typeCharacter, display: type.display, body: type.body, weight: type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max },
+      typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max },
       shape: { id: design.shape, ...SHAPES[design.shape] },
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },

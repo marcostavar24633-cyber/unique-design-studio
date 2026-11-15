@@ -77,7 +77,9 @@ test('аудит ловит дефекты', () => {
 });
 
 test('ядро дизайн-системы подключено и синхронизировано с design-system/*.css', () => {
-  assert.equal(readFileSync(root + 'src/engine/core-css.js', 'utf8'), buildCoreModule(), 'запустите npm run sync-core');
+  // Переводы строк нормализуются: на Windows git может отдать файл с CRLF.
+  const lf = s => s.replace(/\r\n/g, '\n');
+  assert.equal(lf(readFileSync(root + 'src/engine/core-css.js', 'utf8')), lf(buildCoreModule()), 'запустите npm run sync-core');
   const { html } = generate(full);
   assert.ok(html.includes(CORE_CSS));
   const tokens = readFileSync(root + 'design-system/tokens.css', 'utf8');

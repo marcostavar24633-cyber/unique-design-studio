@@ -7,6 +7,16 @@ import { esc } from './util.js';
 
 const pad = n => String(n).padStart(2, '0');
 
+/** Подключение веб-шрифтов (только при fonts: "web"). По умолчанию страница не делает внешних запросов. */
+function fontLinks(fonts = []) {
+  if (!fonts.length) return '';
+  const q = fonts.map(f => `family=${encodeURIComponent(f.family).replace(/%20/g, '+')}:wght@${f.weights}`).join('&');
+  return `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${q}&display=swap">
+`;
+}
+
 function context(project, concept) {
   const vs = concept.visualSystem;
   const order = concept.homepage.sectionOrder;
@@ -221,7 +231,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-<style>${renderCss(concept)}</style>
+${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav}">

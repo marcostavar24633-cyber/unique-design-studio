@@ -23,6 +23,7 @@
 | `secondaryArchitecture` | Точный id вспомогательной архитектуры |
 | `palette` | `Светлая`, `Тёмная` или пусто (подбор по нише) |
 | `accent` | HEX-цвет акцента или пусто |
+| `fonts` | `system` (по умолчанию: системные шрифты, страница без внешних запросов) или `web` (Google Fonts с кириллицей под выбранный характер типографики, системный стек остаётся запасным) |
 
 Соответствие семейств: `catalog` → catalog, product-first; `editorial` → editorial; `immersive` → immersive; `service` → split-utility, storytelling, minimal; `modular` → modular-grid, asymmetric, brutalist.
 

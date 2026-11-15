@@ -25,6 +25,7 @@ const GROUPS = [
   ]],
   ['Архитектура и стиль', true, [
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
+    ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
     ['brandCharacter', 'Характер бренда'],
   ]],
@@ -86,6 +87,7 @@ function buildForm() {
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
@@ -181,6 +183,7 @@ $('#form').addEventListener('input', e => {
     state.raw.architectureMode = mode; state.raw.architecture = mode === 'exact' ? id : 'auto';
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
+  else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
   else if (t.dataset.special === 'accent') { state.raw.accent = t.value; state.raw.accentLocked = true; }
   else if (t.dataset.special === 'accent-auto') {
     const color = t.closest('.row').querySelector('[type=color]');

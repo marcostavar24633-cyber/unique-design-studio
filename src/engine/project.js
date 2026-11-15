@@ -54,6 +54,8 @@ export function normalizeProject(raw = {}) {
   const secondary = str(raw.secondaryArchitecture).toLowerCase();
   p.secondaryArchitecture = ARCHETYPES[secondary] ? secondary : '';
   p.palette = paletteMode(raw.palette);
+  // Шрифты: "system" (по умолчанию, страница без внешних запросов) или "web" (Google Fonts с кириллицей).
+  p.fonts = str(raw.fonts).toLowerCase() === 'web' ? 'web' : 'system';
   p.accent = normalizeHex(raw.accent);
   p.services = items(raw.services ?? raw.items);
   p.advantages = items(raw.advantages);
@@ -70,7 +72,7 @@ export function normalizeProject(raw = {}) {
   p.ctaUrl = safeUrl(raw.ctaUrl);
   p.formAction = /^https:\/\//i.test(str(raw.formAction)) ? str(raw.formAction) : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
-  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent',
+  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts',
     'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
@@ -97,6 +99,7 @@ export function exportProject(input, concept) {
   out.paletteLocked = p.palette !== 'auto';
   out.accent = p.accent || concept?.visualSystem?.palette?.accent || '';
   out.accentLocked = Boolean(p.accent);
+  out.fonts = p.fonts;
   out.services = p.services.map(toRow);
   out.advantages = p.advantages.map(toRow);
   out.process = p.process.map(toRow);

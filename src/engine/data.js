@@ -172,9 +172,10 @@ export const DIRECTIONS = {
   'clean-tech': { mode: 'light', label: 'светлая нейтральная технологичная: холодный почти белый фон и синий акцент', bg: [[205, 220], [14, 24], [96, 98]], ac: [[205, 228], [65, 85], [38, 46]] },
   blueprint: { mode: 'light', label: 'бумажный фон и чернильно-синий акцент', bg: [[40, 55], [18, 30], [95, 97]], ac: [[222, 240], [55, 75], [30, 40]] },
   'sunny-ink': { mode: 'light', label: 'солнечный жёлтый фон, тёмные чернила и красно-оранжевый акцент', bg: [[44, 52], [70, 90], [90, 94]], ac: [[8, 20], [70, 85], [40, 48]] },
-  'night-sky': { mode: 'dark', label: 'глубокий сине-фиолетовый фон и тёплый янтарный акцент', bg: [[225, 245], [30, 45], [8, 12]], ac: [[38, 50], [80, 95], [60, 68]] },
+  // На тёмных фонах тёплые акценты держатся вне «золотого» диапазона 36–54° (§5: тёмный фон с золотом — не по умолчанию).
+  'night-sky': { mode: 'dark', label: 'глубокий сине-фиолетовый фон и тёплый коралловый акцент', bg: [[225, 245], [30, 45], [8, 12]], ac: [[10, 24], [80, 95], [62, 70]] },
   'warm-paper': { mode: 'light', label: 'тёплая кремовая бумага и терракотовый акцент', bg: [[32, 42], [30, 45], [93, 96]], ac: [[10, 22], [45, 60], [38, 46]] },
-  roast: { mode: 'dark', label: 'тёмно-кофейный фон и карамельный акцент', bg: [[20, 30], [18, 28], [10, 14]], ac: [[28, 40], [60, 80], [62, 72]] },
+  roast: { mode: 'dark', label: 'тёмно-кофейный фон и карамельный акцент', bg: [[20, 30], [18, 28], [10, 14]], ac: [[22, 33], [60, 80], [62, 72]] },
   'fresh-market': { mode: 'light', label: 'свежий светло-зелёный фон и ягодно-красный акцент', bg: [[80, 110], [15, 25], [95, 97]], ac: [[0, 12], [65, 80], [42, 50]] },
   'graphite-coral': { mode: 'dark', label: 'графитово-зелёный фон и кораллово-розовый акцент', bg: [[140, 165], [8, 16], [10, 14]], ac: [[2, 14], [75, 90], [66, 72]] },
   'gallery-black': { mode: 'dark', label: 'нейтральный почти чёрный фон галереи и светлый акцент — цвет дают сами работы', bg: [[0, 360], [0, 4], [5, 8]], ac: [[0, 360], [0, 6], [92, 96]] },
@@ -198,6 +199,19 @@ const NEO = 'Inter, Roboto, "Helvetica Neue", "Arial Nova", "Nimbus Sans", Arial
 const COND = 'Bahnschrift, "DIN Alternate", "Franklin Gothic Medium", "Nimbus Sans Narrow", "Roboto Condensed", "Arial Narrow", sans-serif-condensed, sans-serif';
 const MONO = 'ui-monospace, "Cascadia Code", "JetBrains Mono", "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace';
 const ROUND = 'ui-rounded, "Hiragino Maru Gothic ProN", Quicksand, Comfortaa, Manjari, "Arial Rounded MT Bold", Calibri, sans-serif';
+
+/** Необязательные веб-шрифты Google Fonts для каждого характера (все с кириллицей): [семейство, начертания].
+ *  Подключаются, только если в проекте fonts: "web"; системный стек остаётся запасным. */
+export const WEB_FONTS = {
+  'serif-editorial': [['Literata', '400;500;600;700'], ['Golos Text', '400;500;600;700']],
+  'didone-contrast': [['Playfair Display', '400;500;600;700'], ['PT Serif', '400;700']],
+  'grotesque-tight': [['Onest', '400;500;600;700;800'], ['Onest', '400;500;600;700;800']],
+  'condensed-caps': [['Oswald', '400;500;600;700'], ['Onest', '400;500;600;700']],
+  'mono-technical': [['JetBrains Mono', '400;500;600;700'], ['Onest', '400;500;600;700']],
+  'rounded-friendly': [['Nunito', '400;600;700;800'], ['Nunito', '400;600;700;800']],
+  'geometric-clean': [['Jost', '400;500;600;700'], ['Jost', '400;500;600;700']],
+  'slab-sturdy': [['Roboto Slab', '400;500;600;700'], ['Golos Text', '400;500;600;700']],
+};
 
 export const TYPES = {
   'serif-editorial': { label: 'старостильная антиква в заголовках и гуманистический гротеск в тексте', display: OLD, body: HUM, weight: 500, tracking: '-0.01em', transform: 'none', k: 1 },

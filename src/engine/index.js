@@ -9,7 +9,7 @@ export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
 export { buildPrompt } from './prompt.js';
 export { exportProject, normalizeProject, resolveArchitecture, FORMAT_VERSION } from './project.js';
-export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES } from './data.js';
+export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES, WEB_FONTS } from './data.js';
 export { contrast } from './color.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
