@@ -6,7 +6,7 @@
   "description": "Design Director and Visual Identity engines for differentiated website concepts",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/design-director.js && node --check src/visual-identity.js && node --check src/layout-engine.js && node --check src/component-renderer.js && node --check src/studio-pipeline.js && node --check src/history-manager.js && node --check src/zip-export.js && node --check src/site-audit.js && node --check app/app.js && node --check scripts/serve.js && node --test",
+    "check": "node --check src/design-director.js && node --check src/visual-identity.js && node --check src/layout-engine.js && node --check src/component-renderer.js && node --check src/studio-pipeline.js && node --check src/history-manager.js && node --check src/zip-export.js && node --check src/site-audit.js && node --check src/export-readiness.js && node --check app/app.js && node --check scripts/serve.js && node --test",
     "preview": "node scripts/serve.js"
   },
   "engines": {
