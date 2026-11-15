@@ -38,7 +38,7 @@ test("verifies ZIP entries, directory records and CRC32 before download", async 
     {name:"index.html",content:"<!doctype html><title>Site</title>"},
     {name:"README.txt",content:"Open index.html"}
   ]);
-  const result = verifyZipArchive(zip,["index.html","README.txt"]);
+  const result = verifyZipArchive(zip,["index.html","README.txt"],{ "index.html":"<!doctype html><title>Site</title>", "README.txt":"Open index.html" });
   assert.equal(result.valid,true);
   assert.deepEqual(result.entries,["index.html","README.txt"]);
 });
@@ -52,4 +52,12 @@ test("detects corrupted ZIP payload and missing expected files", async () => {
   assert.equal(result.valid,false);
   assert.ok(result.errors.some(error => error.includes("CRC32 mismatch")));
   assert.ok(result.errors.some(error => error.includes("Missing expected entry")));
+});
+
+test("detects an archive whose entry differs from the latest expected HTML", async () => {
+  const { verifyZipArchive } = await import("../src/zip-export.js");
+  const zip = createZip([{name:"index.html",content:"older version"}]);
+  const result = verifyZipArchive(zip,["index.html"],{"index.html":"latest version"});
+  assert.equal(result.valid,false);
+  assert.ok(result.errors.includes("Content mismatch: index.html"));
 });
