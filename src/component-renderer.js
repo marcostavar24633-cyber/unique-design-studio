@@ -27,9 +27,16 @@ function element(tag, attributes, children = "") {
   return VOID.has(tag) ? open : `${open}${children}</${tag}>`;
 }
 
+function safeImageUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const src = value.trim();
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(src)) return src;
+  return safeUrl(src);
+}
+
 function renderImage(image, className = "uds-media") {
   if (!image || typeof image !== "object") return "";
-  const src = safeUrl(image.src);
+  const src = safeImageUrl(image.src);
   if (!src) return "";
   return element("img", {
     class:className, src, alt:String(image.alt ?? ""), loading:"lazy",
