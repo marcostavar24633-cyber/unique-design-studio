@@ -55,3 +55,21 @@ test("embeds safe raster data images but rejects SVG data images", () => {
   const unsafeHtml = renderHtmlPage({layoutPlan:unsafePlan});
   assert.doesNotMatch(unsafeHtml,/data:image\/svg\+xml/);
 });
+
+test("renders editable catalog data fields as escaped product cards", () => {
+  const catalogPlan = {
+    shell:"catalog-led",
+    sections:[{
+      id:"catalog",key:"catalog",component:"product-grid",
+      content:{title:"Каталог",items:[
+        {title:"Оптика <Pro>",description:"Для наблюдений",price:"18 900 ₽",link:{href:"https://example.com/item",label:"Подробнее"},image:{src:"/assets/scope.webp",alt:"Телескоп"}}
+      ]}
+    }]
+  };
+  const html = renderHtmlPage({layoutPlan:catalogPlan});
+  assert.match(html,/Каталог/);
+  assert.match(html,/Оптика &lt;Pro&gt;/);
+  assert.match(html,/18 900 ₽/);
+  assert.match(html,/https:\/\/example.com\/item/);
+  assert.match(html,/alt="Телескоп"/);
+});
