@@ -409,7 +409,7 @@ export function fromAiLanding(landing, input = {}) {
     source: 'ai', niche: project.niche, city: str(input.city), tier,
     goal: str(l.strategySummary), audience: project.targetAudience,
     segments: Array.isArray(l.segments) ? l.segments.filter(s => s && s.name).map(s => ({ name: String(s.name), need: String(s.need || '') })) : [],
-    objections: list(l.objections), triggers: list(l.triggers), keywords: list(l.keywords), competitors: list(l.competitors),
+    objections: list(l.objections), triggers: list(l.triggers), keywords: list(l.keywords), competitors: list(l.competitors), imagePrompts: list(l.imagePrompts),
     marketResearch: project.marketResearch,
     sources: project.researchSources.filter(s => s && /^https:\/\//i.test(s.url)).map(s => ({ title: String(s.title || s.url), url: String(s.url) })),
     seo: { title: str(l.seoTitle) || project.title, description: str(l.seoDescription) || project.description },

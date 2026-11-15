@@ -11,9 +11,17 @@ let result = null;
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
+  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null, assets: saved.assets || {} };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
-const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* нет хранилища */ } };
+// Фото занимают много места: если хранилище браузера переполнено, проект сохраняется без них (и мы об этом говорим).
+let warnedStorage = false;
+const persist = () => {
+  try { localStorage.setItem(STORE, JSON.stringify(state)); }
+  catch {
+    try { localStorage.setItem(STORE, JSON.stringify({ ...state, assets: {} })); } catch { /* нет хранилища */ }
+    if (!warnedStorage && Object.keys(state.assets || {}).length) { warnedStorage = true; setTimeout(() => toast('Фото не помещаются в память браузера: после перезагрузки страницы их придётся загрузить снова. Скачайте HTML или JSON — там фото сохранены.'), 0); }
+  }
+};
 
 // ---------- Описание формы ----------
 const LIST_HINT = 'Одна позиция на строку: Название | Описание';
@@ -32,7 +40,8 @@ const GROUPS = [
     ['brandCharacter', 'Характер бренда'],
   ]],
   ['Изображения', false, [
-    ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
+    ['@photos', 'Ваши фото', 'photos', 'Фото с компьютера: уменьшаются до 1600 px и встраиваются в скачанный HTML. В полях ниже они видны как метки photo:…'],
+    ['images.hero', 'Изображение первого экрана (URL или photo:…)'], ['images.heroAlt', 'Описание изображения (alt)'],
     ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись'],
   ]],
   ['Каталог / услуги / меню', false, [
@@ -89,6 +98,7 @@ function buildForm() {
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'photos') control = photosControl(id, d);
     else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
@@ -102,10 +112,80 @@ function buildForm() {
 // ---------- Генерация и отображение ----------
 const registry = () => state.library.map(l => l.entry);
 
+// ---------- Фото ----------
+// Загруженные фото хранятся в state.assets под id и подставляются в проект как метки «photo:id»;
+// перед сборкой метки заменяются на data:URL, поэтому скачанный HTML и экспорт JSON самодостаточны.
+const PHOTO = /^photo:([\w-]+)$/;
+const assetUrl = v => { const m = typeof v === 'string' && v.match(PHOTO); return m && state.assets?.[m[1]] ? state.assets[m[1]].url : v; };
+function resolveAssets(raw) {
+  const r = JSON.parse(JSON.stringify(raw));
+  if (r.images) r.images.hero = assetUrl(r.images.hero);
+  if (Array.isArray(r.gallery)) r.gallery = r.gallery.map(g => (g && typeof g === 'object' ? { ...g, src: assetUrl(g.src) } : assetUrl(g)));
+  for (const key of ['services', 'items']) if (Array.isArray(r[key])) r[key] = r[key].map(row => (Array.isArray(row) ? row.map((c, i) => (i === 3 ? assetUrl(c) : c)) : row));
+  return r;
+}
+const usedPhotos = () => JSON.stringify(state.raw).match(/photo:[\w-]+/g) || [];
+function photosControl(id, d) {
+  const list = Object.entries(state.assets || {});
+  const thumbs = list.map(([k, a]) => {
+    const where = usedPhotos().includes('photo:' + k) ? '' : ' <span class="note">не используется</span>';
+    return `<li><img src="${a.url}" alt=""><span><code>photo:${k}</code>${where}<br><span class="note">${esc(a.name)} · ${Math.round(a.size / 1024)} КБ</span></span><button type="button" data-photo-del="${k}" aria-label="Удалить фото ${esc(a.name)}">×</button></li>`;
+  }).join('');
+  return `<div class="photos">
+  <div class="row2">
+    <select id="${id}-target" aria-label="Куда поставить фото"><option value="hero">Первый экран</option><option value="gallery">Галерея</option><option value="items">Позиции каталога</option></select>
+    <label class="btn-file"><input type="file" id="${id}" accept="image/*" multiple data-special="photos"${d}>Загрузить фото</label>
+  </div>
+  <p class="note" id="photo-hint"></p>
+  ${list.length ? `<ul class="thumbs">${thumbs}</ul>` : ''}
+</div>`;
+}
+/** Уменьшает фото до 1600 px по длинной стороне и кодирует в WebP (или JPEG, если WebP недоступен). */
+async function compressImage(file, max = 1600) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  let url = c.toDataURL('image/webp', 0.82);
+  if (!url.startsWith('data:image/webp')) url = c.toDataURL('image/jpeg', 0.85);
+  return { url, size: Math.round(url.length * 0.75) };
+}
+async function addPhotos(files, target) {
+  state.assets = state.assets || {};
+  const ids = [];
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    try {
+      const { url, size } = await compressImage(f);
+      const k = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      state.assets[k] = { url, size, name: f.name };
+      ids.push(k);
+    } catch { toast(`Не удалось прочитать «${f.name}»`); }
+  }
+  if (!ids.length) return;
+  if (target === 'hero') { state.raw.images = { ...(state.raw.images || {}), hero: 'photo:' + ids[0] }; ids.slice(1).forEach(k => (state.raw.gallery = [...(state.raw.gallery || []), { src: 'photo:' + k, caption: '', alt: '' }])); }
+  if (target === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), ...ids.map(k => ({ src: 'photo:' + k, caption: '', alt: '' }))];
+  if (target === 'items') {
+    const rows = (state.raw.services || []).map(r => (Array.isArray(r) ? [...r] : [r.title, r.text, r.price, r.image]));
+    let i = 0;
+    for (const row of rows) { if (i >= ids.length) break; if (!row[3]) { while (row.length < 3) row.push(''); row[3] = 'photo:' + ids[i++]; } }
+    if (i < ids.length) toast(`Свободных позиций не хватило: ещё ${ids.length - i} фото не поставлено — добавьте позиции или выберите галерею`);
+    state.raw.services = rows;
+  }
+  buildForm(); run();
+  toast(`Загружено фото: ${ids.length}`);
+}
+
 function run() {
-  result = generate(state.raw, { registry: registry() });
+  result = generate(resolveAssets(state.raw), { registry: registry() });
   $('#frame').srcdoc = result.html;
   renderSpec(); renderConcept(); renderAudit(); renderRegistry();
+  const hint = $('#photo-hint');
+  if (hint) {
+    const a = currentAnalysis();
+    const shots = a && Array.isArray(a.imagePrompts) && a.imagePrompts.length ? a.imagePrompts.join(' · ') : result.concept.designDNA.imageDirection;
+    hint.textContent = `Какие кадры нужны: ${shots}.`;
+  }
   persist();
 }
 
@@ -264,6 +344,22 @@ $('#form').addEventListener('input', e => {
   schedule();
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
+$('#form').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.special !== 'photos' || !t.files.length) return;
+  addPhotos([...t.files], $('#' + t.id + '-target').value);
+  t.value = '';
+});
+$('#form').addEventListener('click', e => {
+  const b = e.target.closest('[data-photo-del]'); if (!b) return;
+  const ref = 'photo:' + b.dataset.photoDel;
+  delete state.assets[b.dataset.photoDel];
+  // Убираем метку отовсюду, где фото стояло.
+  if (state.raw.images && state.raw.images.hero === ref) state.raw.images.hero = '';
+  if (Array.isArray(state.raw.gallery)) state.raw.gallery = state.raw.gallery.filter(g => (g && g.src) !== ref && g !== ref);
+  if (Array.isArray(state.raw.services)) state.raw.services = state.raw.services.map(r => (Array.isArray(r) && r[3] === ref ? r.slice(0, 3) : r));
+  buildForm(); run(); toast('Фото удалено');
+});
 
 const tabs = [...document.querySelectorAll('[role=tab]')];
 function selectTab(tab) {

@@ -90,3 +90,16 @@ test('ответ AI-сервера превращается в проект и �
   assert.deepEqual(r.audit.errors, []);
   assert.equal(r.concept.visualSystem.palette.accent === '#ff0000', false);
 });
+
+test('загруженные фото (data:URL) попадают на первый экран, в галерею и в карточки позиций', () => {
+  const px = 'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
+  const a = autopilot({ niche: 'ювелирная мастерская', tier: 'luxury', email: 'a@example.com' });
+  const p = { ...a.project, images: { hero: px, heroAlt: 'Кольцо на ладони' }, gallery: [{ src: px, caption: 'Мастерская', alt: 'Мастерская' }] };
+  p.services = p.services.map((r, i) => (i === 0 ? [r[0], r[1], '', px] : r));
+  const r = generate(p);
+  const imgs = r.html.match(/<img[^>]+src="data:image\/webp/g) || [];
+  assert.ok(imgs.length >= 2, `встроено фото: ${imgs.length}`);
+  assert.match(r.html, /alt="Кольцо на ладони"/);
+  assert.ok(!r.audit.warnings.some(w => w.id === 'no-images'), 'предупреждения «нет фото» быть не должно');
+  assert.deepEqual(r.audit.errors, []);
+});
