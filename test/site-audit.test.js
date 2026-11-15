@@ -50,10 +50,11 @@ test("warns about demo forms and heading hierarchy", () => {
 });
 
 test("checks accessible link names, external rel and labelled form controls", () => {
-  const report = auditSiteHtml('<html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>A sufficiently long title for a page about products and services</title><meta name="description" content="A description long enough to provide a useful summary of the content and the value proposition for search visitors."></head><body><header></header><main><h1>Page</h1><a href="https://example.com" target="_blank"> </a><a href="#main"></a><form><input id="phone" type="tel"></form></main><footer></footer></body></html>',cleanCss);
+  const report = auditSiteHtml('<html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>A sufficiently long title for a page about products and services</title><meta name="description" content="A description long enough to provide a useful summary of the content and the value proposition for search visitors."></head><body><header></header><main><h1>Page</h1><a href="https://example.com" target="_blank"> </a><a></a><form><input id="phone" type="tel"></form></main><footer></footer></body></html>',cleanCss);
   const codes = report.issues.map(item => item.code);
   assert.ok(codes.includes("external-link-rel"));
   assert.ok(codes.includes("empty-links"));
+  assert.ok(codes.includes("unlabeled-links"));
   assert.ok(codes.includes("form-labels"));
 });
 
