@@ -34,14 +34,14 @@ export function createZip(entries) {
     const local = new Uint8Array(30 + nameBytes.length);
     const lv = new DataView(local.buffer);
     write32(lv,0,0x04034b50); write16(lv,4,20); write16(lv,6,0x0800);
-    write16(lv,8,0); write16(lv,10,0); write16(lv,12,0);
+    write16(lv,8,0); write16(lv,10,0); write16(lv,12,0x21);
     write32(lv,14,crc); write32(lv,18,data.length); write32(lv,22,data.length);
     write16(lv,26,nameBytes.length); write16(lv,28,0); local.set(nameBytes,30);
     localParts.push(local,data);
     const central = new Uint8Array(46 + nameBytes.length);
     const cv = new DataView(central.buffer);
     write32(cv,0,0x02014b50); write16(cv,4,20); write16(cv,6,20);
-    write16(cv,8,0x0800); write16(cv,10,0); write16(cv,12,0); write16(cv,14,0);
+    write16(cv,8,0x0800); write16(cv,10,0); write16(cv,12,0); write16(cv,14,0x21);
     write32(cv,16,crc); write32(cv,20,data.length); write32(cv,24,data.length);
     write16(cv,28,nameBytes.length); write16(cv,30,0); write16(cv,32,0);
     write16(cv,34,0); write16(cv,36,0); write32(cv,38,0); write32(cv,42,localOffset);
