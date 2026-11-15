@@ -181,8 +181,8 @@ export function renderHtmlPage(input = {}) {
 
 export function renderComponentCss(identity = {}) {
   const tokens = identity.cssVariables && typeof identity.cssVariables === "object" ? identity.cssVariables : identity;
-  const tokenCss = Object.entries(tokens).filter(([key,value]) => /^--[a-z0-9-]+$/i.test(key) && typeof value === "string" && !/[;{}]/.test(value)).map(([key,value]) => `  ${key}: ${value};`).join("\\n");
-  return `:root {\\n${tokenCss}\\n  color-scheme: light dark; font-family: var(--uds-font-body, Arial, sans-serif); color: var(--uds-color-text, #202020); background: var(--uds-color-bg, #fff); }
+  const tokenCss = Object.entries(tokens).filter(([key,value]) => /^--[a-z0-9-]+$/i.test(key) && typeof value === "string" && !/[;{}]/.test(value)).map(([key,value]) => `  ${key}: ${value};`).join("\n");
+  return `:root {\n${tokenCss}\n  color-scheme: light dark; font-family: var(--uds-font-body, Arial, sans-serif); color: var(--uds-color-text, #202020); background: var(--uds-color-bg, #fff); }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--uds-color-bg, #fff); color: var(--uds-color-text, #202020); }
 .uds-page { width: min(100%, var(--uds-layout-max, 1440px)); margin-inline: auto; padding-inline: var(--uds-layout-gutter, clamp(20px, 5vw, 80px)); }
