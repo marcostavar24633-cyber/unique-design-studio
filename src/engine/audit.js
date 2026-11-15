@@ -92,7 +92,7 @@ export function auditSite(html, concept, input) {
     const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
     return sum + Math.max(0, Math.floor(payload.length * 3 / 4) - padding);
   }, 0);
-  const externalImages = imgs.filter(i => /^https?:\\/\\//i.test(i.attrs.src || '')).length;
+  const externalImages = imgs.filter(i => { const src = i.attrs.src || ''; return src.startsWith('http://') || src.startsWith('https://'); }).length;
   const imageKb = Math.round(inlineBytes / 102.4) / 10;
   const documentKb = Math.round(utf8Bytes / 102.4) / 10;
   test(documentKb <= 250, 'performance-document-size', `Размер HTML: ${documentKb} КБ`, `HTML весит ${documentKb} КБ. Сократите встроенные данные и CSS; ориентир для автономного лендинга — до 250 КБ`, 'warn');
