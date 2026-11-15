@@ -34,5 +34,11 @@ test('код веб-редактора синтаксически коррект
     "function writeCrop(role, index, viewport, axis, value)",
     "data-crop-viewport",
     "Кадрирование для экранов",
+    "function renderVisualAssetDirector(reports, duplicateCount, missingRoles)",
+    "data-copy-asset-prompt",
+    "Обнаружено",
+    "точных повторов",
+    "не может подтвердить соответствие сюжета нише",
+    "asset-coverage-list",
   ]) assert.ok(source.includes(marker), marker);
 });

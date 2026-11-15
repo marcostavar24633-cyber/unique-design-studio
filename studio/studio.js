@@ -308,13 +308,55 @@ async function renderImageIntelligence() {
   const reports = await Promise.all(assets.map(inspectImage));
   if (token !== imageAuditRun || !host.isConnected) return;
   const warningCount = reports.reduce((n, r) => n + r.warnings.length, 0);
-  host.innerHTML = `<p class="summary ${warningCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний: ${warningCount}.</p>
+  const sourceCounts = new Map();
+  reports.forEach(r => sourceCounts.set(r.src, (sourceCounts.get(r.src) || 0) + 1));
+  const duplicateCount = [...sourceCounts.values()].filter(n => n > 1).reduce((n, count) => n + count - 1, 0);
+  const missingRoles = ['hero','gallery','service'].filter(role => !reports.some(r => r.role === role));
+  const visual = renderVisualAssetDirector(reports, duplicateCount, missingRoles);
+  host.innerHTML = `<p class="summary ${warningCount || duplicateCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний по качеству: ${warningCount}. Возможных повторов: ${duplicateCount}.</p>
   <div class="image-audit-grid">${reports.map(r => `<article class="image-audit-card">
     <div class="image-audit-head"><b>${esc(r.label)}</b><span class="note">${r.role === 'hero' ? 'Первый экран' : r.role === 'service' ? 'Карточка' : 'Галерея'}</span></div>
     <div class="image-audit-body"><img src="${esc(r.src)}" alt="" loading="lazy"><div><b>${r.error ? 'Не удалось проверить' : `${r.width} × ${r.height} px`}</b><span class="note">${r.error ? esc(r.error) : `Пропорции: ${r.ratio.toFixed(2)}:1`}</span>
     ${r.warnings.map(w => `<p class="image-audit-warning">${esc(w)}</p>`).join('')}${r.tips.map(t => `<p class="image-audit-tip">${esc(t)}</p>`).join('')}${!r.warnings.length && !r.tips.length && !r.error ? '<p class="image-audit-ok">Явных проблем по базовым параметрам не обнаружено.</p>' : ''}</div></div>
   </article>`).join('')}</div>
+  ${visual}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
+}
+function renderVisualAssetDirector(reports, duplicateCount, missingRoles) {
+  const p = normalizeProject(state.raw);
+  const dna = result.concept?.designDNA || {};
+  const direction = dna.imageDirection || result.analysis?.imageDirection || 'естественный свет, выразительная композиция и честные детали';
+  const style = [p.tier === 'luxury' ? 'редакционная премиальная съёмка, много воздуха' : p.tier === 'premium' ? 'профессиональный естественный свет, аккуратный фон' : 'чистый естественный свет, живые цвета', dna.colorDirection].filter(Boolean).join('; ');
+  const sourcePrompts = result.analysis?.imagePrompts || [];
+  const roleLabels = { hero: 'Первый экран', gallery: 'Галерея и детали', service: 'Товары и услуги' };
+  const fallback = {
+    hero: `Для сайта «${p.brand || p.niche}»: главный выразительный кадр по теме «${p.niche}». ${direction}. ${style}. Горизонтальный 16:9, оставьте свободную область под заголовок, без текста и водяных знаков.`,
+    gallery: `Фоторепортаж для сайта «${p.brand || p.niche}» о нише «${p.niche}»: реальные детали, фактуры и атмосфера. ${direction}. ${style}. Разнообразные планы, естественный свет, без надписей и водяных знаков.`,
+    service: `Предметная фотография для карточки товара или услуги в нише «${p.niche}». Покажите реальный объект целиком и его важные детали. ${direction}. ${style}. Квадратный кадр 1:1, чистый фон, без текста и водяных знаков.`
+  };
+  const prompts = {
+    hero: sourcePrompts[0] || fallback.hero,
+    gallery: sourcePrompts[4] || fallback.gallery,
+    service: sourcePrompts[1] || fallback.service
+  };
+  const coverage = ['hero','gallery','service'].map(role => {
+    const count = reports.filter(r => r.role === role).length;
+    return `<span class="asset-coverage ${count ? 'is-present' : 'is-missing'}">${esc(roleLabels[role])}: ${count ? count + ' шт.' : 'нет'}</span>`;
+  }).join('');
+  const notes = [];
+  if (duplicateCount) notes.push(`Обнаружено ${duplicateCount} точных повторов одного и того же источника. Проверьте, не используется ли один кадр вместо разных ракурсов.`);
+  if (missingRoles.length) notes.push(`Не заполнены роли: ${missingRoles.map(r => roleLabels[r]).join(', ')}. Это не ошибка для каждого типа сайта, но проверьте, нужны ли эти материалы.`);
+  const promptCards = Object.entries(prompts).map(([role,prompt]) => `<article class="asset-prompt"><div><b>${esc(roleLabels[role])}</b><p>${esc(prompt)}</p></div><button type="button" data-copy-asset-prompt="${esc(prompt)}">Копировать промпт</button></article>`).join('');
+  return `<section class="visual-asset-director" aria-labelledby="visual-asset-title">
+    <h3 id="visual-asset-title">Visual Asset Director</h3>
+    <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
+    <div class="asset-coverage-list">${coverage}</div>
+    ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
+    <h4>Задания на замену или новую съёмку</h4>
+    <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
+    <div class="asset-prompt-list">${promptCards}</div>
+    <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Она оценивает структуру материалов, точные повторы и технические признаки; визуальную релевантность подтверждает человек.</p>
+  </section>`;
 }
 function renderAudit() {
   const a = result.audit;
@@ -470,6 +512,12 @@ $('#form').addEventListener('click', e => {
   buildForm(); run(); toast('Фотография удалена из проекта');
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
+$('#view-audit').addEventListener('click', async e => {
+  const button = e.target.closest('[data-copy-asset-prompt]');
+  if (!button) return;
+  try { await navigator.clipboard.writeText(button.dataset.copyAssetPrompt); toast('Промпт скопирован'); }
+  catch { toast('Не удалось скопировать. Выделите текст промпта вручную.'); }
+});
 
 const tabs = [...document.querySelectorAll('[role=tab]')];
 function selectTab(tab) {

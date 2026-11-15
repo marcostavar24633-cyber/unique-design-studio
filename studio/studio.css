@@ -101,3 +101,19 @@ button.wide{width:100%;min-height:44px}
 .crop-editor output{font-variant-numeric:tabular-nums;color:var(--accent)}
 .crop-editor input[type=range]{width:100%;min-width:0;padding:0;accent-color:var(--accent)}
 @media(max-width:520px){.crop-editor__grid{grid-template-columns:1fr}}
+
+/* Visual Asset Director */
+.visual-asset-director{max-width:920px;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.visual-asset-director h3{margin:0 0 8px;font-size:18px}
+.visual-asset-director h4{margin:18px 0 8px;font-size:15px}
+.asset-coverage-list{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.asset-coverage{padding:5px 10px;border:1px solid var(--line);border-radius:20px;font-size:12px}
+.asset-coverage.is-present{border-color:var(--ok);color:var(--ok)}
+.asset-coverage.is-missing{border-color:var(--warn);color:var(--warn)}
+.asset-director-notes{margin:10px 0;padding-left:20px;font-size:13px}
+.asset-director-notes li{margin:5px 0}
+.asset-prompt-list{display:grid;gap:10px;margin-top:10px}
+.asset-prompt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.asset-prompt p{margin:5px 0 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.asset-prompt button{white-space:nowrap;font-size:12px}
+@media(max-width:600px){.asset-prompt{grid-template-columns:1fr}.asset-prompt button{width:100%}}
