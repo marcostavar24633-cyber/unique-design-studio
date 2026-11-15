@@ -18,11 +18,12 @@ export const BRAND_FONT_WEIGHTS = W;
 export const BRANDS = {
   'slopay-buket': {
     name: 'Слопай букет',
-    source: 'slopay-buket@37dbeaa: src/index.css, src/design-system/slopay-buket.css',
-    mode: 'light', bg: '#fff1e6', surface: '#fffaf6', text: '#3b120e', muted: '#7d4a3e', accent: '#b8262c',
-    display: 'Playfair Display', body: 'Manrope',
-    radius: { sm: '6px', md: '16px', lg: '24px', button: '999px' },
-    note: 'Светлая кремово-персиковая база, ягодно-красный акцент, медовый и листовой зелёный как дополнительные (#d19a2a, #4f7a45).',
+    // Живая главная — статичный редизайн из папки redesign/ (React-версия в корне репозитория — старый сайт).
+    source: 'slopay-buket@37dbeaa: redesign/css/style.css',
+    mode: 'dark', bg: '#0a0908', surface: '#1a1613', text: '#f3e9dc', muted: '#b3a594', accent: '#b3143f',
+    display: 'Cormorant Garamond', body: 'Manrope',
+    radius: { sm: '10px', md: '14px', lg: '22px', button: '999px' },
+    note: 'Почти чёрная тёплая база, кремовый текст, винно-ягодные кнопки (#b3143f, текстовый акцент #e8517a) и золото в заголовках (#d9b779).',
   },
   penka: {
     name: 'ПЕНКА',
