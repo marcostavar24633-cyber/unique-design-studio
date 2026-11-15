@@ -47,7 +47,7 @@ test("detects corrupted ZIP payload and missing expected files", async () => {
   const { verifyZipArchive } = await import("../src/zip-export.js");
   const zip = createZip([{name:"index.html",content:"original"}]);
   const corrupted = zip.slice();
-  corrupted[35] ^= 0xff;
+  corrupted[40] ^= 0xff;
   const result = verifyZipArchive(corrupted,["index.html","README.txt"]);
   assert.equal(result.valid,false);
   assert.ok(result.errors.some(error => error.includes("CRC32 mismatch")));
