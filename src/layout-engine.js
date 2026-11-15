@@ -1,6 +1,10 @@
 const SECTION_COMPONENTS = {
   "hero-product":"product-hero",
-  "category-hero":"product-hero",\n  "delivery":"delivery-panel",\n  "catalog-cta":"conversion-banner",\n  "customer-reviews":"quote-editorial",\n  "pricing-details":"pricing-table",
+  "category-hero":"product-hero",
+  "delivery":"delivery-panel",
+  "catalog-cta":"conversion-banner",
+  "customer-reviews":"quote-editorial",
+  "pricing-details":"pricing-table",
   "featured-products":"product-showcase",
   "category-navigation":"category-rail",
   "category-grid":"category-bento",
