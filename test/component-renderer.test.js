@@ -110,12 +110,12 @@ test("renders escaped SEO, Open Graph, Twitter and canonical metadata", () => {
     canonicalUrl:"https://astro.example/",
     ogImage:"https://astro.example/social-cover.jpg"
   });
-  assert.match(html,/<title>Astro &amp; Optics — телескопы<\\/title>/);
+  assert.ok(html.includes("<title>Astro &amp; Optics — телескопы</title>"));
   assert.match(html,/name="description" content="Подбор телескопов/);
   assert.match(html,/property="og:title" content="Astro &amp; Optics/);
-  assert.match(html,/property="og:image" content="https:\\/\\/astro.example\\/social-cover.jpg"/);
+  assert.ok(html.includes('property="og:image" content="https://astro.example/social-cover.jpg"'));
   assert.match(html,/name="twitter:card" content="summary_large_image"/);
-  assert.match(html,/rel="canonical" href="https:\\/\\/astro.example\\/"/);
+  assert.ok(html.includes('rel="canonical" href="https://astro.example/"'));
   assert.doesNotMatch(html,/&amp;amp;/);
 });
 
