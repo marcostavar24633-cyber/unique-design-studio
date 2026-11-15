@@ -30,3 +30,26 @@ test("writes the expected CRC32 checksum for stored file content", () => {
   assert.equal(view.getUint32(14,true),0xcbf43926);
   assert.equal(view.getUint16(12,true),0x21);
 });
+
+
+test("verifies ZIP entries, directory records and CRC32 before download", async () => {
+  const { verifyZipArchive } = await import("../src/zip-export.js");
+  const zip = createZip([
+    {name:"index.html",content:"<!doctype html><title>Site</title>"},
+    {name:"README.txt",content:"Open index.html"}
+  ]);
+  const result = verifyZipArchive(zip,["index.html","README.txt"]);
+  assert.equal(result.valid,true);
+  assert.deepEqual(result.entries,["index.html","README.txt"]);
+});
+
+test("detects corrupted ZIP payload and missing expected files", async () => {
+  const { verifyZipArchive } = await import("../src/zip-export.js");
+  const zip = createZip([{name:"index.html",content:"original"}]);
+  const corrupted = zip.slice();
+  corrupted[35] ^= 0xff;
+  const result = verifyZipArchive(corrupted,["index.html","README.txt"]);
+  assert.equal(result.valid,false);
+  assert.ok(result.errors.some(error => error.includes("CRC32 mismatch")));
+  assert.ok(result.errors.some(error => error.includes("Missing expected entry")));
+});
