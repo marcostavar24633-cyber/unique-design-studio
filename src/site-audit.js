@@ -101,6 +101,7 @@ export function auditSiteHtml(html = "", css = "") {
   if (missingFragments.length) issues.push(issue("broken-fragments","warning","Есть ссылки на отсутствующие секции","Не найдены ID: " + missingFragments.slice(0,5).join(", ") + "."));
   if (unsafeLinks) issues.push(issue("unsafe-links","error","Найдены небезопасные ссылки","Ссылок с javascript/data/vbscript схемой: " + unsafeLinks + "."));
   if (emptyLinks) issues.push(issue("empty-links","warning","Есть ссылки без адреса","Пустых или отсутствующих href: " + emptyLinks + "."));
+  if (unlabeledLinks) issues.push(issue("unlabeled-links","error","У ссылок нет доступного названия","Ссылок без текста, title или aria-label: " + unlabeledLinks + "."));
   if (externalBlankUnsafe) issues.push(issue("external-link-rel","warning","Внешние вкладки без rel=noopener","Ссылок target=_blank без noopener: " + externalBlankUnsafe + "."));
   if (inputsMissingLabels) issues.push(issue("form-labels","error","У полей формы нет связанной подписи","Полей без связанного label: " + inputsMissingLabels + "."));
   if (demoForms) issues.push(issue("demo-form","warning","Формы пока демонстрационные","Форм без подключённой отправки: " + demoForms + ". Подключите обработчик заявок до публикации."));
