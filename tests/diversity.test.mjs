@@ -2,7 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARCHETYPES, DIRECTIONS, NICHES, buildConcept, exportProject, generate, normalizeProject } from '../src/engine/index.js';
-import { examples } from './helpers.mjs';
+import { examples, unbranded } from './helpers.mjs';
+
+// Проверки шрифтов по умолчанию — на примере без фирменного профиля (с брендом шрифты веб).
+const plain = unbranded(examples[0]);
 
 const triple = f => `${f.archetype}|${f.placement}|${f.typeCharacter}`;
 
@@ -73,15 +76,15 @@ test('тёмный фон с золотым акцентом не выдаётс
 });
 
 test('шрифты: по умолчанию системные и без внешних запросов', () => {
-  const r = generate(examples[0]);
+  const r = generate(plain);
   assert.doesNotMatch(r.html, /fonts\.googleapis/);
   assert.deepEqual(r.concept.visualSystem.typography.webFonts, []);
-  assert.equal(normalizeProject(examples[0]).fonts, 'system');
+  assert.equal(normalizeProject(plain).fonts, 'system');
 });
 
 test('шрифты: fonts:"web" подключает Google Fonts с кириллицей и оставляет системный запасной стек', () => {
   for (const id of Object.keys(ARCHETYPES)) {
-    const r = generate({ ...examples[0], id: `web-${id}`, architecture: id, fonts: 'web' });
+    const r = generate({ ...plain, id: `web-${id}`, architecture: id, fonts: 'web' });
     const t = r.concept.visualSystem.typography;
     assert.ok(t.webFonts.length >= 1, id);
     assert.match(r.html, /<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=/, id);
@@ -92,9 +95,9 @@ test('шрифты: fonts:"web" подключает Google Fonts с кирил�
 });
 
 test('шрифты: настройка сохраняется при экспорте и повторном импорте', () => {
-  const raw = { ...examples[0], fonts: 'web' };
+  const raw = { ...plain, fonts: 'web' };
   const exported = exportProject(raw, buildConcept(raw));
   assert.equal(exported.fonts, 'web');
   assert.equal(normalizeProject(exported).fonts, 'web');
-  assert.equal(normalizeProject({ ...examples[0], fonts: 'что-то другое' }).fonts, 'system');
+  assert.equal(normalizeProject({ ...plain, fonts: 'что-то другое' }).fonts, 'system');
 });
