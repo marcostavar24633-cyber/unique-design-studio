@@ -613,6 +613,7 @@ function moveSection(index, direction) {
   const order = currentInput.sectionOrder;
   const target = index + direction;
   if (target < 0 || target >= order.length) return;
+  recordHistory();
   [order[index],order[target]] = [order[target],order[index]];
   renderCurrentProject();
   buildSectionEditor(currentProject);
@@ -621,6 +622,7 @@ function moveSection(index, direction) {
 
 function removeSection(id) {
   if (currentInput.sectionOrder.length <= 1) return;
+  recordHistory();
   currentInput.sectionOrder = currentInput.sectionOrder.filter(sectionId => sectionId !== id);
   renderCurrentProject();
   buildSectionEditor(currentProject);
