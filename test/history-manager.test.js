@@ -33,5 +33,6 @@ test("snapshots are cloned and empty undo redo return null", () => {
   state.items.push(2);
   assert.deepEqual(history.undo({ items:[3] }),{ items:[1] });
   assert.equal(history.undo({}),null);
-  assert.equal(history.redo({}),null);
+  assert.deepEqual(history.redo({}),{ items:[3] });
+  assert.equal(createHistoryManager().redo({}),null);
 });
