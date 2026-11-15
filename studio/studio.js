@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const $ = sel => document.querySelector(sel);
@@ -11,7 +11,7 @@ let result = null;
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [] };
+  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
 const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* нет хранилища */ } };
 
@@ -25,6 +25,7 @@ const GROUPS = [
   ]],
   ['Архитектура и стиль', true, [
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
+    ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
     ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
@@ -88,6 +89,7 @@ function buildForm() {
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
@@ -103,9 +105,70 @@ const registry = () => state.library.map(l => l.entry);
 function run() {
   result = generate(state.raw, { registry: registry() });
   $('#frame').srcdoc = result.html;
-  renderConcept(); renderAudit(); renderRegistry();
+  renderSpec(); renderConcept(); renderAudit(); renderRegistry();
   persist();
 }
+
+// ---------- ТЗ и анализ ----------
+// Анализ хранится вместе с проектом, для которого его сделал автопилот; у проектов из редактора — пусто.
+const currentAnalysis = () => (state.analysis && state.analysis.projectId === state.raw.id ? state.analysis.data : null);
+function renderSpec() {
+  const a = currentAnalysis();
+  const spec = buildSpec(result.project, result.concept, a || {});
+  const src = a && a.sources && a.sources.length
+    ? `<h2>Источники исследования</h2><ul class="chips-src">${a.sources.map(s => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ul>` : '';
+  $('#view-spec').innerHTML = `
+<div class="spec-actions"><button type="button" data-spec="copy">Скопировать ТЗ</button><button type="button" data-spec="md">Скачать ТЗ (.md)</button><button type="button" data-spec="prompt">Скопировать промт для нейросети</button></div>
+<p class="note">${a ? (a.source === 'ai' ? 'Анализ и тексты подготовил AI с поиском в интернете — проверьте факты по источникам.' : 'Анализ и тексты собраны локальным автопилотом по знаниям о нише — это стартовая гипотеза. Для исследования в интернете укажите адрес AI-сервера в автопилоте или отдайте промт нейросети.') : 'ТЗ собрано по текущему проекту. Автопилот добавит сюда анализ аудитории, возражения, поводы и ключевые запросы.'}</p>
+<pre class="spec">${esc(spec)}</pre>${src}`;
+}
+$('#view-spec').addEventListener('click', async e => {
+  const b = e.target.closest('[data-spec]'); if (!b) return;
+  const a = currentAnalysis() || {};
+  const copy = async (text, ok, file) => { try { await navigator.clipboard.writeText(text); toast(ok); } catch { download(file, text, 'text/plain'); } };
+  if (b.dataset.spec === 'copy') copy(buildSpec(result.project, result.concept, a), 'ТЗ скопировано', `${result.project.id}-tz.md`);
+  if (b.dataset.spec === 'md') download(`${result.project.id}-tz.md`, buildSpec(result.project, result.concept, a), 'text/markdown');
+  if (b.dataset.spec === 'prompt') copy(buildPrompt(result.project, result.concept, a), 'Промт скопирован', `${result.project.id}-prompt.txt`);
+});
+
+// ---------- Автопилот ----------
+try { $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || ''; } catch { /* нет хранилища */ }
+$('#auto').addEventListener('submit', async e => {
+  e.preventDefault();
+  const input = {
+    niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
+    details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
+  };
+  if (!input.niche) return $('#auto-niche').focus();
+  const endpoint = $('#auto-endpoint').value.trim();
+  try { localStorage.setItem('uds:ai-endpoint', endpoint); } catch { /* нет хранилища */ }
+  const status = $('#auto-status'), go = $('#auto-go');
+  go.disabled = true;
+  let draft = null, note = '';
+  if (endpoint) {
+    status.textContent = 'AI изучает нишу в интернете и пишет тексты — обычно это занимает до минуты…';
+    try {
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
+      draft = fromAiLanding(body.landing, input);
+      note = `Готово: AI изучил нишу${draft.analysis.sources.length ? ` (источников: ${draft.analysis.sources.length})` : ''} и написал тексты.`;
+    } catch (err) {
+      note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
+    }
+  }
+  if (!draft) {
+    const local = autopilot(input, { registry: registry() });
+    draft = { project: local.project, analysis: local.analysis };
+    if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
+  }
+  state.analysis = { projectId: draft.project.id, data: draft.analysis };
+  load(draft.project);
+  status.textContent = note;
+  go.disabled = false;
+  selectTab($('#tab-preview'));
+  toast(note);
+});
 let timer;
 const schedule = () => { clearTimeout(timer); timer = setTimeout(run, 220); };
 
@@ -186,6 +249,7 @@ $('#form').addEventListener('input', e => {
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
+  else if (t.dataset.special === 'tier') state.raw.tier = t.value;
   else if (t.dataset.special === 'brand') {
     if (t.value) state.raw.brandProfile = t.value; else delete state.raw.brandProfile;
     // С брендом шрифты по умолчанию веб: обновляем переключатель, чтобы он показывал фактическое значение.

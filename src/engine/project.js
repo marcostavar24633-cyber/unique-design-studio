@@ -6,6 +6,15 @@ import { safeUrl, slugify, str } from './util.js';
 
 export const FORMAT_VERSION = 2;
 
+export const TIERS = { standard: 'Стандарт', premium: 'Премиум', luxury: 'Люкс' };
+/** Класс проекта из любой записи: id, русское название или синоним. */
+export function tierOf(value) {
+  const v = str(value).toLowerCase();
+  if (['luxury', 'lux', 'люкс', 'лакшери', 'лакшери-класс'].includes(v)) return 'luxury';
+  if (['premium', 'премиум', 'премиальный', 'премиум-класс'].includes(v)) return 'premium';
+  return 'standard';
+}
+
 const TEXT_FIELDS = [
   'brand', 'niche', 'title', 'description', 'cta', 'targetAudience', 'mainOffer', 'brandCharacter', 'visualDirection',
   'primaryGoal', 'strategySummary', 'style', 'aboutTitle', 'aboutText', 'servicesTitle', 'servicesIntro',
@@ -55,6 +64,8 @@ export function normalizeProject(raw = {}) {
   const secondary = str(raw.secondaryArchitecture).toLowerCase();
   p.secondaryArchitecture = ARCHETYPES[secondary] ? secondary : '';
   p.palette = paletteMode(raw.palette);
+  // Класс проекта: standard | premium | luxury (влияет на композицию, типографику, палитру и тон текстов).
+  p.tier = tierOf(raw.tier);
   // Фирменный профиль живого проекта (src/engine/brands.js): цвета, гарнитуры и скругления бренда.
   const brandId = str(raw.brandProfile).toLowerCase();
   p.brandProfile = BRANDS[brandId] ? brandId : '';
@@ -78,7 +89,7 @@ export function normalizeProject(raw = {}) {
   p.ctaUrl = safeUrl(raw.ctaUrl);
   p.formAction = /^https:\/\//i.test(str(raw.formAction)) ? str(raw.formAction) : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
-  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile',
+  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier',
     'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
@@ -106,6 +117,7 @@ export function exportProject(input, concept) {
   out.accent = p.accent || concept?.visualSystem?.palette?.accent || '';
   out.accentLocked = Boolean(p.accent);
   if (p.brandProfile) out.brandProfile = p.brandProfile;
+  if (p.tier !== 'standard') out.tier = p.tier;
   // Шрифты пишутся, только если отличаются от умолчания: иначе после импорта «system» стал бы
   // явным выбором и перекрыл бы веб-шрифты, которые фирменный профиль включает по умолчанию.
   if (p.fonts !== (p.brandProfile ? 'web' : 'system')) out.fonts = p.fonts;

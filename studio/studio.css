@@ -54,3 +54,16 @@ table{border-collapse:collapse;width:100%;max-width:920px}th,td{padding:9px 10px
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);margin:0;padding:10px 16px;border-radius:var(--radius);background:var(--ink);color:var(--bg);opacity:0;pointer-events:none;transition:opacity .2s}.toast.show{opacity:1}
 @media(max-width:860px){body{height:auto}.layout{grid-template-columns:1fr}.panel{border-right:0;border-bottom:1px solid var(--line);max-height:none}.stage{min-width:0;overflow:hidden}.view--preview{height:80vh;flex:none}}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
+/* Автопилот и ТЗ */
+.auto{padding:12px 0 16px;border-bottom:2px solid var(--line);display:grid;gap:10px}
+.auto h2{margin:4px 0 0}
+.auto form{display:grid;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.row2{grid-template-columns:1fr}}
+.auto details.ai summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0}
+.auto details.ai .field{margin-top:8px}
+button.wide{width:100%;min-height:44px}
+.note{color:var(--muted);font-size:13px;margin:0}
+.spec-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.spec{white-space:pre-wrap;font:13px/1.6 ui-monospace,"Cascadia Code",Consolas,monospace;max-width:920px;margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow-wrap:anywhere}
+.chips-src a{color:var(--accent)}

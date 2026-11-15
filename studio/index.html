@@ -23,11 +23,38 @@
   </div>
 </header>
 <div class="layout">
-  <aside class="panel" aria-label="Настройки проекта"><form id="form" autocomplete="off"></form></aside>
+  <aside class="panel" aria-label="Настройки проекта">
+    <section class="auto" aria-labelledby="auto-h">
+      <h2 id="auto-h">Автопилот</h2>
+      <p class="note">Впишите любую нишу — студия сама составит анализ аудитории, ТЗ, тексты, промт и соберёт сайт.</p>
+      <form id="auto" autocomplete="off">
+        <div class="field"><label for="auto-niche">Ниша</label><input id="auto-niche" required placeholder="Например: ювелирная мастерская, школа сёрфинга, доставка устриц"></div>
+        <div class="field"><label for="auto-tier">Класс</label><select id="auto-tier"><option value="standard">Стандарт</option><option value="premium">Премиум</option><option value="luxury">Люкс</option></select></div>
+        <div class="row2">
+          <div class="field"><label for="auto-brand">Бренд</label><input id="auto-brand" placeholder="необязательно"></div>
+          <div class="field"><label for="auto-city">Город</label><input id="auto-city" placeholder="необязательно"></div>
+        </div>
+        <div class="field"><label for="auto-details">Что важно знать</label><textarea id="auto-details" placeholder="Необязательно: чем отличаетесь, для кого, что продаёте"></textarea></div>
+        <div class="row2">
+          <div class="field"><label for="auto-email">E-mail для заявок</label><input id="auto-email" type="email" placeholder="необязательно"></div>
+          <div class="field"><label for="auto-phone">Телефон</label><input id="auto-phone" type="tel" placeholder="необязательно"></div>
+        </div>
+        <details class="ai">
+          <summary>Исследовать нишу в интернете (AI)</summary>
+          <div class="field"><label for="auto-endpoint">Адрес AI-сервера</label><input id="auto-endpoint" type="url" placeholder="https://landing-studio-five.vercel.app/api/generate-landing" aria-describedby="auto-endpoint-h">
+            <small id="auto-endpoint-h">Сервер Landing Studio с ключом OPENAI_API_KEY: ищет конкурентов, отзывы и запросы в интернете и пишет тексты. Пусто — локальный автопилот без интернета.</small></div>
+        </details>
+        <button type="submit" class="primary wide" id="auto-go">Собрать сайт</button>
+        <p class="note" id="auto-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+    <form id="form" autocomplete="off"></form>
+  </aside>
   <main class="stage">
     <div class="bar">
       <div class="tabs" role="tablist" aria-label="Разделы результата">
         <button role="tab" id="tab-preview" aria-controls="view-preview" aria-selected="true">Предпросмотр</button>
+        <button role="tab" id="tab-spec" aria-controls="view-spec" aria-selected="false" tabindex="-1">ТЗ и анализ</button>
         <button role="tab" id="tab-concept" aria-controls="view-concept" aria-selected="false" tabindex="-1">Концепция</button>
         <button role="tab" id="tab-audit" aria-controls="view-audit" aria-selected="false" tabindex="-1">Проверка <span id="audit-badge" class="badge"></span></button>
         <button role="tab" id="tab-registry" aria-controls="view-registry" aria-selected="false" tabindex="-1">Реестр <span id="registry-badge" class="badge"></span></button>
@@ -39,6 +66,7 @@
       </div>
     </div>
     <section id="view-preview" role="tabpanel" aria-labelledby="tab-preview" class="view view--preview"><iframe id="frame" title="Предпросмотр страницы" sandbox="allow-scripts"></iframe></section>
+    <section id="view-spec" role="tabpanel" aria-labelledby="tab-spec" class="view" hidden></section>
     <section id="view-concept" role="tabpanel" aria-labelledby="tab-concept" class="view" hidden></section>
     <section id="view-audit" role="tabpanel" aria-labelledby="tab-audit" class="view" hidden></section>
     <section id="view-registry" role="tabpanel" aria-labelledby="tab-registry" class="view" hidden></section>

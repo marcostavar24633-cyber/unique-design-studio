@@ -59,6 +59,10 @@ export function auditSite(html, concept, input) {
   const controls = tags.filter(t => ['input', 'select', 'textarea'].includes(t.name) && t.attrs.type !== 'hidden');
   test(controls.every(c => (c.attrs.id && labelled.has(c.attrs.id)) || c.attrs['aria-label']), 'form-labels', `Поля форм подписаны (${controls.length})`, 'Есть поля формы без подписи <label>');
   if (!imgs.length) add('warn', 'no-images', 'Изображения не предоставлены: вместо фотографий используется абстрактный графический мотив');
+  // Заготовки автопилота вида «[Опишите категорию]» — их должен заменить владелец до публикации.
+  const visible = html.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const holes = [...new Set(visible.match(/\[[А-ЯЁа-яё][^\]\n]{2,120}\]/g) || [])];
+  test(!holes.length, 'placeholders', 'Незаполненных заготовок нет', `На странице остались заготовки — замените их фактами: ${holes.slice(0, 4).join(', ')}${holes.length > 4 ? ` и ещё ${holes.length - 4}` : ''}`, 'warn');
 
   // Доступность и движение
   test(/prefers-reduced-motion/.test(css), 'reduced-motion', 'Учитывается prefers-reduced-motion', 'В стилях нет правила prefers-reduced-motion');
