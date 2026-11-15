@@ -2,6 +2,9 @@
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
+const MAX_IMAGE_BYTES = 1024 * 1024;
+const MAX_IMAGE_DATA = 3_800_000;
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -33,7 +36,10 @@ const GROUPS = [
   ]],
   ['Изображения', false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
+    ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG, PNG, WebP, GIF или AVIF. До 1 МБ на файл.'],
     ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись'],
+    ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. До 1 МБ каждый.'],
+    ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фотографию для её карточки.'],
   ]],
   ['Каталог / услуги / меню', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
@@ -93,6 +99,9 @@ function buildForm() {
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
+    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><button type="button" data-remove-image="hero">Удалить фото</button></figure>` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
+    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><button type="button" data-remove-image="gallery:${i}">Удалить</button></figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
+    else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><button type="button" data-remove-image="service:${i}">Удалить</button></figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
@@ -262,6 +271,49 @@ $('#form').addEventListener('input', e => {
     color.disabled = t.checked; state.raw.accentLocked = !t.checked; state.raw.accent = t.checked ? '' : color.value;
   }
   schedule();
+});
+function imageDataSize() {
+  const values = [state.raw.images?.hero, ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image)];
+  return values.filter(v => typeof v === 'string' && v.startsWith('data:image/')).reduce((n, v) => n + v.length, 0);
+}
+function readImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!IMAGE_TYPES.has(file.type)) return reject(new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.'));
+    if (file.size > MAX_IMAGE_BYTES) return reject(new Error('Файл больше 1 МБ. Уменьшите изображение и повторите загрузку.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл.'));
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.readAsDataURL(file);
+  });
+}
+async function handleImageUpload(input) {
+  const kind = input.dataset.upload, files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length) return;
+  if (kind === 'service' && !Array.isArray(state.raw.services)) return toast('Сначала добавьте позиции в разделе «Каталог / услуги / меню».');
+  const target = kind === 'service' ? Number($('#f--serviceUpload-target')?.value) : -1;
+  if (kind === 'service' && (!Number.isInteger(target) || target < 0 || target >= state.raw.services.length)) return toast('Выберите позицию товара или услуги.');
+  let added = 0;
+  for (const file of files) {
+    try {
+      const data = await readImage(file);
+      if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
+      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || file.name.replace(/\.[^.]+$/, '') };
+      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: file.name.replace(/\.[^.]+$/, ''), alt: file.name.replace(/\.[^.]+$/, '') }];
+      else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '']; cells[3] = data; state.raw.services[target] = cells; }
+      added++;
+    } catch (err) { toast(err.message); }
+  }
+  if (added) { buildForm(); run(); toast(added === 1 ? 'Фотография добавлена в проект' : 'Добавлено фотографий: ' + added); }
+}
+$('#form').addEventListener('change', e => { const input = e.target.closest('[data-upload]'); if (input) handleImageUpload(input); });
+$('#form').addEventListener('click', e => {
+  const b = e.target.closest('[data-remove-image]'); if (!b) return;
+  const [kind, index] = b.dataset.removeImage.split(':');
+  if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: '' };
+  if (kind === 'gallery') state.raw.gallery.splice(Number(index), 1);
+  if (kind === 'service') { const row = state.raw.services[Number(index)]; if (Array.isArray(row)) row[3] = ''; else row.image = ''; }
+  buildForm(); run(); toast('Фотография удалена из проекта');
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
 
