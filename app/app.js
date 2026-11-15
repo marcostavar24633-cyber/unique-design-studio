@@ -43,7 +43,18 @@ function readForm() {
   };
 }
 
-function generate(event) {
+function readImage(file) {
+  if (file.size > 2 * 1024 * 1024) throw new Error("Изображение должно быть не больше 2 МБ.");
+  if (!["image/png","image/jpeg","image/webp","image/gif"].includes(file.type)) throw new Error("Поддерживаются PNG, JPG, WebP и GIF.");
+  return new Promise((resolve,reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Не удалось прочитать изображение."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function generate(event) {
   event.preventDefault();
   if (!form.reportValidity()) return;
   const button = form.querySelector('button[type="submit"]');
@@ -51,13 +62,16 @@ function generate(event) {
   button.querySelector("span").textContent = "Создаём концепцию…";
   try {
     const input = readForm();
+    const imageFile = form.elements.heroImage.files?.[0];
+    const heroImage = imageFile ? await readImage(imageFile) : null;
     const firstProject = createStudioProject(input);
     const heroId = firstProject.concept.homepage.sectionOrder[0];
     input.contentBySection[heroId] = {
-      title:input.businessName || input.businessType,
+      title:form.elements.heroTitle.value.trim() || input.businessName || input.businessType,
       description:input.description || "Описание вашего предложения появится здесь.",
       eyebrow:firstProject.concept.designDNA.primaryArchetypeLabel,
-      cta:{href:"#",label:firstProject.concept.homepage.primaryCTA}
+      cta:{href:"#",label:form.elements.ctaLabel.value.trim() || firstProject.concept.homepage.primaryCTA},
+      ...(heroImage ? {image:{src:heroImage,alt:form.elements.heroAlt.value.trim() || "Изображение проекта"}} : {})
     };
     for (const id of firstProject.concept.homepage.sectionOrder.slice(1)) {
       input.contentBySection[id] = {title:SECTION_LABELS[id] || id.replaceAll("-"," ")};
