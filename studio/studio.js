@@ -66,16 +66,26 @@ function set(path, value) {
 }
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
-  if (path === 'gallery') return [r.src, r.caption].filter(Boolean).join(' | ');
+  if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption].filter(Boolean).join(' | ');
   const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image];
   const cells = a.map(x => x ?? '');
+  if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
   return cells.join(' | ');
 }).join('\n');
 function textToRows(text, path) {
   const rows = text.split('\n').map(l => l.split('|').map(s => s.trim())).filter(r => r.some(Boolean));
   if (path === 'categories') return rows.map(r => r[0]);
-  if (path === 'gallery') return rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[1] || '' }));
+  if (path === 'gallery') {
+    const embedded = (state.raw.gallery || []).filter(g => String(g.src || '').startsWith('data:image/'));
+    return [...rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[1] || '' })), ...embedded];
+  }
+  if (path === 'services') return rows.map((row, i) => {
+    const old = (state.raw.services || []).find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]);
+    const image = Array.isArray(old) ? old[3] : old?.image;
+    if (String(image || '').startsWith('data:image/')) row[3] = image;
+    return row;
+  });
   return rows;
 }
 
@@ -297,7 +307,9 @@ async function handleImageUpload(input) {
   for (const file of files) {
     try {
       const data = await readImage(file);
-      if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
+      const current = kind === 'hero' ? state.raw.images?.hero : kind === 'service' ? (Array.isArray(state.raw.services[target]) ? state.raw.services[target][3] : state.raw.services[target].image) : '';
+      const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
+      if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
       if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || file.name.replace(/\.[^.]+$/, '') };
       else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: file.name.replace(/\.[^.]+$/, ''), alt: file.name.replace(/\.[^.]+$/, '') }];
       else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '']; cells[3] = data; state.raw.services[target] = cells; }
