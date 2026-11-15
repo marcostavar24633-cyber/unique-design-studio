@@ -46,3 +46,19 @@ test("applies explicit palette and shape selections", () => {
 test("rejects missing business type", () => {
   assert.throws(() => createStudioProject({}),/businessType is required/);
 });
+
+test("respects a user-defined section order", () => {
+  const project = createStudioProject({
+    businessType:"студия дизайна",
+    businessName:"Forma",
+    sectionOrder:["contact","benefits","hero-product"],
+    contentBySection:{
+      contact:{title:"Контакты"},
+      benefits:{title:"Преимущества"},
+      "hero-product":{title:"Первый экран"}
+    }
+  });
+  assert.deepEqual(project.sectionOrder,["contact","benefits","hero-product"]);
+  assert.deepEqual(project.layoutPlan.sections.map(section => section.id),["contact","benefits","hero-product"]);
+  assert.ok(project.html.indexOf("Контакты") < project.html.indexOf("Преимущества"));
+});
