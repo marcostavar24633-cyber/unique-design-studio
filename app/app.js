@@ -388,6 +388,10 @@ function buildSiteChromeEditor() {
   currentInput.navigation ||= [];
   currentInput.contacts ||= {phone:"",email:"",address:"",hours:""};
   currentInput.socialLinks ||= [];
+  currentInput.seoTitle ??= currentInput.businessName || currentInput.businessType;
+  currentInput.seoDescription ??= currentInput.description || "";
+  currentInput.canonicalUrl ??= "";
+  currentInput.ogImage ??= "";
   root.replaceChildren();
   const field = (labelText,value,onInput,type="text",placeholder="") => {
     const label = document.createElement("label");
@@ -404,6 +408,20 @@ function buildSiteChromeEditor() {
   const brand = field("Название в шапке",currentInput.brandName,value => {currentInput.brandName=value;renderCurrentProject();});
   const footer = field("Текст в подвале",currentInput.footerText,value => {currentInput.footerText=value;renderCurrentProject();});
   root.append(brand,footer);
+  const seoGroup = document.createElement("div");
+  seoGroup.className = "chrome-editor-group";
+  const seoTitle = document.createElement("strong");
+  seoTitle.textContent = "SEO и предпросмотр в поиске";
+  seoGroup.append(seoTitle);
+  seoGroup.append(field("SEO Title",currentInput.seoTitle,value => {currentInput.seoTitle=value;renderCurrentProject();},"text","Название страницы — ориентир 30–60 символов"));
+  seoGroup.append(field("Meta Description",currentInput.seoDescription,value => {currentInput.seoDescription=value;renderCurrentProject();},"text","Краткое описание — ориентир 70–160 символов"));
+  seoGroup.append(field("Canonical URL",currentInput.canonicalUrl,value => {currentInput.canonicalUrl=value;renderCurrentProject();},"url","https://ваш-домен.ru/"));
+  seoGroup.append(field("Open Graph image URL",currentInput.ogImage,value => {currentInput.ogImage=value;renderCurrentProject();},"url","https://ваш-домен.ru/social-cover.jpg"));
+  const seoHint = document.createElement("small");
+  seoHint.className = "audit-hint";
+  seoHint.textContent = "Canonical укажите только после выбора основного домена. Для соцсетей нужен абсолютный URL доступного изображения.";
+  seoGroup.append(seoHint);
+  root.append(seoGroup);
   const navGroup = document.createElement("div");
   navGroup.className = "chrome-editor-group";
   const navTitle = document.createElement("strong");
