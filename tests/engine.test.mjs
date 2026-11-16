@@ -36,6 +36,22 @@ test('не каждая ниша превращается в тёмный пре
   assert.ok(archetypes.size >= 4, [...archetypes].join());
 });
 
+test('адаптивное кадрирование фотографий учитывает нулевые координаты и безопасные значения по умолчанию', () => {
+  const project = {
+    ...full,
+    images: { hero: 'https://example.com/hero.jpg', heroAlt: 'Тестовое фото' },
+    imageArtDirection: { hero: {
+      desktop: { x: 0, y: 100 },
+      tablet: { x: 120, y: -10 },
+      mobile: { x: null, y: '' },
+    } },
+  };
+  const result = generate(project);
+  assert.match(result.html, /--ds-crop-desktop:0% 100%/);
+  assert.match(result.html, /--ds-crop-tablet:100% 0%/);
+  assert.match(result.html, /--ds-crop-mobile:50% 50%/);
+});
+
 test('генерация детерминирована', () => {
   const a = generate(example('penka')), b = generate(example('penka'));
   assert.equal(a.html, b.html);
