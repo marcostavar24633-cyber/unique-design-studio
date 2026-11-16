@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Библиотека шаблонов — UNIQUE DESIGN STUDIO</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#14171b;--card:#1b1e23;--ink:#f2eee4;--muted:#aaa49a;--gold:#c9a45e;--line:rgba(201,164,94,.25)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% 0%,#282116 0,transparent 38%),var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px max(18px,calc((100% - 1120px)/2));border-bottom:1px solid var(--line);background:#111317}
+a{color:var(--gold);text-decoration:none}button,input,select,textarea{font:inherit;color:inherit}button{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px;cursor:pointer}button.primary{background:linear-gradient(135deg,#d6b46d,#a77d35);color:#111;border-color:var(--gold);font-weight:700}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+main{max-width:1120px;margin:30px auto;padding:0 18px}.eyebrow{color:var(--gold);font-size:11px;font-weight:800;letter-spacing:.18em}.intro h1{font-size:clamp(26px,4vw,40px);margin:6px 0}.intro p,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px;margin-top:24px}.panel{background:linear-gradient(145deg,#1a1c20,#111317);border:1px solid var(--line);border-radius:17px;padding:20px;min-width:0}.panel h2{font-size:19px;margin:0 0 14px}.field{display:grid;gap:6px;margin:13px 0}.field label{font-size:13px;font-weight:650}.field input,.field select,.field textarea{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#0e1013}.field textarea{min-height:78px;resize:vertical}.hint{font-size:12px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.steps{display:grid;gap:10px}.step{display:flex;gap:11px;align-items:flex-start;padding:11px;border:1px solid var(--line);border-radius:11px;background:#111317}.num{display:grid;place-items:center;flex:none;width:27px;height:27px;border-radius:50%;background:#342b1c;color:var(--gold);font-weight:800}.step b{display:block}.step small{color:var(--muted)}.status{min-height:22px;color:var(--gold);font-size:13px;margin:12px 0 0}.library{margin-top:26px}.library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px}.template{padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--panel);min-width:0}.template h3{margin:0 0 5px}.template p{margin:5px 0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}.tag{display:inline-block;padding:3px 8px;border-radius:20px;background:#302719;color:#e3c98e;font-size:11px}.empty{padding:22px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);text-align:center}.template .actions button{font-size:12px;padding:7px 10px}.warning{margin-top:14px;padding:12px;border-left:3px solid var(--gold);background:#201b13;color:#d7c7a6;font-size:12px}
+@media(max-width:760px){header{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}main{margin:22px auto}.panel{padding:15px}}
+</style>
+</head>
+<body>
+<header><strong>✦ UNIQUE DESIGN STUDIO</strong><a href="index.html">← Вернуться в студию</a></header>
+<main>
+<section class="intro"><div class="eyebrow">TEMPLATE BUILDER PRO</div><h1>Создание шаблона из сайта</h1><p>Добавь публичный сайт, укажи страницы и подготовь карточку будущего шаблона для собственной библиотеки.</p></section>
+<div class="grid">
+<section class="panel">
+<h2>Источник шаблона</h2>
+<form id="template-form">
+<div class="field"><label for="source-url">Ссылка на сайт *</label><input id="source-url" type="url" placeholder="https://example.com" required></div>
+<div class="field"><label for="page-urls">Дополнительные страницы</label><textarea id="page-urls" placeholder="https://example.com/catalog&#10;https://example.com/about"></textarea><small class="hint">Каждую ссылку укажи с новой строки.</small></div>
+<div class="field"><label for="template-name">Название шаблона *</label><input id="template-name" required placeholder="Например: Premium Furniture"></div>
+<div class="field"><label for="template-category">Категория</label><select id="template-category"><option>Универсальный</option><option>Интернет-магазин</option><option>Услуги и бизнес</option><option>Каталог</option><option>Портфолио</option><option>Beauty</option><option>Недвижимость</option><option>Другое</option></select></div>
+<div class="field"><label for="template-notes">Заметки</label><textarea id="template-notes" placeholder="Что понравилось: структура, навигация, карточки, стиль..."></textarea></div>
+<div class="actions"><button class="primary" type="submit">Добавить в библиотеку</button><button type="reset">Очистить</button></div>
+<p class="status" id="status" role="status" aria-live="polite"></p>
+</form>
+<div class="warning">Важно: это первый интерфейс библиотеки. Сейчас он сохраняет ссылку, список страниц и описание шаблона локально в этом браузере. Автоматическое чтение сайта, получение скриншотов и извлечение структуры подключаются отдельным следующим этапом.</div>
+</section>
+<aside class="panel">
+<h2>Как будет проходить анализ</h2>
+<div class="steps">
+<div class="step"><span class="num">1</span><div><b>Получение страниц</b><small>Загрузка доступных публичных страниц и скриншотов через отдельный анализатор.</small></div></div>
+<div class="step"><span class="num">2</span><div><b>Разбор структуры</b><small>Секции, сетки, навигация, CTA, формы и адаптивные решения.</small></div></div>
+<div class="step"><span class="num">3</span><div><b>Дизайн-система</b><small>Палитра, типографика, карточки, кнопки и визуальные правила.</small></div></div>
+<div class="step"><span class="num">4</span><div><b>Сборка шаблона</b><small>Редактируемая собственная интерпретация, без копирования чужих материалов.</small></div></div>
+</div>
+<div class="actions"><button id="export-library" type="button">Экспорт библиотеки JSON</button><label><button type="button" id="import-trigger">Импорт JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden></label></div>
+</aside>
+</div>
+<section class="library">
+<div class="library-head"><div><div class="eyebrow">MY TEMPLATE LIBRARY</div><h2>Сохранённые шаблоны <span id="count" class="tag">0</span></h2></div><button id="clear-library" type="button">Очистить библиотеку</button></div>
+<div id="templates" class="cards"><div class="empty">Пока шаблонов нет. Добавь первый сайт в форму выше.</div></div>
+</section>
+</main>
+<script>
+const KEY='uds:template-library:v1';
+const $=s=>document.querySelector(s);
+const read=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v:[]}catch{return[]}};
+let items=read();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(items));return true}catch{return false}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function render(){ $('#count').textContent=items.length;$('#templates').innerHTML=items.length?items.map((x,i)=>'<article class="template"><span class="tag">'+esc(x.category)+'</span><h3>'+esc(x.name)+'</h3><p><a href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer">'+esc(x.url)+'</a></p><p>Страниц: '+(1+x.pages.length)+'</p><p>'+esc(x.notes||'Без заметок')+'</p><small class="hint">Добавлен: '+new Date(x.createdAt).toLocaleDateString('ru-RU')+'</small><div class="actions"><button type="button" data-copy="'+i+'">Копировать данные</button><button type="button" data-delete="'+i+'">Удалить</button></div></article>').join(''):'<div class="empty">Пока шаблонов нет. Добавь первый сайт в форму выше.</div>'}
+$('#template-form').addEventListener('submit',e=>{e.preventDefault();const url=$('#source-url').value.trim();try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))throw 0}catch{$('#status').textContent='Укажи корректную ссылку http или https.';return}const pages=$('#page-urls').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);for(const p of pages){try{const u=new URL(p);if(!['http:','https:'].includes(u.protocol))throw 0}catch{$('#status').textContent='Проверь дополнительную ссылку: '+p;return}}const item={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),url,pages,name:$('#template-name').value.trim(),category:$('#template-category').value,notes:$('#template-notes').value.trim(),createdAt:new Date().toISOString(),status:'source-saved'};items.unshift(item);if(!save()){items.shift();$('#status').textContent='Не удалось сохранить: возможно, переполнено хранилище браузера.';return}render();$('#status').textContent='Ссылка и карточка шаблона сохранены локально. Автоматический анализ ещё не подключён.';e.target.reset()});
+$('#templates').addEventListener('click',e=>{const del=e.target.closest('[data-delete]');if(del){items.splice(Number(del.dataset.delete),1);save();render();return}const copy=e.target.closest('[data-copy]');if(copy){const item=items[Number(copy.dataset.copy)];navigator.clipboard?.writeText(JSON.stringify(item,null,2)).then(()=>$('#status').textContent='Данные шаблона скопированы.').catch(()=>$('#status').textContent='Не удалось скопировать. Используй экспорт JSON.')}});
+$('#export-library').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({version:1,templates:items},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='unique-design-templates.json';a.click();URL.revokeObjectURL(a.href)});
+$('#import-trigger').addEventListener('click',()=>$('#import-file').click());
+$('#import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());const incoming=Array.isArray(data)?data:data.templates;if(!Array.isArray(incoming))throw new Error('В файле нет списка templates');items=[...incoming,...items];save();render();$('#status').textContent='Импортировано шаблонов: '+incoming.length}catch(err){$('#status').textContent=err.message||'Не удалось прочитать JSON'}e.target.value=''});
+$('#clear-library').addEventListener('click',()=>{if(!items.length)return;if(!confirm('Удалить все сохранённые карточки шаблонов?'))return;items=[];save();render()});
+render();
+</script>
+</body>
+</html>
