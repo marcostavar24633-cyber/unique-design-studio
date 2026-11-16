@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -324,6 +324,24 @@ $('#view-spec').addEventListener('click', async e => {
   if (b.dataset.content === 'download') download(`${result.project.id}-content-director.txt`, contentPrompt(), 'text/plain');
 });
 
+// ---------- Библиотека шаблонов в автопилоте ----------
+function readTemplateLibrary() {
+  try { return normalizeLibrary(JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]')); } catch { return []; }
+}
+function renderLibraryHint() {
+  const hint = $('#auto-library-h'); if (!hint) return;
+  const filled = readTemplateLibrary().filter(t => t.status !== 'source-saved').length;
+  const link = '<a href="templates.html">Открыть библиотеку</a>';
+  hint.innerHTML = $('#auto-library').value === 'off' ? 'Концепция строится только по нише и контенту. ' + link
+    : filled ? 'Заполненных профилей: ' + filled + '. Подходящие принципы переосмысляются, дизайн не копируется. ' + link
+    : 'В библиотеке пока нет заполненных профилей. ' + link;
+}
+try { $('#auto-library').value = localStorage.getItem('uds:use-library') === 'off' ? 'off' : 'auto'; } catch {}
+$('#auto-library').addEventListener('change', () => { try { localStorage.setItem('uds:use-library', $('#auto-library').value); } catch {} renderLibraryHint(); });
+window.addEventListener('storage', e => { if (e.key === LIBRARY_KEY) renderLibraryHint(); });
+window.addEventListener('pageshow', renderLibraryHint);
+renderLibraryHint();
+
 // ---------- Автопилот ----------
 try {
   $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
@@ -339,6 +357,9 @@ $('#auto').addEventListener('submit', async e => {
     customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
+  const useLibrary = $('#auto-library').value !== 'off';
+  const references = useLibrary ? referencesFor(readTemplateLibrary(), input) : [];
+  if (references.length) input.designReferences = references;
   const endpoint = $('#auto-endpoint').value.trim();
   try {
     localStorage.setItem('uds:ai-endpoint', endpoint);
@@ -369,6 +390,7 @@ $('#auto').addEventListener('submit', async e => {
     draft = { project: local.project, analysis: local.analysis };
     if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
   }
+  note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
   status.textContent = note;
@@ -420,6 +442,7 @@ function renderConcept() {
   ])}</div>
 ${renderVisualAssetLibrary()}
 <h2>Design DNA</h2><div class="card">${kv([
+    ['Концепция', '<b>' + esc(d.conceptName || '') + '</b> <span class="note">— ' + esc(d.conceptFormula || '') + '</span>'], ['Что учтено', ul(b.contextFactors || [])],
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
     ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)],
