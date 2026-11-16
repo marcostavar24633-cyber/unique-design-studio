@@ -162,7 +162,7 @@ function cropEditor(role, index = 0, src = '') {
   const previews = src ? '<div class="crop-live-previews" aria-label="Предпросмотр кадрирования">' + viewports.map(([key,label,ratio]) => {
     const v = entry && entry[key] || {};
     const x = Math.max(0,Math.min(100,Number(v.x) || 50)), y = Math.max(0,Math.min(100,Number(v.y) || 50));
-    return '<figure class="crop-live"><figcaption>' + label + '</figcaption><div class="crop-live__frame" style="aspect-ratio:' + ratio + '"><img src="' + esc(src) + '" alt="" style="object-position:' + x + '% ' + y + '%"></div></figure>';
+    return '<figure class="crop-live"><figcaption>' + label + '</figcaption><div class="crop-live__frame" style="aspect-ratio:' + ratio + '"><img src="' + esc(src) + '" alt="" data-crop-preview-role="' + role + '" data-crop-preview-index="' + index + '" data-crop-preview-viewport="' + key + '" style="object-position:' + x + '% ' + y + '%"></div></figure>';
   }).join('') + '</div>' : '';
   return '<details class="crop-editor"><summary>Кадрирование для экранов</summary>' + previews + '<div class="crop-editor__grid">' + viewports.map(([key,label]) => { const v = entry && entry[key] || {}; return '<fieldset><legend>' + label + '</legend>' + ['x','y'].map(axis => { const n = Math.max(0,Math.min(100,Number(v[axis]) || 50)); return '<label>' + (axis === 'x' ? 'По горизонтали' : 'По вертикали') + ' <output>' + n + '%</output><input type="range" min="0" max="100" value="' + n + '" data-crop="' + role + '" data-crop-index="' + index + '" data-crop-viewport="' + key + '" data-crop-axis="' + axis + '"></label>'; }).join('') + '</fieldset>'; }).join('') + '</div><p class="note">Предпросмотр показывает обрезку для пропорций экранов. 0% — левый/верхний край, 50% — центр, 100% — правый/нижний край. Проверьте, чтобы важные детали и лица не попадали под текст или за границу кадра.</p></details>';
 }
@@ -861,7 +861,20 @@ function download(name, text, type) {
 
 $('#form').addEventListener('input', e => {
   const t = e.target;
-  if (t.dataset.crop) { writeCrop(t.dataset.crop, Number(t.dataset.cropIndex), t.dataset.cropViewport, t.dataset.cropAxis, t.value); const output = t.parentElement.querySelector('output'); if (output) output.value = t.value + '%'; }
+  if (t.dataset.crop) {
+    const role = t.dataset.crop, index = Number(t.dataset.cropIndex), viewport = t.dataset.cropViewport, axis = t.dataset.cropAxis;
+    writeCrop(role, index, viewport, axis, t.value);
+    const output = t.parentElement.querySelector('output');
+    if (output) output.value = t.value + '%';
+    const editor = t.closest('.crop-editor');
+    const preview = editor?.querySelector('[data-crop-preview-role="' + role + '"][data-crop-preview-index="' + index + '"][data-crop-preview-viewport="' + viewport + '"]');
+    if (preview) {
+      const current = preview.style.objectPosition.split(/\\s+/);
+      const x = axis === 'x' ? t.value : (current[0] || '50%').replace('%','');
+      const y = axis === 'y' ? t.value : (current[1] || '50%').replace('%','');
+      preview.style.objectPosition = x + '% ' + y + '%';
+    }
+  }
   else if (t.dataset.path) set(t.dataset.path, t.value);
   else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
   else if (t.dataset.special === 'arch') {
