@@ -109,8 +109,8 @@ function fakeGitHub({ token = 'test-token', pr = {}, mergeResponse, branchProtec
     ['GET', /\/branches\/feature%2Fx$|\/branches\/feature\/x$/, () => [200, { protected: branchProtected, commit: { sha: 'h'.repeat(40) } }]],
     ['GET', /\/pulls\?state=open&head=/, () => [200, otherPrs]],
     ['DELETE', /\/git\/refs\/heads\/feature\/x$/, () => [204, null]],
-    ['POST', /\/actions\/workflows\/pages\.yml\/dispatches$/, () => [204, null]],
-    ['GET', /\/actions\/workflows\/pages\.yml\/runs/, () => [200, { workflow_runs: runs || [{ head_sha: state.mainSha, status: 'completed', conclusion: 'success', html_url: 'https://github.com/run/1' }] }]],
+    ['POST', /\/actions\/workflows\/pages\.yml\/dispatches$/, () => { state.dispatches = (state.dispatches || 0) + 1; return [204, null]; }],
+    ['GET', /\/actions\/workflows\/pages\.yml\/runs/, () => [200, { workflow_runs: (typeof runs === 'function' ? runs(state) : runs) || [{ head_sha: state.mainSha, status: 'completed', conclusion: 'success', html_url: 'https://github.com/run/1' }] }]],
   ];
   const fetchImpl = async (url, init = {}) => {
     const method = init.method || 'GET';
@@ -224,8 +224,32 @@ test('публикация не считается успешной без по�
   const { gh } = fakeGitHub({ runs: [] });
   const v = await verifyAfterMerge(gh, { mergeSha: 'm'.repeat(40), sleep: noSleep, attempts: 2 });
   assert.equal(v.deploy, 'unknown');
-  const failed = await verifyAfterMerge(fakeGitHub({ runs: [{ head_sha: 'm'.repeat(40), status: 'completed', conclusion: 'failure' }] }).gh, { mergeSha: 'm'.repeat(40), sleep: noSleep, attempts: 1 });
+  const failed = await verifyAfterMerge(fakeGitHub({ runs: [{ head_sha: 'm'.repeat(40), status: 'completed', conclusion: 'failure' }] }).gh, { mergeSha: 'm'.repeat(40), sleep: noSleep, attempts: 1, deployRetries: 0 });
   assert.equal(failed.deploy, 'failed (failure)');
+});
+
+test('упавшая публикация запускается заново отдельным запуском и подтверждается', async () => {
+  const sha = 'm'.repeat(40);
+  const failedRun = { id: 1, head_sha: sha, status: 'completed', conclusion: 'failure', created_at: '2026-11-17T01:00:00Z', html_url: 'https://github.com/run/1' };
+  const freshRun = { id: 2, head_sha: sha, status: 'completed', conclusion: 'success', created_at: '2026-11-17T01:02:00Z', html_url: 'https://github.com/run/2' };
+  // Первый запуск (по первому dispatch) падает; после второго dispatch появляется новый успешный запуск.
+  const { gh, state } = fakeGitHub({ runs: st => (st.dispatches >= 2 ? [freshRun, failedRun] : [failedRun]) });
+  const v = await verifyAfterMerge(gh, { mergeSha: sha, sleep: noSleep, attempts: 5 });
+  assert.equal(v.deploy, 'deployed');
+  assert.equal(v.deployRetries, 1);
+  assert.deepEqual(v.failedRuns, ['https://github.com/run/1']);
+  assert.equal(state.dispatches, 2, 'новый запуск, а не повтор упавшего');
+});
+
+test('повтор публикации ограничен: после неудачного повтора — честная ошибка', async () => {
+  const sha = 'm'.repeat(40);
+  const run = (id, at) => ({ id, head_sha: sha, status: 'completed', conclusion: 'failure', created_at: at, html_url: 'https://github.com/run/' + id });
+  const { gh, state } = fakeGitHub({ runs: st => (st.dispatches >= 2 ? [run(2, '2026-11-17T01:02:00Z'), run(1, '2026-11-17T01:00:00Z')] : [run(1, '2026-11-17T01:00:00Z')]) });
+  const v = await verifyAfterMerge(gh, { mergeSha: sha, sleep: noSleep, attempts: 6 });
+  assert.equal(v.deploy, 'failed (failure)');
+  assert.equal(v.deployRetries, 1);
+  assert.equal(state.dispatches, 2, 'не больше одного повтора');
+  assert.equal(v.failedRuns.length, 2);
 });
 
 // ---------- Анализ git на временном репозитории ----------
