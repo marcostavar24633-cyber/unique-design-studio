@@ -76,21 +76,25 @@ const json = (body, status, origin) => new Response(JSON.stringify(body), {
 async function fetchPublic(target, accept, allowed) {
   let url = target;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    // Разрешение robots.txt проверяется для каждого адреса в цепочке перенаправлений, а не только для исходного.
     if (allowed && !(await allowed(url))) return { error: { reason: 'robots', message: 'Владелец сайта запретил автоматическое чтение этой страницы в robots.txt' } };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     let res;
     try {
       res = await fetch(url.href, { method: 'GET', redirect: 'manual', signal: controller.signal, headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Language': 'ru,en;q=0.8' } });
-    } finally { clearTimeout(timer); }
+    } catch (error) {
+      clearTimeout(timer);
+      throw error;
+    }
     if (res.status >= 300 && res.status < 400 && res.headers.get('Location')) {
+      clearTimeout(timer);
       const next = validateTarget(new URL(res.headers.get('Location'), url).href);
       if (!next.ok) return { error: next };
       url = next.url;
       continue;
     }
-    return { res, url };
+    // Таймер остаётся активным до полного чтения тела ответа.
+    return { res, url, cleanup: () => clearTimeout(timer) };
   }
   return { error: { reason: 'redirects', message: 'Слишком много перенаправлений' } };
 }
@@ -146,7 +150,14 @@ export async function handle(request, env = {}) {
     const allowed = kind !== 'html' ? null : async url => {
       if (!robotsByOrigin.has(url.origin)) {
         const robots = await fetchPublic(new URL('/robots.txt', url), 'text/plain');
-        robotsByOrigin.set(url.origin, robots.res && robots.res.ok ? decode((await readLimited(robots.res, 200_000)).bytes, robots.res.headers.get('Content-Type')) : '');
+        if (robots.error) return false;
+        try {
+          // 4xx означает, что файл отсутствует; 5xx/сетевая ошибка — временно недоступен,
+          // поэтому в сомнительном случае запрещаем автоматическое чтение страницы.
+          if (robots.res.status >= 500) return false;
+          const rules = robots.res.status >= 400 ? '' : decode((await readLimited(robots.res, 200_000)).bytes, robots.res.headers.get('Content-Type'));
+          robotsByOrigin.set(url.origin, rules);
+        } finally { robots.cleanup(); }
       }
       return robotsAllows(robotsByOrigin.get(url.origin), url.pathname + url.search);
     };
@@ -161,7 +172,9 @@ export async function handle(request, env = {}) {
     if (kind === 'html' ? !/text\/html|application\/xhtml/.test(type) : !/text\/css/.test(type)) {
       return json({ ok: false, reason: 'content-type', message: `Неподходящий тип содержимого: ${type || 'не указан'}` }, 200, origin);
     }
-    const { bytes, truncated } = await readLimited(res, MAX_BYTES[kind]);
+    let bytes, truncated;
+    try { ({ bytes, truncated } = await readLimited(res, MAX_BYTES[kind])); }
+    finally { got.cleanup(); }
     return json({ ok: true, kind, url: target.url.href, finalUrl: url.href, status: res.status, contentType: type, truncated, text: decode(bytes, type), fetchedAt: new Date().toISOString() }, 200, origin);
   } catch (err) {
     const timeout = err && err.name === 'AbortError';
