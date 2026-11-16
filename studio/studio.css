@@ -145,3 +145,6 @@ button.wide{width:100%;min-height:44px}
 
 /* Responsive Layout & Accessibility QA */
 .responsive-a11y{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}.responsive-a11y h3{margin:0 0 8px}.responsive-a11y>button{min-height:44px;padding:10px 16px;border:0;border-radius:var(--radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}.responsive-a11y>button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.responsive-a11y .visual-quality-list{margin-bottom:0}
+
+/* Site Content & Interaction QA */
+.site-content-qa{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}.site-content-qa h3{margin:0 0 8px}.site-content-qa>button{min-height:44px;padding:10px 16px;border:0;border-radius:var(--radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}.site-content-qa>button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.site-content-qa .visual-quality-list{margin-bottom:0}
