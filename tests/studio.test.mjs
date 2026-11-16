@@ -81,6 +81,16 @@ test('Mobile crop previews remain readable and horizontally scrollable on narrow
   assert.match(css, /\.crop-live\{scroll-snap-align:start\}/);
 });
 
+test('Smart Crop previews update live when focal point sliders move', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('data-crop-preview-role='));
+  assert.ok(source.includes('data-crop-preview-index='));
+  assert.ok(source.includes('data-crop-preview-viewport='));
+  assert.ok(source.includes("const preview = editor?.querySelector("));
+  assert.ok(source.includes("preview.style.objectPosition = x + '%' + ' ' + y + '%'") || source.includes("preview.style.objectPosition = x + '% ' + y + '%'"));
+  assert.ok(source.includes("writeCrop(role, index, viewport, axis, t.value)"));
+});
+
 test('Photo Art Direction creates a detailed niche-aware shot list', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function buildPhotoShotList(niche, tier)','function formatPhotoShotList(shots)','PHOTO ART DIRECTION — ПЛАН ФОТОСЪЁМКИ','Контекст и пространство','Процесс / работа','Макродеталь / фактура','Мобильный вертикальный кадр','Скопировать весь план фотосъёмки','data-copy-photo-shotlist','не инсценировать несуществующие действия','От 2400 × 1350 px']) assert.ok(source.includes(marker), marker);
