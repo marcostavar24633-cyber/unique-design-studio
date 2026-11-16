@@ -84,6 +84,14 @@ test('код веб-редактора синтаксически коррект
   assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
+test('Visual asset library summarizes desktop and mobile image variants and links to controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of ['function renderVisualAssetLibrary()', 'state.raw.images?.heroMobile', 'mobile.gallery?.[index]', 'mobile.services?.[index]', 'data-open-image-settings', 'data-open-image-audit', 'asset-library__stats', 'asset-library__mobile', 'Библиотека изображений', 'Управлять фотографиями', 'Проверить качество фото']) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.asset-library__grid\{display:grid/);
+  assert.match(css, /@media\(max-width:560px\)\{\.asset-library\{padding:12px\}/);
+});
+
 test('Mobile crop previews remain readable and horizontally scrollable on narrow screens', () => {
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
   assert.match(css, /@media\(max-width:520px\)\{\.crop-editor__grid\{grid-template-columns:1fr\}/);

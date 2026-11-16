@@ -203,3 +203,26 @@ body:not(.dashboard-mode)>.top .top__actions{align-items:center}
   body.workspace-settings-collapsed .view--preview{height:calc(100vh - 190px);min-height:480px}
 }
 @media(prefers-reduced-motion:reduce){.panel{transition:none}}
+
+/* Visual asset library */
+.asset-library{margin:22px 0 28px;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.asset-library__head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.asset-library__head h2{margin:0 0 5px;font-size:20px}
+.asset-library__stats{display:flex;align-items:baseline;gap:5px;white-space:nowrap;color:var(--muted);font-size:12px}
+.asset-library__stats b{margin-left:8px;color:var(--text);font-size:20px;font-variant-numeric:tabular-nums}
+.asset-library__stats b:first-child{margin-left:0}
+.asset-library__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:16px}
+.asset-library__item{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:var(--bg)}
+.asset-library__desktop{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--panel)}
+.asset-library__meta{display:grid;gap:3px;padding:10px 11px}
+.asset-library__role{width:max-content;padding:3px 7px;border-radius:20px;background:var(--panel);color:var(--muted);font-size:10px;font-weight:700}
+.asset-library__meta b{overflow-wrap:anywhere;font-size:13px}
+.asset-library__meta small{color:var(--muted);font-size:11px}
+.asset-library__mobile{display:flex;align-items:center;gap:8px;min-height:48px;padding:7px 10px;border-top:1px solid var(--line);font-size:11px}
+.asset-library__mobile img{width:34px;height:40px;object-fit:cover;border-radius:5px}
+.asset-library__mobile .is-ready{color:var(--ok)}
+.asset-library__mobile .is-empty{color:var(--muted)}
+.asset-library__empty{margin:14px 0;padding:18px;border:1px dashed var(--line);border-radius:10px}
+.asset-library__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+.asset-library__actions button{min-height:40px}
+@media(max-width:560px){.asset-library{padding:12px}.asset-library__head{display:block}.asset-library__stats{margin-top:8px}.asset-library__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.asset-library__meta{padding:8px}.asset-library__mobile{font-size:10px}}
