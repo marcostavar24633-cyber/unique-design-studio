@@ -240,19 +240,45 @@ function safeDeploymentUrl(value) {
     return url.href;
   } catch { return null; }
 }
+let deploymentFilter = 'all';
+function deploymentKind(item) {
+  if (/\.pages\.dev$/i.test(new URL(item.url).hostname) && item.branch === 'production') return 'production';
+  if (/\.pages\.dev$/i.test(new URL(item.url).hostname)) return 'preview';
+  return 'domain';
+}
 function renderPublishHistory() {
   const host = $('#publish-history-list'); if (!host) return;
   const items = readPublishHistory();
-  if (!items.length) { host.innerHTML = '<p class="publish-history__empty">История пока пуста. После успешной команды Wrangler зафиксируйте deployment здесь.</p>'; return; }
-  host.innerHTML = items.map(item => {
+  const counts = { all: items.length, production: 0, preview: 0, domain: 0, reachable: 0, errors: 0, unknown: 0 };
+  for (const item of items) {
+    let kind = 'domain'; try { kind = deploymentKind(item); } catch {}
+    counts[kind]++;
+    if (item.checkState === 'reachable') counts.reachable++;
+    else if (item.checkState === 'http-error') counts.errors++;
+    else if (item.checkState === 'blocked') counts.unknown++;
+  }
+  const filtered = items.filter(item => {
+    let kind = 'domain'; try { kind = deploymentKind(item); } catch {}
+    return deploymentFilter === 'all' || deploymentFilter === kind;
+  });
+  const filters = [['all','Все'],['production','Production'],['preview','Preview'],['domain','Домены']];
+  const cards = [
+    ['Всего адресов', counts.all], ['Production', counts.production], ['Preview', counts.preview],
+    ['Домены', counts.domain], ['Доступны', counts.reachable], ['HTTP-ошибки', counts.errors], ['Не проверены / CORS', counts.unknown]
+  ];
+  host.innerHTML = '<div class="deployment-monitor"><div class="deployment-monitor__top"><div><span class="publish-manager__eyebrow">DEPLOYMENT MONITOR PRO</span><h3>Мониторинг сайтов</h3><p>Локальный реестр адресов и ручные проверки. Данные хранятся в этом браузере.</p></div><button type="button" id="deployment-check-all"' + (items.length ? '' : ' disabled') + '>Проверить все адреса</button></div><div class="deployment-monitor__stats">' + cards.map(([label,value]) => '<div><b>' + value + '</b><small>' + label + '</small></div>').join('') + '</div><div class="deployment-monitor__filters" role="group" aria-label="Фильтр адресов">' + filters.map(([key,label]) => '<button type="button" data-deployment-filter="' + key + '" aria-pressed="' + (deploymentFilter === key) + '">' + label + ' · ' + counts[key] + '</button>').join('') + '</div></div>' +
+  (filtered.length ? filtered.map(item => {
     const date = new Date(item.createdAt);
     const dateText = Number.isNaN(date.getTime()) ? 'Дата не указана' : date.toLocaleString('ru-RU');
-    const stateText = item.checkState === 'reachable' ? 'Сайт ответил: HTTP ' + item.httpStatus
-      : item.checkState === 'http-error' ? 'HTTP ' + item.httpStatus
-      : item.checkState === 'blocked' ? 'Ответ не прочитан: CORS или сеть'
-      : 'Проверка ещё не выполнялась';
-    return '<article class="publish-history__item"><div class="publish-history__meta"><b>' + esc(item.projectName) + ' · ' + esc(item.branch) + '</b><small>' + esc(dateText) + ' · ' + esc(stateText) + '</small><a href="' + esc(item.url) + '" target="_blank" rel="noopener noreferrer">' + esc(item.url) + '</a></div><div class="publish-history__actions"><button type="button" data-check-deployment="' + esc(item.id) + '">Проверить URL</button><button type="button" data-open-deployment="' + esc(item.id) + '">Открыть</button><button type="button" data-delete-deployment="' + esc(item.id) + '" aria-label="Удалить запись">Удалить</button></div></article>';
-  }).join('');
+    const kind = (() => { try { return deploymentKind(item); } catch { return 'domain'; } })();
+    const kindText = kind === 'production' ? 'Production' : kind === 'preview' ? 'Preview' : 'Собственный домен';
+    const stateText = item.checkState === 'reachable' ? 'Доступен · HTTP ' + item.httpStatus
+      : item.checkState === 'http-error' ? 'HTTP-ошибка · ' + item.httpStatus
+      : item.checkState === 'blocked' ? 'Не удалось прочитать ответ · CORS / сеть'
+      : 'Ожидает проверки';
+    const checkedText = item.checkedAt ? 'Проверено: ' + new Date(item.checkedAt).toLocaleString('ru-RU') : 'Проверка не выполнялась';
+    return '<article class="publish-history__item"><div class="publish-history__meta"><b>' + esc(item.projectName) + ' · ' + esc(kindText) + '</b><small>' + esc(item.branch) + ' · ' + esc(dateText) + '</small><a href="' + esc(item.url) + '" target="_blank" rel="noopener noreferrer">' + esc(item.url) + '</a><small>' + esc(stateText) + ' · ' + esc(checkedText) + '</small></div><div class="publish-history__actions"><button type="button" data-check-deployment="' + esc(item.id) + '">Проверить</button><button type="button" data-open-deployment="' + esc(item.id) + '">Открыть</button><button type="button" data-delete-deployment="' + esc(item.id) + '" aria-label="Удалить запись">Удалить</button></div></article>';
+  }).join('') : '<p class="publish-history__empty">' + (items.length ? 'В этой категории пока нет адресов.' : 'История пока пуста. После успешной команды Wrangler зафиксируйте deployment здесь.') + '</p>');
 }
 
 function renderPublishManager() {
@@ -297,6 +323,26 @@ function renderPublishManager() {
   $('#publish-copy-command').addEventListener('click', async () => { try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована'); } catch { toast('Не удалось скопировать. Выделите команду и скопируйте вручную.'); } });
   renderPublishHistory();
   host.onclick = async e => {
+    const filterButton = e.target.closest('[data-deployment-filter]');
+    if (filterButton) { deploymentFilter = filterButton.dataset.deploymentFilter; renderPublishHistory(); return; }
+    if (e.target.closest('#deployment-check-all')) {
+      const button = e.target.closest('#deployment-check-all');
+      const targets = readPublishHistory().filter(item => deploymentFilter === 'all' || (() => { try { return deploymentKind(item) === deploymentFilter; } catch { return false; } })());
+      button.disabled = true; button.textContent = 'Проверка…';
+      for (const item of targets) {
+        const safeUrl = safeDeploymentUrl(item.url); if (!safeUrl) continue;
+        let checkState = 'blocked', httpStatus = null;
+        const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 9000);
+        try {
+          let response = await fetch(safeUrl, { method: 'HEAD', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
+          if (response.status === 405 || response.status === 501) response = await fetch(safeUrl, { method: 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
+          httpStatus = response.status; checkState = response.ok ? 'reachable' : 'http-error';
+        } catch { checkState = 'blocked'; } finally { clearTimeout(timeout); }
+        const latest = readPublishHistory(), target = latest.find(x => x.id === item.id);
+        if (target) { target.checkState = checkState; target.httpStatus = httpStatus; target.checkedAt = new Date().toISOString(); savePublishHistory(latest); }
+      }
+      renderPublishHistory(); toast('Проверка адресов завершена. CORS и сетевые ограничения показаны отдельно.'); return;
+    }
     if (e.target.closest('#publish-record-deployment')) {
       const confirmed = $('#publish-confirm-success')?.checked;
       const url = safeDeploymentUrl($('#publish-deployment-url')?.value);
@@ -321,15 +367,12 @@ function renderPublishManager() {
       if (!safeUrl) { toast('В записи указан некорректный URL.'); return; }
       check.disabled = true; check.textContent = 'Проверяю…';
       let state = 'blocked', status = null;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 9000);
+      const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 9000);
       try {
         let response = await fetch(safeUrl, { method: 'HEAD', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
         if (response.status === 405 || response.status === 501) response = await fetch(safeUrl, { method: 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
-        status = response.status;
-        state = response.ok ? 'reachable' : 'http-error';
-      } catch { state = 'blocked'; }
-      finally { clearTimeout(timeout); }
+        status = response.status; state = response.ok ? 'reachable' : 'http-error';
+      } catch { state = 'blocked'; } finally { clearTimeout(timeout); }
       const latest = readPublishHistory(), target = latest.find(x => x.id === id);
       if (target) { target.checkState = state; target.httpStatus = status; target.checkedAt = new Date().toISOString(); savePublishHistory(latest); }
       renderPublishHistory();
