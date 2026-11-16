@@ -178,13 +178,24 @@ export function similarity(a, b) {
 }
 
 // ---------- Секции ----------
-function sectionOrder(project, profile, arch, s) {
+function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial') {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
     gallery: s.gallery > 0, faq: s.faqs > 0, contact: true,
   };
-  const order = uniq([...(profile.lead || []), ...arch.order]).filter(id => has[id]);
-  return [...order.filter(id => id !== 'contact'), 'contact'];
+  // Ведущие секции ниши сохраняют приоритет; остальные меняют последовательность
+  // в зависимости от редакционной композиции, а не идут одним универсальным списком.
+  const lead = uniq(profile.lead || []).filter(id => id !== 'contact' && has[id]);
+  const base = uniq(arch.order).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
+  const preference = {
+    editorial: ['about', 'gallery', 'items', 'advantages', 'process', 'faq'],
+    offset: ['gallery', 'advantages', 'about', 'items', 'faq', 'process'],
+    framed: ['items', 'advantages', 'process', 'gallery', 'about', 'faq'],
+    quiet: ['about', 'process', 'faq', 'advantages', 'items', 'gallery'],
+  }[sectionLayout] || [];
+  const rank = id => { const i = preference.indexOf(id); return i < 0 ? preference.length : i; };
+  const rest = base.map((id, index) => ({ id, index })).sort((a, b) => rank(a.id) - rank(b.id) || a.index - b.index).map(x => x.id);
+  return [...lead, ...rest, 'contact'];
 }
 
 // ---------- Главная функция ----------
@@ -286,7 +297,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
   const finalPrint = { ...fingerprintOf(design), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
-  const order = sectionOrder(project, profile, arch, s);
+  const order = sectionOrder(project, profile, arch, s, design.sectionLayout);
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
   const itemsVariant = profile.id === 'cafe' ? 'menu'
     : s.prices || s.itemImages ? 'product'
