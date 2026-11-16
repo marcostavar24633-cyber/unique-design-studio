@@ -139,23 +139,39 @@ export async function deleteHeadBranch(gh, pr, number) {
   }
 }
 
-/** После слияния: main указывает на коммит слияния; публикация запущена и (по возможности) завершилась. */
-export async function verifyAfterMerge(gh, { mergeSha, dispatchDeploy = true, sleep, attempts = 20, intervalMs = 15000 }) {
-  const out = { mainSha: null, mainMatches: false, deploy: 'unknown' };
+/**
+ * После слияния: main указывает на коммит слияния; публикация запущена и завершилась успешно.
+ * Упавшую публикацию запускаем заново (до deployRetries раз) отдельным запуском workflow: «Re-run» того же
+ * запуска не помогает — GitHub видит в нём два артефакта github-pages и снова падает.
+ */
+export async function verifyAfterMerge(gh, { mergeSha, dispatchDeploy = true, sleep, attempts = 20, intervalMs = 15000, deployRetries = 1 }) {
+  const out = { mainSha: null, mainMatches: false, deploy: 'unknown', deployRetries: 0, failedRuns: [] };
   const main = await gh.getBranch(BASE);
   out.mainSha = main.commit.sha;
   out.mainMatches = main.commit.sha === mergeSha;
+  const dispatch = async () => {
+    try { await gh.dispatchWorkflow('pages.yml', BASE); return true; } catch (e) { out.deployError = e.message; return false; }
+  };
   // Слияние токеном GITHUB_TOKEN не запускает workflow по push — публикацию запускаем явно.
-  if (dispatchDeploy) {
-    try { await gh.dispatchWorkflow('pages.yml', BASE); out.deployDispatched = true; } catch (e) { out.deployDispatched = false; out.deployError = e.message; }
-  }
+  if (dispatchDeploy) out.deployDispatched = await dispatch();
+  const failed = new Set();
   for (let i = 0; i < attempts; i++) {
     const runs = await gh.workflowRuns('pages.yml', `&branch=${BASE}`).catch(() => []);
-    const run = runs.find(r => r.head_sha === mergeSha);
+    // Самый свежий запуск для коммита слияния, кроме уже признанных неудачными.
+    const run = runs.filter(r => r.head_sha === mergeSha && !failed.has(r.id))
+      .sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0) || (b.id || 0) - (a.id || 0))[0];
     if (run) {
       out.deployRun = run.html_url;
-      if (run.status === 'completed') { out.deploy = run.conclusion === 'success' ? 'deployed' : `failed (${run.conclusion})`; return out; }
-      out.deploy = 'in-progress';
+      if (run.status !== 'completed') out.deploy = 'in-progress';
+      else if (run.conclusion === 'success') { out.deploy = 'deployed'; return out; }
+      else {
+        out.deploy = `failed (${run.conclusion})`;
+        out.failedRuns.push(run.html_url);
+        failed.add(run.id);
+        if (out.deployRetries >= deployRetries || !(await dispatch())) return out;
+        out.deployRetries++;
+        out.deploy = 'retrying';
+      }
     }
     if (i < attempts - 1) await sleep(intervalMs);
   }

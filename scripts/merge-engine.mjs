@@ -82,11 +82,14 @@ async function main() {
       blocked: 'Слияние запрещено: не выполнены обязательные условия.',
       'already-merged': 'PR уже слит — повторная операция пропущена.',
       locked: r.message, 'no-auth': r.message, failed: `GitHub не подтвердил слияние: ${r.message || ''}`,
-      merged: r.verify ? `Слито: ${r.mergeSha.slice(0, 7)}. main ${r.verify.mainMatches ? 'указывает на коммит слияния' : `указывает на ${r.verify.mainSha.slice(0, 7)} (проверьте)`}. Ветка: ${r.branch.deleted ? 'удалена' : `не удалена (${r.branch.reason})`}. Публикация: ${r.verify.deploy}.` : '',
+      merged: r.verify ? `Слито: ${r.mergeSha.slice(0, 7)}. main ${r.verify.mainMatches ? 'указывает на коммит слияния' : `указывает на ${r.verify.mainSha.slice(0, 7)} (проверьте)`}. Ветка: ${r.branch.deleted ? 'удалена' : `не удалена (${r.branch.reason})`}. Публикация: ${r.verify.deploy}${r.verify.deployRetries ? ` (после повторного запуска; упавшие: ${r.verify.failedRuns.join(', ')})` : ''}.` : '',
     }[r.result];
     console.log(`\n${text}`);
     summary(`## Merge Engine — PR #${pr}\n\n${text}\n\n${r.inspection ? markdown(r.inspection) : ''}`);
-    process.exitCode = r.result === 'merged' || r.result === 'dry-run' || r.result === 'already-merged' ? 0 : 3;
+    process.exitCode = r.result === 'dry-run' || r.result === 'already-merged' ? 0
+      // Слияние прошло, но публикация не подтверждена — запуск помечается ошибкой, чтобы это было видно.
+      : r.result === 'merged' ? (r.verify?.deploy === 'deployed' ? 0 : 4) : 3;
+    if (r.result === 'merged' && r.verify?.deploy !== 'deployed') console.log('Внимание: сайт не считается опубликованным — проверьте запуск «Deploy studio to GitHub Pages».');
     return;
   }
   if (command === 'history') {
