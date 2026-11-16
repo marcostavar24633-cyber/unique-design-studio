@@ -298,3 +298,10 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .workflow-approval-diff span{padding:7px;border:1px solid var(--line);border-radius:7px;overflow-wrap:anywhere}
 .workflow-approval-diff span:last-child{border-color:rgba(201,164,94,.55);background:rgba(201,164,94,.07)}
 @media(max-width:560px){.workflow-approval-diff{grid-template-columns:1fr}.workflow-approval-diff span{min-height:32px}}
+
+
+.workflow-manual-proposal{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(0,1.3fr) auto;gap:8px;align-items:center;margin-top:14px;padding:10px;border:1px dashed rgba(201,164,94,.42);border-radius:10px}
+.workflow-manual-proposal>b{grid-column:1/-1;font-size:12px}
+.workflow-manual-proposal select,.workflow-manual-proposal input{min-width:0;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.workflow-manual-proposal button{min-height:38px}
+@media(max-width:560px){.workflow-manual-proposal{grid-template-columns:1fr}.workflow-manual-proposal>b{grid-column:auto}}
