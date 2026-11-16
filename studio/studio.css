@@ -94,13 +94,13 @@ button.wide{width:100%;min-height:44px}
 /* Smart Crop & Art Direction controls */
 .crop-editor{margin-top:8px;padding:9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
 .crop-editor summary{cursor:pointer;font-size:12px;font-weight:650}
-.crop-editor__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.crop-live-previews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.crop-live{min-width:0;margin:0}.crop-live figcaption{margin-bottom:4px;color:var(--muted);font-size:11px;font-weight:650}.crop-live__frame{overflow:hidden;border:1px solid var(--line);border-radius:6px;background:var(--card)}.crop-live__frame img{display:block;width:100%;height:100%;object-fit:cover}.crop-editor__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
 .crop-editor fieldset{min-width:0;margin:0;padding:7px;border:1px solid var(--line);border-radius:8px}
 .crop-editor legend{font-size:11px;font-weight:650}
 .crop-editor label{display:grid;gap:4px;margin:7px 0;font-size:11px}
 .crop-editor output{font-variant-numeric:tabular-nums;color:var(--accent)}
 .crop-editor input[type=range]{width:100%;min-width:0;padding:0;accent-color:var(--accent)}
-@media(max-width:520px){.crop-editor__grid{grid-template-columns:1fr}}
+@media(max-width:520px){.crop-editor__grid{grid-template-columns:1fr}.crop-live-previews{grid-template-columns:1fr 1fr 1fr}.crop-live figcaption{font-size:10px}}
 
 /* Visual Asset Director */
 .visual-asset-director{max-width:920px;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
