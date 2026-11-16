@@ -224,6 +224,37 @@ function run() {
 
 
 const publishSettings = (() => { try { return JSON.parse(localStorage.getItem('uds:publish:v1') || '{}'); } catch { return {}; } })();
+const PUBLISH_HISTORY_KEY = 'uds:publish-history:v1';
+function readPublishHistory() {
+  try { const value = JSON.parse(localStorage.getItem(PUBLISH_HISTORY_KEY) || '[]'); return Array.isArray(value) ? value : []; }
+  catch { return []; }
+}
+function savePublishHistory(items) {
+  try { localStorage.setItem(PUBLISH_HISTORY_KEY, JSON.stringify(items.slice(0, 50))); return true; }
+  catch { toast('Не удалось сохранить историю публикаций в браузере.'); return false; }
+}
+function safeDeploymentUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (url.protocol !== 'https:' || url.username || url.password || !url.hostname || url.hostname === 'localhost') return null;
+    return url.href;
+  } catch { return null; }
+}
+function renderPublishHistory() {
+  const host = $('#publish-history-list'); if (!host) return;
+  const items = readPublishHistory();
+  if (!items.length) { host.innerHTML = '<p class="publish-history__empty">История пока пуста. После успешной команды Wrangler зафиксируйте deployment здесь.</p>'; return; }
+  host.innerHTML = items.map(item => {
+    const date = new Date(item.createdAt);
+    const dateText = Number.isNaN(date.getTime()) ? 'Дата не указана' : date.toLocaleString('ru-RU');
+    const stateText = item.checkState === 'reachable' ? 'Сайт ответил: HTTP ' + item.httpStatus
+      : item.checkState === 'http-error' ? 'HTTP ' + item.httpStatus
+      : item.checkState === 'blocked' ? 'Ответ не прочитан: CORS или сеть'
+      : 'Проверка ещё не выполнялась';
+    return '<article class="publish-history__item"><div class="publish-history__meta"><b>' + esc(item.projectName) + ' · ' + esc(item.branch) + '</b><small>' + esc(dateText) + ' · ' + esc(stateText) + '</small><a href="' + esc(item.url) + '" target="_blank" rel="noopener noreferrer">' + esc(item.url) + '</a></div><div class="publish-history__actions"><button type="button" data-check-deployment="' + esc(item.id) + '">Проверить URL</button><button type="button" data-open-deployment="' + esc(item.id) + '">Открыть</button><button type="button" data-delete-deployment="' + esc(item.id) + '" aria-label="Удалить запись">Удалить</button></div></article>';
+  }).join('');
+}
+
 function renderPublishManager() {
   const host = $('#view-publish'); if (!host || !result) return;
   const projectName = String(publishSettings.projectName || result.project.id || '').toLowerCase();
@@ -253,13 +284,60 @@ function renderPublishManager() {
       </div>
       <section class="publish-manager__terminal"><b>Команда для локального терминала</b><code id="publish-command">${esc(command)}</code><p>Перед запуском: установите Node.js 20+, откройте терминал в корне репозитория UNIQUE DESIGN STUDIO и один раз выполните <code>npx wrangler login</code>. Pages project должен быть создан заранее.</p></section>
       <ol class="publish-manager__steps"><li>Скачайте JSON проекта и поместите его в корень локальной копии репозитория под именем <code>${esc(result.project.id)}.json</code>.</li><li>Убедитесь, что проект Pages существует в Cloudflare и выполнен вход через Wrangler.</li><li>Выполните команду выше. При ошибках аудита CLI остановит публикацию.</li><li>После успешной команды откройте URL, который выведет Wrangler. Подключение собственного домена настраивается отдельно в Cloudflare Pages → Custom domains.</li></ol>
-      <p class="publish-manager__disclaimer">Статус здесь отражает только локальную готовность. Панель не имеет доступа к Cloudflare аккаунту и не утверждает, что сайт опубликован. После выполнения команды отметьте фактический результат в своей истории развёртываний Cloudflare.</p>
+      <p class="publish-manager__disclaimer">Статус здесь отражает только локальную готовность. Панель не имеет доступа к Cloudflare аккаунту и не утверждает, что сайт опубликован. Запись в истории создаётся только после вашего подтверждения успешного deployment в Wrangler.</p>
+      <section class="publish-history"><h3>История публикаций</h3><p class="note">Добавьте URL после того, как Wrangler подтвердил успешную публикацию. Проверка URL выполняется из браузера; некоторые сайты запрещают чтение ответа по CORS.</p>
+        <div class="publish-history__form"><label for="publish-deployment-url">Фактический URL deployment</label><input id="publish-deployment-url" type="url" inputmode="url" placeholder="https://project.pages.dev" autocomplete="url"><label class="publish-history__confirm"><input id="publish-confirm-success" type="checkbox"> Я выполнил команду и Wrangler сообщил об успешной публикации</label><button type="button" id="publish-record-deployment" class="primary">Зафиксировать успешную публикацию</button></div>
+        <div id="publish-history-list" class="publish-history__list" aria-live="polite"></div>
+      </section>
     </section>`;
   $('#publish-project-name').addEventListener('change', e => { publishSettings.projectName=e.target.value.trim().toLowerCase(); localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
   $('#publish-branch').addEventListener('change', e => { publishSettings.branch=e.target.value; localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
   $('#publish-download-json').addEventListener('click', () => download(`${result.project.id}.json`,JSON.stringify(result.exported,null,2)+'\\n','application/json'));
   $('#publish-download-html').addEventListener('click', () => download(`${result.project.id}.html`,result.html,'text/html'));
   $('#publish-copy-command').addEventListener('click', async () => { try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована'); } catch { toast('Не удалось скопировать. Выделите команду и скопируйте вручную.'); } });
+  renderPublishHistory();
+  host.onclick = async e => {
+    if (e.target.closest('#publish-record-deployment')) {
+      const confirmed = $('#publish-confirm-success')?.checked;
+      const url = safeDeploymentUrl($('#publish-deployment-url')?.value);
+      if (!confirmed) return toast('Подтвердите, что Wrangler сообщил об успешной публикации.');
+      if (!url) return toast('Введите корректный HTTPS URL опубликованного сайта.');
+      const items = readPublishHistory();
+      items.unshift({ id: 'deployment-' + Date.now().toString(36), projectName, branch: branchName, url, createdAt: new Date().toISOString(), checkState: 'unchecked', httpStatus: null });
+      if (savePublishHistory(items)) { renderPublishHistory(); toast('Deployment добавлен в историю'); }
+      return;
+    }
+    const check = e.target.closest('[data-check-deployment]');
+    const open = e.target.closest('[data-open-deployment]');
+    const remove = e.target.closest('[data-delete-deployment]');
+    const id = check?.dataset.checkDeployment || open?.dataset.openDeployment || remove?.dataset.deleteDeployment;
+    if (!id) return;
+    const items = readPublishHistory(), item = items.find(x => x.id === id);
+    if (!item) return;
+    if (remove) { savePublishHistory(items.filter(x => x.id !== id)); renderPublishHistory(); return; }
+    if (open) { window.open(item.url, '_blank', 'noopener,noreferrer'); return; }
+    if (check) {
+      const safeUrl = safeDeploymentUrl(item.url);
+      if (!safeUrl) { toast('В записи указан некорректный URL.'); return; }
+      check.disabled = true; check.textContent = 'Проверяю…';
+      let state = 'blocked', status = null;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 9000);
+      try {
+        let response = await fetch(safeUrl, { method: 'HEAD', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
+        if (response.status === 405 || response.status === 501) response = await fetch(safeUrl, { method: 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal });
+        status = response.status;
+        state = response.ok ? 'reachable' : 'http-error';
+      } catch { state = 'blocked'; }
+      finally { clearTimeout(timeout); }
+      const latest = readPublishHistory(), target = latest.find(x => x.id === id);
+      if (target) { target.checkState = state; target.httpStatus = status; target.checkedAt = new Date().toISOString(); savePublishHistory(latest); }
+      renderPublishHistory();
+      if (state === 'reachable') toast('Сайт ответил HTTP ' + status + ' — URL доступен.');
+      else if (state === 'http-error') toast('Сайт ответил HTTP ' + status + '. Проверьте URL и deployment.');
+      else toast('Браузер не смог прочитать ответ (возможны CORS или сетевая ошибка). Откройте сайт вручную.');
+    }
+  };
 }
 
 // ---------- ТЗ и анализ ----------
