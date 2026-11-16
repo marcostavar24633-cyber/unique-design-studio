@@ -375,7 +375,7 @@ function renderWorkflowProgress(events) {
     status.className = 'workflow-progress__status';
     status.textContent = WORKFLOW_STATUS[item.status] || item.status;
     if (id === 'design_review' && item.review?.recommendations?.length) status.textContent += ` · ${item.review.recommendations.length} замеч.`;
-    if (id === 'visual' && item.briefReady) status.textContent = 'Бриф готов · загрузите фото';
+    if (id === 'visual' && item.brief) status.textContent = 'Бриф готов · загрузите фото';
     if (id === 'approved_fixes' && item.status === 'needs_approval') status.textContent = 'Требуется ваше подтверждение';
     li.append(name, status);
     root.append(li);
