@@ -310,9 +310,9 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const type = TYPES[design.typeCharacter];
   const brand = project.brandProfile ? BRANDS[project.brandProfile] : null;
   // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
+  const order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
-  const order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
   const itemsVariant = profile.id === 'cafe' ? 'menu'
     : s.prices || s.itemImages ? 'product'
