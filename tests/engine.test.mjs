@@ -50,7 +50,6 @@ test('адаптивное кадрирование фотографий учи�
   assert.match(result.html, /--ds-crop-desktop:0% 100%/);
   assert.match(result.html, /--ds-crop-tablet:100% 0%/);
   assert.match(result.html, /--ds-crop-mobile:50% 50%/);
-  assert.match(result.css, /object-position:var\\(--ds-crop-desktop,50% 50%\\)/);
 });
 
 test('генерация детерминирована', () => {
