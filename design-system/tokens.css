@@ -1,10 +1,10 @@
 :root {
   /* Core neutrals */
-  --ds-color-ink: #171a18;
-  --ds-color-paper: #f4f1eb;
-  --ds-color-white: #ffffff;
-  --ds-color-muted: #777b75;
-  --ds-color-border: rgba(23, 26, 24, .14);
+  --ds-color-ink: #f2eee4;
+  --ds-color-paper: #0b0c0e;
+  --ds-color-white: #17191d;
+  --ds-color-muted: #a5a29a;
+  --ds-color-border: rgba(207, 170, 95, .20);
 
   /* Semantic roles — override per brand */
   --ds-bg: var(--ds-color-paper);
@@ -12,9 +12,9 @@
   --ds-text: var(--ds-color-ink);
   --ds-text-muted: var(--ds-color-muted);
   --ds-border: var(--ds-color-border);
-  --ds-accent: #9b754d;
-  --ds-accent-contrast: #ffffff;
-  --ds-focus: #246bce;
+  --ds-accent: #c9a45e;
+  --ds-accent-contrast: #111214;
+  --ds-focus: #e0bd72;
 
   /* Layout */
   --ds-container: 1200px;
