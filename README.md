@@ -91,7 +91,7 @@ node bin/uds.js archetypes               # список архитектур
 **Настройка один раз в Cloudflare:**
 
 1. Создайте KV namespace из каталога репозитория:
-   `npx wrangler kv namespace create MONITOR_KV`
+   `npx wrangler kv namespace create MONITOR_KV --config worker/wrangler.jsonc`
 2. Добавьте выданный Cloudflare namespace ID в `worker/wrangler.jsonc`:
    ```json
    "kv_namespaces": [{ "binding": "MONITOR_KV", "id": "ВАШ_KV_NAMESPACE_ID" }]
