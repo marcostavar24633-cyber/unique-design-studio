@@ -558,14 +558,29 @@ $('#auto').addEventListener('submit', async e => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               task: 'design-review',
-              project: context.project,
-              analysis: context.analysis,
+              project: Object.fromEntries([
+                'niche','brand','title','description','cta','targetAudience','mainOffer',
+                'aboutTitle','aboutText','servicesTitle','servicesIntro','advantagesTitle',
+                'processTitle','faqTitle','contactTitle','contactText',
+              ].filter(key => typeof context.project?.[key] === 'string')
+                .map(key => [key, context.project[key].slice(0, 1800)])),
+              analysis: {
+                audience: String(context.analysis?.audience || '').slice(0, 500),
+                objections: (context.analysis?.objections || []).slice(0, 8),
+                keywords: (context.analysis?.keywords || []).slice(0, 12),
+              },
               concept: {
-                designDNA: context.concept?.designDNA,
-                homepage: context.concept?.homepage,
+                designDNA: {
+                  primaryArchetype: context.concept?.designDNA?.primaryArchetype,
+                  selectionRationale: context.concept?.designDNA?.selectionRationale,
+                },
+                homepage: { sectionOrder: context.concept?.homepage?.sectionOrder || [] },
                 designBrief: context.concept?.designBrief,
               },
-              audit: context.audit,
+              audit: {
+                errors: (context.audit?.errors || []).slice(0, 12),
+                warnings: (context.audit?.warnings || []).slice(0, 12),
+              },
             }),
           });
           const body = await response.json().catch(() => ({}));
