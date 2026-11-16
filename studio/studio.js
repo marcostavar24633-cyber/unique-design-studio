@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity, runWorkflow, WORKFLOW_STAGES } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -287,6 +287,38 @@ try {
   $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
   if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
 } catch { /* нет хранилища */ }
+const WORKFLOW_LABELS = {
+  brief: 'Бриф проекта', analysis: 'Анализ аудитории', concept: 'Уникальная концепция',
+  visual: 'Фотографии и визуал', generation: 'Генерация сайта', audit: 'Проверка качества',
+  design_review: 'AI Design Director', approved_fixes: 'Подтверждение исправлений',
+  export: 'Экспорт проекта', publish: 'Публикация',
+};
+const WORKFLOW_STATUS = {
+  running: 'В работе', completed: 'Готово', needs_input: 'Нужны материалы',
+  needs_attention: 'Нужно внимание', needs_approval: 'Ожидает подтверждения',
+  blocked: 'Заблокировано', manual: 'Ручной этап',
+};
+function renderWorkflowProgress(events) {
+  const root = $('#workflow-progress');
+  if (!root) return;
+  root.hidden = false;
+  const latest = new Map(events.map(item => [item.id, item]));
+  root.replaceChildren();
+  for (const id of WORKFLOW_STAGES) {
+    const item = latest.get(id);
+    if (!item) continue;
+    const li = document.createElement('li');
+    li.className = 'workflow-progress__item is-' + String(item.status).replace(/[^a-z_]/g, '');
+    const name = document.createElement('span');
+    name.className = 'workflow-progress__name';
+    name.textContent = WORKFLOW_LABELS[id] || id;
+    const status = document.createElement('span');
+    status.className = 'workflow-progress__status';
+    status.textContent = WORKFLOW_STATUS[item.status] || item.status;
+    li.append(name, status);
+    root.append(li);
+  }
+}
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
   const input = {
@@ -323,6 +355,29 @@ $('#auto').addEventListener('submit', async e => {
     const local = autopilot(input, { registry: registry() });
     draft = { project: local.project, analysis: local.analysis };
     if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
+  }
+  const workflowEvents = [];
+  status.textContent = 'Запускаю единый конвейер: анализ → концепция → генерация → проверка…';
+  try {
+    const workflowResult = await runWorkflow(input, {
+      registry: registry(),
+      draft,
+      onStage: item => {
+        workflowEvents.push(item);
+        renderWorkflowProgress(workflowEvents);
+      },
+    });
+    state.workflow = {
+      projectId: draft.project.id,
+      stages: workflowResult.stages,
+      audit: workflowResult.audit,
+      updatedAt: new Date().toISOString(),
+    };
+    if (workflowResult.audit?.errors?.length) {
+      note += ` Проверка обнаружила ошибок: ${workflowResult.audit.errors.length}.`;
+    }
+  } catch (err) {
+    note += ` Конвейер завершился с ошибкой: ${err.message}.`;
   }
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
