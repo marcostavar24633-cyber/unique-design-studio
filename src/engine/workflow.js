@@ -19,6 +19,7 @@ function stage(id, status, details = {}) {
  */
 export async function runWorkflow(input, {
   registry = [],
+  draft: suppliedDraft,
   imageDirector,
   designDirector,
   applyApprovedFixes,
@@ -33,7 +34,9 @@ export async function runWorkflow(input, {
   };
 
   report('brief', 'running');
-  const { project, analysis } = draftFromNiche(input || {});
+  const { project, analysis } = suppliedDraft?.project && suppliedDraft?.analysis
+    ? suppliedDraft
+    : draftFromNiche(input || {});
   report('brief', 'completed', { assumptions: project.assumptions || [] });
 
   report('analysis', 'completed', {
