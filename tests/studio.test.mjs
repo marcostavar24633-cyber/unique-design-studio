@@ -84,6 +84,14 @@ test('код веб-редактора синтаксически коррект
   assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
+test('Asset library compares responsive crop frames and opens the matching crop editor', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of ['const cropPreview = (item, role, index)', "['desktop','Компьютер','16 / 9']", "['tablet','Планшет','4 / 3']", "['mobile','Телефон','3 / 4']", 'data-open-crop-role', 'data-open-crop-index', 'data-crop-index="${index}"', 'Настроить кадрирование']) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.asset-library__crops\{display:grid/);
+  assert.match(css, /\.asset-library__crop-frame img\{display:block;width:100%;height:100%;object-fit:cover\}/);
+});
+
 test('Visual asset library summarizes desktop and mobile image variants and links to controls', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
