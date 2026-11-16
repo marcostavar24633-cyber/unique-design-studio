@@ -240,7 +240,78 @@ $('#view-spec').addEventListener('click', async e => {
   if (b.dataset.spec === 'prompt') copy(buildPrompt(result.project, result.concept, a), 'Промт скопирован', `${result.project.id}-prompt.txt`);
 });
 
+// ---------- Библиотека промтов единого запуска ----------
+const GENERATION_PROMPTS = [
+  { id: 'market', title: '1. Анализ ниши и рынка', description: 'Позиционирование, спрос, альтернативы и факторы выбора.', prompt: 'Проанализируй нишу «{НИША}». Определи продуктовую категорию, типичные сценарии покупки, критерии выбора, основные альтернативы и возражения. Не выдумывай статистику, названия конкурентов и источники. Если достоверных данных нет, обозначь гипотезы и вопросы для проверки.' },
+  { id: 'audience', title: '2. Целевая аудитория', description: 'Сегменты, потребности, боли, мотивы и язык клиентов.', prompt: 'Определи 2–4 практических сегмента аудитории для ниши «{НИША}». Для каждого укажи задачу клиента, мотивы, сомнения, критерии выбора и подходящее сообщение. Не используй стереотипы и неподтверждённые демографические утверждения.' },
+  { id: 'offer', title: '3. Оффер и позиционирование', description: 'Главное предложение, ценность, отличия и CTA.', prompt: 'Сформулируй ясное позиционирование и сильный, но честный оффер для «{НИША}». Подготовь заголовок первого экрана, подзаголовок, 3 варианта CTA и аргументы ценности. Не обещай гарантированный результат, если это не подтверждено входными данными.' },
+  { id: 'architecture', title: '4. Структура и UX сайта', description: 'Порядок блоков, сценарий пользователя и логика конверсии.', prompt: 'Спроектируй структуру одностраничного сайта для «{НИША}»: первый экран, предложение, преимущества, каталог или услуги, процесс, доверие, FAQ, контакты и заявка. Оставляй только релевантные блоки. Объясни назначение каждого блока и путь пользователя к целевому действию.' },
+  { id: 'copy', title: '5. Тексты всех разделов', description: 'Заголовки, описания, преимущества, услуги, FAQ и контакты.', prompt: 'Напиши полный комплект ясных, конкретных текстов для сайта ниши «{НИША}»: заголовки и подзаголовки всех выбранных блоков, описания, преимущества, карточки услуг или товаров, этапы, FAQ и CTA. Не добавляй вымышленные цены, адреса, телефоны, отзывы, сертификаты, гарантии и факты. Неизвестное оставляй пустым или помечай как требующее уточнения.' },
+  { id: 'seo', title: '6. SEO и метаданные', description: 'Title, description, H1–H3, семантические темы и ALT.', prompt: 'Подготовь SEO-комплект для сайта «{НИША}»: title, meta description, один H1, логичную иерархию H2/H3, естественные поисковые темы и рекомендации по ALT изображений. Не обещай позиции и трафик, не набивай текст ключевыми словами.' },
+  { id: 'visual', title: '7. Визуальная концепция', description: 'Арт-дирекшн, палитра, типографика, композиция и настроение.', prompt: 'Разработай самостоятельную визуальную концепцию сайта для «{НИША}» с учётом класса проекта «{КЛАСС}»: арт-направление, палитра, типографика, сетка, форма карточек, кнопок, фон, композиция первого экрана и мобильная версия. Не повторяй типовой шаблон и не выбирай чёрно-золотую палитру автоматически.' },
+  { id: 'images', title: '8. Промты для изображений', description: 'Hero, галерея и карточки — отдельные промты с назначением кадров.', prompt: 'Составь отдельные подробные промты для генерации изображений сайта «{НИША}»: главное фото первого экрана, 3–5 кадров галереи и изображения карточек товаров или услуг. Укажи сюжет, объект, окружение, свет, ракурс, композицию, формат и зоны без текста. Изображения должны быть фотореалистичными и согласованными по арт-направлению. Не встраивай надписи, логотипы и водяные знаки.' },
+  { id: 'quality', title: '9. Проверка результата', description: 'Факты, доступность, мобильная версия и конверсионная логика.', prompt: 'Проверь итоговый контент и структуру сайта «{НИША}»: непротиворечивость, отсутствие выдуманных фактов, ясность CTA, полноту ответов на возражения, доступность, читаемость и мобильный сценарий. Перечисли недостающие реальные данные отдельно, не заполняй их догадками.' }
+];
+let generationPromptOverrides = {};
+const generationPromptsRoot = $('#generation-prompts-list');
+function renderGenerationPrompts() {
+  if (!generationPromptsRoot) return;
+  generationPromptsRoot.innerHTML = GENERATION_PROMPTS.map(stage => {
+    const custom = generationPromptOverrides[stage.id];
+    const enabled = custom?.enabled !== false;
+    const prompt = custom?.prompt || stage.prompt;
+    return `<details class="generation-stage" data-generation-stage="${stage.id}">
+      <summary><span>${esc(stage.title)}</span><small>${esc(stage.description)}</small></summary>
+      <label class="generation-stage__toggle"><input type="checkbox" data-stage-enabled="${stage.id}" ${enabled ? 'checked' : ''}> Использовать этот этап</label>
+      <label class="generation-stage__label" for="stage-prompt-${stage.id}">Промт этапа</label>
+      <textarea id="stage-prompt-${stage.id}" data-stage-prompt="${stage.id}" maxlength="6000">${esc(prompt)}</textarea>
+      <div class="generation-stage__actions"><button type="button" data-stage-reset="${stage.id}">Вернуть исходный промт</button><button type="button" data-stage-copy="${stage.id}">Скопировать</button></div>
+    </details>`;
+  }).join('');
+}
+function saveGenerationPrompts() {
+  try { localStorage.setItem('uds:generation-prompts', JSON.stringify(generationPromptOverrides)); } catch { /* локальное хранилище необязательно */ }
+}
+function selectedGenerationPrompts(input) {
+  return GENERATION_PROMPTS.filter(stage => generationPromptOverrides[stage.id]?.enabled !== false).map(stage => {
+    const template = generationPromptOverrides[stage.id]?.prompt || stage.prompt;
+    const prompt = template.replaceAll('{НИША}', input.niche).replaceAll('{КЛАСС}', input.tier || 'standard');
+    return { id: stage.id, title: stage.title, prompt };
+  });
+}
+generationPromptsRoot?.addEventListener('input', event => {
+  const promptId = event.target.dataset.stagePrompt;
+  const enabledId = event.target.dataset.stageEnabled;
+  if (promptId) generationPromptOverrides[promptId] = { ...(generationPromptOverrides[promptId] || {}), prompt: event.target.value };
+  if (enabledId) generationPromptOverrides[enabledId] = { ...(generationPromptOverrides[enabledId] || {}), enabled: event.target.checked };
+  saveGenerationPrompts();
+});
+generationPromptsRoot?.addEventListener('click', async event => {
+  const reset = event.target.closest('[data-stage-reset]');
+  const copy = event.target.closest('[data-stage-copy]');
+  if (!reset && !copy) return;
+  const id = (reset || copy).dataset.stageReset || (reset || copy).dataset.stageCopy;
+  const stage = GENERATION_PROMPTS.find(item => item.id === id);
+  if (!stage) return;
+  if (reset) {
+    const enabled = generationPromptOverrides[id]?.enabled;
+    generationPromptOverrides[id] = { ...(enabled === undefined ? {} : { enabled }), prompt: stage.prompt };
+    saveGenerationPrompts();
+    renderGenerationPrompts();
+    const detail = generationPromptsRoot.querySelector(`[data-generation-stage="${id}"]`);
+    if (detail) detail.open = true;
+  } else {
+    const text = generationPromptOverrides[id]?.prompt || stage.prompt;
+    try { await navigator.clipboard.writeText(text); toast('Промт скопирован'); }
+    catch { toast('Не удалось скопировать промт в этом браузере'); }
+  }
+});
+
 // ---------- Автопилот ----------
+try {
+  generationPromptOverrides = JSON.parse(localStorage.getItem('uds:generation-prompts') || '{}') || {};
+} catch { generationPromptOverrides = {}; }
+renderGenerationPrompts();
 try {
   $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
   $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
@@ -269,8 +340,12 @@ $('#auto').addEventListener('submit', async e => {
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
-      const studioPrompt = autopilot(input, { registry: registry() }).prompt;
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
+      const basePrompt = autopilot(input, { registry: registry() }).prompt;
+      const generationPrompts = selectedGenerationPrompts(input);
+      const promptBundle = generationPrompts.map((item, index) => `ЭТАП ${index + 1}: ${item.title}\n${item.prompt}`).join('\n\n');
+      const studioPrompt = [basePrompt, '--- ДОПОЛНИТЕЛЬНЫЕ ПРОМТЫ ЭТАПОВ ---', promptBundle].join('\n\n');
+      status.textContent = `AI выполняет выбранные этапы: ${generationPrompts.length}. Редактор остаётся доступен, дождитесь результата…`;
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt, generationPrompts }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
