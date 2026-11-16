@@ -86,4 +86,7 @@ test('Smart Image Matching ranks image candidates using role-specific technical 
   assert.ok(source.includes("role === 'service'"));
 });
 
-test('Visual Quality Control checks hero tone zones and gallery tonal consistency', () => {\n  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');\n  for (const marker of ['function buildVisualQualityReport(reports)','zoneSums = [0,0,0]','brightnessZones','luminanceRange','Visual Quality Control — визуальный контроль','Левая зона','Разный тональный характер галереи','не измерение WCAG-контраста']) assert.ok(source.includes(marker), marker);\n});\n
+test('Visual Quality Control checks hero tone zones and gallery tonal consistency', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of ['function buildVisualQualityReport(reports)','zoneSums = [0,0,0]','brightnessZones','luminanceRange','Visual Quality Control — визуальный контроль','Левая зона','Разный тональный характер галереи','не измерение WCAG-контраста']) assert.ok(source.includes(marker), marker);
+});
