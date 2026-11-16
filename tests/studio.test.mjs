@@ -111,7 +111,7 @@ test('Hero Readability QA measures actual preview at three responsive widths', (
 
 test('Hero image QA checks loading, intrinsic resolution, ALT and loading priority', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  for (const marker of ['doc.querySelectorAll(\'.hero img\')','img.complete','img.naturalWidth === 0','img.naturalWidth','img.hasAttribute(\'alt\')','img.getAttribute(\'loading\') === \'lazy\'','img.getAttribute(\'fetchpriority\') !== \'high\'','Hero без фотографии','возможна нехватка разрешения']) assert.ok(source.includes(marker), marker);
+  for (const marker of ['doc.querySelectorAll(\'.hero img\')','img.complete','img.naturalWidth === 0','img.naturalWidth','img.hasAttribute(\'alt\')','img.getAttribute(\'loading\') === \'lazy\'','img.getAttribute(\'fetchpriority\') !== \'high\'','Hero без фотографии','возможно недостаточно разрешения']) assert.ok(source.includes(marker), marker);
 });
 
 test('Hero image resolution is checked independently at each responsive viewport', () => {
