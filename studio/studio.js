@@ -429,6 +429,14 @@ function renderVisualAssetLibrary() {
   </section>`;
 }
 
+document.addEventListener('click', e => {
+  if (!e.target.closest('#drop-references') || !result?.concept?.libraryUse) return;
+  delete result.concept.libraryUse;
+  result.concept.designBrief.contextFactors = (result.concept.designBrief.contextFactors || []).filter(x => !x.includes('Конкурентная среда:'));
+  renderConcept();
+  toast('Референсы исключены из текущей концепции');
+});
+
 function renderConcept() {
   const c = result.concept, b = c.designBrief, d = c.designDNA, h = c.homepage, u = c.uniquenessCheck, vs = c.visualSystem;
   const name = id => (id ? `${ARCHETYPES[id].name} <span class="note">(${ARCHETYPES[id].ru})</span>` : '<span class="note">—</span>');
@@ -441,6 +449,7 @@ function renderConcept() {
     ['Доказательства доверия', ul(b.trustProofs)], ['Ограничения', ul(b.constraints)], ['Гипотезы', ul(b.assumptions)],
   ])}</div>
 ${renderVisualAssetLibrary()}
+${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Библиотека шаблонов</h2><p><b>Использованы профили:</b> ${ul(c.libraryUse.references.map(r => `«${r.name}» — ${r.category}`))}</p><h3>Применённые принципы</h3>${ul(c.libraryUse.applied)}<h3>Чем проект отличается</h3>${ul(c.libraryUse.divergence)}<button type="button" id="drop-references">Убрать референсы из проекта</button></section>` : ''}
 <h2>Design DNA</h2><div class="card">${kv([
     ['Концепция', '<b>' + esc(d.conceptName || '') + '</b> <span class="note">— ' + esc(d.conceptFormula || '') + '</span>'], ['Что учтено', ul(b.contextFactors || [])],
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
