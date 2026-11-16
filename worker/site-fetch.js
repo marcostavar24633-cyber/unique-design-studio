@@ -73,9 +73,11 @@ const json = (body, status, origin) => new Response(JSON.stringify(body), {
   },
 });
 
-async function fetchPublic(target, accept) {
+async function fetchPublic(target, accept, allowed) {
   let url = target;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    // Разрешение robots.txt проверяется для каждого адреса в цепочке перенаправлений, а не только для исходного.
+    if (allowed && !(await allowed(url))) return { error: { reason: 'robots', message: 'Владелец сайта запретил автоматическое чтение этой страницы в robots.txt' } };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     let res;
@@ -127,22 +129,27 @@ export async function handle(request, env = {}) {
   if (!origin) return json({ ok: false, reason: 'origin', message: 'Запросы принимаются только со страниц студии' }, 403, '');
   if (here.pathname !== '/fetch') return json({ ok: false, reason: 'not-found', message: 'Неизвестный адрес' }, 404, origin);
 
+  // Заголовок Origin защищает только от чужих сайтов в браузере: прямой клиент может его подделать.
+  // Поэтому при наличии привязки RATE_LIMITER (см. docs/site-analyzer.md) частота запросов ограничивается по IP.
+  if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === 'function') {
+    const { success } = await env.RATE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
+    if (!success) return json({ ok: false, reason: 'rate-limit', message: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
+  }
   const kind = here.searchParams.get('kind') === 'css' ? 'css' : 'html';
   const target = validateTarget(here.searchParams.get('url'));
   if (!target.ok) return json(target, 400, origin);
 
   try {
     // robots.txt проверяется для страниц; файлы стилей — часть уже разрешённой страницы.
-    if (kind === 'html') {
-      const robots = await fetchPublic(new URL('/robots.txt', target.url), 'text/plain');
-      if (robots.res && robots.res.ok) {
-        const { bytes } = await readLimited(robots.res, 200_000);
-        if (!robotsAllows(decode(bytes, robots.res.headers.get('Content-Type')), target.url.pathname + target.url.search)) {
-          return json({ ok: false, reason: 'robots', message: 'Владелец сайта запретил автоматическое чтение этой страницы в robots.txt' }, 200, origin);
-        }
+    const robotsByOrigin = new Map();
+    const allowed = kind !== 'html' ? null : async url => {
+      if (!robotsByOrigin.has(url.origin)) {
+        const robots = await fetchPublic(new URL('/robots.txt', url), 'text/plain');
+        robotsByOrigin.set(url.origin, robots.res && robots.res.ok ? decode((await readLimited(robots.res, 200_000)).bytes, robots.res.headers.get('Content-Type')) : '');
       }
-    }
-    const got = await fetchPublic(target.url, kind === 'css' ? 'text/css,*/*;q=0.1' : 'text/html,application/xhtml+xml');
+      return robotsAllows(robotsByOrigin.get(url.origin), url.pathname + url.search);
+    };
+    const got = await fetchPublic(target.url, kind === 'css' ? 'text/css,*/*;q=0.1' : 'text/html,application/xhtml+xml', allowed);
     if (got.error) return json({ ok: false, ...got.error }, 200, origin);
     const { res, url } = got;
     if (PROTECTED.has(res.status) || res.headers.get('cf-mitigated')) {

@@ -91,3 +91,27 @@ test('в коде Worker и страницы библиотеки нет сек�
   const fetches = [...page.matchAll(/fetch\(([^)]*)\)/g)].map(m => m[1]);
   assert.deepEqual(fetches, ['ep + path, { signal: ctrl.signal, headers: { Accept: \'application/json\' } }'], 'страница обращается только к анализатору-серверу');
 });
+
+test('robots.txt проверяется и для адреса, на который ведёт перенаправление', async () => {
+  await withNet(u => {
+    if (u.hostname === 'a-site.ru') return u.pathname === '/robots.txt' ? new Response('', { status: 404 }) : new Response(null, { status: 301, headers: { Location: 'https://b-site.ru/closed/page' } });
+    if (u.pathname === '/robots.txt') return new Response('User-agent: *\nDisallow: /closed');
+    return new Response('<html><body>секрет</body></html>', { headers: { 'Content-Type': 'text/html' } });
+  }, async seen => {
+    const body = await (await call('/fetch?url=https://a-site.ru/start')).json();
+    assert.equal(body.reason, 'robots');
+    assert.ok(!seen.some(s => s.url === 'https://b-site.ru/closed/page'), 'запрещённая страница не запрашивается');
+  });
+  await withNet(u => (u.pathname === '/robots.txt' ? new Response('', { status: 404 }) : u.hostname === 'a-site.ru' ? new Response(null, { status: 302, headers: { Location: 'https://b-site.ru/open' } }) : new Response('<html>ok</html>', { headers: { 'Content-Type': 'text/html' } })), async () => {
+    const body = await (await call('/fetch?url=https://a-site.ru/start')).json();
+    assert.equal(body.ok, true);
+    assert.equal(body.finalUrl, 'https://b-site.ru/open');
+  });
+});
+
+test('при подключённом ограничителе частоты лишние запросы получают 429', async () => {
+  const env = { RATE_LIMITER: { limit: async ({ key }) => ({ success: key !== '203.0.113.9' }) } };
+  const req = ip => new Request('https://w.dev/fetch?url=http://192.168.0.1/', { headers: { Origin: ORIGIN, 'CF-Connecting-IP': ip } });
+  assert.equal((await handle(req('203.0.113.9'), env)).status, 429);
+  assert.equal((await handle(req('203.0.113.10'), env)).status, 400, 'обычный запрос доходит до проверки адреса');
+});

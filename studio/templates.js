@@ -177,13 +177,14 @@ async function runAnalysis(src, how) {
   const css = $('#css-input').value;
   for (const [i, url] of urls.entries()) {
     const row = rows[i];
-    let html = '', sheetCss = '', loaded = 0;
+    let html = '', sheetCss = '', loaded = 0, truncated = false;
     row.state = 'run';
     if (how === 'worker') {
       row.note = 'загрузка страницы через анализатор-сервер…'; renderProgress(rows, done, 'Идёт анализ');
       const r = await workerCall(`/fetch?kind=html&url=${encodeURIComponent(url)}`);
       if (!r.ok) { row.state = 'err'; row.note = `Не получено: ${r.message || 'ошибка сервера'}`; done++; renderProgress(rows, done, 'Идёт анализ'); continue; }
       html = r.text;
+      truncated = Boolean(r.truncated);
       const sheets = stylesheetLinks(html, r.finalUrl || url).slice(0, MAX_STYLESHEETS);
       for (const [k, sheet] of sheets.entries()) {
         row.note = `загрузка стилей: ${k + 1} из ${sheets.length}…`; renderProgress(rows, done, 'Идёт анализ');
@@ -198,9 +199,11 @@ async function runAnalysis(src, how) {
     await tick();
     try {
       const a = analyzePage({ url, html, css: how === 'worker' ? sheetCss : css, cssLoaded: loaded });
+      // Сервер отдаёт не больше 1,5 МБ разметки: неполная страница должна быть явно помечена в профиле.
+      if (truncated) a.warnings.push(`Страница ${url} больше 1,5 МБ и получена не целиком — блоки в конце страницы могли не попасть в анализ. Проверьте структуру вручную.`);
       const blocks = a.structure.order.length;
       if (!blocks && a.stats.textLength < 200) { row.state = 'err'; row.note = a.warnings[0] || 'В разметке нет содержимого для анализа'; }
-      else { analyses.push(a); row.state = 'ok'; row.note = `Блоков: ${blocks}; элементов: ${a.stats.elements}; стили: ${a.visual.available ? 'получены' : 'недостаточно данных'}`; }
+      else { analyses.push(a); row.state = 'ok'; row.note = `Блоков: ${blocks}; элементов: ${a.stats.elements}; стили: ${a.visual.available ? 'получены' : 'недостаточно данных'}${truncated ? '; страница получена не целиком' : ''}`; }
     } catch (err) { row.state = 'err'; row.note = `Ошибка разбора: ${err.message}`; }
     done++; renderProgress(rows, done, 'Идёт анализ');
   }
@@ -344,10 +347,19 @@ $('#editor-form').addEventListener('submit', e => {
   if (!persist()) { items = before; $('#editor-status').textContent = 'Не удалось сохранить профиль в браузере.'; return; }
   const wasNew = editing.isNew;
   editing = null;
+  reanalyzeId = '';
   $('#editor').close();
   render();
   if (wasNew) resetForm();
   toast(wasNew ? `Профиль «${saved.name}» сохранён в библиотеку` : 'Изменения сохранены');
+});
+
+// Редактор закрыт без сохранения (кнопка, Esc): повторный анализ отменён, и следующий новый профиль
+// не должен заменить старую запись.
+$('#editor').addEventListener('close', () => {
+  if (!editing) return;
+  if (editing.isNew && reanalyzeId) { reanalyzeId = ''; setStatus('Повторный анализ отменён: существующий профиль не изменён.'); }
+  editing = null;
 });
 
 // ---------- Библиотека ----------

@@ -512,7 +512,17 @@ function applyReferences(refs, design, baseOrder, project) {
         ? `Архитектура ${ARCHETYPES[theirs].name} задана вручную и совпадает с источником «${r.name}» — отличаются расположение визуала, порядок секций, палитра и типографика`
         : `Архитектура ${ARCHETYPES[theirs].name} осталась самой уместной для ниши, хотя близка источнику «${r.name}», — отличаются расположение визуала, порядок секций, палитра и типографика`);
   }
-  if (refs.some(r => r.traits.typeCharacter || r.traits.shape)) divergence.push('Характер типографики и форма элементов выбраны иными, чем у источников; палитра строится по нише проекта, а не по источникам');
+  // Исключения источников — пожелание, а не гарантия: если у архитектуры и класса проекта не осталось других
+  // вариантов, выбор возвращается к полному списку. Отчёт описывает фактический результат.
+  const sameType = refs.filter(r => r.traits.typeCharacter && r.traits.typeCharacter === design.typeCharacter).map(r => `«${r.name}»`);
+  const sameShape = refs.filter(r => r.traits.shape && r.traits.shape === design.shape).map(r => `«${r.name}»`);
+  if (refs.some(r => r.traits.typeCharacter)) divergence.push(sameType.length
+    ? `Характер типографики совпал с источником ${sameType.join(', ')}: для выбранной архитектуры и класса проекта других вариантов не осталось`
+    : 'Характер типографики выбран иным, чем у источников');
+  if (refs.some(r => r.traits.shape)) divergence.push(sameShape.length
+    ? `Форма элементов совпала с источником ${sameShape.join(', ')}: для выбранной архитектуры и класса проекта других вариантов не осталось`
+    : 'Форма элементов выбрана иной, чем у источников');
+  divergence.push('Палитра строится по нише проекта, а не по источникам');
   return { order, applied, divergence, patterns };
 }
 

@@ -25,6 +25,7 @@ globalThis.fetch = async (url, init) => {
     if (u.pathname === '/assets/main.css') return new Response('.extra{color:#123456;border-radius:8px}', { headers: { 'Content-Type': 'text/css' } });
     return new Response(fixture, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
+  if (u.hostname === 'big-site.ru') return u.pathname === '/robots.txt' ? new Response('', { status: 404 }) : new Response(fixture + '<!-- ' + 'x'.repeat(1_600_000) + ' -->', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   if (u.hostname === 'closed-site.ru') return new Response(u.pathname === '/robots.txt' ? '' : 'Forbidden', { status: u.pathname === '/robots.txt' ? 404 : 403 });
   return realFetch(url, init);
 };
@@ -133,6 +134,25 @@ try {
   await page.click('#confirm-yes');
   check(await page.locator('.template').count() === 1, 'подтверждённое удаление не сработало');
 
+  // --- Отменённый повторный анализ не заменяет существующий профиль ---
+  const keptName = await page.textContent('.template h3');
+  await page.click('[data-act=view]');
+  await page.click('[data-dact=reanalyze]');
+  await page.fill('#html-0', fixture);
+  await page.click('#start');
+  await page.waitForSelector('#editor[open]');
+  await page.click('#editor [data-close]');
+  check((await page.textContent('#status')).includes('Повторный анализ отменён'), 'нет сообщения об отмене повторного анализа');
+  await page.fill('#template-name', 'Совсем другой профиль');
+  await page.click('#start');
+  await page.waitForSelector('#editor[open]');
+  await page.click('#editor-save');
+  await page.waitForSelector('#editor:not([open])', { state: 'attached' });
+  const names = await page.locator('.template h3').allTextContents();
+  check(names.length === 2 && names.includes(keptName) && names.includes('Совсем другой профиль'), `новый профиль заменил старый после отменённого повторного анализа: ${names.join(', ')}`);
+  await page.locator('.template', { hasText: 'Совсем другой профиль' }).locator('[data-act=delete]').click();
+  await page.click('#confirm-yes');
+
   // --- Экспорт и импорт, включая формат v1 из PR №36 ---
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#export-library')]);
   const exported = JSON.parse(readFileSync(await dl.path(), 'utf8'));
@@ -161,6 +181,13 @@ try {
   check(!(await page.textContent('#editor-body')).includes('Внешние таблицы стилей'), 'при загруженных стилях не должно быть предупреждения');
   const list = await page.textContent('#progress-list');
   check(list.includes('авторизацию') || list.includes('Не получено'), 'закрытая страница должна быть честно помечена как неполученная');
+  await page.click('#editor [data-close]');
+
+  // Страница больше лимита сервера → профиль создаётся, но с явным предупреждением о неполных данных.
+  await page.fill('#source-url', 'https://big-site.ru/'); await page.fill('#page-urls', ''); await page.fill('#template-name', 'Большая страница');
+  await page.click('#start');
+  await page.waitForSelector('#editor[open]');
+  check((await page.textContent('#editor-body')).includes('получена не целиком'), 'нет предупреждения о неполностью полученной странице');
   await page.click('#editor [data-close]');
 
   // Сервер получил только отказ → профиль не создаётся.

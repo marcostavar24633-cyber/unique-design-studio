@@ -196,3 +196,14 @@ test('концепция получает имя и формулу, а бриф 
   const prompt = buildPrompt(autopilot({ niche: 'тату-студия' }).project, buildConcept(autopilot({ niche: 'тату-студия' }).project));
   assert.match(prompt, /Концепция: Brutalist/);
 });
+
+test('если варианты типографики и формы исчерпаны, отчёт не утверждает, что они отличаются', () => {
+  const { project } = autopilot({ niche: 'ювелирная мастерская', tier: 'luxury', email: 'hello@example.com' });
+  const ref = (typeCharacter, shape, name) => ({ name, traits: { typeCharacter, shape }, patterns: {} });
+  const c = buildConcept({ ...project, architecture: 'editorial', designReferences: [ref('didone-contrast', 'sharp', 'А'), ref('serif-editorial', 'soft', 'Б')] });
+  const refTypes = ['didone-contrast', 'serif-editorial'], refShapes = ['sharp', 'soft'];
+  const text = c.libraryUse.divergence.join(' | ');
+  assert.equal(refTypes.includes(c.visualSystem.typography.id), /Характер типографики совпал/.test(text));
+  assert.equal(refShapes.includes(c.visualSystem.shape.id), /Форма элементов совпала/.test(text));
+  assert.ok(refTypes.includes(c.visualSystem.typography.id), 'сценарий действительно исчерпывает варианты типографики');
+});
