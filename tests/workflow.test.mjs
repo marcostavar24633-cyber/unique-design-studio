@@ -51,3 +51,13 @@ test('workflow uses a prepared AI draft instead of replacing it with local niche
   assert.equal(result.analysis.source, 'ai');
   assert.deepEqual(result.imageBrief.prompts, ['Editorial sofa photograph']);
 });
+
+test('workflow runs the built-in Design Director and keeps its recommendations pending approval', async () => {
+  const result = await runWorkflow({ niche: 'магазин авторской мебели', title: 'Авторская мебель', cta: 'Посмотреть коллекцию' });
+  assert.ok(result.designReview);
+  assert.equal(result.designReview.mode, 'rules-based');
+  assert.equal(result.designReview.safety.autoApplied, false);
+  assert.equal(result.stages.findLast(item => item.id === 'design_review').status, 'completed');
+  assert.equal(result.stages.findLast(item => item.id === 'approved_fixes').status, 'needs_approval');
+  assert.equal(result.fixes.status, 'awaiting_approval');
+});
