@@ -389,7 +389,7 @@ function renderPublishManager() {
         <div id="cloud-monitor-credentials" class="cloud-monitor__credentials">
           <label>Worker endpoint URL<input id="cloud-monitor-endpoint" type="url" placeholder="https://your-worker.your-account.workers.dev" autocomplete="url"></label>
           <label>Административный Bearer token<input id="cloud-monitor-token" type="password" autocomplete="new-password" spellcheck="false" placeholder="Вставьте токен для подключения"></label>
-          <div class="cloud-monitor__actions"><button type="button" id="cloud-monitor-connect" class="primary">Подключить и проверить</button><button type="button" id="cloud-monitor-disconnect" hidden>Отключиться</button><button type="button" id="cloud-monitor-refresh" disabled>Обновить список</button><button type="button" id="cloud-monitor-check">Проверить все сайты</button></div>
+          <div class="cloud-monitor__actions"><button type="button" id="cloud-monitor-connect" class="primary">Подключить и проверить</button><button type="button" id="cloud-monitor-disconnect" hidden>Отключиться</button><button type="button" id="cloud-monitor-refresh" disabled>Обновить список</button><button type="button" id="cloud-monitor-check" disabled>Проверить все сайты</button></div>
         </div>
         <p id="cloud-monitor-status" class="cloud-monitor__status" role="status" aria-live="polite">Не подключено. Токен не сохраняется и очищается при закрытии страницы.</p>
         <form id="cloud-monitor-add" class="cloud-monitor__add">
