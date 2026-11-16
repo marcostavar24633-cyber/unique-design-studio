@@ -280,3 +280,11 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .workflow-progress__item.is-needs_input .workflow-progress__status,.workflow-progress__item.is-needs_approval .workflow-progress__status,.workflow-progress__item.is-needs_attention .workflow-progress__status{color:var(--warn,#d7ad65)}
 .workflow-progress__item.is-blocked .workflow-progress__status{color:var(--danger,#d77979)}
 @media(max-width:560px){.workflow-progress__item{align-items:flex-start;font-size:11px}.workflow-progress__status{font-size:10px}}
+
+
+.workflow-review{margin:12px 0 0;padding:12px;border:1px solid rgba(201,164,94,.28);border-radius:12px;background:rgba(201,164,94,.045)}
+.workflow-review h4{margin:0 0 7px;font-size:13px}
+.workflow-review__list{display:grid;gap:9px;margin:10px 0 0;padding-left:19px}
+.workflow-review__list li{padding-left:2px;font-size:12px;line-height:1.45}
+.workflow-review__list li p{margin:4px 0}
+.workflow-review__list li b{color:var(--text)}
