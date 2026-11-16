@@ -1,5 +1,5 @@
-:root{--bg:#f3f2ee;--panel:#fbfaf7;--card:#fff;--ink:#1c1d1a;--muted:#62645d;--line:#dcdad2;--accent:#2f5d50;--accent-ink:#fff;--ok:#2c6e49;--warn:#8a5a00;--err:#b3261e;--radius:8px;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#161715;--panel:#1d1f1c;--card:#242622;--ink:#eceae4;--muted:#a3a59c;--line:#373a34;--accent:#8fc7b3;--accent-ink:#10201b;--ok:#7fcf9f;--warn:#e5b454;--err:#ff8a80;color-scheme:dark}}
+:root{--bg:#0b0c0e;--panel:#111317;--card:#191c21;--ink:#f2eee4;--muted:#a5a29a;--line:rgba(201,164,94,.22);--accent:#c9a45e;--accent-ink:#111214;--ok:#83b78a;--warn:#d6ad62;--err:#e07870;--radius:12px;color-scheme:dark}
+
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -226,3 +226,21 @@ body:not(.dashboard-mode)>.top .top__actions{align-items:center}
 .asset-library__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
 .asset-library__actions button{min-height:40px}
 @media(max-width:560px){.asset-library{padding:12px}.asset-library__head{display:block}.asset-library__stats{margin-top:8px}.asset-library__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.asset-library__meta{padding:8px}.asset-library__mobile{font-size:10px}}
+
+
+/* Unified black, gold and graphite studio theme */
+:root{color-scheme:dark;accent-color:#c9a45e}
+body{background:#0b0c0e;color:#f2eee4}
+.top,.panel,.bar{background:#111317;border-color:rgba(201,164,94,.20)}
+.card,.spec,.visual-asset-director,.image-seo-panel,.image-audit-card{background:#191c21;border-color:rgba(201,164,94,.22)}
+button,select,.field input:not([type=color]):not([type=checkbox]),.field textarea,.field select,.image-seo-panel input{background:#191c21;color:#f2eee4;border-color:rgba(201,164,94,.22)}
+button:hover,select:hover{border-color:rgba(224,189,114,.65)}
+button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b46d,#a77d35);color:#111214;border-color:#c9a45e}
+:focus-visible{outline-color:#e0bd72}
+.tabs button[aria-selected=true],.sizes button[aria-pressed=true]{background:#302719;border-color:#c9a45e;color:#f6e5bd}
+.badge.n{background:#302719;color:#e5d2a7}
+.toast{background:#c9a45e;color:#111214}
+.crop-editor,.asset-recommendation,.photo-shot{background:#14171b;border-color:rgba(201,164,94,.20)}
+.chip,.asset-coverage{border-color:rgba(201,164,94,.24)}
+.asset-coverage.is-present{color:#9bc69d;border-color:#638c68}
+.asset-coverage.is-missing{color:#e0bd72;border-color:#9a7438}
