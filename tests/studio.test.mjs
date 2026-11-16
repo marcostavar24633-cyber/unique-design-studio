@@ -111,7 +111,17 @@ test('Hero Readability QA measures actual preview at three responsive widths', (
 
 test('Hero image QA checks loading, intrinsic resolution, ALT and loading priority', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  for (const marker of ['doc.querySelectorAll(\'.hero img\')','img.complete','img.naturalWidth === 0','img.naturalWidth','img.hasAttribute(\'alt\')','img.getAttribute(\'loading\') === \'lazy\'','img.getAttribute(\'fetchpriority\') !== \'high\'','Hero без фотографии','возможна нехватка разрешения']) assert.ok(source.includes(marker), marker);
+  for (const marker of ['doc.querySelectorAll(\'.hero img\')','img.complete','img.naturalWidth === 0','img.naturalWidth','img.hasAttribute(\'alt\')','img.getAttribute(\'loading\') === \'lazy\'','img.getAttribute(\'fetchpriority\') !== \'high\'','Hero без фотографии','возможно недостаточно разрешения']) assert.ok(source.includes(marker), marker);
+});
+
+test('Hero image resolution is checked independently at each responsive viewport', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditHeroReadability()');
+  const end = source.indexOf('function renderHeroReadabilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes('heroImages.forEach((img,index) => {'));
+  assert.ok(audit.includes("title:viewport.label + ': ' + label + ' — возможно недостаточно разрешения'"));
+  assert.ok(audit.indexOf("frame.style.width = viewport.width + 'px'") < audit.indexOf('img.getBoundingClientRect()'));
 });
 
 test('Hero Readability QA restores preview sizing after responsive checks', () => {

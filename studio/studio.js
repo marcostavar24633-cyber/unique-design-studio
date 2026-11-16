@@ -655,11 +655,7 @@ function auditHeroReadability() {
     else if (img.naturalWidth === 0) checks.push({level:'check',title:label + ': изображение не загрузилось',text:'Браузер не получил изображение. Проверьте URL, доступность файла и формат.'});
     else {
       checks.push({level:'good',title:label + ': изображение загружено',text:'Исходный размер: ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px.'});
-      const rect = img.getBoundingClientRect();
-      const dpr = Math.max(1, Number(doc.defaultView.devicePixelRatio) || 1);
-      if (rect.width > 0 && rect.height > 0 && (img.naturalWidth + 1 < rect.width * dpr || img.naturalHeight + 1 < rect.height * dpr)) {
-        checks.push({level:'check',title:label + ': возможна нехватка разрешения',text:'Исходник ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px отображается примерно в ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + ' CSS px при DPR ' + dpr + '. Проверьте резкость на устройстве.'});
-      }
+      // Проверка фактического размера выполняется отдельно для каждого viewport ниже.
     }
     if (!img.hasAttribute('alt')) checks.push({level:'check',title:label + ': отсутствует ALT',text:'Добавьте текстовое описание фотографии. Для смыслового изображения пустой alt нежелателен.'});
     else if (!img.getAttribute('alt').trim()) checks.push({level:'check',title:label + ': пустой ALT',text:'Hero-фотография помечена как декоративная. Если она передаёт содержание, добавьте краткое описание.'});
@@ -670,6 +666,15 @@ function auditHeroReadability() {
     for (const viewport of viewports) {
       frame.style.width = viewport.width + 'px';
       frame.style.maxWidth = '100%';
+      heroImages.forEach((img,index) => {
+        if (!img.complete || img.naturalWidth === 0) return;
+        const rect = img.getBoundingClientRect();
+        const dpr = Math.max(1, Number(doc.defaultView.devicePixelRatio) || 1);
+        if (rect.width > 0 && rect.height > 0 && (img.naturalWidth + 1 < rect.width * dpr || img.naturalHeight + 1 < rect.height * dpr)) {
+          const label = 'Hero-фото' + (heroImages.length > 1 ? ' ' + (index + 1) : '');
+          checks.push({level:'check',title:viewport.label + ': ' + label + ' — возможно недостаточно разрешения',text:'Исходник ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px отображается примерно в ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + ' CSS px при DPR ' + dpr + '. Проверьте резкость на этом размере экрана.'});
+        }
+      });
       const heading = doc.querySelector('.hero h1');
       const lede = doc.querySelector('.hero .lede');
       const button = doc.querySelector('.hero .actions .ds-button, .hero .ds-button');
