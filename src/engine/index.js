@@ -15,6 +15,8 @@ export { contrast } from './color.js';
 export { LIBRARY_KEY, normalizeLibrary, referencesFor } from './library.js';
 export { analyzePage, buildProfile, stylesheetLinks, headingType } from './site-analysis.js';
 export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIELDS } from './design-director.js';
+export { qualityReport, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
+export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
 export function generate(input, { registry = [], neighbors = 2 } = {}) {

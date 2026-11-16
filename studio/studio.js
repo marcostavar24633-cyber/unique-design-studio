@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -118,6 +118,10 @@ const GROUPS = [
     ['@promptMode', 'Как использовать свой промт', 'promptMode'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
     ['brandCharacter', 'Характер бренда'],
+  ]],
+  ['SEO', false, [
+    ['seoTitle', 'SEO-заголовок (title)', 'text', 'Необязательно. 30–60 символов. Если пусто — «Заголовок — Бренд»'],
+    ['seoDescription', 'SEO-описание (meta description)', 'area', 'Необязательно. 120–160 символов. Если пусто — описание предложения'],
   ]],
   ['Изображения', false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
@@ -260,7 +264,7 @@ function run() {
   result = nextResult;
   lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
   $('#frame').srcdoc = result.html;
-  renderSpec(); renderConcept(); renderAudit(); renderRegistry();
+  renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
   updateChangePreviewButton();
   persist();
 }
@@ -325,6 +329,72 @@ $('#view-spec').addEventListener('click', async e => {
   if (b.dataset.spec === 'prompt') copy(buildPrompt(result.project, result.concept, a), 'Промт скопирован', `${result.project.id}-prompt.txt`);
   if (b.dataset.content === 'copy') copy(contentPrompt(), 'Задание AI Content Director скопировано', `${result.project.id}-content-director.txt`);
   if (b.dataset.content === 'download') download(`${result.project.id}-content-director.txt`, contentPrompt(), 'text/plain');
+});
+
+// ---------- Производство: конвейер, контроль качества и безопасные исправления ----------
+const QUALITY_HISTORY = 'uds:quality-history:v1';
+function qualityHistory() {
+  try { return JSON.parse(localStorage.getItem(QUALITY_HISTORY) || '[]').filter(e => e && e.projectId === state.raw.id).slice(-10); } catch { return []; }
+}
+function recordQualityHistory(entry) {
+  try {
+    const all = JSON.parse(localStorage.getItem(QUALITY_HISTORY) || '[]');
+    all.push({ ...entry, projectId: state.raw.id, at: new Date().toISOString() });
+    localStorage.setItem(QUALITY_HISTORY, JSON.stringify(all.slice(-50)));
+  } catch { /* история — удобство, без неё работа продолжается */ }
+}
+const STAGE_LABEL = { done: 'Готово', attention: 'Нужно внимание', input: 'Нужны данные', manual: 'Вручную' };
+function renderProduction() {
+  const host = $('#view-production');
+  if (!host || !result) return;
+  const q = qualityReport(result);
+  const p = result.project;
+  const a = currentAnalysis();
+  const photos = [p.images?.hero, ...(p.gallery || []).map(g => g.src), ...(p.services || []).map(s => s.image)].filter(Boolean).length;
+  const director = q.findings.filter(f => f.source === 'design-director');
+  const fixable = q.findings.filter(f => f.autoFix);
+  const kb = Math.round(new TextEncoder().encode(result.html).length / 1024);
+  const arch = ARCHETYPES[result.concept.designDNA.primaryArchetype];
+  const stages = [
+    ['Бриф', p.niche ? 'done' : 'input', p.niche ? `${esc(p.brand || 'Без названия')} · ${esc(p.niche)}` : 'Укажите нишу проекта'],
+    ['Анализ', a ? 'done' : 'manual', a ? (a.source === 'ai' ? 'AI с поиском в интернете' : 'Локальный автопилот') : 'Проект из редактора: анализ не запускался. Используйте автопилот.'],
+    ['Design DNA', 'done', `${esc(arch.name)} — ${esc(result.concept.homepage.heroComposition)}`],
+    ['Визуальный бриф', photos ? 'done' : 'input', photos ? `Фотографий: ${photos}` : 'Фото не загружены: на странице абстрактный мотив. Задание для съёмки — во вкладке «Проверка».'],
+    ['HTML', 'done', `Самодостаточная страница, ${kb} КБ`],
+    ['Аудит', result.audit.ok ? 'done' : 'attention', `Ошибок: ${result.audit.errors.length}, предупреждений: ${result.audit.warnings.length}`],
+    ['Контроль качества', q.counts.critical || q.counts.high ? 'attention' : 'done', `Critical ${q.counts.critical} · High ${q.counts.high} · Medium ${q.counts.medium} · Low ${q.counts.low}`],
+    ['Design Director', director.length ? 'attention' : 'done', director.length ? `Рекомендаций: ${director.length}. Применяются только вручную.` : 'Рекомендаций нет'],
+    ['Исправления', fixable.length ? 'attention' : 'done', fixable.length ? `Можно исправить автоматически: ${fixable.length}` : 'Автоматически исправлять нечего'],
+    ['Экспорт', 'done', 'HTML и JSON проекта доступны'],
+    ['Публикация', 'manual', 'Хостинг не подключён: скачайте HTML и загрузите его на свой хостинг. Студия не считает сайт опубликованным.'],
+  ];
+  const badge = $('#production-badge');
+  if (badge) { const n = q.counts.critical + q.counts.high; badge.textContent = n || '✓'; badge.className = 'badge ' + (n ? 'err' : 'ok'); }
+  const groups = Object.entries(QUALITY_CATEGORIES).map(([id, label]) => [label, q.byCategory[id]]).filter(([, list]) => list.length);
+  const history = qualityHistory();
+  host.innerHTML = `<div class="production">
+  <div class="production__head"><div><span class="eyebrow">PRODUCTION PIPELINE</span><h2>Производственный конвейер</h2>
+    <p class="note">Статусы считаются по текущему проекту. Ориентир качества: ${q.score} из 100 — он нужен для сравнения версий, а не как оценка дизайна.</p></div>
+    <div class="production__actions"><button type="button" class="primary" data-production="fix"${fixable.length ? '' : ' disabled'}>Исправить автоматически${fixable.length ? ` (${fixable.length})` : ''}</button><button type="button" data-production="html">Скачать HTML</button><button type="button" data-production="json">Экспорт JSON</button></div></div>
+  <ol class="production__stages">${stages.map(([name, st, detail]) => `<li class="is-${st}"><b>${name}</b><span class="production__state">${STAGE_LABEL[st]}</span><small>${detail}</small></li>`).join('')}</ol>
+  <h3>Замечания по направлениям</h3>
+  ${groups.length ? groups.map(([label, list]) => `<section class="production__group"><h4>${esc(label)} <span class="note">${list.length}</span></h4><ul>${list.map(f => `<li><span class="sev sev--${f.severity}">${SEVERITY_LABELS[f.severity]}</span><span>${esc(f.message)}${f.action ? `<br><small class="note">${esc(f.action)}</small>` : ''}</span>${f.autoFix ? '<em class="production__auto">исправится автоматически</em>' : ''}</li>`).join('')}</ul></section>`).join('') : '<p class="summary ok">Замечаний нет.</p>'}
+  <h3>История проверок</h3>
+  ${history.length ? `<ul class="production__history">${history.slice().reverse().map(h => `<li>${new Date(h.at).toLocaleString('ru-RU')}: ${esc(h.text)}</li>`).join('')}</ul>` : '<p class="note">Автоисправления ещё не запускались.</p>'}
+</div>`;
+}
+$('#view-production').addEventListener('click', e => {
+  const b = e.target.closest('[data-production]'); if (!b || b.disabled) return;
+  if (b.dataset.production === 'html') { $('#download').click(); return; }
+  if (b.dataset.production === 'json') { $('#export').click(); return; }
+  // Безопасные исправления с повторной проверкой: не больше двух проходов, остановка, если менять нечего.
+  const r = fixAndRecheck(state.raw, raw => generate(raw, { registry: registry() }), { maxPasses: 2 });
+  if (!r.passes.length) { toast('Автоматически исправлять нечего'); return; }
+  const fields = [...new Set(r.passes.flatMap(x => x.applied.flatMap(a => a.fields)))];
+  const text = `исправлено полей: ${fields.join(', ')}; замечаний было ${r.before.findings.length}, стало ${r.after.findings.length}`;
+  recordQualityHistory({ text, before: r.before.counts, after: r.after.counts });
+  load(r.project, `Исправлено автоматически: ${fields.join(', ')}. Повторная проверка: было ${r.before.findings.length}, стало ${r.after.findings.length}.`);
+  selectTab($('#tab-production'));
 });
 
 // ---------- Библиотека шаблонов в автопилоте ----------
