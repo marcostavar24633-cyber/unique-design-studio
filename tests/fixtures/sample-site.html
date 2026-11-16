@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мастерская «Тестовая» — мебель на заказ</title>
+<meta name="description" content="Тестовая страница для проверки анализатора.">
+<link rel="stylesheet" href="/assets/main.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;600&display=swap">
+<style>
+:root{--accent:#b4552d;--bg:#f6f1e8;--ink:#1d1a16}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:17px}
+h1{font-family:"Playfair Display",Georgia,serif;font-size:clamp(2.2rem,5vw,4.5rem);font-weight:700}
+h2{font-family:"Playfair Display",Georgia,serif;font-size:2.4rem}
+h3{font-size:1.25rem}
+.header{position:sticky;top:0;background:#f6f1e8;border-bottom:1px solid #d8cfbf}
+.container{max-width:1180px;margin:0 auto;padding:0 24px}
+.btn{display:inline-flex;background:var(--accent);color:#fff;border-radius:8px;padding:16px 32px;transition:background .2s}
+.btn:focus-visible{outline:2px solid #1d1a16}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.card{background:#ffffff;border-radius:8px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+section{padding:96px 0}
+a{color:#b4552d}
+.steps{display:flex;gap:16px}
+@media (max-width:760px){.cards{grid-template-columns:1fr}section{padding:48px 0}}
+@media (max-width:480px){.btn{padding:12px 16px}}
+</style>
+</head>
+<body>
+<header class="header"><div class="container">
+  <a class="logo" href="/">Тестовая</a>
+  <nav><ul><li><a href="#catalog">Каталог</a></li><li><a href="#how">Как мы работаем</a></li><li><a href="#reviews">Отзывы</a></li><li><a href="#faq">Вопросы</a></li><li><a href="#contact">Контакты</a></li></ul></nav>
+  <a class="btn" href="#contact">Обсудить проект</a>
+  <button class="burger" aria-label="Меню"></button>
+</div></header>
+<main>
+<section class="hero"><div class="container">
+  <h1>Мебель по вашим размерам за 21 день</h1>
+  <p>Проектируем, изготавливаем и собираем. 12 лет работы и 800+ проектов.</p>
+  <a class="btn" href="#contact">Обсудить проект</a> <a class="btn btn--ghost" href="#catalog">Смотреть каталог</a>
+  <img src="hero.jpg" alt="Кухня из дуба">
+</div></section>
+<section id="catalog"><div class="container">
+  <h2>Каталог</h2>
+  <div class="cards">
+    <article class="card"><img src="1.jpg" alt="Кухня"><h3>Кухни</h3><p>Фасады из массива и шпона, фурнитура с доводчиками.</p><span>от 180 000 ₽</span><a href="/kitchens">Подробнее</a></article>
+    <article class="card"><img src="2.jpg" alt="Шкаф"><h3>Шкафы</h3><p>Встроенные и отдельно стоящие, с подсветкой и наполнением.</p><span>от 90 000 ₽</span><a href="/wardrobes">Подробнее</a></article>
+    <article class="card"><img src="3.jpg"><h3>Столы</h3><p>Обеденные и рабочие столы из дуба, ясеня и ореха.</p><span>от 45 000 ₽</span><a href="/tables">Подробнее</a></article>
+  </div>
+</div></section>
+<section class="advantages"><div class="container">
+  <h2>Почему выбирают нас</h2>
+  <ul class="cards"><li class="card"><svg></svg><h3>Свой цех</h3><p>Контролируем каждый этап производства сами.</p></li><li class="card"><svg></svg><h3>Гарантия 5 лет</h3><p>Письменная гарантия на корпус и фурнитуру.</p></li><li class="card"><svg></svg><h3>Точный срок</h3><p>Срок фиксируем в договоре до начала работ.</p></li></ul>
+</div></section>
+<section id="how"><div class="container">
+  <h2>Как мы работаем</h2>
+  <ol class="steps"><li class="step">01 Замер и обсуждение задачи на объекте</li><li class="step">02 Проект и смета с фиксированной ценой</li><li class="step">03 Изготовление в собственном цехе</li><li class="step">04 Доставка и аккуратная сборка</li></ol>
+</div></section>
+<section id="reviews"><div class="container"><h2>Отзывы клиентов</h2>
+  <div class="swiper"><div class="review">★★★★★ Отличная работа, всё сделали в срок и аккуратно.</div><div class="review">★★★★★ Кухня получилась точно как на проекте, спасибо.</div><div class="review">★★★★☆ Хорошее качество, сборщики приехали вовремя.</div></div>
+</div></section>
+<section id="faq"><div class="container"><h2>Частые вопросы</h2>
+  <details><summary>Сколько стоит замер?</summary><p>Бесплатно в пределах города.</p></details>
+  <details><summary>Какие материалы используете?</summary><p>Массив, шпон, МДФ в эмали.</p></details>
+</div></section>
+<section id="contact"><div class="container"><h2>Оставьте заявку</h2>
+  <form action="/send" method="post"><label for="n">Имя</label><input id="n" name="name" required><input type="tel" name="phone" placeholder="Телефон" required><textarea name="message" placeholder="Комментарий"></textarea><button type="submit" class="btn">Отправить заявку</button></form>
+  <a href="tel:+70000000000">+7 000 000-00-00</a> <a href="https://t.me/test">Telegram</a>
+</div></section>
+</main>
+<footer><div class="container"><p>© Тестовая мастерская</p><a href="https://vk.com/test">VK</a></div></footer>
+<script src="https://code.jivo.ru/widget/abc" async></script>
+</body></html>
