@@ -2,6 +2,7 @@
 // Проверяет отсутствие горизонтальной прокрутки, видимость заголовка и CTA, клавиатурный фокус и reduced motion.
 // Запуск: npm run test:e2e (нужен Playwright с Chromium: npm i -D playwright && npx playwright install chromium).
 import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { ARCHETYPES, ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { examples, full, root } from '../helpers.mjs';
@@ -75,6 +76,33 @@ for (const { name, html } of pages) {
   if (hidden) failures.push(`без JS скрыто блоков: ${hidden}`);
   await ctx.close(); checks++;
 }
+
+/* Studio publish manager smoke test: history is explicit and remains local. */
+{
+  const server = spawn(process.execPath, [`${root}bin/uds.js`, 'serve', '--port', '4174'], { cwd: root, stdio: 'ignore' });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    let opened = false;
+    for (let attempt = 0; attempt < 15 && !opened; attempt++) {
+      try { await page.goto('http://127.0.0.1:4174/studio/', { waitUntil: 'domcontentloaded', timeout: 2500 }); opened = true; }
+      catch { await new Promise(resolve => setTimeout(resolve, 250)); }
+    }
+    if (!opened) throw new Error('studio server did not start');
+    await page.locator('[data-dash="publish"]').first().click();
+    await page.locator('#view-publish h2').waitFor({ state: 'visible' });
+    if (!(await page.locator('#publish-copy-command').count())) failures.push('publish manager: no deploy command control');
+    await page.locator('#publish-deployment-url').fill('https://uds-smoke-test.pages.dev/');
+    await page.locator('#publish-confirm-success').check();
+    await page.locator('#publish-record-deployment').click();
+    if (!(await page.locator('#publish-history-list').getByText('https://uds-smoke-test.pages.dev/').count())) failures.push('publish manager: deployment history record was not rendered');
+    await page.locator('[data-delete-deployment]').first().click();
+    if (!(await page.locator('.publish-history__empty').count())) failures.push('publish manager: deleted record still appears');
+    checks++;
+    await page.close();
+  } catch (error) { failures.push('publish manager smoke test: ' + error.message); }
+  finally { server.kill(); }
+}
+
 await browser.close();
 if (failures.length) { console.error(`Провалено проверок: ${failures.length}\n- ${failures.join('\n- ')}`); process.exit(1); }
 console.log(`Браузерные проверки пройдены: ${pages.length} страниц × ${WIDTHS.length} ширины, всего ${checks} прогонов.`);
