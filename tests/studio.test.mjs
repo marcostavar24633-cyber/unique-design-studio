@@ -40,7 +40,7 @@ test('код веб-редактора синтаксически коррект
     "function writeCrop(role, index, viewport, axis, value)",
     "data-crop-viewport",
     "Кадрирование для экранов",
-    "function renderVisualAssetDirector(reports, duplicateCount, missingRoles)",
+    "function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs = [])",
     "Люкс-арт-дирекшн",
     "Премиум-арт-дирекшн",
     "Серия из 4–6 РАЗНЫХ фотографий",
