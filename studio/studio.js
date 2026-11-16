@@ -1030,8 +1030,25 @@ $('#form').addEventListener('click', e => {
   if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: '', heroMobile: '', heroAlt: '' };
   else if (kind === 'hero-mobile') state.raw.images = { ...(state.raw.images || {}), heroMobile: '' };
   else if (kind === 'gallery-mobile' || kind === 'service-mobile') { const idx = Number(index); const key = kind === 'gallery-mobile' ? 'gallery' : 'services'; if (state.raw.imageArtDirection?.mobileSources?.[key]) delete state.raw.imageArtDirection.mobileSources[key][idx]; }
-  if (kind === 'gallery') state.raw.gallery.splice(Number(index), 1);
-  if (kind === 'service') { const row = state.raw.services[Number(index)]; if (Array.isArray(row)) { row[3] = ''; row[4] = ''; } else { row.image = ''; row.alt = ''; } }
+  if (kind === 'gallery') {
+    const idx = Number(index);
+    state.raw.gallery.splice(idx, 1);
+    const mobileGallery = state.raw.imageArtDirection?.mobileSources?.gallery;
+    if (Array.isArray(mobileGallery)) mobileGallery.splice(idx, 1);
+    else if (mobileGallery && typeof mobileGallery === 'object') {
+      const entries = Object.entries(mobileGallery).filter(([key]) => /^\\d+$/.test(key));
+      for (const [key] of entries) delete mobileGallery[key];
+      for (const [key, value] of entries) if (Number(key) > idx) mobileGallery[Number(key) - 1] = value;
+    }
+  }
+  if (kind === 'service') {
+    const idx = Number(index);
+    const row = state.raw.services[idx];
+    if (Array.isArray(row)) { row[3] = ''; row[4] = ''; } else if (row) { row.image = ''; row.alt = ''; }
+    const mobileServices = state.raw.imageArtDirection?.mobileSources?.services;
+    if (Array.isArray(mobileServices)) delete mobileServices[idx];
+    else if (mobileServices && typeof mobileServices === 'object') delete mobileServices[idx];
+  }
   buildForm(); run(); toast('Фотография удалена из проекта');
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
