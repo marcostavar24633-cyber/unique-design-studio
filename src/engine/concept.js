@@ -148,17 +148,30 @@ function compose(project, profile, ranked, seed, avoid) {
 }
 
 export const fingerprintOf = d => ({
-  archetype: d.primary, placement: d.placement, typeCharacter: d.typeCharacter, nav: d.nav, colorDirection: d.direction, shape: d.shape,
+  archetype: d.primary,
+  placement: d.placement,
+  typeCharacter: d.typeCharacter,
+  nav: d.nav,
+  colorDirection: d.direction,
+  shape: d.shape,
+  motif: d.motif,
+  button: d.button,
+  motion: ARCHETYPES[d.primary].motion,
 });
 
 const tripleEqual = (a, b) => a.archetype === b.archetype && a.placement === b.placement && a.typeCharacter === b.typeCharacter;
 
-/** Доля совпавших признаков визуального характера (0…1) — для отчёта о похожести. */
+/** Доля совпавших признаков визуального характера (0…1) — для отчёта о похожести.
+ *  Старые записи реестра без новых полей совместимы: отсутствующие признаки не учитываются. */
 export function similarity(a, b) {
-  const w = { archetype: 3, placement: 2, typeCharacter: 2, nav: 1, colorDirection: 1, shape: 1 };
+  const w = { archetype: 3, placement: 2, typeCharacter: 2, nav: 1, colorDirection: 1, shape: 1, motif: 1, button: 1, motion: 1 };
   let total = 0, same = 0;
-  for (const [k, v] of Object.entries(w)) { total += v; if (a[k] && a[k] === b[k]) same += v; }
-  return Math.round((same / total) * 100) / 100;
+  for (const [k, v] of Object.entries(w)) {
+    if (a[k] == null || b[k] == null || a[k] === '' || b[k] === '') continue;
+    total += v;
+    if (a[k] === b[k]) same += v;
+  }
+  return total ? Math.round((same / total) * 100) / 100 : 0;
 }
 
 // ---------- Секции ----------
