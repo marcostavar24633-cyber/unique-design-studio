@@ -111,3 +111,8 @@ test('Responsive QA restores preview dimensions after testing each viewport', ()
   assert.ok(audit.includes('frame.style.height = originalHeight;'));
   assert.ok(audit.includes('frame.style.maxWidth = originalMaxWidth;'));
 });
+
+test('Site Content & Interaction QA checks images, links, CTAs and forms in the preview', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of ['function auditSiteContentAndInteractions()','function renderSiteContentInteractionChecks()','data-run-site-content-qa','site-content-qa-results','naturalWidth===0','Пустые или небезопасные ссылки','Внешние адреса требуют проверки','доставка не подтверждена','Поля без подписи','aria-disabled']) assert.ok(source.includes(marker), marker);
+});
