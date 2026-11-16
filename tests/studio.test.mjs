@@ -36,7 +36,7 @@ test('код веб-редактора синтаксически коррект
     "image-audit-warning",
     "image-audit-tip",
     "image-intelligence",
-    "function cropEditor(role, index = 0)",
+    "function cropEditor(role, index = 0, src = '')",
     "crop-live-previews",
     "crop-live__frame",
     "Предпросмотр показывает обрезку для пропорций экранов",
