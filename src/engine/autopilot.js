@@ -381,6 +381,19 @@ ${d.conceptName ? `- Концепция: **${d.conceptName}** — ${d.conceptFor
 - Типографика: ${d.typographyDirection}
 - Изображения: ${d.imageDirection}
 - Движение: ${d.motionDirection}
+${concept.libraryUse ? `
+### Профили библиотеки шаблонов
+Изучены: ${concept.libraryUse.references.map(r => `«${r.name}» (${r.category})`).join(', ')}. Использованы принципы, не готовый дизайн.
+
+Что применено:
+${li(concept.libraryUse.applied)}
+
+Решения для переосмысления:
+${li([...concept.libraryUse.patterns.structure, ...concept.libraryUse.patterns.ux, ...concept.libraryUse.patterns.content])}
+
+Чем проект отличается:
+${li(concept.libraryUse.divergence)}
+` : ''}
 
 ## 5. План фотосъёмки\n${li(a.imagePrompts)}\n\n## 6. Структура страницы
 ${h.sections.map((s, i) => `${i + 1}. **${s.id}** — ${s.role}`).join('\n')}
@@ -403,7 +416,7 @@ ${li([...b.assumptions, 'Реальные позиции, цены и сроки
 /** Всё за один вызов: проект → концепция → ТЗ и промт. Сборка HTML — обычным generate(). */
 export function autopilot(input, { registry = [] } = {}) {
   const { project, analysis } = draftFromNiche(input);
-  const concept = buildConcept(project, { registry });
+  const concept = buildConcept(project, { registry, references: input.designReferences });
   return { project, analysis, spec: buildSpec(project, concept, analysis), prompt: buildPrompt(project, concept, analysis) };
 }
 
