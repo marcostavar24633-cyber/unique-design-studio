@@ -2,6 +2,7 @@
 // Оркестрирует существующий локальный движок; внешние AI-сервисы подключаются адаптерами.
 import { draftFromNiche, buildSpec } from './autopilot.js';
 import { generate } from './index.js';
+import { reviewDesign } from './design-director.js';
 
 const isFunction = value => typeof value === 'function';
 
@@ -82,9 +83,12 @@ export async function runWorkflow(input, {
   });
 
   let designReview = null;
-  if (isFunction(designDirector)) {
+  const runDesignReview = isFunction(designDirector)
+    ? designDirector
+    : async context => ({ ...reviewDesign(context.project, { concept: context.concept, audit: context.audit }), mode: 'rules-based' });
+  if (isFunction(runDesignReview)) {
     report('design_review', 'running');
-    designReview = await designDirector({
+    designReview = await runDesignReview({
       project: generated.project,
       analysis,
       concept: generated.concept,
@@ -93,7 +97,7 @@ export async function runWorkflow(input, {
       imageBrief,
       visualAssets,
     });
-    report('design_review', 'completed', { review: designReview });
+    report('design_review', 'completed', { mode: designReview?.mode || 'adapter', review: designReview });
   } else {
     report('design_review', 'needs_input', { reason: 'AI Design Director adapter is not configured.' });
   }
