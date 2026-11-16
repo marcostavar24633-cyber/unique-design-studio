@@ -130,3 +130,6 @@ button.wide{width:100%;min-height:44px}
 .seo-check-list{display:grid;gap:6px;margin:10px 0;padding-left:20px;font-size:13px}
 /* Свой промт */
 .prompt-area{min-height:140px}
+
+/* Photo Art Direction shot list */
+.photo-shot-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.photo-shot-actions button{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:650}.photo-shot-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 20px}.photo-shot{min-width:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}.photo-shot__head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}.photo-shot__head span{flex:none;color:var(--muted);font-size:11px}.photo-shot p{margin:6px 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}@media(max-width:600px){.photo-shot-list{grid-template-columns:1fr}.photo-shot__head{display:grid}}
