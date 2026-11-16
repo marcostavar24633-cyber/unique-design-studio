@@ -25,3 +25,5 @@ export function generate(input, { registry = [], neighbors = 2 } = {}) {
 export { BRANDS } from './brands.js';
 
 export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
+
+export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIELDS } from './design-director.js';
