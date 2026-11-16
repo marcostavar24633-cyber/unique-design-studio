@@ -270,3 +270,13 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .dash-nav-link{display:flex;align-items:center;gap:14px;min-height:43px;padding:9px 13px;border-radius:12px;color:#c6c1d1;text-decoration:none;font-size:14px}
 .dash-nav-link:hover{background:linear-gradient(100deg,#54228c,#32194f);color:#fff}
 .dash-nav-link:focus-visible{outline:2px solid #bd8aff;outline-offset:3px}
+
+
+/* Drag-and-drop gallery ordering */
+.media-preview--grid [data-gallery-item]{cursor:grab;transition:border-color .16s,opacity .16s,transform .16s}
+.media-preview--grid [data-gallery-item].is-dragging{opacity:.42;cursor:grabbing;transform:scale(.98)}
+.media-preview--grid [data-gallery-item].is-drop-target{border:2px dashed var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card))}
+.gallery-order-controls{display:flex;gap:6px;align-items:center}
+.gallery-order-controls button{flex:1;cursor:pointer}
+.gallery-order-controls button:disabled{opacity:.35;cursor:not-allowed}
+@media(hover:none){.media-preview--grid [data-gallery-item]{cursor:default}}
