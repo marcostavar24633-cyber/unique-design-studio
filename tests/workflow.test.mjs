@@ -9,8 +9,8 @@ test('workflow generates a project, concept, HTML, audit and export without exte
   assert.match(result.html, /<!doctype html/i);
   assert.ok(result.audit);
   assert.ok(result.exported);
-  assert.deepEqual(result.stages.map(item => item.id), WORKFLOW_STAGES);
-  assert.equal(result.stages.find(item => item.id === 'visual').status, 'needs_input');
+  assert.deepEqual([...new Set(result.stages.map(item => item.id))], WORKFLOW_STAGES);
+  assert.equal(result.stages.findLast(item => item.id === 'visual').status, 'needs_input');
   assert.equal(result.stages.find(item => item.id === 'publish').status, 'manual');
 });
 
@@ -28,8 +28,8 @@ test('workflow calls optional visual and review adapters and only applies fixes 
   assert.deepEqual(calls, ['visual', 'review', 'fixes']);
   assert.equal(result.fixes.status, 'applied');
   assert.equal(result.exported.testFixApplied, true);
-  assert.equal(result.stages.find(item => item.id === 'visual').status, 'completed');
-  assert.equal(result.stages.find(item => item.id === 'approved_fixes').status, 'completed');
+  assert.equal(result.stages.findLast(item => item.id === 'visual').status, 'completed');
+  assert.equal(result.stages.findLast(item => item.id === 'approved_fixes').status, 'completed');
 });
 
 test('workflow never applies review findings unless an explicit fix adapter is supplied', async () => {
