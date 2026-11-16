@@ -298,6 +298,36 @@ const WORKFLOW_STATUS = {
   needs_attention: 'Нужно внимание', needs_approval: 'Ожидает подтверждения',
   blocked: 'Заблокировано', manual: 'Ручной этап',
 };
+function renderWorkflowReview(review) {
+  const root = $('#workflow-review');
+  if (!root || !review) return;
+  root.hidden = false;
+  root.replaceChildren();
+  const heading = document.createElement('h4');
+  heading.textContent = 'AI Design Director — отчёт проверки';
+  const summary = document.createElement('p');
+  const recommendations = Array.isArray(review.recommendations) ? review.recommendations : [];
+  summary.className = 'note';
+  summary.textContent = recommendations.length
+    ? `Найдено рекомендаций: ${recommendations.length}. Изменения не применялись — требуется проверка.`
+    : 'Критичных замечаний по текущим правилам не найдено.';
+  const list = document.createElement('ul');
+  list.className = 'workflow-review__list';
+  for (const item of recommendations) {
+    const li = document.createElement('li');
+    const title = document.createElement('b');
+    title.textContent = item.title || item.id || 'Рекомендация';
+    const reason = document.createElement('p');
+    reason.textContent = item.reason || '';
+    const action = document.createElement('p');
+    action.className = 'note';
+    action.textContent = item.action || '';
+    li.append(title, reason, action);
+    list.append(li);
+  }
+  root.append(heading, summary);
+  if (recommendations.length) root.append(list);
+}
 function renderWorkflowProgress(events) {
   const root = $('#workflow-progress');
   if (!root) return;
@@ -315,6 +345,9 @@ function renderWorkflowProgress(events) {
     const status = document.createElement('span');
     status.className = 'workflow-progress__status';
     status.textContent = WORKFLOW_STATUS[item.status] || item.status;
+    if (id === 'design_review' && item.review?.recommendations?.length) status.textContent += ` · ${item.review.recommendations.length} замеч.`;
+    if (id === 'visual' && item.briefReady) status.textContent = 'Бриф готов · загрузите фото';
+    if (id === 'approved_fixes' && item.status === 'needs_approval') status.textContent = 'Требуется ваше подтверждение';
     li.append(name, status);
     root.append(li);
   }
@@ -365,12 +398,15 @@ $('#auto').addEventListener('submit', async e => {
       onStage: item => {
         workflowEvents.push(item);
         renderWorkflowProgress(workflowEvents);
+        if (item.id === 'design_review' && item.review) renderWorkflowReview(item.review);
       },
     });
     state.workflow = {
       projectId: draft.project.id,
       stages: workflowResult.stages,
       audit: workflowResult.audit,
+      designReview: workflowResult.designReview,
+      fixes: workflowResult.fixes,
       updatedAt: new Date().toISOString(),
     };
     if (workflowResult.audit?.errors?.length) {
