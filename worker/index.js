@@ -178,7 +178,7 @@ export default {
     try {
       const result = await env.AI.run(MODEL, {
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-        max_tokens: 3000,
+        max_tokens: 6000,
         temperature: 0.55,
       });
       const rawOutput = result?.response ?? result?.result?.response ?? result;
