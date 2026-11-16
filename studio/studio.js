@@ -630,11 +630,84 @@ function renderHeroReadabilityChecks() {
   host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
 }
 
+
+function auditResponsiveLayoutAndAccessibility() {
+  const frame = $('#frame');
+  const doc = frame?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки страницы в окне предпросмотра.'}];
+  const originalWidth = frame.style.width;
+  const originalHeight = frame.style.height;
+  const originalMaxWidth = frame.style.maxWidth;
+  const results = [];
+  const sizes = [{width:320,label:'Телефон 320 px'},{width:375,label:'Телефон 375 px'},{width:768,label:'Планшет 768 px'}];
+  const visible = el => {
+    const style = doc.defaultView.getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+  };
+  const hasName = el => Boolean((el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.value || '').trim() || (el.labels && [...el.labels].some(label => label.innerText.trim())));
+  const intersects = (a,b) => a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2;
+  try {
+    for (const size of sizes) {
+      frame.style.width = size.width + 'px';
+      frame.style.maxWidth = '100%';
+      const root = doc.documentElement;
+      const body = doc.body;
+      const viewportWidth = doc.defaultView.innerWidth || size.width;
+      const pageWidth = Math.max(root.scrollWidth,body.scrollWidth);
+      if (pageWidth > viewportWidth + 2) results.push({level:'check',title:size.label + ': горизонтальная прокрутка',text:'Контент шире окна на ' + (pageWidth - viewportWidth) + ' px. Проверьте фиксированные ширины, длинные строки и сетки.'});
+      else results.push({level:'good',title:size.label + ': ширина страницы',text:'Горизонтальное переполнение на уровне документа не обнаружено.'});
+      const controls = [...doc.querySelectorAll('a[href],button,input,select,textarea,[role="button"],[tabindex]')].filter(visible);
+      const unnamed = controls.filter(el => !hasName(el));
+      if (unnamed.length) results.push({level:'check',title:size.label + ': элементы без доступного имени',text:'Найдено ' + unnamed.length + ' ссылок или элементов управления без видимого текста, подписи, aria-label или title.'});
+      const smallTargets = controls.filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.width < 44 || r.height < 44;
+      });
+      if (smallTargets.length) results.push({level:'check',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше ориентира 44 × 44 px. Увеличьте область нажатия или расстояние между соседними элементами.'});
+      const offscreen = controls.filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.right < 0 || r.left > viewportWidth || r.bottom < 0;
+      });
+      if (offscreen.length) results.push({level:'check',title:size.label + ': элементы за пределами экрана',text:offscreen.length + ' интерактивных элементов находятся за видимой областью. Проверьте меню, CTA и горизонтальные списки.'});
+      const focusMissing = controls.filter(el => {
+        const style = doc.defaultView.getComputedStyle(el);
+        return style.outlineStyle === 'none' && style.boxShadow === 'none';
+      });
+      if (focusMissing.length) results.push({level:'manual',title:size.label + ': проверить клавиатурный фокус',text:focusMissing.length + ' элементов не имеют очевидного outline или box-shadow в обычном состоянии. Проверьте :focus-visible клавиатурой.'});
+      const overlapping = [];
+      const candidates = controls.filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type));
+      for (let i=0;i<candidates.length;i++) for (let j=i+1;j<candidates.length;j++) {
+        const a=candidates[i],b=candidates[j];
+        if (a.contains(b) || b.contains(a)) continue;
+        if (intersects(a.getBoundingClientRect(),b.getBoundingClientRect())) overlapping.push([a,b]);
+      }
+      if (overlapping.length) results.push({level:'check',title:size.label + ': пересечение интерактивных элементов',text:'Обнаружено ' + overlapping.length + ' пар пересекающихся ссылок и элементов управления. Проверьте, не мешают ли они друг другу нажиматься.'});
+      const unlabeledFields = [...doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea')].filter(visible).filter(el => !hasName(el));
+      if (unlabeledFields.length) results.push({level:'check',title:size.label + ': поля без подписи',text:'Найдено ' + unlabeledFields.length + ' видимых полей без label, aria-label или title.'});
+    }
+  } catch {
+    results.push({level:'manual',title:'Проверка прервана',text:'Предпросмотр обновился во время диагностики. Запустите проверку ещё раз.'});
+  } finally {
+    frame.style.width = originalWidth;
+    frame.style.height = originalHeight;
+    frame.style.maxWidth = originalMaxWidth;
+  }
+  if (!results.length) results.push({level:'manual',title:'Нет результатов',text:'Не удалось собрать диагностические данные.'});
+  return results;
+}
+function renderResponsiveAccessibilityChecks() {
+  const host = $('#responsive-a11y-results');
+  if (!host) return;
+  const checks = auditResponsiveLayoutAndAccessibility();
+  host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+}
+
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
-  $('#view-audit').innerHTML = `<section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+  $('#view-audit').innerHTML = `<section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
 <h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
 <h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
