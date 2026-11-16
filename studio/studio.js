@@ -387,7 +387,15 @@ function renderWorkflowReview(review) {
   summary.className = 'note';
   summary.textContent = recommendations.length
     ? `Найдено рекомендаций: ${recommendations.length}. Отметьте предложения, которые хотите рассмотреть.`
-    : 'Критичных замечаний по текущим правилам не найдено.';
+    : review.warning || 'Критичных замечаний по текущей проверке не найдено.';
+  if (review.mode === 'workers-ai') summary.textContent = 'Проверка выполнена Workers AI. Все предложения требуют вашей проверки и отдельного подтверждения.';
+  const modeNote = document.createElement('p');
+  modeNote.className = 'note';
+  modeNote.textContent = review.mode === 'workers-ai'
+    ? 'Режим: AI Design Director (Workers AI)'
+    : review.mode === 'workers-ai-unavailable'
+      ? 'AI Design Director временно недоступен. Ни одно изменение не применялось.'
+      : 'Режим: встроенная проверка по правилам студии.';
   const list = document.createElement('ul');
   list.className = 'workflow-review__list';
   for (const item of recommendations) {
@@ -412,7 +420,7 @@ function renderWorkflowReview(review) {
     li.append(label, reason, action, stateNote);
     list.append(li);
   }
-  root.append(heading, summary);
+  root.append(heading, modeNote, summary);
   if (recommendations.length) root.append(list);
   const manual = document.createElement('form');
   manual.className = 'workflow-manual-proposal';
