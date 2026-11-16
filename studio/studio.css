@@ -174,7 +174,7 @@ body:not(.dashboard-mode)>.top{position:sticky;top:0;z-index:20;box-shadow:0 4px
 body:not(.dashboard-mode)>.top .top__actions{align-items:center}
 @media(max-width:760px){
   body:not(.dashboard-mode)>.top{align-items:flex-start;padding:9px 10px}
-  body:not(.dashboard-mode)>.top__brand{flex:none}
+  body:not(.dashboard-mode)>.top .top__brand{flex:none}
   body:not(.dashboard-mode)>.top .top__actions{display:flex;flex-wrap:nowrap;max-width:100%;overflow-x:auto;padding:2px 0 5px;scrollbar-width:thin}
   body:not(.dashboard-mode)>.top .top__actions>*{flex:none}
   #dashboard-back{position:sticky;left:0;z-index:2}
