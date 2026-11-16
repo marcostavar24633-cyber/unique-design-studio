@@ -41,7 +41,7 @@ ul[role=list],ol[role=list]{list-style:none;margin:0;padding:0}
 .faq details p{padding:0 0 18px;max-width:62ch;color:var(--ds-text-muted)}
 .sec--contact{background:var(--u-tint)}
 .contact{display:grid;gap:clamp(24px,5vw,64px)}@media(min-width:860px){.contact--two{grid-template-columns:minmax(0,1fr) minmax(0,.9fr);align-items:start}}
-.contact__list{display:grid;gap:10px;margin:1.4rem 0 0;padding:0;list-style:none}.contact__list a{text-underline-offset:4px}
+.contact__list{display:grid;gap:10px;margin:1.4rem 0 0;padding:0;list-style:none}.contact__list a{display:inline-flex;align-items:center;min-height:44px;text-underline-offset:4px;overflow-wrap:anywhere}
 .contact__list span{display:block;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ds-text-muted)}
 .form{display:grid;gap:14px}.form label{display:grid;gap:6px;font-size:.92rem;font-weight:600}
 .form .ds-field{font-weight:400}.form textarea.ds-field{min-height:96px;resize:vertical}
