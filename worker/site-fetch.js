@@ -164,18 +164,18 @@ export async function handle(request, env = {}) {
     const got = await fetchPublic(target.url, kind === 'css' ? 'text/css,*/*;q=0.1' : 'text/html,application/xhtml+xml', allowed);
     if (got.error) return json({ ok: false, ...got.error }, 200, origin);
     const { res, url } = got;
-    if (PROTECTED.has(res.status) || res.headers.get('cf-mitigated')) {
-      return json({ ok: false, reason: 'protected', status: res.status, message: 'Сайт требует авторизацию или проверку «я не робот». Такие страницы не анализируются.' }, 200, origin);
-    }
-    if (!res.ok) return json({ ok: false, reason: 'http', status: res.status, message: `Сайт ответил кодом ${res.status}` }, 200, origin);
-    const type = (res.headers.get('Content-Type') || '').toLowerCase();
-    if (kind === 'html' ? !/text\/html|application\/xhtml/.test(type) : !/text\/css/.test(type)) {
-      return json({ ok: false, reason: 'content-type', message: `Неподходящий тип содержимого: ${type || 'не указан'}` }, 200, origin);
-    }
-    let bytes, truncated;
-    try { ({ bytes, truncated } = await readLimited(res, MAX_BYTES[kind])); }
-    finally { got.cleanup(); }
-    return json({ ok: true, kind, url: target.url.href, finalUrl: url.href, status: res.status, contentType: type, truncated, text: decode(bytes, type), fetchedAt: new Date().toISOString() }, 200, origin);
+    try {
+      if (PROTECTED.has(res.status) || res.headers.get('cf-mitigated')) {
+        return json({ ok: false, reason: 'protected', status: res.status, message: 'Сайт требует авторизацию или проверку «я не робот». Такие страницы не анализируются.' }, 200, origin);
+      }
+      if (!res.ok) return json({ ok: false, reason: 'http', status: res.status, message: `Сайт ответил кодом ${res.status}` }, 200, origin);
+      const type = (res.headers.get('Content-Type') || '').toLowerCase();
+      if (kind === 'html' ? !/text\\/html|application\\/xhtml/.test(type) : !/text\\/css/.test(type)) {
+        return json({ ok: false, reason: 'content-type', message: `Неподходящий тип содержимого: ${type || 'не указан'}` }, 200, origin);
+      }
+      const { bytes, truncated } = await readLimited(res, MAX_BYTES[kind]);
+      return json({ ok: true, kind, url: target.url.href, finalUrl: url.href, status: res.status, contentType: type, truncated, text: decode(bytes, type), fetchedAt: new Date().toISOString() }, 200, origin);
+    } finally { got.cleanup(); }
   } catch (err) {
     const timeout = err && err.name === 'AbortError';
     return json({ ok: false, reason: timeout ? 'timeout' : 'network', message: timeout ? 'Сайт не ответил за 10 секунд' : 'Не удалось соединиться с сайтом' }, 200, origin);
