@@ -142,7 +142,9 @@ try {
   await page.click('#start');
   await page.waitForSelector('#editor[open]');
   await page.click('#editor [data-close]');
-  check((await page.textContent('#status')).includes('Повторный анализ отменён'), 'нет сообщения об отмене повторного анализа');
+  // Событие close у <dialog> приходит асинхронно — ждём сообщение, а не читаем его сразу.
+  const cancelled = await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Повторный анализ отменён'), null, { timeout: 5000 }).then(() => true, () => false);
+  check(cancelled, 'нет сообщения об отмене повторного анализа');
   await page.fill('#template-name', 'Совсем другой профиль');
   await page.click('#start');
   await page.waitForSelector('#editor[open]');
