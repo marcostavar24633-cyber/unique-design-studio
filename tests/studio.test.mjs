@@ -79,6 +79,9 @@ test('код веб-редактора синтаксически коррект
     "Image SEO & Accessibility",
     "Performance & Core Web Vitals",
   ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /if \(Array\.isArray\(mobileGallery\)\) mobileGallery\.splice\(idx, 1\)/);
+  assert.match(source, /Number\(key\) > idx\) mobileGallery\[Number\(key\) - 1\] = value/);
+  assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
 test('Mobile crop previews remain readable and horizontally scrollable on narrow screens', () => {
