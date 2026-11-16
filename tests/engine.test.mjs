@@ -61,6 +61,15 @@ test('мобильное фото Hero экспортируется в picture, 
   assert.ok(responsive.html.includes('src="https://example.com/desktop.jpg"'));
 });
 
+test('mobile art direction supports separate gallery and service image sources', () => {
+  const project = { ...full, gallery: [{ src: 'https://example.com/gallery.jpg', alt: 'Desktop gallery' }], services: [{ title: 'Service', image: 'https://example.com/service.jpg' }], imageArtDirection: { mobileSources: { gallery: { 0: 'https://example.com/gallery-mobile.jpg' }, services: { 0: 'https://example.com/service-mobile.jpg' } } } };
+  const html = generate(project).html;
+  assert.ok(html.includes('srcset="https://example.com/gallery-mobile.jpg"'));
+  assert.ok(html.includes('srcset="https://example.com/service-mobile.jpg"'));
+  assert.ok(html.includes('src="https://example.com/gallery.jpg"'));
+  assert.ok(html.includes('src="https://example.com/service.jpg"'));
+});
+
 test('генерация детерминирована', () => {
   const a = generate(example('penka')), b = generate(example('penka'));
   assert.equal(a.html, b.html);

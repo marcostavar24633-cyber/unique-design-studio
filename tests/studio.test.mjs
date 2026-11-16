@@ -10,6 +10,9 @@ test('код веб-редактора синтаксически коррект
   for (const marker of [
     "data-upload=\"hero\"",
     "data-upload=\"hero-mobile\"",
+    "data-upload=\"gallery-mobile\"",
+    "mobileSources?.gallery",
+    "gallery-mobile:${i}",
     "Отдельная композиция для телефона",
     "state.raw.images?.heroMobile",
     "data-upload=\"gallery\"",
