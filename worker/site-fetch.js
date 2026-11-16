@@ -170,7 +170,7 @@ export async function handle(request, env = {}) {
       }
       if (!res.ok) return json({ ok: false, reason: 'http', status: res.status, message: `Сайт ответил кодом ${res.status}` }, 200, origin);
       const type = (res.headers.get('Content-Type') || '').toLowerCase();
-      if (kind === 'html' ? !/text\\/html|application\\/xhtml/.test(type) : !/text\\/css/.test(type)) {
+      if (kind === 'html' ? !/text\/html|application\/xhtml/.test(type) : !/text\/css/.test(type)) {
         return json({ ok: false, reason: 'content-type', message: `Неподходящий тип содержимого: ${type || 'не указан'}` }, 200, origin);
       }
       const { bytes, truncated } = await readLimited(res, MAX_BYTES[kind]);
