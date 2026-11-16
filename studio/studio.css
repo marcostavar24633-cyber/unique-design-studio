@@ -139,3 +139,6 @@ button.wide{width:100%;min-height:44px}
 
 /* Visual Quality Control */
 .visual-quality-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 20px}.visual-quality-card{min-width:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}.visual-quality-card p{font-size:12px;line-height:1.5;margin:7px 0 0;overflow-wrap:anywhere}.visual-quality-card.is-check{border-left:3px solid var(--warning,#b7791f)}.visual-quality-card.is-good{border-left:3px solid var(--success,#31845b)}@media(max-width:600px){.visual-quality-list{grid-template-columns:1fr}}
+
+/* Hero Readability QA */
+.hero-readability{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}.hero-readability h3{margin:0 0 8px}.hero-readability>button{min-height:44px;padding:10px 16px;border:0;border-radius:var(--radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}.hero-readability>button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hero-readability .visual-quality-list{margin-bottom:0}
