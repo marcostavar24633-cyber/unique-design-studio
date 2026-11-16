@@ -297,6 +297,31 @@ const schedule = () => { clearTimeout(timer); timer = setTimeout(run, 220); };
 const ul = arr => (arr.length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="note">—</span>');
 const kv = rows => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
+function renderVisualAssetLibrary() {
+  const mobile = state.raw.imageArtDirection?.mobileSources || {};
+  const assets = [];
+  const hero = state.raw.images?.hero;
+  if (hero) assets.push({ role: 'Первый экран', name: 'Hero', desktop: hero, phone: state.raw.images?.heroMobile || '', detail: 'Главная фотография сайта' });
+  (state.raw.gallery || []).forEach((item, index) => {
+    if (item?.src) assets.push({ role: 'Галерея', name: item.caption || `Фото ${index + 1}`, desktop: item.src, phone: mobile.gallery?.[index] || '', detail: `Изображение ${index + 1}` });
+  });
+  (state.raw.services || []).forEach((item, index) => {
+    const src = Array.isArray(item) ? item[3] : item?.image;
+    if (src) assets.push({ role: 'Карточка', name: Array.isArray(item) ? item[0] : item.title || `Позиция ${index + 1}`, desktop: src, phone: mobile.services?.[index] || '', detail: 'Товар или услуга' });
+  });
+  const mobileCount = assets.filter(item => item.phone).length;
+  return `<section class="asset-library" aria-labelledby="asset-library-title">
+    <div class="asset-library__head"><div><h2 id="asset-library-title">Библиотека изображений</h2><p class="note">Фотографии проекта: назначение, десктопная версия и отдельный кадр для телефона.</p></div>
+    <div class="asset-library__stats"><b>${assets.length}</b><span>фото</span><b>${mobileCount}</b><span>мобильных версий</span></div></div>
+    ${assets.length ? `<div class="asset-library__grid">${assets.map(item => `<article class="asset-library__item">
+      <img class="asset-library__desktop" src="${esc(item.desktop)}" alt="" loading="lazy">
+      <div class="asset-library__meta"><span class="asset-library__role">${esc(item.role)}</span><b>${esc(item.name)}</b><small>${esc(item.detail)}</small></div>
+      <div class="asset-library__mobile">${item.phone ? `<img src="${esc(item.phone)}" alt="" loading="lazy"><span class="is-ready">Мобильное фото добавлено</span>` : `<span class="is-empty">Отдельного фото для телефона нет</span>`}</div>
+    </article>`).join('')}</div>` : '<p class="note asset-library__empty">Фотографий пока нет. Добавьте Hero, изображения галереи или фото карточек.</p>'}
+    <div class="asset-library__actions"><button type="button" data-open-image-settings>Управлять фотографиями</button><button type="button" data-open-image-audit>Проверить качество фото</button></div>
+  </section>`;
+}
+
 function renderConcept() {
   const c = result.concept, b = c.designBrief, d = c.designDNA, h = c.homepage, u = c.uniquenessCheck, vs = c.visualSystem;
   const name = id => (id ? `${ARCHETYPES[id].name} <span class="note">(${ARCHETYPES[id].ru})</span>` : '<span class="note">—</span>');
@@ -308,6 +333,7 @@ function renderConcept() {
     ['Характер бренда', esc(b.brandCharacter)], ['Приоритет контента', `<div class="chips">${b.contentPriority.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`],
     ['Доказательства доверия', ul(b.trustProofs)], ['Ограничения', ul(b.constraints)], ['Гипотезы', ul(b.assumptions)],
   ])}</div>
+${renderVisualAssetLibrary()}
 <h2>Design DNA</h2><div class="card">${kv([
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
@@ -1050,6 +1076,14 @@ $('#form').addEventListener('click', e => {
     else if (mobileServices && typeof mobileServices === 'object') delete mobileServices[idx];
   }
   buildForm(); run(); toast('Фотография удалена из проекта');
+});
+$('#view-concept').addEventListener('click', e => {
+  if (e.target.closest('[data-open-image-settings]')) {
+    const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
+    if (group) { group.open = true; group.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    return;
+  }
+  if (e.target.closest('[data-open-image-audit]')) selectTab($('#tab-audit'));
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
 $('#view-audit').addEventListener('click', async e => {
