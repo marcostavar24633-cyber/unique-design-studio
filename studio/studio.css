@@ -181,3 +181,25 @@ body:not(.dashboard-mode)>.top .top__actions{align-items:center}
   .panel{max-height:48vh}
   .stage{min-height:55vh}
 }
+
+
+/* Mobile-first workspace controls */
+.sizes{align-items:center}
+.sizes button{min-height:40px}
+#toggle-settings{border-color:var(--accent);color:var(--accent);font-weight:650}
+.tabs{max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}
+.tabs button{flex:none;white-space:nowrap;min-height:42px}
+@media(max-width:760px){
+  .bar{position:sticky;top:0;z-index:15;background:var(--panel);padding:8px 10px}
+  .tabs{width:100%;padding-bottom:2px}
+  .sizes{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .sizes button{flex:none;white-space:nowrap}
+  .view{padding:14px 12px 32px}
+  .view--preview{height:72vh;min-height:420px}
+  .view--preview.sized{height:72vh}
+  .panel{transition:max-height .2s ease, padding .2s ease}
+  body.workspace-settings-collapsed .panel{display:none}
+  body.workspace-settings-collapsed .stage{min-height:calc(100vh - 130px)}
+  body.workspace-settings-collapsed .view--preview{height:calc(100vh - 190px);min-height:480px}
+}
+@media(prefers-reduced-motion:reduce){.panel{transition:none}}
