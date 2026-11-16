@@ -43,6 +43,86 @@ export default {
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'unique-design-studio-ai' }, 200, origin);
     }
+    if (url.pathname === '/api/usage') {
+      if (request.method !== 'GET') return json({ error: 'Метод не поддерживается' }, 405, origin);
+      if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
+      if (!env.CF_ANALYTICS_TOKEN || !env.CF_ACCOUNT_ID) {
+        return json({ error: 'Не настроены секрет CF_ANALYTICS_TOKEN и переменная CF_ACCOUNT_ID' }, 503, origin);
+      }
+
+      const range = url.searchParams.get('range') || '24h';
+      const hoursByRange = { '24h': 24, '7d': 24 * 7, '30d': 24 * 30 };
+      if (!Object.prototype.hasOwnProperty.call(hoursByRange, range)) {
+        return json({ error: 'Допустимые периоды: 24h, 7d, 30d' }, 400, origin);
+      }
+
+      const end = new Date();
+      const start = new Date(end.getTime() - hoursByRange[range] * 60 * 60 * 1000);
+      const query = `query WorkersAIUsage($accountTag: String!, $start: Time!, $end: Time!) {
+        viewer {
+          accounts(filter: { accountTag: $accountTag }) {
+            aiInferenceAdaptiveGroups(
+              limit: 1000
+              filter: { datetime_geq: $start, datetime_leq: $end }
+              orderBy: [datetimeHour_ASC]
+            ) {
+              count
+              dimensions { datetimeHour modelId }
+              sum { totalNeurons totalInputTokens totalOutputTokens }
+            }
+          }
+        }
+      }`;
+
+      try {
+        const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.CF_ANALYTICS_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: {
+              accountTag: env.CF_ACCOUNT_ID,
+              start: start.toISOString(),
+              end: end.toISOString(),
+            },
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok || payload.errors?.length) {
+          return json({
+            error: 'Cloudflare Analytics не вернул статистику',
+            details: (payload.errors || []).map(item => item.message).join('; ') || `HTTP ${response.status}`,
+          }, 502, origin);
+        }
+
+        const groups = payload.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups || [];
+        const neurons = groups.reduce((total, item) => total + Number(item.sum?.totalNeurons || 0), 0);
+        const requests = groups.reduce((total, item) => total + Number(item.count || 0), 0);
+        const models = {};
+        for (const item of groups) {
+          const name = item.dimensions?.modelId || 'unknown';
+          if (!models[name]) models[name] = { neurons: 0, requests: 0 };
+          models[name].neurons += Number(item.sum?.totalNeurons || 0);
+          models[name].requests += Number(item.count || 0);
+        }
+        return json({
+          range,
+          start: start.toISOString(),
+          end: end.toISOString(),
+          neurons: Number(neurons.toFixed(4)),
+          requests,
+          models,
+          source: 'Cloudflare GraphQL Analytics',
+          note: 'Аналитические данные могут поступать с задержкой и не являются расчётом биллинга.',
+        }, 200, origin);
+      } catch (error) {
+        return json({ error: 'Не удалось связаться с Cloudflare Analytics', details: error?.message || 'Network error' }, 502, origin);
+      }
+    }
     if (url.pathname !== '/api/generate-landing') {
       return json({ error: 'Маршрут не найден' }, 404, origin);
     }
