@@ -102,6 +102,38 @@ for (const { name, html } of pages) {
     await page.getByText('Доступен · HTTP 200').waitFor({ state: 'visible' });
     await page.locator('[data-deployment-filter="preview"]').click();
     if (!(await page.locator('.publish-history__empty').count())) failures.push('deployment monitor: empty Preview filter did not render');
+    // Cloud Monitor API is mocked; verify session-only token handling and CRUD actions.
+    const cloudSites = [];
+    await page.route('https://monitor-api.example.workers.dev/**', async route => {
+      const request = route.request(), url = new URL(request.url()), method = request.method();
+      const headers = { 'Access-Control-Allow-Origin': 'http://127.0.0.1:4174', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type' };
+      if (method === 'OPTIONS') return route.fulfill({ status: 204, headers });
+      if (url.pathname === '/api/monitor/sites' && method === 'GET') return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ sites: cloudSites }) });
+      if (url.pathname === '/api/monitor/sites' && method === 'POST') {
+        const body = request.postDataJSON();
+        cloudSites.push({ id: 'cloud-site-1', label: body.label, environment: body.environment, url: body.url, lastCheck: null });
+        return route.fulfill({ status: 201, headers, contentType: 'application/json', body: JSON.stringify({ site: cloudSites[0] }) });
+      }
+      if (url.pathname === '/api/monitor/check' && method === 'POST') return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ checked: cloudSites.length, sites: cloudSites }) });
+      if (url.pathname === '/api/monitor/sites/cloud-site-1' && method === 'DELETE') { cloudSites.length = 0; return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ deleted: true }) }); }
+      return route.fulfill({ status: 404, headers, contentType: 'application/json', body: JSON.stringify({ error: 'not found' }) });
+    });
+    await page.locator('#cloud-monitor-endpoint').fill('https://monitor-api.example.workers.dev');
+    await page.locator('#cloud-monitor-token').fill('e2e-session-secret');
+    await page.locator('#cloud-monitor-connect').click();
+    await page.getByText(/Подключено\. Получено адресов: 0/).waitFor({ state: 'visible' });
+    if (await page.locator('#cloud-monitor-token').inputValue()) failures.push('cloud monitor: token input was not cleared');
+    const stored = await page.evaluate(() => JSON.stringify(localStorage));
+    if (stored.includes('e2e-session-secret')) failures.push('cloud monitor: token leaked into localStorage');
+    await page.locator('#cloud-monitor-add [name="label"]').fill('Smoke site');
+    await page.locator('#cloud-monitor-add [name="url"]').fill('https://demo.pages.dev/');
+    await page.locator('#cloud-monitor-add button[type="submit"]').click();
+    await page.getByText('Smoke site').waitFor({ state: 'visible' });
+    await page.locator('#cloud-monitor-check').click();
+    await page.locator('[data-cloud-delete="cloud-site-1"]').click();
+    await page.getByText('В облачном реестре пока нет сайтов.').waitFor({ state: 'visible' });
+    await page.locator('#cloud-monitor-disconnect').click();
+    checks++;
     await page.locator('[data-deployment-filter="all"]').click();
     await page.locator('[data-delete-deployment]').first().click();
     if (!(await page.locator('.publish-history__empty').count())) failures.push('publish manager: deleted record still appears');
