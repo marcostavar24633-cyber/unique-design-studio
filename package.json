@@ -11,6 +11,6 @@
     "build": "node scripts/build.mjs",
     "sync-core": "node scripts/sync-core.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/e2e/responsive.mjs"
+    "test:e2e": "node tests/e2e/responsive.mjs && node tests/e2e/templates.mjs"
   }
 }
