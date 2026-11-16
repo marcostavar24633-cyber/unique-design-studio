@@ -226,18 +226,58 @@ function renderSpec() {
   const spec = buildSpec(result.project, result.concept, a || {});
   const src = a && a.sources && a.sources.length
     ? `<h2>Источники исследования</h2><ul class="chips-src">${a.sources.map(s => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ul>` : '';
+  const contentFields = ['brand','niche','title','description','cta','seoTitle','seoDescription','audience','offer','advantages','services','products','steps','faq','reviews','contacts'];
+  const contentSnapshot = Object.fromEntries(contentFields.filter(key => result.project[key] !== undefined && result.project[key] !== '').map(key => [key, result.project[key]]));
+  const textValues = contentFields.map(key => result.project[key]).flatMap(value => Array.isArray(value) ? value.flat(Infinity) : [value]).filter(value => typeof value === 'string' && value.trim());
+  const genericTerms = ['лучший','номер один','уникальный','гарантируем результат','индивидуальный подход'];
+  const flags = [];
+  if (!String(result.project.title || '').trim()) flags.push('Не заполнен главный заголовок');
+  if (String(result.project.title || '').length > 75) flags.push('Главный заголовок длиннее 75 символов');
+  if (!String(result.project.description || '').trim()) flags.push('Нет пояснения к предложению');
+  if (!String(result.project.cta || '').trim()) flags.push('Не задан текст основного действия');
+  if (String(result.project.seoTitle || '').length > 60) flags.push('SEO Title длиннее 60 символов');
+  if (String(result.project.seoDescription || '').length > 160) flags.push('SEO Description длиннее 160 символов');
+  const foundGeneric = [...new Set(textValues.flatMap(value => genericTerms.filter(term => value.toLowerCase().includes(term))))];
+  if (foundGeneric.length) flags.push('Проверьте неподтверждённые или шаблонные формулировки: ' + foundGeneric.join(', '));
+  const contentPrompt = () => {
+    const direction = ($('#content-direction')?.value || '').trim();
+    return [
+      'РОЛЬ: AI Content Director — старший UX-копирайтер и редактор коммерческих сайтов.',
+      'ЗАДАЧА: улучшить тексты текущего проекта, не меняя структуру и смысл подтверждённых фактов.',
+      'ПРАВИЛА: не выдумывай цены, сроки, отзывы, гарантии, сертификаты, адреса, статистику и преимущества. Не используй пустые превосходные степени. Если данных недостаточно — оставь поле без выдумки и укажи, что нужно уточнить.',
+      'Сделай заголовок конкретным, объясни ценность предложения, пиши для указанной аудитории, убери повторы и канцелярит. Сохрани русский язык и адаптируй длину текста под веб-интерфейс.',
+      'Верни результат строго JSON с теми же ключами, которые есть во входных данных; не удаляй неизвестные поля. Для каждого изменённого текста добавь краткое обоснование отдельно в поле editorialNotes. Не переписывай массивы изображений и технические настройки.',
+      direction ? 'ДОПОЛНИТЕЛЬНОЕ НАПРАВЛЕНИЕ: ' + direction : '',
+      'ТЕКУЩИЕ ДАННЫЕ ПРОЕКТА: ' + JSON.stringify(contentSnapshot),
+      a ? 'КОНТЕКСТ АНАЛИЗА: ' + JSON.stringify({ audience:a.audience, pains:a.pains, objections:a.objections, positioning:a.positioning, sources:a.sources }) : 'Контекст аудитории и рынка не подтверждён — не выдавай предположения за факты.'
+    ].filter(Boolean).join('\\n\\n');
+  };
   $('#view-spec').innerHTML = `
 <div class="spec-actions"><button type="button" data-spec="copy">Скопировать ТЗ</button><button type="button" data-spec="md">Скачать ТЗ (.md)</button><button type="button" data-spec="prompt">Скопировать промт для нейросети</button></div>
 <p class="note">${a ? (a.source === 'ai' ? 'Анализ и тексты подготовил AI с поиском в интернете — проверьте факты по источникам.' : 'Анализ и тексты собраны локальным автопилотом по знаниям о нише — это стартовая гипотеза. Для исследования в интернете укажите адрес AI-сервера в автопилоте или отдайте промт нейросети.') : 'ТЗ собрано по текущему проекту. Автопилот добавит сюда анализ аудитории, возражения, поводы и ключевые запросы.'}</p>
+<section class="content-director" aria-labelledby="content-director-title">
+  <div class="content-director__head"><div><span class="eyebrow">AI CONTENT DIRECTOR</span><h2 id="content-director-title">Редактор коммерческих текстов</h2><p class="note">Анализирует заполненность и готовит точное задание для AI. Тексты автоматически не меняются: результат можно проверить перед импортом.</p></div><span class="content-director__mark" aria-hidden="true">✦</span></div>
+  <div class="content-director__stats"><div><b>${textValues.length}</b><small>текстовых значений</small></div><div><b>${flags.length}</b><small>замечаний</small></div><div><b>${a?.sources?.length || 0}</b><small>источников анализа</small></div></div>
+  <ul class="content-director__checks">${flags.length ? flags.map(item => '<li>! ' + esc(item) + '</li>').join('') : '<li class="is-ok">✓ Базовые проверки заполненности пройдены. Это не подтверждает фактическую достоверность текста.</li>'}</ul>
+  <label class="content-director__label" for="content-direction">Редакторское направление</label>
+  <textarea id="content-direction" rows="3" maxlength="2000" placeholder="Например: спокойный премиальный тон, меньше прилагательных, больше конкретики и пользы для клиента…"></textarea>
+  <div class="spec-actions"><button type="button" data-content="copy">Скопировать задание AI</button><button type="button" data-content="download">Скачать задание (.txt)</button></div>
+</section>
 <pre class="spec">${esc(spec)}</pre>${src}`;
+  try { $('#content-direction').value = localStorage.getItem('uds:content-direction') || ''; } catch {}
 }
+$('#view-spec').addEventListener('input', e => {
+  if (e.target.id === 'content-direction') { try { localStorage.setItem('uds:content-direction', e.target.value); } catch {} }
+});
 $('#view-spec').addEventListener('click', async e => {
-  const b = e.target.closest('[data-spec]'); if (!b) return;
+  const b = e.target.closest('[data-spec], [data-content]'); if (!b) return;
   const a = currentAnalysis() || {};
   const copy = async (text, ok, file) => { try { await navigator.clipboard.writeText(text); toast(ok); } catch { download(file, text, 'text/plain'); } };
   if (b.dataset.spec === 'copy') copy(buildSpec(result.project, result.concept, a), 'ТЗ скопировано', `${result.project.id}-tz.md`);
   if (b.dataset.spec === 'md') download(`${result.project.id}-tz.md`, buildSpec(result.project, result.concept, a), 'text/markdown');
   if (b.dataset.spec === 'prompt') copy(buildPrompt(result.project, result.concept, a), 'Промт скопирован', `${result.project.id}-prompt.txt`);
+  if (b.dataset.content === 'copy') copy(contentPrompt(), 'Задание AI Content Director скопировано', `${result.project.id}-content-director.txt`);
+  if (b.dataset.content === 'download') download(`${result.project.id}-content-director.txt`, contentPrompt(), 'text/plain');
 });
 
 // ---------- Автопилот ----------
