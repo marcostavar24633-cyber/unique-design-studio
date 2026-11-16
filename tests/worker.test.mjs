@@ -5,7 +5,8 @@ import { handle, robotsAllows, validateTarget } from '../worker/site-fetch.js';
 import { root } from './helpers.mjs';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
-const call = (path, { origin = ORIGIN, method = 'GET' } = {}) => handle(new Request('https://w.dev' + path, { method, headers: origin ? { Origin: origin } : {} }), {});
+const TEST_ENV = { RATE_LIMITER: { limit: async () => ({ success: true }) } };
+const call = (path, { origin = ORIGIN, method = 'GET', env = TEST_ENV } = {}) => handle(new Request('https://w.dev' + path, { method, headers: origin ? { Origin: origin } : {} }), env);
 /** Подменяет сеть на время одного теста. */
 async function withNet(routes, fn) {
   const real = globalThis.fetch;
@@ -107,6 +108,15 @@ test('robots.txt проверяется и для адреса, на котор�
     assert.equal(body.ok, true);
     assert.equal(body.finalUrl, 'https://b-site.ru/open');
   });
+});
+
+test('Worker fail-closed: без RATE_LIMITER не запрашивает целевой сайт', async () => {
+  const req = new Request('https://w.dev/fetch?url=https://public-site.example/', {
+    headers: { Origin: ORIGIN, 'CF-Connecting-IP': '203.0.113.11' }
+  });
+  const response = await handle(req, {});
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).reason, 'rate-limit-unconfigured');
 });
 
 test('при подключённом ограничителе частоты лишние запросы получают 429', async () => {
