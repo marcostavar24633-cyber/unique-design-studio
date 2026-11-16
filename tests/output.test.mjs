@@ -182,3 +182,33 @@ test('композиция секций выбирается отдельно о
   assert.ok(layouts.size >= 2, `ожидалось несколько композиций секций, получено: ${[...layouts].join(', ')}`);
   assert.ok(orders.size >= 2, 'разные композиции должны менять и последовательность секций');
 });
+
+
+test('реальная фотография проекта автоматически используется в hero, если отдельное hero-фото не задано', () => {
+  const galleryPhoto = 'data:image/webp;base64,GALLERY';
+  const servicePhoto = 'data:image/webp;base64,SERVICE';
+  const fromGallery = generate({
+    ...full,
+    architecture: 'editorial',
+    images: {},
+    gallery: [{ src: galleryPhoto, alt: 'Фотография интерьера', caption: 'Интерьер' }],
+  });
+  assert.ok(fromGallery.html.includes(`src="${galleryPhoto}" alt="Фотография интерьера" fetchpriority="high"`));
+  assert.ok(fromGallery.html.includes('class="hero__figure visual"'));
+  const fromService = generate({
+    ...full,
+    architecture: 'editorial',
+    images: {},
+    gallery: [],
+    services: [['Услуга с фотографией', 'Описание', '', servicePhoto, 'Фотография услуги']],
+  });
+  assert.ok(fromService.html.includes(`src="${servicePhoto}" alt="Фотография услуги" fetchpriority="high"`));
+  const explicitHero = generate({
+    ...full,
+    architecture: 'editorial',
+    images: { hero: 'data:image/webp;base64,EXPLICIT', heroAlt: 'Главная фотография' },
+    gallery: [{ src: galleryPhoto, alt: 'Фото галереи' }],
+  });
+  assert.ok(explicitHero.html.includes('src="data:image/webp;base64,EXPLICIT" alt="Главная фотография"'));
+  assert.ok(!explicitHero.html.includes('src="' + galleryPhoto + '" alt="Фото галереи" fetchpriority="high"'));
+});

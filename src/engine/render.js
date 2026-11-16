@@ -66,7 +66,23 @@ function artStyle(p, role, index = 0) {
 }
 
 function visual(c, variant = 0) {
-  if (c.p.images.hero && !variant) return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
+  // На первом экране используем реальные материалы проекта в приоритетном порядке:
+  // явно выбранное hero → фотография галереи → изображение первой позиции.
+  // Декоративные варианты (variant > 0) остаются мотивами и не дублируют фотографию.
+  if (!variant) {
+    if (c.p.images.hero) {
+      return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
+    }
+    if (c.p.gallery[0]?.src) {
+      const photo = c.p.gallery[0];
+      return `<img ${artStyle(c.p, "gallery", 0)} src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || c.p.title || c.p.niche || "Фотография проекта")}" fetchpriority="high" decoding="async">`;
+    }
+    const firstService = c.p.services.find(item => item.image);
+    if (firstService) {
+      const index = c.p.services.indexOf(firstService);
+      return `<img ${artStyle(c.p, "services", index)} src="${esc(firstService.image)}" alt="${esc(firstService.alt || firstService.title)}" fetchpriority="high" decoding="async">`;
+    }
+  }
   return motifSvg(c.vs, variant);
 }
 
