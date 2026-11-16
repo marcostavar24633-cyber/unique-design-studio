@@ -288,3 +288,13 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .workflow-review__list li{padding-left:2px;font-size:12px;line-height:1.45}
 .workflow-review__list li p{margin:4px 0}
 .workflow-review__list li b{color:var(--text)}
+
+
+.workflow-approval-choice{display:flex;align-items:flex-start;gap:9px;cursor:pointer}
+.workflow-approval-choice input{margin-top:3px;accent-color:#c9a45e}
+.workflow-approval-choice input:disabled{cursor:not-allowed}
+.workflow-approval-preview{display:grid;gap:9px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.workflow-approval-diff{display:grid;grid-template-columns:minmax(80px,.7fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start;font-size:11px}
+.workflow-approval-diff span{padding:7px;border:1px solid var(--line);border-radius:7px;overflow-wrap:anywhere}
+.workflow-approval-diff span:last-child{border-color:rgba(201,164,94,.55);background:rgba(201,164,94,.07)}
+@media(max-width:560px){.workflow-approval-diff{grid-template-columns:1fr}.workflow-approval-diff span{min-height:32px}}
