@@ -33,6 +33,173 @@ function extractJson(value) {
   throw new Error('Модель вернула ответ не в формате JSON');
 }
 
+
+const MONITOR_PREFIX = 'monitor:site:';
+const MONITOR_MAX_SITES = 50;
+const MONITOR_TIMEOUT_MS = 8000;
+const MONITOR_MAX_REDIRECTS = 3;
+
+function monitorAllowedHosts(env) {
+  return new Set(String(env.MONITOR_ALLOWED_HOSTS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
+}
+
+function monitorSafeUrl(value, env) {
+  if (typeof value !== 'string' || value.length > 2048) throw new Error('URL должен быть строкой не длиннее 2048 символов');
+  let url;
+  try { url = new URL(value); } catch { throw new Error('Некорректный URL'); }
+  const host = url.hostname.toLowerCase();
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) throw new Error('Разрешены только HTTPS URL без учётных данных и нестандартных портов');
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.test') || host.endsWith('.invalid') || host.endsWith('.example') || host.startsWith('[') || /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) throw new Error('Локальные и IP-адреса запрещены');
+  if (!monitorAllowedHosts(env).has(host)) throw new Error('Домен отсутствует в MONITOR_ALLOWED_HOSTS');
+  url.hash = '';
+  return url;
+}
+
+function monitorAuthorized(request, env) {
+  const expected = String(env.MONITOR_API_TOKEN || '');
+  const actual = String(request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  if (!expected || actual.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ actual.charCodeAt(i);
+  return diff === 0;
+}
+
+function monitorResponse(data, status, origin) {
+  return json(data, status, origin);
+}
+
+async function monitorFetch(url, env) {
+  let current = monitorSafeUrl(url, env);
+  for (let redirects = 0; redirects <= MONITOR_MAX_REDIRECTS; redirects++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), MONITOR_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(current.toString(), {
+        method: 'HEAD', redirect: 'manual', signal: controller.signal,
+        headers: { 'User-Agent': 'UniqueDesignStudio-Monitor/1.0' },
+      });
+      if (response.status === 405 || response.status === 501) {
+        try { await response.body?.cancel(); } catch {}
+        response = await fetch(current.toString(), {
+          method: 'GET', redirect: 'manual', signal: controller.signal,
+          headers: { 'User-Agent': 'UniqueDesignStudio-Monitor/1.0', 'Range': 'bytes=0-0' },
+        });
+      }
+      if ([301,302,303,307,308].includes(response.status)) {
+        const location = response.headers.get('Location');
+        try { await response.body?.cancel(); } catch {}
+        if (!location || redirects === MONITOR_MAX_REDIRECTS) return { state: 'http-error', httpStatus: response.status, checkedAt: new Date().toISOString(), detail: 'redirect-limit-or-missing-location' };
+        current = monitorSafeUrl(new URL(location, current).toString(), env);
+        continue;
+      }
+      const result = {
+        state: response.ok ? 'reachable' : 'http-error',
+        httpStatus: response.status,
+        checkedAt: new Date().toISOString(),
+        finalUrl: current.toString(),
+      };
+      try { await response.body?.cancel(); } catch {}
+      return result;
+    } catch (error) {
+      return {
+        state: error?.name === 'AbortError' ? 'timeout' : 'check-error',
+        httpStatus: null,
+        checkedAt: new Date().toISOString(),
+        detail: String(error?.message || 'network-error').slice(0, 180),
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return { state: 'check-error', httpStatus: null, checkedAt: new Date().toISOString() };
+}
+
+async function monitorList(env) {
+  const listed = await env.MONITOR_KV.list({ prefix: MONITOR_PREFIX, limit: MONITOR_MAX_SITES });
+  const sites = [];
+  for (const key of listed.keys) {
+    const value = await env.MONITOR_KV.get(key.name, 'json');
+    if (value) sites.push(value);
+  }
+  return sites.sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+}
+
+async function monitorCheckSite(site, env) {
+  let result;
+  try { result = await monitorFetch(site.url, env); }
+  catch (error) {
+    result = { state: 'blocked', httpStatus: null, checkedAt: new Date().toISOString(), detail: String(error?.message || 'invalid-url').slice(0,180) };
+  }
+  const updated = { ...site, lastCheck: result };
+  await env.MONITOR_KV.put(MONITOR_PREFIX + site.id, JSON.stringify(updated));
+  return updated;
+}
+
+async function monitorCheckAll(env) {
+  const sites = await monitorList(env);
+  const results = [];
+  for (const site of sites) results.push(await monitorCheckSite(site, env));
+  return results;
+}
+
+async function handleMonitor(request, env, origin) {
+  if (!env.MONITOR_KV) return monitorResponse({ error: 'KV binding MONITOR_KV не настроен' }, 503, origin);
+  if (!monitorAuthorized(request, env)) return monitorResponse({ error: 'Требуется действительный Bearer token' }, 401, origin);
+  const url = new URL(request.url);
+  if (url.pathname === '/api/monitor/sites' && request.method === 'GET') {
+    return monitorResponse({ sites: await monitorList(env) }, 200, origin);
+  }
+  if (url.pathname === '/api/monitor/sites' && request.method === 'POST') {
+    let input;
+    try {
+      const raw = await request.text();
+      if (raw.length > 4096) return monitorResponse({ error: 'Слишком большой запрос' }, 413, origin);
+      input = JSON.parse(raw);
+    } catch { return monitorResponse({ error: 'Некорректный JSON' }, 400, origin); }
+    const label = String(input.label || '').trim().slice(0, 80);
+    const environment = ['production','preview','custom'].includes(input.environment) ? input.environment : 'custom';
+    let safeUrl;
+    try { safeUrl = monitorSafeUrl(input.url, env); }
+    catch (error) { return monitorResponse({ error: error.message }, 400, origin); }
+    const existing = await monitorList(env);
+    if (existing.length >= MONITOR_MAX_SITES) return monitorResponse({ error: 'Достигнут лимит 50 адресов' }, 409, origin);
+    if (existing.some(site => site.url === safeUrl.toString())) return monitorResponse({ error: 'Этот URL уже добавлен' }, 409, origin);
+    const site = {
+      id: crypto.randomUUID(),
+      label: label || safeUrl.hostname,
+      environment,
+      url: safeUrl.toString(),
+      createdAt: new Date().toISOString(),
+      lastCheck: null,
+    };
+    await env.MONITOR_KV.put(MONITOR_PREFIX + site.id, JSON.stringify(site));
+    return monitorResponse({ site }, 201, origin);
+  }
+  if (url.pathname === '/api/monitor/check' && request.method === 'POST') {
+    const listed = await env.MONITOR_KV.list({ prefix: MONITOR_PREFIX, limit: MONITOR_MAX_SITES });
+    const rateKey = 'monitor:manual-check-minute';
+    const recent = await env.MONITOR_KV.get(rateKey);
+    if (recent) return monitorResponse({ error: 'Повторная массовая проверка доступна не чаще раза в минуту' }, 429, origin);
+    await env.MONITOR_KV.put(rateKey, new Date().toISOString(), { expirationTtl: 60 });
+    let input = {};
+    try { const raw = await request.text(); if (raw.length > 1024) return monitorResponse({ error: 'Слишком большой запрос' }, 413, origin); input = raw ? JSON.parse(raw) : {}; }
+    catch { return monitorResponse({ error: 'Некорректный JSON' }, 400, origin); }
+    const sites = await monitorList(env);
+    const selected = input.id ? sites.filter(site => site.id === input.id) : sites;
+    if (input.id && !selected.length) return monitorResponse({ error: 'Адрес не найден' }, 404, origin);
+    const results = [];
+    for (const site of selected) results.push(await monitorCheckSite(site, env));
+    return monitorResponse({ checked: results.length, sites: results }, 200, origin);
+  }
+  const match = url.pathname.match(/^\/api\/monitor\/sites\/([a-f0-9-]{36})$/i);
+  if (match && request.method === 'DELETE') {
+    await env.MONITOR_KV.delete(MONITOR_PREFIX + match[1]);
+    return monitorResponse({ deleted: true }, 200, origin);
+  }
+  return monitorResponse({ error: 'Маршрут мониторинга не найден' }, 404, origin);
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -42,6 +209,10 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'unique-design-studio-ai' }, 200, origin);
+    }
+    if (url.pathname.startsWith('/api/monitor/')) {
+      if (!['GET','POST','DELETE'].includes(request.method)) return monitorResponse({ error: 'Метод не поддерживается' }, 405, origin);
+      return handleMonitor(request, env, origin);
     }
     if (url.pathname !== '/api/generate-landing') {
       return json({ error: 'Маршрут не найден' }, 404, origin);
@@ -170,5 +341,9 @@ export default {
     } catch (error) {
       return json({ error: error?.message || 'Ошибка генерации Workers AI' }, 502, origin);
     }
+  },
+  async scheduled(_controller, env, ctx) {
+    if (!env.MONITOR_KV || !env.MONITOR_ALLOWED_HOSTS) return;
+    ctx.waitUntil(monitorCheckAll(env));
   },
 };
