@@ -73,7 +73,7 @@ function visual(c, variant = 0) {
   if (!variant) {
     if (c.p.images.hero) {
       const alt = c.p.images.heroAlt || c.p.title || c.p.brand || c.p.niche || "Главная фотография проекта";
-      return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async">`;
+      return c.p.images.heroMobile ? `<picture class="ds-hero-picture"><source media="(max-width:600px)" srcset="${esc(c.p.images.heroMobile)}"><img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async"></picture>` : `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async">`;
     }
     if (c.p.gallery[0]?.src) {
       const photo = c.p.gallery[0];
