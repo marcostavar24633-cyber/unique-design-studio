@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity, runWorkflow, WORKFLOW_STAGES } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity, runWorkflow, WORKFLOW_STAGES, applyApprovedDesignPatch } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -16,6 +16,8 @@ let result = null;
 let exampleProjects = [];
 let dashboardFilter = 'all';
 let dashboardQuery = '';
+let currentWorkflowReview = null;
+let selectedWorkflowRecommendations = new Set();
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -327,9 +329,50 @@ function renderWorkflowVisual(brief) {
   note.textContent = 'Бриф и промты подготовлены. Реальные фотографии нужно загрузить или назначить в разделе «Фотографии и визуал»; генерация изображений автоматически не заявляется.';
   root.append(note);
 }
+function renderWorkflowApprovalPreview() {
+  const root = $('#workflow-approval-preview');
+  if (!root) return;
+  root.replaceChildren();
+  const recommendations = currentWorkflowReview?.recommendations || [];
+  const chosen = recommendations.filter(item => selectedWorkflowRecommendations.has(item.id) && item.patch && typeof item.patch === 'object');
+  if (!chosen.length) {
+    const note = document.createElement('p');
+    note.className = 'note';
+    note.textContent = 'Выберите рекомендации с готовым безопасным предложением изменений. Текстовые рекомендации без patch требуют ручного редактирования.';
+    root.append(note);
+    return;
+  }
+  const patch = Object.assign({}, ...chosen.map(item => item.patch));
+  const fields = Object.keys(patch);
+  const preview = applyApprovedDesignPatch(state.raw, patch, fields);
+  const heading = document.createElement('b');
+  heading.textContent = 'Предпросмотр изменений';
+  root.append(heading);
+  for (const key of preview.applied) {
+    const row = document.createElement('div');
+    row.className = 'workflow-approval-diff';
+    const label = document.createElement('b');
+    label.textContent = key;
+    const before = document.createElement('span');
+    before.textContent = String(state.raw[key] ?? '—');
+    const after = document.createElement('span');
+    after.textContent = String(preview.project[key] ?? '—');
+    row.append(label, before, after);
+    root.append(row);
+  }
+  const apply = document.createElement('button');
+  apply.type = 'button';
+  apply.className = 'primary wide';
+  apply.dataset.workflowApplyApproved = 'true';
+  apply.textContent = 'Применить выбранные изменения';
+  apply.disabled = preview.applied.length === 0;
+  root.append(apply);
+}
 function renderWorkflowReview(review) {
   const root = $('#workflow-review');
   if (!root || !review) return;
+  currentWorkflowReview = review;
+  selectedWorkflowRecommendations = new Set();
   root.hidden = false;
   root.replaceChildren();
   const heading = document.createElement('h4');
@@ -338,25 +381,41 @@ function renderWorkflowReview(review) {
   const recommendations = Array.isArray(review.recommendations) ? review.recommendations : [];
   summary.className = 'note';
   summary.textContent = recommendations.length
-    ? `Найдено рекомендаций: ${recommendations.length}. Изменения не применялись — требуется проверка.`
+    ? `Найдено рекомендаций: ${recommendations.length}. Отметьте предложения, которые хотите рассмотреть.`
     : 'Критичных замечаний по текущим правилам не найдено.';
   const list = document.createElement('ul');
   list.className = 'workflow-review__list';
   for (const item of recommendations) {
     const li = document.createElement('li');
+    const label = document.createElement('label');
+    label.className = 'workflow-approval-choice';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.workflowRecommendation = item.id || '';
+    checkbox.disabled = !item.patch || typeof item.patch !== 'object' || !Object.keys(item.patch).length;
     const title = document.createElement('b');
     title.textContent = item.title || item.id || 'Рекомендация';
+    label.append(checkbox, title);
     const reason = document.createElement('p');
     reason.textContent = item.reason || '';
     const action = document.createElement('p');
     action.className = 'note';
     action.textContent = item.action || '';
-    li.append(title, reason, action);
+    const stateNote = document.createElement('small');
+    stateNote.className = 'note';
+    stateNote.textContent = checkbox.disabled ? 'Нужно подготовить конкретное предложение изменений; пока только рекомендация.' : 'Есть вариант изменения — можно включить в предпросмотр.';
+    li.append(label, reason, action, stateNote);
     list.append(li);
   }
   root.append(heading, summary);
   if (recommendations.length) root.append(list);
+  const preview = document.createElement('div');
+  preview.id = 'workflow-approval-preview';
+  preview.className = 'workflow-approval-preview';
+  root.append(preview);
+  renderWorkflowApprovalPreview();
 }
+
 function renderWorkflowProgress(events) {
   const root = $('#workflow-progress');
   if (!root) return;
@@ -381,6 +440,26 @@ function renderWorkflowProgress(events) {
     root.append(li);
   }
 }
+$('#workflow-review')?.addEventListener('change', event => {
+  const checkbox = event.target.closest('[data-workflow-recommendation]');
+  if (!checkbox) return;
+  if (checkbox.checked) selectedWorkflowRecommendations.add(checkbox.dataset.workflowRecommendation);
+  else selectedWorkflowRecommendations.delete(checkbox.dataset.workflowRecommendation);
+  renderWorkflowApprovalPreview();
+});
+$('#workflow-review')?.addEventListener('click', event => {
+  const button = event.target.closest('[data-workflow-apply-approved]');
+  if (!button) return;
+  const recommendations = currentWorkflowReview?.recommendations || [];
+  const chosen = recommendations.filter(item => selectedWorkflowRecommendations.has(item.id) && item.patch && typeof item.patch === 'object');
+  const patch = Object.assign({}, ...chosen.map(item => item.patch));
+  const preview = applyApprovedDesignPatch(state.raw, patch, Object.keys(patch));
+  if (!preview.changed) return toast('Нет безопасных подготовленных изменений для применения.');
+  load(preview.project, 'Одобренные изменения применены. Повторно проверяем сайт…');
+  persist();
+  toast('Изменения применены. Запустите повторную проверку качества.');
+  button.disabled = true;
+});
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
   const input = {
