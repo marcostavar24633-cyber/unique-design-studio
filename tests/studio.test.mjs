@@ -11,6 +11,8 @@ test('код веб-редактора синтаксически коррект
     "data-upload=\"hero\"",
     "data-upload=\"hero-mobile\"",
     "data-upload=\"gallery-mobile\"",
+    "data-upload=\"service-mobile\"",
+    "mobileSources?.services",
     "mobileSources?.gallery",
     "gallery-mobile:${i}",
     "Отдельная композиция для телефона",
