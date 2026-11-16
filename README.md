@@ -203,3 +203,31 @@ npm run build
 AI-ревью не заменяет встроенный аудит и не применяет изменения автоматически. Варианты доступны в панели Design Director для предпросмотра «до/после» и явного подтверждения пользователем. Если AI-ревью недоступно, студия показывает статус ошибки и не выдаёт его за успешный анализ. Без настроенного endpoint остаётся встроенная проверка по правилам.
 
 Для этой функции Worker должен быть повторно опубликован после обновления `worker/index.js`. До публикации нового Worker текущий развёрнутый endpoint не знает задачу `design-review`; сайт при этом продолжит работать с локальным Design Director.
+
+
+## Публикация отдельного проекта в Cloudflare Pages
+
+Для публикации отдельного сгенерированного сайта добавлена CLI-команда `uds deploy`. Она создаёт HTML из JSON-проекта, запускает аудит и **не отправляет сайт**, если аудит содержит ошибки. После успешной проверки команда вызывает Wrangler для существующего Cloudflare Pages project.
+
+1. Установите Node.js 20+ и выполните в терминале из корня репозитория:
+
+```bash
+npx wrangler login
+```
+
+2. Убедитесь, что целевой Pages project уже создан в Cloudflare Dashboard.
+3. Выполните:
+
+```bash
+node bin/uds.js deploy examples/penka.json --project-name penka-site
+```
+
+Для preview deployment можно указать ветку:
+
+```bash
+node bin/uds.js deploy project.json --project-name my-pages-project --branch preview/review
+```
+
+Имя Pages project и ветка обязательны/проверяются; команда не создаёт Cloudflare project и не хранит API-токены в проекте. Wrangler использует локальную авторизацию `wrangler login`. Папка результата по умолчанию: `out/<project-id>/cloudflare-pages`; её можно изменить через `--out`.
+
+После публикации Wrangler выведет URL deployment. Пользовательский домен подключается отдельно в Cloudflare Pages → Custom domains. Это публикация из локального терминала; браузерная студия не получает секрет Cloudflare и не публикует сайт сама.
