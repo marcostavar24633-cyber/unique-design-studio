@@ -261,3 +261,10 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .content-director__label{display:block;margin:12px 0 6px;font-size:12px;font-weight:700}
 #content-direction{width:100%;min-height:84px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
 @media(max-width:600px){.content-director{padding:14px}.content-director__stats{gap:6px}.content-director__stats>div{padding:9px}.content-director__stats b{font-size:18px}.content-director__stats small{font-size:10px}}
+
+/* AI Image Director brief */
+.image-director-brief{display:grid;gap:12px;margin:14px 0;padding:14px;border:1px solid rgba(201,164,94,.3);border-radius:14px;background:rgba(201,164,94,.05)}
+.image-director-brief label{display:grid;gap:6px;font-size:12px;font-weight:650}
+.image-director-brief input,.image-director-brief textarea{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;font-weight:400}
+.image-director-actions{display:flex;gap:9px;flex-wrap:wrap}
+@media(max-width:560px){.image-director-actions button{width:100%}}
