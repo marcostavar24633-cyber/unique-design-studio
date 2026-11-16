@@ -109,6 +109,11 @@ test('Hero Readability QA measures actual preview at three responsive widths', (
   for (const marker of ['function parseRgb(color)','function relativeLuminance(rgb)','function contrastRatio(a,b)','function auditHeroReadability()','width:320,label:\'Телефон 320 px\'','width:768,label:\'Планшет 768 px\'','width:1280,label:\'Компьютер 1280 px\'','data-run-hero-readability','hero-readability-results','Контраст текста кнопки ниже 4.5:1']) assert.ok(source.includes(marker), marker);
 });
 
+test('Hero image QA checks loading, intrinsic resolution, ALT and loading priority', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of ['doc.querySelectorAll(\'.hero img\')','img.complete','img.naturalWidth === 0','img.naturalWidth','img.hasAttribute(\'alt\')','img.getAttribute(\'loading\') === \'lazy\'','img.getAttribute(\'fetchpriority\') !== \'high\'','Hero без фотографии','возможна нехватка разрешения']) assert.ok(source.includes(marker), marker);
+});
+
 test('Hero Readability QA restores preview sizing after responsive checks', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.match(source, /finally\s*\{\s*frame\.style\.width = originalWidth;\s*frame\.style\.height = originalHeight;/);

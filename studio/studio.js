@@ -643,6 +643,29 @@ function auditHeroReadability() {
   const checks = [];
   const viewports = [{width:320,label:'Телефон 320 px'},{width:768,label:'Планшет 768 px'},{width:1280,label:'Компьютер 1280 px'}];
   const rectsOverlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  // Проверяем именно фотографию Hero, а не все изображения страницы.
+  // SVG-мотив без фотографии допустим для части архитектур и не считается ошибкой.
+  const heroImages = [...doc.querySelectorAll('.hero img')];
+  if (!heroImages.length) {
+    checks.push({level:'manual',title:'Hero без фотографии',text:'В первом экране не найдено img. Это допустимо для графической концепции; если нужна фотография, добавьте её в поле «Изображение первого экрана».'});
+  }
+  heroImages.forEach((img,index) => {
+    const label = 'Hero-фото' + (heroImages.length > 1 ? ' ' + (index + 1) : '');
+    if (!img.complete) checks.push({level:'manual',title:label + ': загрузка не завершена',text:'Браузер ещё загружает изображение. Повторите QA после завершения загрузки.'});
+    else if (img.naturalWidth === 0) checks.push({level:'check',title:label + ': изображение не загрузилось',text:'Браузер не получил изображение. Проверьте URL, доступность файла и формат.'});
+    else {
+      checks.push({level:'good',title:label + ': изображение загружено',text:'Исходный размер: ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px.'});
+      const rect = img.getBoundingClientRect();
+      const dpr = Math.max(1, Number(doc.defaultView.devicePixelRatio) || 1);
+      if (rect.width > 0 && rect.height > 0 && (img.naturalWidth + 1 < rect.width * dpr || img.naturalHeight + 1 < rect.height * dpr)) {
+        checks.push({level:'check',title:label + ': возможна нехватка разрешения',text:'Исходник ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px отображается примерно в ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + ' CSS px при DPR ' + dpr + '. Проверьте резкость на устройстве.'});
+      }
+    }
+    if (!img.hasAttribute('alt')) checks.push({level:'check',title:label + ': отсутствует ALT',text:'Добавьте текстовое описание фотографии. Для смыслового изображения пустой alt нежелателен.'});
+    else if (!img.getAttribute('alt').trim()) checks.push({level:'check',title:label + ': пустой ALT',text:'Hero-фотография помечена как декоративная. Если она передаёт содержание, добавьте краткое описание.'});
+    if (img.getAttribute('loading') === 'lazy') checks.push({level:'check',title:label + ': отложенная загрузка',text:'Главное изображение находится на первом экране. Уберите loading="lazy", чтобы не задерживать его появление.'});
+    if (img.getAttribute('fetchpriority') !== 'high') checks.push({level:'manual',title:label + ': приоритет загрузки не повышен',text:'Проверьте, стоит ли задать fetchpriority="high" для главной фотографии. Это рекомендация, а не измерение скорости.'});
+  });
   try {
     for (const viewport of viewports) {
       frame.style.width = viewport.width + 'px';
