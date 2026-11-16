@@ -165,3 +165,16 @@ test('форма не имитирует серверную отправку ч�
   assert.ok(endpoint.html.includes('data-form-delivery="endpoint-configured"'));
   assert.ok(endpoint.audit.warnings.some(w => w.id === 'form-delivery'), 'настройка endpoint не равна подтверждённой доставке');
 });
+
+test('композиция секций выбирается отдельно от hero и реально применяется в HTML/CSS', () => {
+  const layouts = new Set();
+  for (let i = 0; i < 16; i++) {
+    const result = generate({ ...full, id: `section-layout-${i}`, brand: `Разный бренд ${i}`, niche: 'кофейня' });
+    const layout = result.concept.visualSystem.sectionLayout;
+    assert.ok(['editorial', 'offset', 'framed', 'quiet'].includes(layout), layout);
+    assert.ok(result.html.includes(`section-layout-${layout}`), `класс секций ${layout} не попал в HTML`);
+    assert.ok(result.html.includes(`.ds-section.section-layout--${layout}`), `CSS для ${layout} не попал в HTML`);
+    layouts.add(layout);
+  }
+  assert.ok(layouts.size >= 2, `ожидалось несколько композиций секций, получено: ${[...layouts].join(', ')}`);
+});
