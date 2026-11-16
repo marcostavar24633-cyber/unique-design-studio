@@ -84,6 +84,14 @@ test('код веб-редактора синтаксически коррект
   assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
+test('Asset library compares responsive crop frames and opens the matching crop editor', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of ['const cropPreview = (item, role, index)', "['desktop','Компьютер','16 / 9']", "['tablet','Планшет','4 / 3']", "['mobile','Телефон','3 / 4']", 'data-open-crop-role', 'data-open-crop-index', 'data-crop-index="${index}"', 'Настроить кадрирование']) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.asset-library__crops\{display:grid/);
+  assert.match(css, /\.asset-library__crop-frame img\{display:block;width:100%;height:100%;object-fit:cover\}/);
+});
+
 test('Visual asset library summarizes desktop and mobile image variants and links to controls', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
@@ -235,4 +243,26 @@ test('Gallery supports primary image selection and accessible fullscreen preview
   ]) assert.ok(source.includes(marker), marker);
   assert.match(css, /\.gallery-lightbox/);
   assert.match(css, /\.gallery-primary-badge/);
+});
+
+test('Visual asset library applies the saved mobile focal point to a separate mobile photo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('const cropPreview = (item, role, index) => {');
+  const end = source.indexOf('return `<section class="asset-library"', start);
+  const cropPreview = source.slice(start, end);
+  assert.ok(cropPreview.includes("const src = viewport === 'mobile' && item.phone ? item.phone : item.desktop;"));
+  assert.ok(cropPreview.includes("const position = cropCoordinate(focal.x) + '% ' + cropCoordinate(focal.y) + '%';"));
+  assert.ok(!cropPreview.includes("? '50% 50%'"));
+});
+
+test('Opening a crop editor reveals collapsed settings and updates the toggle state', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
+  const end = source.indexOf("$('#form').addEventListener('submit'", start);
+  const handler = source.slice(start, end);
+  assert.ok(handler.includes("document.body.classList.contains('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("document.body.classList.remove('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("toggle.setAttribute('aria-expanded', 'true')"));
+  assert.ok(handler.includes("toggle.textContent = 'Скрыть настройки'"));
+  assert.ok(handler.indexOf("classList.remove('workspace-settings-collapsed')") < handler.indexOf("group.open = true"));
 });
