@@ -703,11 +703,71 @@ function renderResponsiveAccessibilityChecks() {
   host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
 }
 
+
+function auditSiteContentAndInteractions() {
+  const doc = $('#frame')?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки готовой страницы в окне предпросмотра.'}];
+  const results = [];
+  const add = (level,title,text) => results.push({level,title,text});
+  const visible = el => { const s=doc.defaultView.getComputedStyle(el),r=el.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0; };
+  const nameOf = el => (el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || '').trim();
+  const ids = new Set([...doc.querySelectorAll('[id]')].map(el=>el.id));
+  const images = [...doc.querySelectorAll('img')];
+  const broken = images.filter(img=>img.complete&&img.naturalWidth===0);
+  const pending = images.filter(img=>!img.complete);
+  if(broken.length) add('check','Изображения не загрузились','Не удалось загрузить '+broken.length+' из '+images.length+' изображений. Проверьте URL, формат и доступ к файлам.');
+  else if(images.length) add('good','Изображения загружены','Браузер подтвердил загрузку '+(images.length-pending.length)+' из '+images.length+' изображений.');
+  else add('manual','Изображения отсутствуют','На странице нет элементов img. Проверьте, требуется ли фотографии место в этой концепции.');
+  if(pending.length) add('manual','Изображения ещё загружаются',pending.length+' изображений не завершили загрузку. Повторите проверку позже.');
+  const missingAlt=images.filter(img=>!img.hasAttribute('alt')), emptyAlt=images.filter(img=>img.hasAttribute('alt')&&!img.getAttribute('alt').trim());
+  if(missingAlt.length) add('check','Нет атрибута ALT',missingAlt.length+' изображений не имеют alt. Добавьте описание смысловым изображениям; декоративным задайте alt="".');
+  else add('good','ALT-атрибуты присутствуют','У всех '+images.length+' изображений есть alt. Пустой alt допустим для декоративной графики.');
+  if(emptyAlt.length) add('manual','Проверить пустые ALT',emptyAlt.length+' изображений имеют alt="". Это правильно для декора, но проверьте, не скрывает ли описание важные фотографии.');
+  const links=[...doc.querySelectorAll('a')], invalid=[], missingAnchors=[], external=[];
+  for(const link of links){
+    const href=(link.getAttribute('href')||'').trim();
+    if(!href||href==='#'||href.toLowerCase().startsWith('javascript:')){invalid.push(href||'(пусто)');continue;}
+    if(href.startsWith('#')) { try { if(!ids.has(decodeURIComponent(href.slice(1)))) missingAnchors.push(href); } catch { missingAnchors.push(href); } }
+    if(href.startsWith('http://')||href.startsWith('https://')) { try { const u=new URL(href,doc.baseURI); if(['http:','https:'].includes(u.protocol)) external.push(href); else invalid.push(href); } catch { invalid.push(href); } }
+  }
+  if(invalid.length) add('check','Пустые или небезопасные ссылки',invalid.length+' ссылок имеют пустой href, href="#" или javascript:. Исправьте назначение.');
+  else add('good','Формат ссылок проверен','Пустые ссылки и схема javascript: не обнаружены.');
+  if(missingAnchors.length) add('check','Не найдены якорные разделы',missingAnchors.length+' ссылок ведут к отсутствующим id: '+[...new Set(missingAnchors)].slice(0,5).join(', '));
+  else add('good','Внутренние якоря существуют','Все проверенные ссылки на #раздел ведут к существующим id.');
+  if(external.length) add('manual','Внешние адреса требуют проверки','Формат '+external.length+' внешних URL корректен. Доступность серверов и конечных страниц не проверялась.');
+  const ctas=[...doc.querySelectorAll('[data-cta],.ds-button,button')].filter(visible);
+  const unnamed=ctas.filter(el=>!nameOf(el)), disabled=ctas.filter(el=>el.disabled||el.getAttribute('aria-disabled')==='true'), dead=ctas.filter(el=>el.tagName==='A'&&(!el.getAttribute('href')||el.getAttribute('href')==='#'));
+  if(ctas.length) add('good','CTA найдены','В предпросмотре обнаружено '+ctas.length+' видимых элементов действия.');
+  else add('manual','CTA не найдены','Не обнаружены видимые кнопки и элементы с data-cta. Проверьте целевой сценарий страницы.');
+  if(unnamed.length) add('check','CTA без названия',unnamed.length+' кнопок не имеют доступного текстового имени.');
+  if(disabled.length) add('check','Неактивные CTA',disabled.length+' кнопок отключены или имеют aria-disabled="true".');
+  if(dead.length) add('check','CTA без рабочего назначения',dead.length+' ссылок-кнопок не имеют назначения или ведут на #.');
+  const forms=[...doc.querySelectorAll('form')];
+  if(!forms.length) add('manual','Формы не обнаружены','На странице нет form. Если заявки должны собираться через контакты или мессенджер, проверьте этот сценарий отдельно.');
+  forms.forEach((form,index)=>{
+    const controls=[...form.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea,button[type="submit"]')];
+    const unlabeled=controls.filter(el=>!el.disabled&&!el.getAttribute('aria-label')&&!el.getAttribute('title')&&!(el.labels&&[...el.labels].length));
+    const action=(form.getAttribute('action')||'').trim(), method=(form.getAttribute('method')||'get').toLowerCase();
+    if(!controls.length) add('check','Форма '+(index+1)+': нет полей','Форма не содержит пользовательских полей или кнопки отправки.');
+    else add('good','Форма '+(index+1)+': поля обнаружены','Элементов формы: '+controls.length+'; обязательных: '+controls.filter(el=>el.required).length+'.');
+    if(unlabeled.length) add('check','Форма '+(index+1)+': поля без подписи',unlabeled.length+' полей не связаны с label и не имеют aria-label/title.');
+    if(!action) add('manual','Форма '+(index+1)+': адрес отправки не задан','Атрибут action пуст. Проверьте обработчик формы и фактическую доставку заявки.');
+    else if(action.toLowerCase().startsWith('javascript:')) add('check','Форма '+(index+1)+': небезопасный action','У формы указан javascript: в action.');
+    else add('manual','Форма '+(index+1)+': доставка не подтверждена','Указан action и метод '+method.toUpperCase()+', но реальная отправка и получение заявки не тестировались.');
+    if(!['get','post','dialog'].includes(method)) add('check','Форма '+(index+1)+': неизвестный метод','Проверьте атрибут method формы.');
+  });
+  return results.length?results:[{level:'manual',title:'Нет результатов',text:'Не удалось собрать диагностические данные.'}];
+}
+function renderSiteContentInteractionChecks() {
+  const host=$('#site-content-qa-results'); if(!host) return;
+  host.innerHTML=auditSiteContentAndInteractions().map(item=>'<article class="visual-quality-card is-'+esc(item.level)+'"><b>'+esc(item.title)+'</b><p>'+esc(item.text)+'</p></article>').join('');
+}
+
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
-  $('#view-audit').innerHTML = `<section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+  $('#view-audit').innerHTML = `<section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
 <h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
 <h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
@@ -868,6 +928,10 @@ $('#form').addEventListener('click', e => {
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
 $('#view-audit').addEventListener('click', async e => {
+  if (e.target.closest('[data-run-site-content-qa]')) { renderSiteContentInteractionChecks(); return; }
+  if (e.target.closest('[data-run-responsive-a11y]')) { renderResponsiveAccessibilityChecks(); return; }
+  if (e.target.closest('[data-run-hero-readability]')) { renderHeroReadabilityChecks(); return; }
+
   const button = e.target.closest('[data-copy-asset-prompt]');
   if (!button) return;
   try { await navigator.clipboard.writeText(button.dataset.copyAssetPrompt); toast('Промпт скопирован'); }
