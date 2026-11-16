@@ -51,6 +51,7 @@
 | `faqTitle`, `faqs` | `[вопрос, ответ]` | Вопросы |
 | `galleryTitle`, `gallery` | `{ "src", "alt", "caption" }` | Галерея |
 | `images` | `{ "hero", "heroAlt" }` | Изображение первого экрана |
+| `imageArtDirection` | объект | Фокус кадрирования по ролям и экранам: `hero`, `gallery`, `services` → индекс/элемент → `desktop`, `tablet`, `mobile` → `{ "x": 0–100, "y": 0–100 }`. Значения задают `object-position`; 0 и 100 — допустимые крайние точки, отсутствие координаты означает центр 50/50 |
 | `contactTitle`, `contactText`, `contacts` | `{ "phone", "email", "address", "hours" }` | Контакты |
 | `formAction` | `https://…` | Обработчик формы. Без него при наличии e-mail форма открывает почтовую программу |
 
