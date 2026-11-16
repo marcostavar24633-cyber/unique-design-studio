@@ -9,6 +9,9 @@ test('код веб-редактора синтаксически коррект
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of [
     "data-upload=\"hero\"",
+    "data-upload=\"hero-mobile\"",
+    "Отдельная композиция для телефона",
+    "state.raw.images?.heroMobile",
     "data-upload=\"gallery\"",
     "data-upload=\"service\"",
     "image/jpeg,image/png,image/webp,image/gif,image/avif",
