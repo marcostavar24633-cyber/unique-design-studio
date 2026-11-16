@@ -236,3 +236,32 @@ test('Gallery supports primary image selection and accessible fullscreen preview
   assert.match(css, /\.gallery-lightbox/);
   assert.match(css, /\.gallery-primary-badge/);
 });
+
+test('AI Image Director handlers are delegated from the audit view that renders its controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(source.includes("$('#view-audit').addEventListener('input', e => {"));
+  assert.ok(source.includes("$('#view-audit').addEventListener('click', async e => {"));
+  assert.ok(!source.includes("$('#view-concept').addEventListener('input', e => {"));
+  assert.ok(!source.includes("$('#view-concept').addEventListener('click', e => {"));
+});
+
+test('AI Image Director package uses actual newline separators', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function imageDirectorPackage()');
+  const end = source.indexOf('\n}', start);
+  const body = source.slice(start, end);
+  assert.ok(body.includes(".join('\\n')"));
+  assert.ok(body.includes("card.innerText + '\\n' + additions"));
+  assert.ok(body.includes(".join('\\n\\n'"));
+  assert.ok(!body.includes(".join('\\\\n')"));
+});
+
+test('AI Image Director brief edits refresh exported JSON before save or export', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf("$('#view-audit').addEventListener('input', e => {");
+  const end = source.indexOf('\n});', start);
+  const handler = source.slice(start, end);
+  assert.ok(handler.includes('root.brief[field.dataset.imageBrief] = field.value;'));
+  assert.ok(handler.includes('result.exported = exportProject(state.raw, result.concept);'));
+  assert.ok(handler.indexOf('result.exported = exportProject') < handler.indexOf('persist();'));
+});
