@@ -61,7 +61,8 @@ const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>`;
 function artStyle(p, role, index = 0) {
   const root = p.passthrough?.imageArtDirection || {};
   const entry = role === 'hero' ? root.hero : root[role]?.[index];
-  const point = key => { const v = entry && entry[key] || {}; const x = Number.isFinite(Number(v.x)) ? Math.max(0, Math.min(100, Number(v.x))) : 50; const y = Number.isFinite(Number(v.y)) ? Math.max(0, Math.min(100, Number(v.y))) : 50; return x + '% ' + y + '%'; };
+  const coordinate = value => value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value)) ? Math.max(0, Math.min(100, Number(value))) : 50;
+  const point = key => { const v = entry && entry[key] || {}; return coordinate(v.x) + '% ' + coordinate(v.y) + '%'; };
   return 'class="ds-media ds-art" style="--ds-crop-desktop:' + point('desktop') + ';--ds-crop-tablet:' + point('tablet') + ';--ds-crop-mobile:' + point('mobile') + '"';
 }
 
