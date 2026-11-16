@@ -18,7 +18,8 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
-const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };\n
+const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };
+
 function renderDashboard(filter = 'all') {
   const root = $('#dash-projects'); if (!root) return;
   const entries = state.library.map((item, index) => ({...item, index, kind:'saved'}));
