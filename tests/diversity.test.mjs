@@ -101,3 +101,21 @@ test('шрифты: настройка сохраняется при экспо�
   assert.equal(normalizeProject(exported).fonts, 'web');
   assert.equal(normalizeProject({ ...plain, fonts: 'что-то другое' }).fonts, 'system');
 });
+
+
+test('порядок секций имеет несколько редакционных маршрутов и входит в fingerprint уникальности', () => {
+  const orders = new Set();
+  for (let i = 0; i < 24; i++) {
+    const result = buildConcept({
+      ...plain,
+      id: `section-route-${i}`,
+      brand: `Новый бренд ${i}`,
+      niche: 'кофейня',
+    });
+    const order = result.homepage.sectionOrder.join('>');
+    orders.add(order);
+    assert.equal(result.uniquenessCheck.fingerprint.sectionOrder, order);
+    assert.equal(result.homepage.sectionOrder.at(-1), 'contact');
+  }
+  assert.ok(orders.size >= 2, `ожидались разные маршруты секций, получено: ${orders.size}`);
+});
