@@ -155,16 +155,21 @@ function textToRows(text, path) {
   return rows;
 }
 
+function cropCoordinate(value) {
+  const n = Number(value);
+  return value !== undefined && value !== null && value !== '' && Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+}
+
 function cropEditor(role, index = 0, src = '') {
   const root = state.raw.imageArtDirection || {};
   const entry = role === 'hero' ? root.hero : (root[role] || {})[index];
   const viewports = [['desktop','Компьютер','16 / 9'],['tablet','Планшет','4 / 3'],['mobile','Телефон','3 / 4']];
   const previews = src ? '<div class="crop-live-previews" aria-label="Предпросмотр кадрирования">' + viewports.map(([key,label,ratio]) => {
     const v = entry && entry[key] || {};
-    const x = Math.max(0,Math.min(100,Number(v.x) || 50)), y = Math.max(0,Math.min(100,Number(v.y) || 50));
+    const x = cropCoordinate(v.x), y = cropCoordinate(v.y);
     return '<figure class="crop-live"><figcaption>' + label + '</figcaption><div class="crop-live__frame" style="aspect-ratio:' + ratio + '"><img src="' + esc(src) + '" alt="" data-crop-preview-role="' + role + '" data-crop-preview-index="' + index + '" data-crop-preview-viewport="' + key + '" style="object-position:' + x + '% ' + y + '%"></div></figure>';
   }).join('') + '</div>' : '';
-  return '<details class="crop-editor"><summary>Кадрирование для экранов</summary>' + previews + '<div class="crop-editor__grid">' + viewports.map(([key,label]) => { const v = entry && entry[key] || {}; return '<fieldset><legend>' + label + '</legend>' + ['x','y'].map(axis => { const n = Math.max(0,Math.min(100,Number(v[axis]) || 50)); return '<label>' + (axis === 'x' ? 'По горизонтали' : 'По вертикали') + ' <output>' + n + '%</output><input type="range" min="0" max="100" value="' + n + '" data-crop="' + role + '" data-crop-index="' + index + '" data-crop-viewport="' + key + '" data-crop-axis="' + axis + '"></label>'; }).join('') + '</fieldset>'; }).join('') + '</div><p class="note">Предпросмотр показывает обрезку для пропорций экранов. 0% — левый/верхний край, 50% — центр, 100% — правый/нижний край. Проверьте, чтобы важные детали и лица не попадали под текст или за границу кадра.</p></details>';
+  return '<details class="crop-editor"><summary>Кадрирование для экранов</summary>' + previews + '<div class="crop-editor__grid">' + viewports.map(([key,label]) => { const v = entry && entry[key] || {}; return '<fieldset><legend>' + label + '</legend>' + ['x','y'].map(axis => { const n = cropCoordinate(v[axis]); return '<label>' + (axis === 'x' ? 'По горизонтали' : 'По вертикали') + ' <output>' + n + '%</output><input type="range" min="0" max="100" value="' + n + '" data-crop="' + role + '" data-crop-index="' + index + '" data-crop-viewport="' + key + '" data-crop-axis="' + axis + '"></label>'; }).join('') + '</fieldset>'; }).join('') + '</div><p class="note">Предпросмотр показывает обрезку для пропорций экранов. 0% — левый/верхний край, 50% — центр, 100% — правый/нижний край. Проверьте, чтобы важные детали и лица не попадали под текст или за границу кадра.</p></details>';
 }
 function writeCrop(role, index, viewport, axis, value) {
   const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
