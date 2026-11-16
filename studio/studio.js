@@ -59,7 +59,7 @@ function openWorkspace(section = 'create') {
   if (section === 'seo') selectTab($('#tab-spec'));
   if (section === 'qa') selectTab($('#tab-audit'));
   if (section === 'projects') selectTab($('#tab-registry'));
-  if (section === 'publish') selectTab($('#tab-preview'));
+  if (section === 'publish') selectTab($('#tab-publish'));
 }
 $('#dashboard-back')?.addEventListener('click', () => {
   document.body.classList.add('dashboard-mode');
@@ -218,8 +218,48 @@ const registry = () => state.library.map(l => l.entry);
 function run() {
   result = generate(state.raw, { registry: registry() });
   $('#frame').srcdoc = result.html;
-  renderSpec(); renderConcept(); renderAudit(); renderRegistry();
+  renderSpec(); renderConcept(); renderAudit(); renderRegistry(); renderPublishManager();
   persist();
+}
+
+
+const publishSettings = (() => { try { return JSON.parse(localStorage.getItem('uds:publish:v1') || '{}'); } catch { return {}; } })();
+function renderPublishManager() {
+  const host = $('#view-publish'); if (!host || !result) return;
+  const projectName = String(publishSettings.projectName || result.project.id || '').toLowerCase();
+  const branchName = String(publishSettings.branch || 'production');
+  const validName = /^[a-z0-9][a-z0-9-]{0,57}[a-z0-9]$/.test(projectName) || /^[a-z0-9]$/.test(projectName);
+  const validBranch = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branchName) && !branchName.includes('..') && !branchName.endsWith('/') && !branchName.endsWith('.');
+  const checks = [
+    ['Проект сформирован', Boolean(result.html && result.project.id), 'Сначала создайте или откройте проект в редакторе'],
+    ['Аудит пройден', Boolean(result.audit?.ok), result.audit?.errors?.length ? 'Ошибок аудита: ' + result.audit.errors.length : 'Есть замечания — изучите вкладку «Проверка»'],
+    ['Имя Pages project', validName, 'Латиница, цифры и дефисы; 1–59 символов'],
+    ['Ветка публикации', validBranch, 'Укажите допустимое имя ветки']
+  ];
+  const ready = checks.every(item => item[1]);
+  const command = 'node bin/uds.js deploy ' + result.project.id + '.json --project-name ' + projectName + ' --branch ' + branchName;
+  host.innerHTML = `
+    <section class="publish-manager">
+      <header class="publish-manager__head"><div><span class="publish-manager__eyebrow">PRODUCTION CONTROL</span><h2>Центр публикации</h2><p>Подготовка проекта, проверка готовности и безопасная передача в Cloudflare Pages</p></div><span class="publish-manager__state ${ready ? 'is-ready' : 'is-blocked'}">${ready ? 'Готов к публикации' : 'Требует внимания'}</span></header>
+      <div class="publish-manager__checks">${checks.map(([name,ok,detail]) => `<div class="publish-manager__check ${ok?'is-ok':'is-warn'}"><b>${ok?'✓':'!' } ${esc(name)}</b><small>${esc(detail)}</small></div>`).join('')}</div>
+      <div class="publish-manager__settings">
+        <label>Cloudflare Pages project name<input id="publish-project-name" value="${esc(projectName)}" maxlength="59" autocomplete="off" spellcheck="false"><small>Имя уже созданного проекта в Cloudflare Pages, не домен сайта.</small></label>
+        <label>Ветка deployment<select id="publish-branch"><option value="production" ${branchName==='production'?'selected':''}>production — Production</option><option value="preview/review" ${branchName==='preview/review'?'selected':''}>preview/review — Preview</option><option value="preview/staging" ${branchName==='preview/staging'?'selected':''}>preview/staging — Preview staging</option></select><small>Для собственной ветки можно изменить команду вручную в терминале.</small></label>
+      </div>
+      <div class="publish-manager__actions">
+        <button type="button" id="publish-download-json">Скачать project JSON</button>
+        <button type="button" id="publish-download-html">Скачать HTML</button>
+        <button type="button" id="publish-copy-command" class="primary" ${ready?'':'disabled'}>Копировать команду публикации</button>
+      </div>
+      <section class="publish-manager__terminal"><b>Команда для локального терминала</b><code id="publish-command">${esc(command)}</code><p>Перед запуском: установите Node.js 20+, откройте терминал в корне репозитория UNIQUE DESIGN STUDIO и один раз выполните <code>npx wrangler login</code>. Pages project должен быть создан заранее.</p></section>
+      <ol class="publish-manager__steps"><li>Скачайте JSON проекта и поместите его в корень локальной копии репозитория под именем <code>${esc(result.project.id)}.json</code>.</li><li>Убедитесь, что проект Pages существует в Cloudflare и выполнен вход через Wrangler.</li><li>Выполните команду выше. При ошибках аудита CLI остановит публикацию.</li><li>После успешной команды откройте URL, который выведет Wrangler. Подключение собственного домена настраивается отдельно в Cloudflare Pages → Custom domains.</li></ol>
+      <p class="publish-manager__disclaimer">Статус здесь отражает только локальную готовность. Панель не имеет доступа к Cloudflare аккаунту и не утверждает, что сайт опубликован. После выполнения команды отметьте фактический результат в своей истории развёртываний Cloudflare.</p>
+    </section>`;
+  $('#publish-project-name').addEventListener('change', e => { publishSettings.projectName=e.target.value.trim().toLowerCase(); localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
+  $('#publish-branch').addEventListener('change', e => { publishSettings.branch=e.target.value; localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
+  $('#publish-download-json').addEventListener('click', () => download(`${result.project.id}.json`,JSON.stringify(result.exported,null,2)+'\\n','application/json'));
+  $('#publish-download-html').addEventListener('click', () => download(`${result.project.id}.html`,result.html,'text/html'));
+  $('#publish-copy-command').addEventListener('click', async () => { try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована'); } catch { toast('Не удалось скопировать. Выделите команду и скопируйте вручную.'); } });
 }
 
 // ---------- ТЗ и анализ ----------
