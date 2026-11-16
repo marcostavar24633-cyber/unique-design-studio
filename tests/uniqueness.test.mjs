@@ -68,7 +68,7 @@ test('мера сходства: 1 для одинаковых отпечатк�
 
 test('отпечаток дизайна учитывает графический мотив, кнопку и motion, а старые записи совместимы', () => {
   const current = buildConcept(example('penka')).uniquenessCheck.fingerprint;
-  for (const key of ['archetype', 'placement', 'typeCharacter', 'nav', 'colorDirection', 'shape', 'motif', 'button', 'motion']) {
+  for (const key of ['archetype', 'placement', 'typeCharacter', 'nav', 'colorDirection', 'shape', 'motif', 'button', 'motion', 'sectionLayout']) {
     assert.ok(Object.hasOwn(current, key), `нет признака ${key}`);
   }
   const legacy = Object.fromEntries(['archetype', 'placement', 'typeCharacter', 'nav', 'colorDirection', 'shape'].map(key => [key, current[key]]));
