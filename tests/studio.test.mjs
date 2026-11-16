@@ -103,5 +103,11 @@ test('Responsive Layout and Accessibility QA checks overflow, overlaps and acces
 
 test('Responsive QA restores preview dimensions after testing each viewport', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  assert.match(source, /function auditResponsiveLayoutAndAccessibility\(\)[\\s\\S]*?finally\\s*\\{\\s*frame\\.style\\.width = originalWidth;\\s*frame\\.style\\.height = originalHeight;\\s*frame\\.style\\.maxWidth = originalMaxWidth;/);
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes('finally {'));
+  assert.ok(audit.includes('frame.style.width = originalWidth;'));
+  assert.ok(audit.includes('frame.style.height = originalHeight;'));
+  assert.ok(audit.includes('frame.style.maxWidth = originalMaxWidth;'));
 });
