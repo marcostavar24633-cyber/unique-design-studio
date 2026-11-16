@@ -1127,18 +1127,19 @@ function imageDirectorPackage() {
     brief.mustShow && 'ОБЯЗАТЕЛЬНО ПОКАЗАТЬ: '+brief.mustShow,
     brief.avoid && 'ИЗБЕГАТЬ: '+brief.avoid,
     'Не добавлять неподтверждённые свойства, текст, логотипы и водяные знаки.'
-  ].filter(Boolean).join('\\n');
-  return cards.map(card => card.innerText + '\\n' + additions).join('\\n\\n' + '='.repeat(48) + '\\n\\n');
+  ].filter(Boolean).join('\n');
+  return cards.map(card => card.innerText + '\n' + additions).join('\n\n' + '='.repeat(48) + '\n\n');
 }
-$('#view-concept').addEventListener('input', e => {
+$('#view-audit').addEventListener('input', e => {
   const field = e.target.closest('[data-image-brief]');
   if (!field) return;
   const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
   root.brief = root.brief || {};
   root.brief[field.dataset.imageBrief] = field.value;
+  if (result) result.exported = exportProject(state.raw, result.concept);
   persist();
 });
-$('#view-concept').addEventListener('click', e => {
+$('#view-audit').addEventListener('click', async e => {
   const directorButton = e.target.closest('[data-image-director]');
   if (directorButton) {
     const text = imageDirectorPackage();
