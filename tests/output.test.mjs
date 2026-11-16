@@ -175,6 +175,7 @@ test('композиция секций выбирается отдельно о
     assert.ok(['editorial', 'offset', 'framed', 'quiet'].includes(layout), layout);
     assert.ok(result.html.includes(`section-layout-${layout}`), `класс секций ${layout} не попал в HTML`);
     assert.ok(result.html.includes(`.ds-section.section-layout--${layout}`), `CSS для ${layout} не попал в HTML`);
+    assert.ok(result.html.includes(`.sec--gallery.section-layout--${layout}`), `композиция фотогалереи ${layout} не попала в HTML`);
     layouts.add(layout);
     orders.add(result.concept.homepage.sectionOrder.join('|'));
   }
