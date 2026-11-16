@@ -57,7 +57,7 @@ function monitorSafeUrl(value, env) {
 
 function monitorAuthorized(request, env) {
   const expected = String(env.MONITOR_API_TOKEN || '');
-  const match = /^Bearer ([^\\s]+)$/i.exec(String(request.headers.get('Authorization') || ''));
+  const match = /^Bearer ([^\s]+)$/i.exec(String(request.headers.get('Authorization') || ''));
   const actual = match ? match[1] : '';
   if (!expected || !match || actual.length !== expected.length) return false;
   let diff = 0;
