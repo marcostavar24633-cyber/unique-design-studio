@@ -285,7 +285,7 @@ function inspectImage(asset) {
       } else if (asset.role === 'service') {
         if (ratio < 0.78 || ratio > 1.35) tips.push('Карточка обычно лучше смотрится с квадратным кадром 1:1; при обрезке проверьте, что товар целиком виден.');
       } else if (ratio < 0.72 || ratio > 1.8) tips.push('Галерея: необычные пропорции могут обрезаться в сетке. Проверьте кадрирование и главный объект.');
-      let brightness = null, detail = null;
+      let brightness = null, detail = null, visualHash = '';
       if (asset.src.startsWith('data:image/')) {
         try {
           const canvas = document.createElement('canvas');
@@ -305,16 +305,33 @@ function inspectImage(asset) {
             }
             brightness = count ? sum / count : null;
             detail = edgeCount ? edges / edgeCount : null;
+            const hashCanvas = document.createElement('canvas');
+            hashCanvas.width = 8; hashCanvas.height = 8;
+            const hashContext = hashCanvas.getContext('2d', { willReadFrequently: true });
+            if (hashContext) {
+              hashContext.drawImage(img, 0, 0, 8, 8);
+              const sample = hashContext.getImageData(0, 0, 8, 8).data;
+              const luminance = [];
+              for (let i = 0; i < sample.length; i += 4) luminance.push(.2126 * sample[i] + .7152 * sample[i + 1] + .0722 * sample[i + 2]);
+              const average = luminance.reduce((a, b) => a + b, 0) / luminance.length;
+              if (Math.max(...luminance) - Math.min(...luminance) > 8) visualHash = luminance.map(v => v >= average ? '1' : '0').join('');
+            }
           }
         } catch { /* Проверка пикселей может быть недоступна для отдельных форматов. */ }
       }
       if (brightness !== null && brightness < 48) warnings.push('Кадр выглядит очень тёмным по средней яркости; проверьте детали в тенях.');
       if (detail !== null && detail < 5) warnings.push('Мало мелких деталей на уменьшенной копии: возможна мягкость или расфокус. Проверьте фото визуально.');
-      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail });
+      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail, visualHash });
     };
     img.onerror = () => resolve({ ...asset, error: 'Не удалось прочитать изображение. Проверьте ссылку или формат.', warnings: [], tips: [] });
     img.src = asset.src;
   });
+}
+function hammingDistance(a, b) {
+  if (!a || !b || a.length !== b.length) return Infinity;
+  let distance = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) distance++;
+  return distance;
 }
 async function renderImageIntelligence() {
   const host = $('#image-intelligence');
@@ -329,9 +346,17 @@ async function renderImageIntelligence() {
   const sourceCounts = new Map();
   reports.forEach(r => sourceCounts.set(r.src, (sourceCounts.get(r.src) || 0) + 1));
   const duplicateCount = [...sourceCounts.values()].filter(n => n > 1).reduce((n, count) => n + count - 1, 0);
+  const comparable = reports.filter(r => r.visualHash && !r.error);
+  const nearDuplicatePairs = [];
+  for (let i = 0; i < comparable.length; i++) for (let j = i + 1; j < comparable.length; j++) {
+    if (comparable[i].src === comparable[j].src) continue;
+    const distance = hammingDistance(comparable[i].visualHash, comparable[j].visualHash);
+    if (distance <= 5) nearDuplicatePairs.push([comparable[i], comparable[j], distance]);
+  }
+  const nearDuplicateCount = nearDuplicatePairs.length;
   const missingRoles = ['hero','gallery','service'].filter(role => !reports.some(r => r.role === role));
-  const visual = renderVisualAssetDirector(reports, duplicateCount, missingRoles);
-  host.innerHTML = `<p class="summary ${warningCount || duplicateCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний по качеству: ${warningCount}. Возможных повторов: ${duplicateCount}.</p>
+  const visual = renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs);
+  host.innerHTML = `<p class="summary ${warningCount || duplicateCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний по качеству: ${warningCount}. Точных повторов: ${duplicateCount}. Похожих кадров: ${nearDuplicateCount}.</p>
   <div class="image-audit-grid">${reports.map(r => `<article class="image-audit-card">
     <div class="image-audit-head"><b>${esc(r.label)}</b><span class="note">${r.role === 'hero' ? 'Первый экран' : r.role === 'service' ? 'Карточка' : 'Галерея'}</span></div>
     <div class="image-audit-body"><img src="${esc(r.src)}" alt="" loading="lazy"><div><b>${r.error ? 'Не удалось проверить' : `${r.width} × ${r.height} px`}</b><span class="note">${r.error ? esc(r.error) : `Пропорции: ${r.ratio.toFixed(2)}:1`}</span>
@@ -340,7 +365,7 @@ async function renderImageIntelligence() {
   ${visual}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
 }
-function renderVisualAssetDirector(reports, duplicateCount, missingRoles) {
+function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs = []) {
   const p = normalizeProject(state.raw);
   const dna = result.concept?.designDNA || {};
   const direction = dna.imageDirection || result.analysis?.imageDirection || 'естественный свет, выразительная композиция и честные детали';
@@ -375,12 +400,15 @@ function renderVisualAssetDirector(reports, duplicateCount, missingRoles) {
   }).join('');
   const notes = [];
   if (duplicateCount) notes.push(`Обнаружено ${duplicateCount} точных повторов одного и того же источника. Проверьте, не используется ли один кадр вместо разных ракурсов.`);
+  if (nearDuplicateCount) notes.push(`Локальное сравнение обнаружило ${nearDuplicateCount} пар визуально похожих кадров. Это могут быть повторные ракурсы или близкие по композиции изображения — проверьте их вручную.`);
   if (missingRoles.length) notes.push(`Не заполнены роли: ${missingRoles.map(r => roleLabels[r]).join(', ')}. Это не ошибка для каждого типа сайта, но проверьте, нужны ли эти материалы.`);
+  const similarityDetails = nearDuplicatePairs.slice(0, 8).map(([a, b, distance]) => `<li>${esc(a.label)} ↔ ${esc(b.label)} (различие hash: ${distance}/64)</li>`).join('');
   const promptCards = Object.entries(prompts).map(([role,prompt]) => `<article class="asset-prompt"><div><b>${esc(roleLabels[role])}</b><p>${esc(prompt)}</p></div><button type="button" data-copy-asset-prompt="${esc(prompt)}">Копировать промпт</button></article>`).join('');
   return `<section class="visual-asset-director" aria-labelledby="visual-asset-title">
     <h3 id="visual-asset-title">Visual Asset Director</h3>
     <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
     <div class="asset-coverage-list">${coverage}</div>
+    ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
     <h4>Задания на замену или новую съёмку</h4>
     <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
