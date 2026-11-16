@@ -4,6 +4,8 @@ import { contrast, ensureContrast, hexToHsl, hslToHex, mix, readableOn, rgba } f
 import { normalizeProject } from './project.js';
 import { BRAND_FONT_WEIGHTS, BRANDS } from './brands.js';
 import { between, hash, pick, stream, uniq } from './util.js';
+import { conceptIdentity, contextSignals } from './context.js';
+import { SECTION_LABELS, normalizeReferences } from './library.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -37,7 +39,7 @@ function contentSignals(p) {
 }
 
 // ---------- Выбор архитектуры ----------
-function rankArchetypes(project, profile, s) {
+function rankArchetypes(project, profile, s, refs = []) {
   const score = Object.fromEntries(Object.keys(ARCHETYPES).map(id => [id, 0]));
   const reasons = Object.fromEntries(Object.keys(ARCHETYPES).map(id => [id, []]));
   const add = (id, n, why) => { score[id] += n; if (why) reasons[id].push(why); };
@@ -55,6 +57,8 @@ function rankArchetypes(project, profile, s) {
     add('immersive', 4, 'люкс — крупный визуал и атмосфера'); add('minimal', 3); add('asymmetric', 2);
     add('catalog', -3); add('product-first', -2); add('brutalist', -6); add('split-utility', -2);
   }
+  for (const sig of contextSignals(project)) add(sig.id, sig.n, sig.why);
+  for (const ref of refs) if (ref.traits.archetypes[0]) add(ref.traits.archetypes[0], -4);
   const arch = project.architecture;
   let ids = Object.keys(ARCHETYPES);
   if (arch.mode === 'family') ids = LEGACY_FAMILIES[arch.family];
@@ -214,16 +218,22 @@ function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', se
 }
 
 // ---------- Главная функция ----------
-export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
+export function buildConcept(input, { registry = [], neighbors = 2, references } = {}) {
   const project = normalizeProject(input);
   const profile = detectNiche(project);
   const s = contentSignals(project);
-  const ranked = rankArchetypes(project, profile, s);
+  const refs = normalizeReferences(references ?? project.passthrough.designReferences);
+  const ranked = rankArchetypes(project, profile, s, refs);
   const seed = hash(`${project.brand}|${project.niche}`);
   const others = registry.filter(e => e && e.fingerprint && e.id !== project.id);
   const near = neighbors > 0 ? others.slice(-neighbors) : [];
 
   const avoid = { archetypes: [], placements: [], types: [], navs: [], directions: [], shapes: [], sectionLayouts: [] };
+  for (const ref of refs) {
+    if (ref.traits.typeCharacter) avoid.types.push(ref.traits.typeCharacter);
+    if (ref.traits.shape) avoid.shapes.push(ref.traits.shape);
+    if (!avoid.secondaryHint && ref.traits.archetypes[0]) avoid.secondaryHint = ref.traits.archetypes[0];
+  }
   const repeated = [], actions = [];
   let design = compose(project, profile, ranked, seed, avoid);
 
@@ -310,7 +320,9 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const type = TYPES[design.typeCharacter];
   const brand = project.brandProfile ? BRANDS[project.brandProfile] : null;
   // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
-  const order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
+  let order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
+  const libraryUse = refs.length ? applyReferences(refs, design, order, project) : null;
+  if (libraryUse) order = libraryUse.order;
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
@@ -356,7 +368,10 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const webFonts = web && project.fonts === 'web' ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
   const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
+  const identity = conceptIdentity(design, project);
+  const signals = uniq(contextSignals(project).map(x => x.why).filter(Boolean));
   return {
+    ...(libraryUse ? { libraryUse: { references: refs.map(r => ({ id: r.id, name: r.name, category: r.category, why: r.why })), applied: libraryUse.applied, divergence: libraryUse.divergence, patterns: libraryUse.patterns } } : {}),
     designBrief: {
       businessType: profile.label,
       product: project.mainOffer || project.title || project.niche,
@@ -367,8 +382,11 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       contentPriority: profile.priority,
       constraints,
       assumptions,
+      contextFactors: [`Ниша: ${profile.label}`, `Класс: ${{ standard: 'стандарт', premium: 'премиум', luxury: 'люкс' }[project.tier]}`, ...signals.map(capitalize), refs.length ? `Конкурентная среда: ${refs.length} профилей библиотеки` : 'Конкурентная среда: подходящих профилей нет'],
     },
     designDNA: {
+      conceptName: identity.name,
+      conceptFormula: identity.formula,
       primaryArchetype: design.primary,
       secondaryArchetype: design.secondary,
       selectionRationale: rationale,
@@ -412,6 +430,21 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
 }
 
 const capitalize = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+function applyReferences(refs, design, baseOrder, project) {
+  const applied = [], divergence = [];
+  let order = [...baseOrder];
+  const votes = {};
+  for (const r of refs) { const first = r.traits.sectionOrder.find(id => id !== 'contact'); if (first) votes[first] = (votes[first] || 0) + 1; }
+  const fav = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+  if (fav) { const i = order.indexOf(fav[0]); if (i > 0) { order.splice(i, 1); order.splice(i - 1, 0, fav[0]); applied.push('Изменён порядок блоков по принципам изученных сайтов'); } }
+  const merged = key => uniq(refs.flatMap(r => r.patterns[key])).slice(0, 6);
+  const patterns = { structure: merged('structure'), ux: merged('ux'), content: merged('content'), ideas: merged('ideas'), avoid: merged('avoid') };
+  if (patterns.structure.length + patterns.ux.length + patterns.content.length) applied.push('Структурные, UX- и контентные решения переданы в ТЗ и промт для переосмысления');
+  for (const r of refs) if (r.traits.archetypes[0]) divergence.push(r.traits.archetypes[0] !== design.primary ? 'Архитектура первого экрана отличается от источника «' + r.name + '»' : 'Архитектура близка источнику «' + r.name + '», но визуальная система формируется отдельно');
+  divergence.push('Палитра и типографика формируются для нового проекта');
+  return { order, applied, divergence, patterns };
+}
 
 /** Запись для реестра проектов: по ней сравниваются следующие генерации. */
 export function registryEntry(input, concept) {
