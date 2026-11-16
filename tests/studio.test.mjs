@@ -84,6 +84,14 @@ test('код веб-редактора синтаксически коррект
   assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
+test('Asset library compares responsive crop frames and opens the matching crop editor', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of ['const cropPreview = (item, role, index)', "['desktop','Компьютер','16 / 9']", "['tablet','Планшет','4 / 3']", "['mobile','Телефон','3 / 4']", 'data-open-crop-role', 'data-open-crop-index', 'data-crop-index="${index}"', 'Настроить кадрирование']) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.asset-library__crops\{display:grid/);
+  assert.match(css, /\.asset-library__crop-frame img\{display:block;width:100%;height:100%;object-fit:cover\}/);
+});
+
 test('Visual asset library summarizes desktop and mobile image variants and links to controls', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
@@ -237,12 +245,48 @@ test('Gallery supports primary image selection and accessible fullscreen preview
   assert.match(css, /\.gallery-primary-badge/);
 });
 
+test('Visual asset library applies the saved mobile focal point to a separate mobile photo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('const cropPreview = (item, role, index) => {');
+  const end = source.indexOf('return `<section class="asset-library"', start);
+  const cropPreview = source.slice(start, end);
+  assert.ok(cropPreview.includes("const src = viewport === 'mobile' && item.phone ? item.phone : item.desktop;"));
+  assert.ok(cropPreview.includes("const position = cropCoordinate(focal.x) + '% ' + cropCoordinate(focal.y) + '%';"));
+  assert.ok(!cropPreview.includes("? '50% 50%'"));
+});
+
+test('Opening a crop editor reveals collapsed settings and updates the toggle state', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
+  const end = source.indexOf("$('#form').addEventListener('submit'", start);
+  const handler = source.slice(start, end);
+  assert.ok(handler.includes("document.body.classList.contains('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("document.body.classList.remove('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("toggle.setAttribute('aria-expanded', 'true')"));
+  assert.ok(handler.includes("toggle.textContent = 'Скрыть настройки'"));
+  assert.ok(handler.indexOf("classList.remove('workspace-settings-collapsed')") < handler.indexOf("group.open = true"));
+});
+
 test('AI Image Director handlers are delegated from the audit view that renders its controls', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.ok(source.includes("$('#view-audit').addEventListener('input', e => {"));
   assert.ok(source.includes("$('#view-audit').addEventListener('click', async e => {"));
   assert.ok(!source.includes("$('#view-concept').addEventListener('input', e => {"));
-  assert.ok(!source.includes("$('#view-concept').addEventListener('click', e => {"));
+  // Кнопки AI Image Director рисуются в «Проверке», поэтому их обработчик не должен жить в «Концепции».
+  const concept = source.slice(source.indexOf("$('#view-concept').addEventListener('click', e => {"));
+  assert.ok(!concept.slice(0, concept.indexOf('\n});')).includes('data-image-director'));
+});
+
+test('Asset library buttons in the concept view keep a click handler there', () => {
+  // Библиотека изображений рисуется во вкладке «Концепция» (renderConcept → renderVisualAssetLibrary):
+  // без обработчика на #view-concept кнопки «Управлять фотографиями» и «Проверить фото» ничего не делают.
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const render = source.slice(source.indexOf('function renderConcept()'));
+  assert.ok(render.slice(0, render.indexOf('\n}\n')).includes('${renderVisualAssetLibrary()}'));
+  const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
+  assert.ok(start > 0, 'обработчик кликов вкладки «Концепция»');
+  const handler = source.slice(start, source.indexOf('\n});', start));
+  for (const marker of ['[data-open-image-settings]', '[data-open-image-audit]', '[data-open-crop-role]']) assert.ok(handler.includes(marker), marker);
 });
 
 test('AI Image Director package uses actual newline separators', () => {

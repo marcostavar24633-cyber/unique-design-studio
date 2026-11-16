@@ -297,6 +297,15 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 @media(max-width:600px){.gallery-lightbox{padding:12px}.gallery-lightbox__panel{grid-template-columns:36px minmax(0,1fr) 36px;gap:5px;height:82vh}.gallery-lightbox__panel button{width:36px;height:36px;font-size:22px}.gallery-lightbox__panel .gallery-lightbox__close{top:-4px;right:0}.gallery-lightbox__panel figure{padding-top:42px}}
 
 
+/* Responsive crop comparison in the asset library */
+.asset-library__crops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:0 9px 9px}
+.asset-library__crops figure{min-width:0;margin:0}
+.asset-library__crop-frame{overflow:hidden;border-radius:6px;background:var(--panel)}
+.asset-library__crop-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.asset-library__crops figcaption{padding-top:4px;text-align:center;color:var(--muted);font-size:10px}
+.asset-library__crop-action{margin:0 9px 10px;min-height:34px;padding:5px 8px;font-size:11px}
+@media(max-width:560px){.asset-library__crops{gap:4px;padding-inline:6px}.asset-library__crops figcaption{font-size:9px}.asset-library__crop-action{margin-inline:6px;padding-inline:5px;font-size:10px}}
+
 /* AI Image Director brief */
 .image-director-brief{display:grid;gap:12px;margin:14px 0;padding:14px;border:1px solid rgba(201,164,94,.3);border-radius:14px;background:rgba(201,164,94,.05)}
 .image-director-brief label{display:grid;gap:6px;font-size:12px;font-weight:650}
