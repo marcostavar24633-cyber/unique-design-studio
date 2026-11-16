@@ -342,7 +342,8 @@ function renderWorkflowApprovalPreview() {
     root.append(note);
     return;
   }
-  const patch = Object.assign({}, ...chosen.map(item => item.patch));
+  const patch = Object.create(null);
+  for (const item of chosen) for (const [key, value] of Object.entries(item.patch)) patch[key] = value;
   const fields = Object.keys(patch);
   const preview = applyApprovedDesignPatch(state.raw, patch, fields);
   const heading = document.createElement('b');
@@ -452,7 +453,8 @@ $('#workflow-review')?.addEventListener('click', event => {
   if (!button) return;
   const recommendations = currentWorkflowReview?.recommendations || [];
   const chosen = recommendations.filter(item => selectedWorkflowRecommendations.has(item.id) && item.patch && typeof item.patch === 'object');
-  const patch = Object.assign({}, ...chosen.map(item => item.patch));
+  const patch = Object.create(null);
+  for (const item of chosen) for (const [key, value] of Object.entries(item.patch)) patch[key] = value;
   const preview = applyApprovedDesignPatch(state.raw, patch, Object.keys(patch));
   if (!preview.changed) return toast('Нет безопасных подготовленных изменений для применения.');
   load(preview.project, 'Одобренные изменения применены. Повторно проверяем сайт…');
