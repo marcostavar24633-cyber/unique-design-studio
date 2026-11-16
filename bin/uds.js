@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // CLI Unique Design Studio.
 import { createServer } from 'node:http';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARCHETYPES, buildConcept, buildPrompt, generate, normalizeProject } from '../src/engine/index.js';
+import { buildCloudflarePagesDeployArgs } from '../src/engine/cloudflare-pages.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const HELP = `Unique Design Studio — генератор уникальных главных страниц
@@ -95,6 +97,30 @@ switch (cmd) {
     printAudit(r.audit);
     console.log(`\nГотово: ${join(out, 'index.html')}`);
     process.exit(r.audit.ok ? 0 : 1);
+  }
+  case 'deploy': {
+    const projectFile = args._[0];
+    const projectName = args['project-name'];
+    const branch = typeof args.branch === 'string' ? args.branch : 'production';
+    if (!projectName || typeof projectName !== 'string') fail('Укажите --project-name с именем уже созданного Cloudflare Pages project.');
+    const raw = loadProject(projectFile);
+    const reg = loadRegistry(args);
+    const r = generate(raw, { registry: reg.list });
+    printConcept(r.concept);
+    console.log('\\nПроверка перед публикацией:');
+    printAudit(r.audit);
+    if (!r.audit.ok) fail('Публикация отменена: исправьте ошибки аудита и повторите команду.');
+    const out = resolve(typeof args.out === 'string' ? args.out : join('out', r.project.id, 'cloudflare-pages'));
+    mkdirSync(out, { recursive: true });
+    writeFileSync(join(out, 'index.html'), r.html);
+    const deployArgs = buildCloudflarePagesDeployArgs(out, projectName, branch);
+    console.log('\\nОтправляю сайт в Cloudflare Pages…');
+    const executable = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    const result = spawnSync(executable, ['wrangler', ...deployArgs], { stdio: 'inherit', shell: process.platform === 'win32' });
+    if (result.error) fail(`Не удалось запустить Wrangler: ${result.error.message}. Установите Node.js/npm и выполните npx wrangler login.`);
+    if (result.status !== 0) process.exit(result.status || 1);
+    console.log('\\nПубликация завершена. Проверьте адрес deployment, который вывел Wrangler.');
+    break;
   }
   case 'concept': {
     const { visualSystem, ...contract } = buildConcept(loadProject(args._[0]), { registry: loadRegistry(args).list });
