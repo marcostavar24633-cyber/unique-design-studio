@@ -107,6 +107,7 @@ button.wide{width:100%;min-height:44px}
 .visual-asset-director h3{margin:0 0 8px;font-size:18px}
 .visual-asset-director h4{margin:18px 0 8px;font-size:15px}
 .asset-coverage-list{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.asset-recommendations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 18px}.asset-recommendation{padding:10px 12px;border:1px solid var(--line);border-left-width:3px;border-radius:8px;background:var(--bg)}.asset-recommendation b{font-size:13px}.asset-recommendation p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.asset-recommendation.is-important{border-left-color:var(--warn)}.asset-recommendation.is-check{border-left-color:var(--accent)}.asset-recommendation.is-good{border-left-color:var(--ok)}.asset-recommendation.is-manual{border-left-color:var(--line)}@media(max-width:600px){.asset-recommendations{grid-template-columns:1fr}}
 .asset-coverage{padding:5px 10px;border:1px solid var(--line);border-radius:20px;font-size:12px}
 .asset-coverage.is-present{border-color:var(--ok);color:var(--ok)}
 .asset-coverage.is-missing{border-color:var(--warn);color:var(--warn)}
