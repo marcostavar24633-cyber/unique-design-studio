@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "unique-design-studio-ai",
+  "main": "index.js",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": true,
+  "ai": {
+    "binding": "AI"
+  }
+}
