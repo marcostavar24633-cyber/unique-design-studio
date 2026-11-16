@@ -142,3 +142,6 @@ button.wide{width:100%;min-height:44px}
 
 /* Hero Readability QA */
 .hero-readability{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}.hero-readability h3{margin:0 0 8px}.hero-readability>button{min-height:44px;padding:10px 16px;border:0;border-radius:var(--radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}.hero-readability>button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.hero-readability .visual-quality-list{margin-bottom:0}
+
+/* Responsive Layout & Accessibility QA */
+.responsive-a11y{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius)}.responsive-a11y h3{margin:0 0 8px}.responsive-a11y>button{min-height:44px;padding:10px 16px;border:0;border-radius:var(--radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:650;cursor:pointer}.responsive-a11y>button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}.responsive-a11y .visual-quality-list{margin-bottom:0}
