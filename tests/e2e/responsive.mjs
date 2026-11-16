@@ -95,6 +95,14 @@ for (const { name, html } of pages) {
     await page.locator('#publish-confirm-success').check();
     await page.locator('#publish-record-deployment').click();
     if (!(await page.locator('#publish-history-list').getByText('https://uds-smoke-test.pages.dev/').count())) failures.push('publish manager: deployment history record was not rendered');
+    if (!(await page.locator('.deployment-monitor__stats').count())) failures.push('deployment monitor: summary counters were not rendered');
+    if (!(await page.locator('[data-deployment-filter="production"]').count())) failures.push('deployment monitor: Production filter is missing');
+    await page.route('https://uds-smoke-test.pages.dev/**', route => route.fulfill({ status: 200, body: 'ok' }));
+    await page.locator('#deployment-check-all').click();
+    await page.getByText('Доступен · HTTP 200').waitFor({ state: 'visible' });
+    await page.locator('[data-deployment-filter="preview"]').click();
+    if (!(await page.locator('.publish-history__empty').count())) failures.push('deployment monitor: empty Preview filter did not render');
+    await page.locator('[data-deployment-filter="all"]').click();
     await page.locator('[data-delete-deployment]').first().click();
     if (!(await page.locator('.publish-history__empty').count())) failures.push('publish manager: deleted record still appears');
     checks++;
