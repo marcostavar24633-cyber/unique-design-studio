@@ -61,3 +61,15 @@ test('workflow runs the built-in Design Director and keeps its recommendations p
   assert.equal(result.stages.findLast(item => item.id === 'approved_fixes').status, 'needs_approval');
   assert.equal(result.fixes.status, 'awaiting_approval');
 });
+
+test('approved design patches expose a preview and only change allowlisted approved fields', async () => {
+  const { applyApprovedDesignPatch } = await import('../src/engine/design-director.js');
+  const source = { title: 'Старый заголовок', cta: 'Подробнее', privateNote: 'не менять' };
+  const proposal = { title: 'Новый заголовок', privateNote: 'подмена' };
+  const preview = applyApprovedDesignPatch(source, proposal, ['title', 'privateNote']);
+  assert.equal(preview.changed, true);
+  assert.deepEqual(preview.applied, ['title']);
+  assert.equal(preview.project.title, 'Новый заголовок');
+  assert.equal(preview.project.privateNote, 'не менять');
+  assert.equal(source.title, 'Старый заголовок');
+});
