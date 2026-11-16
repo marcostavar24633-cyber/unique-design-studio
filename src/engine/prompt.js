@@ -39,7 +39,7 @@ export function buildPrompt(input, concept, analysis) {
   ].filter(Boolean).join('\n\n');
 
   const lib = concept.libraryUse;
-  const libraryBlock = lib ? `\nРешения из библиотеки шаблонов (изучены: ${lib.references.map(r => `«${r.name}»`).join(', ')}):\n${list([...lib.patterns.structure, ...lib.patterns.ux, ...lib.patterns.content])}\nНе копировать тексты, изображения, логотипы, палитру и фирменный стиль источников.\n` : '';
+  const libraryBlock = lib ? `\nРешения из библиотеки шаблонов (изучены: ${lib.references.map(r => `«${r.name}»`).join(', ')}):\n${list([...lib.patterns.structure, ...lib.patterns.ux, ...lib.patterns.content])}\nЗапрещено: копировать тексты, изображения, логотипы, палитру и фирменный стиль источников. Используй только обобщённые UX- и структурные принципы, создавая оригинальное решение.\n` : '';
 
   const full = `Ты — команда из четырёх специалистов: исследователь рынка, бренд-стратег, UX-копирайтер и арт-директор. Подготовь тексты главной страницы на русском языке строго внутри дизайн-концепции ниже. Не задавай вопросов — где данных нет, используй осторожные формулировки и вынеси вопрос в assumptions.
 
