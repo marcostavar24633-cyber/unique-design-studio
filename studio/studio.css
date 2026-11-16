@@ -348,3 +348,21 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .deployment-monitor__filters button{min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#14171c;color:var(--muted);font-size:11px}
 .deployment-monitor__filters button[aria-pressed="true"]{border-color:rgba(201,164,94,.65);background:rgba(201,164,94,.1);color:#f0d69f}
 @media(max-width:640px){.deployment-monitor__top{align-items:stretch;flex-direction:column}.deployment-monitor__top button{width:100%}.deployment-monitor__stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Cloud Monitor PRO — session-only admin connection */
+.cloud-monitor{display:grid;gap:13px;margin:22px 0;padding:17px;border:1px solid rgba(105,157,205,.32);border-radius:14px;background:#0d1218}
+.cloud-monitor>header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.cloud-monitor>header h3{margin:5px 0;font-size:19px}.cloud-monitor>header p,.cloud-monitor__note{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.55}
+.cloud-monitor__badge{padding:6px 9px;border:1px solid var(--line);border-radius:8px;color:#a9c8e8;font-size:10px;white-space:nowrap}
+.cloud-monitor__credentials,.cloud-monitor__add{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#111820}
+.cloud-monitor__credentials label,.cloud-monitor__add label{display:grid;gap:6px;font-size:11px;color:var(--muted)}
+.cloud-monitor__credentials input,.cloud-monitor__add input,.cloud-monitor__add select{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:#090e13;color:var(--text);font:inherit}
+.cloud-monitor__actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}.cloud-monitor__actions button,.cloud-monitor__add button{min-height:39px;padding:8px 12px}
+.cloud-monitor__status{margin:0;padding:10px 12px;border-radius:8px;background:#151a20;color:var(--muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.cloud-monitor__status[data-state="ok"]{color:#9ed7b0}.cloud-monitor__status[data-state="error"]{color:#f0a4a4}
+.cloud-monitor__add{grid-template-columns:1.1fr 1.6fr 1fr auto;align-items:end}
+.cloud-monitor__sites{display:grid;gap:8px}.cloud-monitor__site{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px;border:1px solid var(--line);border-radius:9px;background:#111820;min-width:0}
+.cloud-monitor__site>div{display:grid;gap:5px;min-width:0}.cloud-monitor__site b{font-size:12px}.cloud-monitor__site small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.cloud-monitor__site button{flex:none;min-height:34px;padding:6px 10px}
+.cloud-monitor [hidden]{display:none!important}
+@media(max-width:760px){.cloud-monitor__add{grid-template-columns:1fr 1fr}.cloud-monitor__add button{grid-column:1/-1}.cloud-monitor__credentials{grid-template-columns:1fr}}
+@media(max-width:480px){.cloud-monitor__add{grid-template-columns:1fr}.cloud-monitor__site{align-items:flex-start;flex-direction:column}.cloud-monitor__site button{width:100%}.cloud-monitor__actions{display:grid;grid-template-columns:1fr 1fr}.cloud-monitor__actions button{width:100%}}
