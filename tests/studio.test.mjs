@@ -77,3 +77,11 @@ test('Photo Art Direction creates a detailed niche-aware shot list', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function buildPhotoShotList(niche, tier)','function formatPhotoShotList(shots)','PHOTO ART DIRECTION — ПЛАН ФОТОСЪЁМКИ','Контекст и пространство','Процесс / работа','Макродеталь / фактура','Мобильный вертикальный кадр','Скопировать весь план фотосъёмки','data-copy-photo-shotlist','не инсценировать несуществующие действия','От 2400 × 1350 px']) assert.ok(source.includes(marker), marker);
 });
+
+test('Smart Image Matching ranks image candidates using role-specific technical signals', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of ['function scoreAssetForRole(report, role)','function buildSmartImageMatches(reports)','Smart Image Matching — подбор по техническим параметрам','Хорошее техническое соответствие','пропорциям, разрешению, средней яркости и локальной детализации','содержание и композицию проверяйте глазами']) assert.ok(source.includes(marker), marker);
+  assert.ok(source.includes("role === 'hero'"));
+  assert.ok(source.includes("role === 'gallery'"));
+  assert.ok(source.includes("role === 'service'"));
+});
