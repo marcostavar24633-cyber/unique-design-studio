@@ -267,3 +267,16 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .dash-nav-link{display:flex;align-items:center;gap:14px;min-height:43px;padding:9px 13px;border-radius:12px;color:#c6c1d1;text-decoration:none;font-size:14px}
 .dash-nav-link:hover{background:linear-gradient(100deg,#54228c,#32194f);color:#fff}
 .dash-nav-link:focus-visible{outline:2px solid #bd8aff;outline-offset:3px}
+
+
+/* Live production workflow progress */
+.workflow-progress{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none}
+.workflow-progress__item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:12px}
+.workflow-progress__name{font-weight:650}
+.workflow-progress__status{flex:none;color:var(--muted);font-size:11px}
+.workflow-progress__item.is-completed .workflow-progress__status{color:var(--ok,#83bd91)}
+.workflow-progress__item.is-running{border-color:var(--accent,#c9a45e)}
+.workflow-progress__item.is-running .workflow-progress__status{color:var(--accent,#c9a45e)}
+.workflow-progress__item.is-needs_input .workflow-progress__status,.workflow-progress__item.is-needs_approval .workflow-progress__status,.workflow-progress__item.is-needs_attention .workflow-progress__status{color:var(--warn,#d7ad65)}
+.workflow-progress__item.is-blocked .workflow-progress__status{color:var(--danger,#d77979)}
+@media(max-width:560px){.workflow-progress__item{align-items:flex-start;font-size:11px}.workflow-progress__status{font-size:10px}}
