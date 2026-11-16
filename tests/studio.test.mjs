@@ -73,6 +73,14 @@ test('код веб-редактора синтаксически коррект
   ]) assert.ok(source.includes(marker), marker);
 });
 
+test('Mobile crop previews remain readable and horizontally scrollable on narrow screens', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.match(css, /@media\(max-width:520px\)\{\.crop-editor__grid\{grid-template-columns:1fr\}/);
+  assert.match(css, /\.crop-live-previews\{grid-template-columns:repeat\(3,minmax\(88px,1fr\)\);overflow-x:auto/);
+  assert.match(css, /scroll-snap-type:x proximity/);
+  assert.match(css, /\.crop-live\{scroll-snap-align:start\}/);
+});
+
 test('Photo Art Direction creates a detailed niche-aware shot list', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function buildPhotoShotList(niche, tier)','function formatPhotoShotList(shots)','PHOTO ART DIRECTION — ПЛАН ФОТОСЪЁМКИ','Контекст и пространство','Процесс / работа','Макродеталь / фактура','Мобильный вертикальный кадр','Скопировать весь план фотосъёмки','data-copy-photo-shotlist','не инсценировать несуществующие действия','От 2400 × 1350 px']) assert.ok(source.includes(marker), marker);
