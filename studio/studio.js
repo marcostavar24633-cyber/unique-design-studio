@@ -298,6 +298,35 @@ const WORKFLOW_STATUS = {
   needs_attention: 'Нужно внимание', needs_approval: 'Ожидает подтверждения',
   blocked: 'Заблокировано', manual: 'Ручной этап',
 };
+function renderWorkflowVisual(brief) {
+  const root = $('#workflow-visual');
+  if (!root || !brief) return;
+  root.hidden = false;
+  root.replaceChildren();
+  const heading = document.createElement('h4');
+  heading.textContent = 'Image Director — визуальное техническое задание';
+  const direction = document.createElement('p');
+  direction.textContent = 'Направление: ' + (brief.direction || 'уточняется по концепции');
+  const slots = document.createElement('p');
+  slots.className = 'note';
+  slots.textContent = 'Нужные кадры: ' + (brief.requiredSlots || []).join(' · ');
+  root.append(heading, direction, slots);
+  const prompts = Array.isArray(brief.prompts) ? brief.prompts : [];
+  if (prompts.length) {
+    const list = document.createElement('ul');
+    list.className = 'workflow-review__list';
+    for (const prompt of prompts) {
+      const item = document.createElement('li');
+      item.textContent = prompt;
+      list.append(item);
+    }
+    root.append(list);
+  }
+  const note = document.createElement('p');
+  note.className = 'note';
+  note.textContent = 'Бриф и промты подготовлены. Реальные фотографии нужно загрузить или назначить в разделе «Фотографии и визуал»; генерация изображений автоматически не заявляется.';
+  root.append(note);
+}
 function renderWorkflowReview(review) {
   const root = $('#workflow-review');
   if (!root || !review) return;
@@ -399,6 +428,7 @@ $('#auto').addEventListener('submit', async e => {
         workflowEvents.push(item);
         renderWorkflowProgress(workflowEvents);
         if (item.id === 'design_review' && item.review) renderWorkflowReview(item.review);
+        if (item.id === 'visual' && item.brief) renderWorkflowVisual(item.brief);
       },
     });
     state.workflow = {
