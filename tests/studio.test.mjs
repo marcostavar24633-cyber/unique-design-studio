@@ -95,3 +95,13 @@ test('Hero Readability QA restores preview sizing after responsive checks', () =
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.match(source, /finally\s*\{\s*frame\.style\.width = originalWidth;\s*frame\.style\.height = originalHeight;/);
 });
+
+test('Responsive Layout and Accessibility QA checks overflow, overlaps and accessible controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of ['function auditResponsiveLayoutAndAccessibility()','width:320,label:\'Телефон 320 px\'','width:375,label:\'Телефон 375 px\'','width:768,label:\'Планшет 768 px\'','горизонтальная прокрутка','элементы без доступного имени','маленькие интерактивные области','пересечение интерактивных элементов','поля без подписи','data-run-responsive-a11y','responsive-a11y-results']) assert.ok(source.includes(marker), marker);
+});
+
+test('Responsive QA restores preview dimensions after testing each viewport', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.match(source, /function auditResponsiveLayoutAndAccessibility\(\)[\\s\\S]*?finally\\s*\\{\\s*frame\\.style\\.width = originalWidth;\\s*frame\\.style\\.height = originalHeight;\\s*frame\\.style\\.maxWidth = originalMaxWidth;/);
+});
