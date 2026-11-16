@@ -117,8 +117,8 @@ function nav(c) {
 const HERO = {
   'product-first'(c) {
     const it = c.p.services[0];
-    const media = c.p.images.hero ? visual(c) : it && it.image
-      ? `<img class="ds-media" src="${esc(it.image)}" alt="${esc(it.alt || it.title)}" fetchpriority="high" decoding="async">` : visual(c);
+    // Единый выбор изображения для всех архитектур: hero → галерея → услуга → мотив.
+    const media = visual(c);
     const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#item-0">Подробнее</a></div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },

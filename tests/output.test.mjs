@@ -212,3 +212,19 @@ test('реальная фотография проекта автоматиче�
   assert.ok(explicitHero.html.includes('src="data:image/webp;base64,EXPLICIT" alt="Главная фотография"'));
   assert.ok(!explicitHero.html.includes('src="' + galleryPhoto + '" alt="Фото галереи" fetchpriority="high"'));
 });
+
+
+test('product-first использует фото галереи на карточке товара, если hero и фото услуги не заданы', () => {
+  const galleryPhoto = 'data:image/webp;base64,PRODUCT_GALLERY';
+  const result = generate({
+    ...full,
+    architecture: 'product-first',
+    images: {},
+    services: [['Товар без фото', 'Описание товара', '10 000 ₽']],
+    gallery: [{ src: galleryPhoto, alt: 'Главный товар в интерьере', caption: 'Главный товар' }],
+  });
+  assert.ok(
+    result.html.includes(`src="${galleryPhoto}" alt="Главный товар в интерьере" fetchpriority="high"`),
+    'product-first должен брать изображение из галереи через общий photo fallback',
+  );
+});
