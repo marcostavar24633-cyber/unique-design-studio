@@ -13,7 +13,7 @@ export { exportProject, normalizeProject, resolveArchitecture, tierOf, FORMAT_VE
 export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES, WEB_FONTS } from './data.js';
 export { contrast } from './color.js';
 export { LIBRARY_KEY, normalizeLibrary, referencesFor } from './library.js';
-export { analyzeSite, analyzeHtml, analyzeCss } from './site-analysis.js';
+export { analyzePage, buildProfile, stylesheetLinks, headingType } from './site-analysis.js';
 export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIELDS } from './design-director.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
