@@ -143,3 +143,34 @@ test('monitor refuses redirects to hosts outside the allowlist', async () => {
     assert.equal(requests, 1);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+
+test('monitor preflight permits only the configured origin and required auth headers', async () => {
+  const response = await worker.fetch(new Request('https://worker.test/api/monitor/sites', {
+    method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'authorization,content-type' },
+  }), monitorEnv());
+  assert.equal(response.status, 204);
+  assert.match(response.headers.get('Access-Control-Allow-Headers'), /Authorization/);
+  assert.match(response.headers.get('Access-Control-Allow-Methods'), /GET/);
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), origin);
+});
+
+test('scheduled monitor checks saved sites without exposing the admin token', async () => {
+  const env = monitorEnv();
+  const added = await worker.fetch(new Request('https://worker.test/api/monitor/sites', {
+    method: 'POST', headers: monitorHeaders,
+    body: JSON.stringify({ url: 'https://demo.pages.dev/', label: 'Scheduled' }),
+  }), env);
+  assert.equal(added.status, 201);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 204 });
+  try {
+    let pending;
+    await worker.scheduled(null, env, { waitUntil(promise) { pending = promise; } });
+    await pending;
+    const listed = await worker.fetch(new Request('https://worker.test/api/monitor/sites', { headers: monitorHeaders }), env);
+    const site = (await listed.json()).sites[0];
+    assert.equal(site.lastCheck.state, 'reachable');
+    assert.equal(site.lastCheck.httpStatus, 204);
+  } finally { globalThis.fetch = originalFetch; }
+});
