@@ -9,10 +9,10 @@ import { examples, full, root } from './helpers.mjs';
 test('immersive hero adds a stronger, readable mobile text zone', () => {
   const css = readFileSync(new URL('../src/engine/css.js', import.meta.url), 'utf8');
   const mobile = css.slice(css.indexOf('@media(max-width:600px)', css.indexOf('hero__scrim')));
-  assert.match(mobile, /hero__scrim\\{background:linear-gradient\\(to top,rgba\\(0,0,0,\\.9\\)/);
-  assert.match(mobile, /hero--immersive h1\\{max-width:14ch/);
-  assert.match(mobile, /text-wrap:balance/);
-  assert.match(mobile, /hero--immersive \\.actions \\.ds-button\\{min-height:48px/);
+  assert.ok(mobile.includes('.hero__scrim{background:linear-gradient(to top,rgba(0,0,0,.9)'));
+  assert.ok(mobile.includes('.hero--immersive h1{max-width:14ch'));
+  assert.ok(mobile.includes('text-wrap:balance'));
+  assert.ok(mobile.includes('.hero--immersive .actions .ds-button{min-height:48px'));
 });
 
 test('примеры проходят проверку перед выдачей без ошибок (§9)', () => {
