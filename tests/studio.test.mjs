@@ -194,3 +194,23 @@ test('Gallery reordering controls are available and preserve image art direction
     'Порядок фотографий обновлён'
   ]) assert.ok(source.includes(marker), marker);
 });
+
+
+test('Gallery supports drag-and-drop ordering and shifts associated indexed variants', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'draggable="true" data-gallery-item=',
+    "addEventListener('dragstart'",
+    "addEventListener('dragover'",
+    "addEventListener('drop'",
+    "addEventListener('dragend'",
+    'function reorderIndexedEntries(bucket, from, to)',
+    'function reorderGalleryImage(from, to)',
+    'reorderIndexedEntries(art.gallery, from, to)',
+    'reorderIndexedEntries(art.mobileSources?.gallery, from, to)',
+    'reorderGalleryImage(from, target)'
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.is-dragging/);
+  assert.match(css, /\.is-drop-target/);
+});
