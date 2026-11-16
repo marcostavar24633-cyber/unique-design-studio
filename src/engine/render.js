@@ -37,8 +37,9 @@ function context(project, concept) {
 }
 
 function leadFormSpec(p) {
+  // Форма показывается только при наличии реального HTTPS endpoint. mailto не является
+  // надёжным form handler: для email fallback выводится обычная ссылка в контактах.
   if (p.formAction) return { action: p.formAction, extra: '' };
-  if (p.contacts.email) return { action: `mailto:${p.contacts.email}`, extra: ' enctype="text/plain"' };
   return null;
 }
 
@@ -63,7 +64,7 @@ function visual(c, variant = 0) {
 function leadForm(c, prefix) {
   if (!c.form) return '';
   const opts = c.p.services.filter(i => i.title).map(i => `<option>${esc(i.title)}</option>`).join('');
-  return `<form class="form" action="${esc(c.form.action)}" method="post"${c.form.extra}>
+  return `<form class="form" action="${esc(c.form.action)}" method="post" data-form-delivery="endpoint-configured">
 <label for="${prefix}-name">Имя<input class="ds-field" id="${prefix}-name" name="name" autocomplete="name" required></label>
 <label for="${prefix}-contact">Телефон или e-mail<input class="ds-field" id="${prefix}-contact" name="contact" autocomplete="tel" required></label>
 ${opts ? `<label for="${prefix}-topic">${esc(c.labels.items)}<select class="ds-field" id="${prefix}-topic" name="topic" data-topic><option value="">Не выбрано</option>${opts}</select></label>` : ''}
