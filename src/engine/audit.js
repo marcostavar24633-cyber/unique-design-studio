@@ -52,8 +52,12 @@ export function auditSite(html, concept, input) {
   const ctas = tags.filter(t => t.attrs['data-cta'] === 'primary');
   test(ctas.length >= 1, 'cta', 'Основной CTA виден на первом экране', 'На первом экране нет основного CTA');
   const k = project.contacts;
-  const hasPath = Boolean(project.formAction || k.email || k.phone || k.address || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
-  test(hasPath, 'cta-path', 'Путь пользователя завершается действием: есть форма, контакты или внешняя ссылка', 'CTA ведёт в раздел без способа связи: укажите контакты, formAction или ctaUrl');
+  const hasPath = Boolean(project.formAction || k.email || k.phone || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
+  test(hasPath, 'cta-path', 'Путь пользователя завершается действием: есть форма, телефон, email или внешняя ссылка', 'CTA ведёт в раздел без способа связи: укажите телефон, email, formAction или ctaUrl');
+  const formDelivery = project.formAction ? 'endpoint-configured' : k.email ? 'mailto-fallback' : 'not-configured';
+  if (formDelivery === 'endpoint-configured') add('warn', 'form-delivery', 'HTTPS endpoint формы настроен, но фактическая доставка заявки не подтверждена тестовой отправкой');
+  else if (formDelivery === 'mailto-fallback') add('warn', 'form-delivery', 'Указан email для связи, но серверная форма не настроена: отправка через почтовую ссылку зависит от почтового приложения пользователя');
+  else add('warn', 'form-delivery', 'Приём заявок не настроен: добавьте HTTPS formAction или укажите рабочие контакты');
   if (/@example\.(com|org|net)|\/\/example\.(com|org|net)/.test(`${k.email} ${project.formAction} ${project.ctaUrl}`)) add('warn', 'placeholder-contacts', 'Контакты указывают на example.com — это заглушка, замените перед публикацией');
 
   // Изображения и формы
@@ -121,5 +125,5 @@ export function auditSite(html, concept, input) {
 
   const errors = checks.filter(c => c.level === 'error');
   const warnings = checks.filter(c => c.level === 'warn');
-  return { ok: errors.length === 0, errors, warnings, checks };
+  return { ok: errors.length === 0, errors, warnings, checks, formDelivery };
 }
