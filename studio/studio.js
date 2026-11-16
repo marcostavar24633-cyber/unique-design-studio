@@ -197,7 +197,10 @@ $('#auto').addEventListener('submit', async e => {
   if (endpoint) {
     status.textContent = 'AI изучает нишу в интернете и пишет тексты — обычно это занимает до минуты…';
     try {
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+      // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
+      // а не только ниша: так AI пишет тексты внутри выбранной композиции.
+      const studioPrompt = autopilot(input, { registry: registry() }).prompt;
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
