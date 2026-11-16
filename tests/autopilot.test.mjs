@@ -1,7 +1,7 @@
 // Автопилот: сайт по одной нише, класс проекта, подробный промт и разбор ответа AI-сервера.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NICHES, autopilot, buildPrompt, buildConcept, fromAiLanding, generate, normalizeProject, tierOf } from '../src/engine/index.js';
+import { NICHES, autopilot, buildPrompt, buildConcept, exportProject, fromAiLanding, generate, normalizeProject, tierOf } from '../src/engine/index.js';
 
 test('любая ниша собирается в проект без ошибок проверки', () => {
   const niches = ['ювелирная мастерская', 'школа сёрфинга', 'доставка устриц', 'магазин телескопов', 'кофейня', 'ремонт квартир', 'юрист по банкротству', 'студия йоги', 'что-то совсем новое'];
@@ -93,4 +93,25 @@ test('ответ AI-сервера превращается в проект и �
   const r = generate(project);
   assert.deepEqual(r.audit.errors, []);
   assert.equal(r.concept.visualSystem.palette.accent === '#ff0000', false);
+});
+
+test('свой промт: дополняет или заменяет стандартный, сохраняет честность и формат ответа', () => {
+  const mine = 'Пиши для аудитории 35+, упор на ручную работу, без слов «лучший» и «уникальный».';
+  const base = { niche: 'ювелирная мастерская', tier: 'luxury', email: 'a@example.com', customPrompt: mine };
+  const add = autopilot({ ...base, customPromptMode: 'append' });
+  assert.ok(add.prompt.includes('# 1. Проект') && add.prompt.includes('# 12. Указания заказчика'));
+  assert.ok(add.prompt.trimEnd().endsWith(mine));
+  const rep = autopilot({ ...base, customPromptMode: 'replace' });
+  assert.ok(rep.prompt.startsWith(mine), 'промт заказчика первым');
+  assert.ok(!rep.prompt.includes('# 5. Тон и лексика'), 'стандартные правила заменены');
+  for (const s of ['# 1. Проект', '# 6. Дизайн-концепция', '# 11. Формат ответа', 'не выдумывай цены']) assert.ok(rep.prompt.includes(s), s);
+  // Без своего промта — прежний стандартный промт.
+  assert.ok(!autopilot({ niche: 'кофейня' }).prompt.includes('Указания заказчика'));
+  // Сохраняется в проекте, экспорте и после импорта; длина ограничена.
+  const out = exportProject(rep.project, buildConcept(rep.project));
+  assert.equal(out.customPrompt, mine);
+  assert.equal(out.customPromptMode, 'replace');
+  assert.equal(normalizeProject(out).customPromptMode, 'replace');
+  assert.equal(normalizeProject({ niche: 'x', customPrompt: 'я'.repeat(9000) }).customPrompt.length, 8000);
+  assert.equal(normalizeProject({ niche: 'x', customPromptMode: 'что-то' }).customPromptMode, 'append');
 });

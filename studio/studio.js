@@ -33,6 +33,8 @@ const GROUPS = [
     ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
     ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
+    ['customPrompt', 'Свой промт', 'area', 'Ваши указания для нейросети: попадают в «Промт для AI» и во вкладку «ТЗ и анализ»'],
+    ['@promptMode', 'Как использовать свой промт', 'promptMode'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
     ['brandCharacter', 'Характер бренда'],
   ]],
@@ -123,6 +125,7 @@ function buildForm() {
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'promptMode') control = `<select id="${id}" data-special="promptMode">${[['append', 'Дополнить стандартный — мои указания важнее'], ['replace', 'Заменить стандартный моим']].map(([k, v]) => `<option value="${k}"${p.customPromptMode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
@@ -168,16 +171,26 @@ $('#view-spec').addEventListener('click', async e => {
 });
 
 // ---------- Автопилот ----------
-try { $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || ''; } catch { /* нет хранилища */ }
+try {
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
+  $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
+  $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
+  if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
+} catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
+    customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
   const endpoint = $('#auto-endpoint').value.trim();
-  try { localStorage.setItem('uds:ai-endpoint', endpoint); } catch { /* нет хранилища */ }
+  try {
+    localStorage.setItem('uds:ai-endpoint', endpoint);
+    localStorage.setItem('uds:custom-prompt', input.customPrompt);
+    localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
+  } catch { /* нет хранилища */ }
   const status = $('#auto-status'), go = $('#auto-go');
   go.disabled = true;
   let draft = null, note = '';
@@ -409,6 +422,7 @@ $('#form').addEventListener('input', e => {
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
   else if (t.dataset.special === 'tier') state.raw.tier = t.value;
+  else if (t.dataset.special === 'promptMode') state.raw.customPromptMode = t.value;
   else if (t.dataset.special === 'brand') {
     if (t.value) state.raw.brandProfile = t.value; else delete state.raw.brandProfile;
     // С брендом шрифты по умолчанию веб: обновляем переключатель, чтобы он показывал фактическое значение.

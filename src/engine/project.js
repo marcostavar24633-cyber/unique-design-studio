@@ -66,6 +66,9 @@ export function normalizeProject(raw = {}) {
   p.palette = paletteMode(raw.palette);
   // Класс проекта: standard | premium | luxury (влияет на композицию, типографику, палитру и тон текстов).
   p.tier = tierOf(raw.tier);
+  // Свой промт заказчика: дополняет стандартный (append) или заменяет его (replace) — см. prompt.js.
+  p.customPrompt = str(raw.customPrompt).slice(0, 8000);
+  p.customPromptMode = raw.customPromptMode === 'replace' ? 'replace' : 'append';
   // Фирменный профиль живого проекта (src/engine/brands.js): цвета, гарнитуры и скругления бренда.
   const brandId = str(raw.brandProfile).toLowerCase();
   p.brandProfile = BRANDS[brandId] ? brandId : '';
@@ -89,7 +92,7 @@ export function normalizeProject(raw = {}) {
   p.ctaUrl = safeUrl(raw.ctaUrl);
   p.formAction = /^https:\/\//i.test(str(raw.formAction)) ? str(raw.formAction) : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
-  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier',
+  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
     'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
@@ -118,6 +121,7 @@ export function exportProject(input, concept) {
   out.accentLocked = Boolean(p.accent);
   if (p.brandProfile) out.brandProfile = p.brandProfile;
   if (p.tier !== 'standard') out.tier = p.tier;
+  if (p.customPrompt) { out.customPrompt = p.customPrompt; out.customPromptMode = p.customPromptMode; }
   // Шрифты пишутся, только если отличаются от умолчания: иначе после импорта «system» стал бы
   // явным выбором и перекрыл бы веб-шрифты, которые фирменный профиль включает по умолчанию.
   if (p.fonts !== (p.brandProfile ? 'web' : 'system')) out.fonts = p.fonts;

@@ -38,7 +38,7 @@ export function buildPrompt(input, concept, analysis) {
     a.marketResearch ? `Уже собранное исследование:\n${a.marketResearch}` : '',
   ].filter(Boolean).join('\n\n');
 
-  return `Ты — команда из четырёх специалистов: исследователь рынка, бренд-стратег, UX-копирайтер и арт-директор. Подготовь тексты главной страницы на русском языке строго внутри дизайн-концепции ниже. Не задавай вопросов — где данных нет, используй осторожные формулировки и вынеси вопрос в assumptions.
+  const full = `Ты — команда из четырёх специалистов: исследователь рынка, бренд-стратег, UX-копирайтер и арт-директор. Подготовь тексты главной страницы на русском языке строго внутри дизайн-концепции ниже. Не задавай вопросов — где данных нет, используй осторожные формулировки и вынеси вопрос в assumptions.
 
 # 1. Проект
 Бренд: ${p.brand || '(не указан — предложи 3 варианта названия в assumptions, в текстах используй нейтральное «мы»)'}
@@ -116,4 +116,24 @@ advantagesTitle, advantages [[заголовок, текст]], processTitle, pr
 faqs [[вопрос, ответ]], contactTitle, contactText,
 imagePrompts [строки], researchSources [{title, url}], assumptions [строки].
 Этот JSON импортируется в Unique Design Studio и в Landing Studio без изменений.`;
+  return withCustomPrompt(full, p.customPrompt, p.customPromptMode);
+}
+
+/**
+ * Свой промт заказчика.
+ * append — стандартный промт + указания заказчика (они важнее общих правил);
+ * replace — промт заказчика + контекст проекта от студии (концепция, секции) и формат ответа,
+ *           чтобы ответ по-прежнему импортировался в студию.
+ * В обоих режимах сохраняются два правила: не выдумывать факты и отвечать в формате JSON.
+ */
+export function withCustomPrompt(full, custom, mode = 'append') {
+  const text = String(custom || '').trim();
+  if (!text) return full;
+  const keep = 'Обязательно в любом случае: не выдумывай цены, отзывы, сертификаты, адреса, телефоны и гарантии; верни ответ строго в формате JSON из раздела «Формат ответа».';
+  if (mode !== 'replace') {
+    return `${full}\n\n# 12. Указания заказчика (выполняй их в первую очередь)\nЕсли они расходятся с правилами выше — следуй указаниям заказчика. ${keep}\n\n${text}`;
+  }
+  const cut = (from, to) => { const a = full.indexOf(from); if (a < 0) return ''; const b = to ? full.indexOf(to, a) : -1; return full.slice(a, b < 0 ? undefined : b).trim(); };
+  const context = [cut('# 1. Проект', '# 2.'), cut('# 6. Дизайн-концепция', '# 8.'), cut('# 11. Формат ответа')].filter(Boolean).join('\n\n');
+  return `${text}\n\n---\n# Контекст проекта от Unique Design Studio\n${keep}\n\n${context}`;
 }

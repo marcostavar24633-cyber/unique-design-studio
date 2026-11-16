@@ -306,6 +306,7 @@ export function draftFromNiche(input = {}) {
     brand: brand || `${cap(niche)}${city ? ' · ' + city : ''}`,
     niche,
     tier,
+    customPrompt: str(input.customPrompt), customPromptMode: input.customPromptMode === 'replace' ? 'replace' : 'append',
     title: pack.title,
     description: fill(pack.sub, ctx) + (details ? ` ${details}` : ''),
     cta: pack.cta,
@@ -416,6 +417,7 @@ export function fromAiLanding(landing, input = {}) {
   const project = {
     formatVersion: 2, id: `ai-${Date.now().toString(36)}`,
     brand: str(input.brand) || str(l.brand), niche: str(input.niche) || str(l.niche), tier,
+    customPrompt: str(input.customPrompt), customPromptMode: input.customPromptMode === 'replace' ? 'replace' : 'append',
     title: str(l.title), description: str(l.description), cta: str(l.cta),
     targetAudience: str(l.targetAudience), mainOffer: str(l.mainOffer), visualDirection: str(l.visualDirection), strategySummary: str(l.strategySummary),
     aboutTitle: str(l.aboutTitle), aboutText: str(l.aboutText), servicesTitle: str(l.servicesTitle), servicesIntro: str(l.servicesIntro), services: pairs(l.services),

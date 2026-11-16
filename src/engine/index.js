@@ -7,7 +7,7 @@ import { exportProject, normalizeProject } from './project.js';
 export { buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
 export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
-export { buildPrompt } from './prompt.js';
+export { buildPrompt, withCustomPrompt } from './prompt.js';
 export { autopilot, buildSpec, draftFromNiche, fromAiLanding } from './autopilot.js';
 export { exportProject, normalizeProject, resolveArchitecture, tierOf, FORMAT_VERSION, TIERS } from './project.js';
 export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES, WEB_FONTS } from './data.js';
