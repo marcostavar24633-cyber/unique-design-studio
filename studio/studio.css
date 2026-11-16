@@ -261,3 +261,9 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .content-director__label{display:block;margin:12px 0 6px;font-size:12px;font-weight:700}
 #content-direction{width:100%;min-height:84px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
 @media(max-width:600px){.content-director{padding:14px}.content-director__stats{gap:6px}.content-director__stats>div{padding:9px}.content-director__stats b{font-size:18px}.content-director__stats small{font-size:10px}}
+
+
+/* Template Builder navigation link */
+.dash-nav-link{display:flex;align-items:center;gap:14px;min-height:43px;padding:9px 13px;border-radius:12px;color:#c6c1d1;text-decoration:none;font-size:14px}
+.dash-nav-link:hover{background:linear-gradient(100deg,#54228c,#32194f);color:#fff}
+.dash-nav-link:focus-visible{outline:2px solid #bd8aff;outline-offset:3px}
