@@ -363,7 +363,7 @@ function renderVisualAssetDirector(reports, duplicateCount, missingRoles) {
     gallery: 'Фокус: визуальное разнообразие ракурсов, планов и фактур; каждый кадр должен добавлять новую информацию.',
     service: 'Фокус: точное соответствие реальному товару или услуге, понятный силуэт и читаемая деталь.'
   };
-  const buildRolePrompt = (role, source, fallbackPrompt) => [source || fallbackPrompt, roleDirections[role], tierDirection].filter(Boolean).join('\\n\\n');
+  const buildRolePrompt = (role, source, fallbackPrompt) => [source || fallbackPrompt, roleDirections[role], tierDirection].filter(Boolean).join('\n\n');
   const prompts = {
     hero: buildRolePrompt('hero', sourcePrompts[0], fallback.hero),
     gallery: buildRolePrompt('gallery', sourcePrompts[4], fallback.gallery),
