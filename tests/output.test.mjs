@@ -228,3 +228,23 @@ test('product-first использует фото галереи на карто
     'product-first должен брать изображение из галереи через общий photo fallback',
   );
 });
+
+
+test('главное фото получает осмысленный ALT, если владелец не указал heroAlt', () => {
+  const result = generate({
+    ...full,
+    title: 'Мастерская авторской мебели',
+    images: { hero: 'data:image/webp;base64,HERO_WITHOUT_ALT', heroAlt: '' },
+  });
+  assert.ok(result.html.includes('alt="Мастерская авторской мебели" fetchpriority="high"'));
+  assert.ok(!result.audit.warnings.some(w => w.id === 'img-alt-empty'));
+});
+
+test('явно заданный heroAlt сохраняет приоритет над автоматическим описанием', () => {
+  const result = generate({
+    ...full,
+    title: 'Мастерская авторской мебели',
+    images: { hero: 'data:image/webp;base64,HERO_WITH_ALT', heroAlt: 'Стол из натурального дуба' },
+  });
+  assert.ok(result.html.includes('alt="Стол из натурального дуба" fetchpriority="high"'));
+});
