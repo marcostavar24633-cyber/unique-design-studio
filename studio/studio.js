@@ -393,6 +393,26 @@ function buildAssetRecommendations(reports, nearDuplicateCount = 0) {
   if (!serviceCount && !serviceImages.length) recommendations.push({ level: 'manual', title: 'Фото карточек не обязательны', text: 'Если сайт не показывает отдельные товары или услуги карточками, этот тип изображений можно не добавлять.' });
   return recommendations;
 }
+function buildPhotoShotList(niche, tier) {
+  const subject = String(niche || 'предложение бизнеса').trim();
+  const luxury = tier === 'luxury';
+  const premium = luxury || tier === 'premium';
+  const light = luxury ? 'Большой мягкий источник сбоку, контролируемые глубокие тени и чистые блики.' : premium ? 'Естественный направленный свет из окна или большой рассеиватель; мягкое заполнение теней.' : 'Мягкий естественный свет без жёсткой вспышки и цветных рефлексов.';
+  const background = luxury ? 'Минимальная сценография, натуральные материалы, чистый фон и осознанное пустое пространство.' : premium ? 'Спокойный фактурный фон, ограниченный реквизит, палитра согласована с сайтом.' : 'Реальная аккуратная среда без визуального шума.';
+  return [
+    {title:'Hero — ключевой образ',scene:'Один главный сюжет, раскрывающий ' + subject + '; объект или результат читается с первого взгляда.',plan:'Общий / средне-общий',angle:'На уровне объекта, лёгкий диагональный ракурс',light,background,composition:'Оставить 35–45% спокойной зоны с одной стороны под заголовок и CTA; важные детали не помещать под текст.',format:'Горизонталь 16:9',resolution:'От 2400 × 1350 px, желательно RAW'},
+    {title:'Контекст и пространство',scene:'Показать реальное место, окружение или контекст использования.',plan:'Общий план',angle:'Прямой или из угла помещения, вертикали без завала',light,background,composition:'Сохранить глубину переднего, среднего и заднего плана.',format:'Горизонталь 3:2',resolution:'От 2400 px по длинной стороне'},
+    {title:'Процесс / работа',scene:'Зафиксировать реальный этап работы; не инсценировать несуществующие действия.',plan:'Средний план',angle:'¾ сбоку, на уровне действия',light,background,composition:'Главное действие в фокусе, руки и инструмент не обрезать случайно.',format:'Вертикаль 4:5 и горизонталь 3:2',resolution:'От 2000 px по длинной стороне'},
+    {title:'Макродеталь / фактура',scene:'Показать материал, текстуру, отделку или важную деталь реального объекта.',plan:'Крупный / макро',angle:'Боковой скользящий угол для проявления фактуры',light:'Мягкий боковой свет, подчёркивающий рельеф без искусственного блеска.',background:'Нейтральная поверхность, минимум отвлекающих элементов.',composition:'Одна деталь занимает кадр; оставить запас по краям.',format:'Квадрат 1:1',resolution:'От 2000 × 2000 px'},
+    {title:'Результат / готовый объект',scene:'Показать реальный итог работы или объект целиком без неподтверждённых характеристик.',plan:'Средний и общий — два кадра',angle:'Фронтальный плюс ¾',light,background,composition:'Объект целиком, ровная перспектива, понятный масштаб.',format:'Квадрат 1:1 и вертикаль 4:5',resolution:'От 2000 px по длинной стороне'},
+    {title:'Человек / автор / команда (если уместно)',scene:'Естественный портрет специалиста или команды только при наличии согласия.',plan:'Поясной и крупный портрет',angle:'На уровне глаз, лёгкий поворот корпуса',light:'Мягкий боковой свет, естественный оттенок кожи.',background:'Реальная рабочая среда с мягким размытием.',composition:'Оставить пространство вокруг головы; не обрезать суставы по краю.',format:'Вертикаль 4:5',resolution:'От 2000 × 2500 px'},
+    {title:'Атмосферный кадр',scene:'Передать настроение бренда через реальную среду, свет и связанные с предложением детали.',plan:'Общий или деталь',angle:'Свободный авторский ракурс',light,background,composition:'Слоистая композиция, один визуальный акцент.',format:'Горизонталь 16:9 и вертикаль 4:5',resolution:'От 2400 px по длинной стороне'},
+    {title:'Мобильный вертикальный кадр',scene:'Отдельная композиция для мобильного экрана: ' + subject + ' крупно и ясно.',plan:'Средний план',angle:'Вертикальная съёмка с запасом сверху и снизу',light,background,composition:'Центральная безопасная зона; не полагаться только на обрезку горизонтального Hero.',format:'Вертикаль 4:5 или 3:4',resolution:'От 1600 × 2000 px'}
+  ];
+}
+function formatPhotoShotList(shots) {
+  return ['PHOTO ART DIRECTION — ПЛАН ФОТОСЪЁМКИ'].concat(shots.map((s,i) => (i+1)+'. '+s.title+'\nСюжет: '+s.scene+'\nПлан: '+s.plan+'\nРакурс: '+s.angle+'\nСвет: '+s.light+'\nФон: '+s.background+'\nКомпозиция: '+s.composition+'\nФормат: '+s.format+'\nРазрешение: '+s.resolution)).join('\n\n');
+}
 function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs = []) {
   const p = normalizeProject(state.raw);
   const dna = result.concept?.designDNA || {};
@@ -423,6 +443,9 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     service: buildRolePrompt('service', sourcePrompts[1], fallback.service)
   };
   const recommendations = buildAssetRecommendations(reports, nearDuplicateCount);
+  const shotList = buildPhotoShotList(p.niche, p.tier);
+  const shotCards = shotList.map((shot,index) => '<article class="photo-shot"><div class="photo-shot__head"><b>'+(index+1)+'. '+esc(shot.title)+'</b><span>'+esc(shot.format)+'</span></div><p><b>Сюжет:</b> '+esc(shot.scene)+'</p><p><b>План и ракурс:</b> '+esc(shot.plan)+'; '+esc(shot.angle)+'.</p><p><b>Свет:</b> '+esc(shot.light)+'</p><p><b>Фон:</b> '+esc(shot.background)+'</p><p><b>Композиция:</b> '+esc(shot.composition)+'</p><p><b>Файл:</b> '+esc(shot.resolution)+'</p></article>').join('');
+  const shotListText = formatPhotoShotList(shotList);
   const coverage = ['hero','gallery','service'].map(role => {
     const count = reports.filter(r => r.role === role).length;
     return `<span class="asset-coverage ${count ? 'is-present' : 'is-missing'}">${esc(roleLabels[role])}: ${count ? count + ' шт.' : 'нет'}</span>`;
@@ -441,7 +464,7 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
     ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
-    <h4>Задания на замену или новую съёмку</h4>
+    <h4>Photo Art Direction — план фотосессии</h4>\n    <p class="note">Shot list для фотографа: сюжеты, планы, ракурсы, свет, фон, композиция, ориентация и разрешение. Список учитывает нишу и уровень проекта, не выдумывая свойства товара или услуги.</p>\n    <div class="photo-shot-actions"><button type="button" data-copy-photo-shotlist="${esc(shotListText)}">Скопировать весь план фотосъёмки</button></div>\n    <div class="photo-shot-list">${shotCards}</div>\n    <h4>Задания на замену или новую съёмку</h4>
     <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
     <div class="asset-prompt-list">${promptCards}</div>
     <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Локальное сравнение похожести работает для встроенных в проект изображений; внешние URL не анализируются по пикселям из-за ограничений безопасности браузера. Технические признаки и повторы — ориентир, визуальную релевантность подтверждает человек.</p>
