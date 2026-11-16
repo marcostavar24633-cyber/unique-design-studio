@@ -5,6 +5,7 @@ const STORE = 'uds:studio:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
+const $ = sel => document.querySelector(sel);
 const AI_USAGE_KEY = 'uds:ai-success-count';
 function renderAiUsage() {
   const node = $('#ai-usage-count');
@@ -23,7 +24,6 @@ function recordAiUsage() {
 renderAiUsage();
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
-const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
