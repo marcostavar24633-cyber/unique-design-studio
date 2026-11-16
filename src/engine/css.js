@@ -112,7 +112,16 @@ export const HERO_CSS = {
 .hero--immersive .hero__content{position:relative;z-index:1;align-self:flex-end;padding-block:132px clamp(40px,8vw,96px)}
 .hero--immersive .kicker,.hero--immersive .lede{color:#fff}.hero--immersive .ds-button--secondary{color:#fff;border-color:rgba(255,255,255,.7)}
 .hero--immersive :focus-visible{outline-color:#fff}
-.is-bleed-center .hero__content{align-self:center;text-align:center}.is-bleed-center .lede{margin-inline:auto}.is-bleed-center .actions{justify-content:center}`,
+.is-bleed-center .hero__content{align-self:center;text-align:center}.is-bleed-center .lede{margin-inline:auto}.is-bleed-center .actions{justify-content:center}
+@media(max-width:600px){
+.hero--immersive{min-height:min(88svh,760px)}
+.hero__scrim{background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.76) 48%,rgba(0,0,0,.34) 100%)}
+.is-bleed-center .hero__scrim{background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.58))}
+.hero--immersive .hero__content{width:100%;padding-block:104px 36px}
+.hero--immersive h1{max-width:14ch;font-size:clamp(2rem,9vw,3.2rem);line-height:1.06;text-wrap:balance}
+.hero--immersive .lede{max-width:42ch;font-size:1rem}
+.hero--immersive .actions .ds-button{min-height:48px}
+}`,
   asymmetric: `
 .hero--asymmetric{padding-block:clamp(28px,5vw,72px)}
 .hero__canvas{display:grid;gap:24px}.hero__canvas .visual{aspect-ratio:4/3}
