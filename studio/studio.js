@@ -34,6 +34,9 @@ let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'all';
 let dashboardQuery = '';
+// Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
+// а вызывается из обработчика кнопок этой вкладки.
+let contentPrompt = () => '';
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -283,7 +286,7 @@ function renderSpec() {
   if (String(result.project.seoDescription || '').length > 160) flags.push('SEO Description длиннее 160 символов');
   const foundGeneric = [...new Set(textValues.flatMap(value => genericTerms.filter(term => value.toLowerCase().includes(term))))];
   if (foundGeneric.length) flags.push('Проверьте неподтверждённые или шаблонные формулировки: ' + foundGeneric.join(', '));
-  const contentPrompt = () => {
+  contentPrompt = () => {
     const direction = ($('#content-direction')?.value || '').trim();
     return [
       'РОЛЬ: AI Content Director — старший UX-копирайтер и редактор коммерческих сайтов.',
@@ -294,7 +297,7 @@ function renderSpec() {
       direction ? 'ДОПОЛНИТЕЛЬНОЕ НАПРАВЛЕНИЕ: ' + direction : '',
       'ТЕКУЩИЕ ДАННЫЕ ПРОЕКТА: ' + JSON.stringify(contentSnapshot),
       a ? 'КОНТЕКСТ АНАЛИЗА: ' + JSON.stringify({ audience:a.audience, pains:a.pains, objections:a.objections, positioning:a.positioning, sources:a.sources }) : 'Контекст аудитории и рынка не подтверждён — не выдавай предположения за факты.'
-    ].filter(Boolean).join('\\n\\n');
+    ].filter(Boolean).join('\n\n');
   };
   $('#view-spec').innerHTML = `
 <div class="spec-actions"><button type="button" data-spec="copy">Скопировать ТЗ</button><button type="button" data-spec="md">Скачать ТЗ (.md)</button><button type="button" data-spec="prompt">Скопировать промт для нейросети</button></div>
