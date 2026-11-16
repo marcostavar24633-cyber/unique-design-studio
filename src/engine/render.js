@@ -156,10 +156,10 @@ const HERO = {
 };
 
 // ---------- Секции ----------
-const wrap = (c, id, inner, intro = '') => `<section id="${id}" class="ds-section sec sec--${id}" aria-labelledby="${id}-h"><div class="ds-container"><header class="sec__head"><h2 id="${id}-h">${esc(c.titles[id])}</h2>${intro ? `<p class="sec__intro">${esc(intro)}</p>` : ''}</header>${inner}</div></section>`;
+const wrap = (c, id, inner, intro = '') => `<section id="${id}" class="${sectionClass(c, id)}" aria-labelledby="${id}-h"><div class="ds-container"><header class="sec__head"><h2 id="${id}-h">${esc(c.titles[id])}</h2>${intro ? `<p class="sec__intro">${esc(intro)}</p>` : ''}</header>${inner}</div></section>`;
 
 const SECTION = {
-  about: c => `<section id="about" class="ds-section sec sec--about" aria-labelledby="about-h"><div class="ds-container"><header class="sec__head"><h2 id="about-h">${esc(c.titles.about)}</h2></header><p class="about__text" data-reveal>${esc(c.p.aboutText)}</p></div></section>`,
+  about: c => `<section id="about" class="${sectionClass(c, 'about')}" aria-labelledby="about-h"><div class="ds-container"><header class="sec__head"><h2 id="about-h">${esc(c.titles.about)}</h2></header><p class="about__text" data-reveal>${esc(c.p.aboutText)}</p></div></section>`,
   items(c) {
     const v = c.vs.variants.items;
     const li = c.p.services.map((i, n) => {
@@ -192,7 +192,7 @@ const SECTION = {
     if (k.hours) rows.push(`<li><span>Часы работы</span>${esc(k.hours)}</li>`);
     const form = leadForm(c, 'contact');
     const ext = c.p.ctaUrl && !c.p.ctaUrl.startsWith('#') ? `<div class="actions">${cta(c)}</div>` : '';
-    return `<section id="contact" class="ds-section sec sec--contact" aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''}"><div><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form}</div></section>`;
+    return `<section id="contact" class="${sectionClass(c, 'contact')}" aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''}"><div><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form}</div></section>`;
   },
 };
 
@@ -220,7 +220,7 @@ export function renderCss(concept) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
-    CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype],
+    CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
@@ -253,7 +253,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 ${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept)}</style>
 ${jsonLd(c)}
 </head>
-<body id="top" class="arch-${vs.archetype} nav-${vs.nav}">
+<body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
 <a class="skip" href="#main">Перейти к содержимому</a>
 ${nav(c)}
 <main id="main">
