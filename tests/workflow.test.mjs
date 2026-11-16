@@ -39,3 +39,15 @@ test('workflow never applies review findings unless an explicit fix adapter is s
   assert.equal(result.fixes.status, 'awaiting_approval');
   assert.equal(result.stages.find(item => item.id === 'approved_fixes').status, 'needs_approval');
 });
+
+test('workflow uses a prepared AI draft instead of replacing it with local niche copy', async () => {
+  const draft = {
+    project: { niche: 'авторские диваны', brand: 'AI Atelier', title: 'Диваны по вашему сценарию', description: 'AI draft', services: [] },
+    analysis: { source: 'ai', niche: 'авторские диваны', audience: 'Покупатели дизайнерской мебели', segments: [], objections: [], keywords: [], imagePrompts: ['Editorial sofa photograph'] },
+  };
+  const result = await runWorkflow({ niche: 'другая ниша' }, { draft });
+  assert.equal(result.project.brand, 'AI Atelier');
+  assert.equal(result.project.title, 'Диваны по вашему сценарию');
+  assert.equal(result.analysis.source, 'ai');
+  assert.deepEqual(result.imageBrief.prompts, ['Editorial sofa photograph']);
+});
