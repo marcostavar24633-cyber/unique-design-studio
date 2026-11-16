@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Merge Control Center — UNIQUE DESIGN STUDIO</title>
+<meta name="description" content="Состояние Pull Request, CI и публикации Unique Design Studio.">
+<link rel="stylesheet" href="templates.css">
+<link rel="stylesheet" href="merge.css">
+</head>
+<body>
+<header class="top"><strong>✦ UNIQUE DESIGN STUDIO</strong><a href="index.html">← Вернуться в студию</a></header>
+<main>
+<section class="intro">
+  <div class="eyebrow">MERGE CONTROL CENTER</div>
+  <h1>Pull Request и слияние в main</h1>
+  <p>Данные берутся напрямую из GitHub. Панель только показывает состояние. Проверку на результате слияния и само слияние выполняет исполнитель Merge Engine в GitHub Actions: у браузера нет и не должно быть токена с правом записи.</p>
+</section>
+
+<section class="panel" aria-labelledby="mc-sum-h">
+  <div class="mc-head"><h2 id="mc-sum-h">Сводка</h2><span class="hint" id="mc-checked">Ещё не проверялось</span></div>
+  <div class="mc-stats" id="mc-stats" aria-live="polite"></div>
+  <div class="mc-actions">
+    <button type="button" class="primary" data-mc="refresh">Проверить PR</button>
+    <button type="button" data-mc="conflicts">Проверить конфликты</button>
+    <button type="button" data-mc="tests">Запустить тесты</button>
+    <button type="button" data-mc="prepare">Подготовить к merge</button>
+    <button type="button" data-mc="merge">Автоматический merge</button>
+    <button type="button" data-mc="history">История операций</button>
+  </div>
+  <p class="mc-note" id="mc-note" role="status"></p>
+</section>
+
+<section class="panel" aria-labelledby="mc-prs-h">
+  <h2 id="mc-prs-h">Открытые Pull Request</h2>
+  <div id="mc-prs"><p class="hint">Загрузка…</p></div>
+</section>
+
+<section class="panel" aria-labelledby="mc-hist-h" id="mc-history-panel">
+  <h2 id="mc-hist-h">История операций</h2>
+  <div class="mc-cols">
+    <div><h3>Запуски Merge Engine</h3><div id="mc-runs"><p class="hint">—</p></div></div>
+    <div><h3>Последние слияния в main</h3><div id="mc-merged"><p class="hint">—</p></div></div>
+  </div>
+</section>
+</main>
+<script type="module" src="merge.js"></script>
+</body>
+</html>
