@@ -39,7 +39,10 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 // Worker — на отдельном порту: как и в жизни, это другой origin, и браузер присылает заголовок Origin.
 const workerServer = createServer(async (req, res) => {
-  const r = await handle(new Request(`https://worker.dev${req.url}`, { method: req.method, headers: req.headers }), { ALLOWED_ORIGINS: base });
+  const r = await handle(new Request(`https://worker.dev${req.url}`, { method: req.method, headers: req.headers }), {
+    ALLOWED_ORIGINS: base,
+    RATE_LIMITER: { limit: async () => ({ success: true }) },
+  });
   res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(await r.text());
 });
 await new Promise(r => workerServer.listen(0, '127.0.0.1', r));
