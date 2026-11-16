@@ -42,6 +42,11 @@ function openWorkspace(section = 'create') {
   if (section === 'projects') selectTab($('#tab-registry'));
   if (section === 'publish') selectTab($('#tab-preview'));
 }
+$('#dashboard-back')?.addEventListener('click', () => {
+  document.body.classList.add('dashboard-mode');
+  renderDashboard();
+  $('#dash-search')?.focus({ preventScroll: true });
+});
 $('#dashboard')?.addEventListener('click', e => {
   const project = e.target.closest('[data-open-project]');
   if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
