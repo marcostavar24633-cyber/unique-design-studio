@@ -316,7 +316,7 @@ function renderVisualAssetLibrary() {
     return '<div class="asset-library__crops">' + viewports.map(([viewport,label,ratio]) => {
       const focal = entry?.[viewport] || {};
       const src = viewport === 'mobile' && item.phone ? item.phone : item.desktop;
-      const position = viewport === 'mobile' && item.phone ? '50% 50%' : `${cropCoordinate(focal.x)}% ${cropCoordinate(focal.y)}%`;
+      const position = cropCoordinate(focal.x) + '% ' + cropCoordinate(focal.y) + '%';
       return `<figure><div class="asset-library__crop-frame" style="aspect-ratio:${ratio}"><img src="${esc(src)}" alt="" loading="lazy" style="object-position:${position}"></div><figcaption>${label}</figcaption></figure>`;
     }).join('') + `</div><button type="button" class="asset-library__crop-action" data-open-crop-role="${role}" data-open-crop-index="${index}">Настроить кадрирование</button>`;
   };
@@ -1091,6 +1091,15 @@ $('#view-concept').addEventListener('click', e => {
   if (e.target.closest('[data-open-crop-role]')) {
     const button = e.target.closest('[data-open-crop-role]');
     const role = button.dataset.openCropRole, index = Number(button.dataset.openCropIndex);
+    const panelWasCollapsed = document.body.classList.contains('workspace-settings-collapsed');
+    if (panelWasCollapsed) {
+      document.body.classList.remove('workspace-settings-collapsed');
+      const toggle = $('#toggle-settings');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.textContent = 'Скрыть настройки';
+      }
+    }
     const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
     if (group) {
       group.open = true;
