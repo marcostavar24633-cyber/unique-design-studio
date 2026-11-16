@@ -281,6 +281,79 @@ function renderPublishHistory() {
   }).join('') : '<p class="publish-history__empty">' + (items.length ? 'В этой категории пока нет адресов.' : 'История пока пуста. После успешной команды Wrangler зафиксируйте deployment здесь.') + '</p>');
 }
 
+
+/* Cloud Monitor credentials live only in this page's JavaScript memory. */
+let cloudMonitorToken = '';
+let cloudMonitorEndpoint = '';
+let cloudMonitorSites = [];
+let cloudMonitorBusy = false;
+function cloudMonitorRequest(path, options = {}) {
+  if (!cloudMonitorToken || !cloudMonitorEndpoint) throw new Error('Сначала подключитесь к Cloud Monitor.');
+  return fetch(cloudMonitorEndpoint + path, {
+    ...options,
+    headers: { 'Authorization': 'Bearer ' + cloudMonitorToken, ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) },
+    cache: 'no-store',
+  }).then(async response => {
+    let data = {};
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data.error || ('Cloud Monitor ответил HTTP ' + response.status));
+    return data;
+  });
+}
+function renderCloudMonitorSites() {
+  const host = $('#cloud-monitor-sites'); if (!host) return;
+  host.innerHTML = cloudMonitorSites.length ? cloudMonitorSites.map(site => {
+    const check = site.lastCheck || {};
+    const status = check.state === 'reachable' ? 'Доступен · HTTP ' + check.httpStatus
+      : check.state === 'http-error' ? 'HTTP-ошибка · ' + check.httpStatus
+      : check.state === 'timeout' ? 'Тайм-аут'
+      : check.state === 'check-error' ? 'Ошибка проверки'
+      : 'Не проверялся';
+    return '<article class="cloud-monitor__site"><div><b>' + esc(site.label) + '</b><small>' + esc(site.environment) + ' · ' + esc(site.url) + '</small><small>' + esc(status) + (check.checkedAt ? ' · ' + esc(new Date(check.checkedAt).toLocaleString('ru-RU')) : '') + '</small></div><button type="button" data-cloud-delete="' + esc(site.id) + '">Удалить</button></article>';
+  }).join('') : '<p class="publish-history__empty">В облачном реестре пока нет сайтов.</p>';
+}
+function setCloudMonitorStatus(message, kind = '') {
+  const status = $('#cloud-monitor-status');
+  if (status) { status.textContent = message; status.dataset.state = kind; }
+}
+async function connectCloudMonitor() {
+  const endpoint = safeDeploymentUrl($('#cloud-monitor-endpoint')?.value);
+  const tokenInput = $('#cloud-monitor-token');
+  const token = String(tokenInput?.value || '').trim();
+  if (!endpoint || !/^https:\/\//i.test(endpoint)) return setCloudMonitorStatus('Укажите корректный HTTPS адрес Worker.', 'error');
+  if (!token || /\s/.test(token)) return setCloudMonitorStatus('Введите Bearer token без пробелов.', 'error');
+  cloudMonitorEndpoint = endpoint.replace(/\/$/, '');
+  cloudMonitorToken = token;
+  if (tokenInput) tokenInput.value = '';
+  setCloudMonitorStatus('Проверяю подключение…');
+  try {
+    const data = await cloudMonitorRequest('/api/monitor/sites');
+    cloudMonitorSites = Array.isArray(data.sites) ? data.sites : [];
+    $('#cloud-monitor-connect').hidden = true;
+    $('#cloud-monitor-disconnect').hidden = false;
+    $('#cloud-monitor-credentials')?.classList.add('is-connected');
+    setCloudMonitorStatus('Подключено. Получено адресов: ' + cloudMonitorSites.length + '.', 'ok');
+    renderCloudMonitorSites();
+  } catch (error) {
+    cloudMonitorToken = '';
+    cloudMonitorEndpoint = '';
+    setCloudMonitorStatus(error.message + ' Проверьте URL Worker, Bearer token, KV и CORS origin.', 'error');
+  }
+}
+function disconnectCloudMonitor() {
+  cloudMonitorToken = '';
+  cloudMonitorEndpoint = '';
+  cloudMonitorSites = [];
+  const tokenInput = $('#cloud-monitor-token'); if (tokenInput) tokenInput.value = '';
+  const endpointInput = $('#cloud-monitor-endpoint'); if (endpointInput) endpointInput.value = '';
+  $('#cloud-monitor-connect').hidden = false;
+  $('#cloud-monitor-disconnect').hidden = true;
+  $('#cloud-monitor-credentials')?.classList.remove('is-connected');
+  setCloudMonitorStatus('Отключено. Токен очищен из памяти страницы.');
+  renderCloudMonitorSites();
+}
+window.addEventListener('pagehide', () => { cloudMonitorToken = ''; cloudMonitorEndpoint = ''; });
+
 function renderPublishManager() {
   const host = $('#view-publish'); if (!host || !result) return;
   const projectName = String(publishSettings.projectName || result.project.id || '').toLowerCase();
@@ -311,6 +384,23 @@ function renderPublishManager() {
       <section class="publish-manager__terminal"><b>Команда для локального терминала</b><code id="publish-command">${esc(command)}</code><p>Перед запуском: установите Node.js 20+, откройте терминал в корне репозитория UNIQUE DESIGN STUDIO и один раз выполните <code>npx wrangler login</code>. Pages project должен быть создан заранее.</p></section>
       <ol class="publish-manager__steps"><li>Скачайте JSON проекта и поместите его в корень локальной копии репозитория под именем <code>uds-project.json</code>.</li><li>Убедитесь, что проект Pages существует в Cloudflare и выполнен вход через Wrangler.</li><li>Выполните команду выше. При ошибках аудита CLI остановит публикацию.</li><li>После успешной команды откройте URL, который выведет Wrangler. Подключение собственного домена настраивается отдельно в Cloudflare Pages → Custom domains.</li></ol>
       <p class="publish-manager__disclaimer">Статус здесь отражает только локальную готовность. Панель не имеет доступа к Cloudflare аккаунту и не утверждает, что сайт опубликован. Запись в истории создаётся только после вашего подтверждения успешного deployment в Wrangler.</p>
+      <section class="cloud-monitor" aria-labelledby="cloud-monitor-title">
+        <header><div><span class="publish-manager__eyebrow">CLOUD MONITOR PRO</span><h3 id="cloud-monitor-title">Облачный мониторинг</h3><p>Серверный реестр и проверки по расписанию. Подключение доступно только администратору.</p></div><span class="cloud-monitor__badge">Worker API</span></header>
+        <div id="cloud-monitor-credentials" class="cloud-monitor__credentials">
+          <label>Worker endpoint URL<input id="cloud-monitor-endpoint" type="url" placeholder="https://your-worker.your-account.workers.dev" autocomplete="url"></label>
+          <label>Административный Bearer token<input id="cloud-monitor-token" type="password" autocomplete="new-password" spellcheck="false" placeholder="Вставьте токен для подключения"></label>
+          <div class="cloud-monitor__actions"><button type="button" id="cloud-monitor-connect" class="primary">Подключить и проверить</button><button type="button" id="cloud-monitor-disconnect" hidden>Отключиться</button><button type="button" id="cloud-monitor-refresh" disabled>Обновить список</button><button type="button" id="cloud-monitor-check">Проверить все сайты</button></div>
+        </div>
+        <p id="cloud-monitor-status" class="cloud-monitor__status" role="status" aria-live="polite">Не подключено. Токен не сохраняется и очищается при закрытии страницы.</p>
+        <form id="cloud-monitor-add" class="cloud-monitor__add">
+          <label>Название<input name="label" maxlength="80" placeholder="Например, основной сайт"></label>
+          <label>URL сайта<input name="url" type="url" required placeholder="https://example.pages.dev"></label>
+          <label>Среда<select name="environment"><option value="production">Production</option><option value="preview">Preview</option><option value="custom">Собственный домен</option></select></label>
+          <button type="submit" class="primary" disabled>Добавить адрес</button>
+        </form>
+        <div id="cloud-monitor-sites" class="cloud-monitor__sites" aria-live="polite"><p class="publish-history__empty">Подключите Worker, чтобы загрузить облачный реестр.</p></div>
+        <p class="cloud-monitor__note">Требуется развернутый Worker, KV binding MONITOR_KV, секреты MONITOR_API_TOKEN и MONITOR_ALLOWED_HOSTS. Домен студии должен быть разрешён в CORS. Не вставляйте токен в URL, переписку или настройки сайта.</p>
+      </section>
       <section class="publish-history"><h3>История публикаций</h3><p class="note">Добавьте URL после того, как Wrangler подтвердил успешную публикацию. Проверка URL выполняется из браузера; некоторые сайты запрещают чтение ответа по CORS.</p>
         <div class="publish-history__form"><label for="publish-deployment-url">Фактический URL deployment</label><input id="publish-deployment-url" type="url" inputmode="url" placeholder="https://project.pages.dev" autocomplete="url"><label class="publish-history__confirm"><input id="publish-confirm-success" type="checkbox"> Я выполнил команду и Wrangler сообщил об успешной публикации</label><button type="button" id="publish-record-deployment" class="primary">Зафиксировать успешную публикацию</button></div>
         <div id="publish-history-list" class="publish-history__list" aria-live="polite"></div>
@@ -321,6 +411,36 @@ function renderPublishManager() {
   $('#publish-download-json').addEventListener('click', () => download('uds-project.json',JSON.stringify(result.exported,null,2)+'\\n','application/json'));
   $('#publish-download-html').addEventListener('click', () => download(`${result.project.id}.html`,result.html,'text/html'));
   $('#publish-copy-command').addEventListener('click', async () => { try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована'); } catch { toast('Не удалось скопировать. Выделите команду и скопируйте вручную.'); } });
+  $('#cloud-monitor-connect')?.addEventListener('click', connectCloudMonitor);
+  $('#cloud-monitor-disconnect')?.addEventListener('click', disconnectCloudMonitor);
+  $('#cloud-monitor-refresh')?.addEventListener('click', async () => {
+    try { const data = await cloudMonitorRequest('/api/monitor/sites'); cloudMonitorSites = data.sites || []; renderCloudMonitorSites(); setCloudMonitorStatus('Список обновлён: ' + cloudMonitorSites.length + ' сайтов.', 'ok'); }
+    catch (error) { setCloudMonitorStatus(error.message, 'error'); }
+  });
+  $('#cloud-monitor-check')?.addEventListener('click', async () => {
+    const button = $('#cloud-monitor-check'); button.disabled = true;
+    try { const data = await cloudMonitorRequest('/api/monitor/check', { method: 'POST', body: '{}' }); cloudMonitorSites = data.sites || []; renderCloudMonitorSites(); setCloudMonitorStatus('Проверка завершена. Проверено: ' + (data.checked ?? cloudMonitorSites.length) + '.', 'ok'); }
+    catch (error) { setCloudMonitorStatus(error.message, 'error'); }
+    finally { button.disabled = false; }
+  });
+  $('#cloud-monitor-add')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
+    const button = form.querySelector('button[type="submit"]'); button.disabled = true;
+    try { await cloudMonitorRequest('/api/monitor/sites', { method: 'POST', body: JSON.stringify(values) }); const data = await cloudMonitorRequest('/api/monitor/sites'); cloudMonitorSites = data.sites || []; renderCloudMonitorSites(); form.reset(); setCloudMonitorStatus('Адрес добавлен в облачный реестр.', 'ok'); }
+    catch (error) { setCloudMonitorStatus(error.message, 'error'); }
+    finally { button.disabled = !cloudMonitorToken; }
+  });
+  $('#cloud-monitor-sites')?.addEventListener('click', async event => {
+    const button = event.target.closest('[data-cloud-delete]'); if (!button) return;
+    button.disabled = true;
+    try { await cloudMonitorRequest('/api/monitor/sites/' + encodeURIComponent(button.dataset.cloudDelete), { method: 'DELETE' }); const data = await cloudMonitorRequest('/api/monitor/sites'); cloudMonitorSites = data.sites || []; renderCloudMonitorSites(); setCloudMonitorStatus('Адрес удалён.', 'ok'); }
+    catch (error) { setCloudMonitorStatus(error.message, 'error'); button.disabled = false; }
+  });
+  const cloudControls = ['#cloud-monitor-refresh','#cloud-monitor-check','#cloud-monitor-add button[type="submit"]'];
+  const syncCloudControls = () => cloudControls.forEach(selector => { const control = $(selector); if (control) control.disabled = !cloudMonitorToken; });
+  $('#cloud-monitor-connect')?.addEventListener('click', () => setTimeout(syncCloudControls, 0));
+  $('#cloud-monitor-disconnect')?.addEventListener('click', syncCloudControls);
   renderPublishHistory();
   host.onclick = async e => {
     const filterButton = e.target.closest('[data-deployment-filter]');
