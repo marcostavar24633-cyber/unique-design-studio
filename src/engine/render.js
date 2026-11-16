@@ -7,6 +7,15 @@ import { esc } from './util.js';
 
 const pad = n => String(n).padStart(2, '0');
 
+const SECTION_LAYOUT_CSS = {
+  editorial: ".ds-section.section-layout--editorial:not(.sec--contact) .sec__head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--ds-border)}.ds-section.section-layout--editorial:not(.sec--contact) .sec__head h2{max-width:16ch}.ds-section.section-layout--editorial:not(.sec--contact) .sec__intro{max-width:38ch;margin:0;text-align:right}",
+  offset: "@media(min-width:900px){.ds-section.section-layout--offset:not(.sec--contact) .ds-container{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:clamp(24px,5vw,72px);align-items:start}.ds-section.section-layout--offset:not(.sec--contact) .sec__head{position:sticky;top:28px}.ds-section.section-layout--offset:not(.sec--contact) .sec__head+*{min-width:0}}",
+  framed: ".ds-section.section-layout--framed:not(.sec--contact){background:var(--ds-surface);border-block:1px solid var(--ds-border)}.ds-section.section-layout--framed:not(.sec--contact) .ds-container{padding-block:clamp(24px,4vw,48px)}.ds-section.section-layout--framed:not(.sec--contact) .sec__head{padding-left:clamp(14px,2vw,24px);border-left:3px solid var(--ds-accent)}",
+  quiet: ".ds-section.section-layout--quiet:not(.sec--contact){border-top:1px solid var(--ds-border)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head{margin-bottom:clamp(16px,2.5vw,28px)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head h2{font-size:clamp(1.35rem,1.1rem + 1.6vw,2.2rem);letter-spacing:-.025em}"
+};
+
+const sectionClass = (c, id) => "ds-section sec sec--" + id + " section-layout--" + (c.vs.sectionLayout || "editorial");
+
 /** Подключение веб-шрифтов (только при fonts: "web"). По умолчанию страница не делает внешних запросов. */
 function fontLinks(fonts = []) {
   if (!fonts.length) return '';
