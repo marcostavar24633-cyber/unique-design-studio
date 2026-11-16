@@ -70,6 +70,10 @@ test('monitor API requires bearer authentication and an exact host allowlist', a
   const env = monitorEnv();
   const denied = await worker.fetch(new Request('https://worker.test/api/monitor/sites'), env);
   assert.equal(denied.status, 401);
+  const wrongScheme = await worker.fetch(new Request('https://worker.test/api/monitor/sites', {
+    headers: { Authorization: 'test-monitor-secret' },
+  }), env);
+  assert.equal(wrongScheme.status, 401);
   const badHost = await worker.fetch(new Request('https://worker.test/api/monitor/sites', {
     method: 'POST', headers: monitorHeaders,
     body: JSON.stringify({ url: 'https://not-allowed.invalid-domain.com/', label: 'External' }),
