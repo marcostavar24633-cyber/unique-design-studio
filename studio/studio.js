@@ -556,11 +556,84 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Локальное сравнение похожести работает для встроенных в проект изображений; внешние URL не анализируются по пикселям из-за ограничений безопасности браузера. Технические признаки и повторы — ориентир, визуальную релевантность подтверждает человек.</p>
   </section>`;
 }
+
+function parseRgb(color) {
+  const match = String(color || '').match(/rgba?\\(([^)]+)\\)/i);
+  if (!match) return null;
+  const values = match[1].split(',').map(v => Number.parseFloat(v.trim()));
+  if (values.length < 3 || values.slice(0,3).some(v => !Number.isFinite(v))) return null;
+  return values.slice(0,3).map(v => Math.max(0,Math.min(255,v)));
+}
+function relativeLuminance(rgb) {
+  const channels = rgb.map(v => { const n = v / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; });
+  return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+}
+function contrastRatio(a,b) {
+  if (!a || !b) return null;
+  const values = [relativeLuminance(a),relativeLuminance(b)].sort((x,y) => y-x);
+  return (values[0] + .05) / (values[1] + .05);
+}
+function auditHeroReadability() {
+  const frame = $('#frame');
+  const doc = frame?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки страницы в окне предпросмотра.'}];
+  const originalWidth = frame.style.width;
+  const originalHeight = frame.style.height;
+  const checks = [];
+  const viewports = [{width:320,label:'Телефон 320 px'},{width:768,label:'Планшет 768 px'},{width:1280,label:'Компьютер 1280 px'}];
+  const rectsOverlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  try {
+    for (const viewport of viewports) {
+      frame.style.width = viewport.width + 'px';
+      frame.style.maxWidth = '100%';
+      const heading = doc.querySelector('.hero h1');
+      const lede = doc.querySelector('.hero .lede');
+      const button = doc.querySelector('.hero .actions .ds-button, .hero .ds-button');
+      if (!heading) {
+        checks.push({level:'manual',title:viewport.label,text:'Заголовок первого экрана не найден — проверьте структуру Hero.'});
+        continue;
+      }
+      const headingStyle = doc.defaultView.getComputedStyle(heading);
+      const buttonStyle = button ? doc.defaultView.getComputedStyle(button) : null;
+      const headingRect = heading.getBoundingClientRect();
+      const ledeRect = lede?.getBoundingClientRect();
+      const buttonRect = button?.getBoundingClientRect();
+      if (heading.scrollWidth > heading.clientWidth + 1) checks.push({level:'check',title:viewport.label + ': заголовок может обрезаться',text:'Ширина текста превышает доступную ширину блока. Уменьшите размер, измените перенос или расширьте контейнер.'});
+      if (lede && buttonRect && ledeRect && rectsOverlap(ledeRect,buttonRect)) checks.push({level:'check',title:viewport.label + ': текст пересекается с CTA',text:'Описание и кнопка занимают пересекающиеся области. Проверьте отступы и вертикальное расположение.'});
+      if (button && (buttonRect.width < 44 || buttonRect.height < 44)) checks.push({level:'check',title:viewport.label + ': малая область нажатия',text:'Основная кнопка меньше ориентира 44 × 44 px. Увеличьте высоту или внутренние отступы.'});
+      const buttonBg = parseRgb(buttonStyle?.backgroundColor);
+      const buttonFg = parseRgb(buttonStyle?.color);
+      const buttonContrast = contrastRatio(buttonFg,buttonBg);
+      if (button && buttonContrast !== null) checks.push({level:buttonContrast >= 4.5 ? 'good' : 'check',title:viewport.label + ': контраст кнопки ' + buttonContrast.toFixed(2) + ':1',text:buttonContrast >= 4.5 ? 'Цвет текста и сплошной фон кнопки проходят ориентир WCAG AA для обычного текста.' : 'Контраст текста кнопки ниже 4.5:1. Усильте различие цветов.'});
+      else if (button) checks.push({level:'manual',title:viewport.label + ': фон кнопки сложный или прозрачный',text:'Автоматически измерить пару цветов нельзя. Проверьте контраст кнопки на реальном фоне.'});
+      const headingBg = parseRgb(headingStyle.backgroundColor);
+      const headingFg = parseRgb(headingStyle.color);
+      const headingContrast = contrastRatio(headingFg,headingBg);
+      if (headingContrast !== null && headingStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') checks.push({level:headingContrast >= 4.5 ? 'good' : 'check',title:viewport.label + ': контраст заголовка ' + headingContrast.toFixed(2) + ':1',text:headingContrast >= 4.5 ? 'Контраст текста относительно собственного сплошного фона проходит ориентир WCAG AA.' : 'Контраст заголовка ниже 4.5:1 относительно его фона.'});
+      else checks.push({level:'manual',title:viewport.label + ': проверить заголовок на фотографии',text:'У заголовка прозрачный фон или под ним изображение/градиент. Проверка по одному цвету невозможна — оцените читаемость на самом кадре.'});
+      if (headingRect.width <= 0 || headingRect.height <= 0) checks.push({level:'check',title:viewport.label + ': заголовок не виден',text:'Проверьте скрытие, позиционирование и размеры первого экрана.'});
+    }
+  } catch (error) {
+    checks.push({level:'manual',title:'Не удалось завершить проверку',text:'Предпросмотр изменил состояние во время анализа. Запустите проверку ещё раз.'});
+  } finally {
+    frame.style.width = originalWidth;
+    frame.style.height = originalHeight;
+    frame.style.maxWidth = '';
+  }
+  return checks;
+}
+function renderHeroReadabilityChecks() {
+  const host = $('#hero-readability-results');
+  if (!host) return;
+  const checks = auditHeroReadability();
+  host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+}
+
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
-  $('#view-audit').innerHTML = `<p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+  $('#view-audit').innerHTML = `<section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
 <h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
 <h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
