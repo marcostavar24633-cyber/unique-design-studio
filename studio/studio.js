@@ -5,6 +5,22 @@ const STORE = 'uds:studio:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
+const AI_USAGE_KEY = 'uds:ai-success-count';
+function renderAiUsage() {
+  const node = $('#ai-usage-count');
+  if (!node) return;
+  let count = 0;
+  try { count = Math.max(0, Number(localStorage.getItem(AI_USAGE_KEY)) || 0); } catch { /* локальное хранилище недоступно */ }
+  node.textContent = String(count);
+}
+function recordAiUsage() {
+  try {
+    const count = Math.max(0, Number(localStorage.getItem(AI_USAGE_KEY)) || 0) + 1;
+    localStorage.setItem(AI_USAGE_KEY, String(count));
+  } catch { /* счётчик недоступен без localStorage */ }
+  renderAiUsage();
+}
+renderAiUsage();
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const $ = sel => document.querySelector(sel);
@@ -314,6 +330,7 @@ $('#auto').addEventListener('submit', async e => {
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
+      recordAiUsage();
       note = `Готово: AI изучил нишу${draft.analysis.sources.length ? ` (источников: ${draft.analysis.sources.length})` : ''} и написал тексты.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
