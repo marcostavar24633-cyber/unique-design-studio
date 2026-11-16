@@ -226,3 +226,18 @@ body:not(.dashboard-mode)>.top .top__actions{align-items:center}
 .asset-library__actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
 .asset-library__actions button{min-height:40px}
 @media(max-width:560px){.asset-library{padding:12px}.asset-library__head{display:block}.asset-library__stats{margin-top:8px}.asset-library__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.asset-library__meta{padding:8px}.asset-library__mobile{font-size:10px}}
+
+
+/* Единый запуск и библиотека редактируемых промтов */
+.generation-prompts{padding:10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.auto .generation-prompts>summary{cursor:pointer;font-weight:700;font-size:13px;padding:5px 0}
+.generation-prompts-list{display:grid;gap:8px;margin-top:10px}
+.generation-stage{min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg)}
+.generation-stage>summary{display:grid;gap:3px;cursor:pointer;font-weight:650;font-size:12px}
+.generation-stage>summary small{font-size:11px;font-weight:400;color:var(--muted);line-height:1.4}
+.generation-stage__toggle{display:flex;align-items:center;gap:7px;margin:10px 0;font-size:12px}
+.generation-stage__label{display:block;margin:8px 0 5px;font-size:12px;font-weight:650}
+.generation-stage textarea{display:block;width:100%;min-height:110px;resize:vertical;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:12px/1.5 ui-monospace,monospace}
+.generation-stage__actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}
+.generation-stage__actions button{min-height:34px;padding:6px 9px;font-size:11px}
+@media(max-width:520px){.generation-stage__actions button{flex:1}.generation-stage textarea{min-height:130px}}
