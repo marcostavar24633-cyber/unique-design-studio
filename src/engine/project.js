@@ -86,7 +86,7 @@ export function normalizeProject(raw = {}) {
   p.gallery = (Array.isArray(raw.gallery) ? raw.gallery : []).map(g => (typeof g === 'string' ? { src: g } : g || {}))
     .map(g => ({ src: safeUrl(g.src, { image: true }), alt: str(g.alt), caption: str(g.caption) })).filter(g => g.src);
   const img = raw.images && typeof raw.images === 'object' ? raw.images : {};
-  p.images = { hero: safeUrl(img.hero ?? raw.heroImage, { image: true }), heroAlt: str(img.heroAlt) };
+  p.images = { hero: safeUrl(img.hero ?? raw.heroImage, { image: true }), heroMobile: safeUrl(img.heroMobile, { image: true }), heroAlt: str(img.heroAlt) };
   const c = raw.contacts && typeof raw.contacts === 'object' ? raw.contacts : {};
   p.contacts = { phone: str(c.phone), email: str(c.email), address: str(c.address), hours: str(c.hours) };
   p.ctaUrl = safeUrl(raw.ctaUrl);
