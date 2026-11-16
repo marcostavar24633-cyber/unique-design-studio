@@ -13,6 +13,9 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
 let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
+let exampleProjects = [];
+let dashboardFilter = 'all';
+let dashboardQuery = '';
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -20,24 +23,36 @@ try {
 } catch { /* хранилище недоступно — работаем без сохранения */ }
 const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };
 
-function renderDashboard(filter = 'all') {
+function renderDashboard(filter = dashboardFilter) {
   const root = $('#dash-projects'); if (!root) return;
-  const entries = state.library.map((item, index) => ({...item, index, kind:'saved'}));
-  const shown = filter === 'saved' ? entries : entries;
-  $('#dash-project-count').textContent = String(entries.length);
-  $('#stat-projects').textContent = String(entries.length);
-  const exampleCount = Number($('#examples')?.options.length || 1) - 1;
-  $('#stat-examples').textContent = String(Math.max(0, exampleCount));
+  dashboardFilter = filter;
+  const saved = state.library.map((item, index) => ({ raw: item.raw, index, kind: 'saved' }));
+  const examples = exampleProjects.map((item, index) => ({ raw: item.raw, index, kind: 'example' }));
+  const entries = filter === 'saved' ? saved : filter === 'examples' ? examples : [...saved, ...examples];
+  const q = dashboardQuery.trim().toLowerCase();
+  const shown = entries.filter(item => {
+    const p = normalizeProject(item.raw);
+    return !q || [p.brand, p.niche, p.title].some(value => String(value || '').toLowerCase().includes(q));
+  });
+  $('#dash-project-count').textContent = String(saved.length);
+  $('#stat-projects').textContent = String(saved.length);
+  $('#stat-examples').textContent = String(exampleProjects.length);
+  document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected', button.dataset.filter === filter));
   root.innerHTML = shown.length ? shown.map(item => {
     const p = normalizeProject(item.raw), name = p.brand || p.niche || 'Без названия';
     const image = p.images?.hero || p.gallery?.[0]?.src || '';
-    return '<article class="dash-project-card"><div class="dash-project-image">'+(image ? '<img src="'+esc(image)+'" alt="">' : '<span>✦</span>')+'</div><div class="dash-project-info"><b>'+esc(name)+'</b><small>'+esc(p.niche || 'Коммерческий сайт')+'</small><button data-open-project="'+item.index+'">Открыть проект →</button></div></article>';
-  }).join('') : '<div class="dash-empty"><b>Пока нет сохранённых проектов</b><p>Создайте сайт и нажмите «В реестр», чтобы он появился здесь.</p><button class="dash-primary" data-dash="create">Создать первый сайт</button></div>';
+    const action = item.kind === 'saved'
+      ? '<button type="button" data-open-project="' + item.index + '">Открыть проект →</button>'
+      : '<button type="button" data-open-example="' + item.index + '">Открыть пример →</button>';
+    return '<article class="dash-project-card"><div class="dash-project-image">' + (image ? '<img src="' + esc(image) + '" alt="">' : '<span>✦</span>') + '</div><div class="dash-project-info"><b>' + esc(name) + '</b><small>' + esc(p.niche || 'Коммерческий сайт') + (item.kind === 'example' ? ' · Пример' : '') + '</small>' + action + '</div></article>';
+  }).join('') : '<div class="dash-empty"><b>' + (q ? 'Ничего не найдено' : filter === 'examples' ? 'Примеры пока не загружены' : 'Пока нет сохранённых проектов') + '</b><p>' + (q ? 'Измените поисковый запрос.' : 'Создайте сайт и нажмите «В реестр», чтобы сохранить его здесь.') + '</p>' + (filter !== 'examples' && !q ? '<button class="dash-primary" data-dash="create">Создать сайт</button>' : '') + '</div>';
 }
 function openWorkspace(section = 'create') {
   document.body.classList.remove('dashboard-mode');
-  if (section === 'create' || section === 'editor' || section === 'director') { selectTab($('#tab-preview')); $('#auto-niche')?.focus(); }
-  if (section === 'visual') selectTab($('#tab-concept'));
+  document.querySelectorAll('.dash-nav [data-dash]').forEach(button => button.classList.toggle('is-active', button.dataset.dash === section));
+  if (section === 'create' || section === 'editor' || section === 'director') { selectTab($('#tab-preview')); if (section === 'create') $('#auto-niche')?.focus(); }
+  if (section === 'visual' || section === 'motion') selectTab($('#tab-concept'));
+  if (section === 'seo') selectTab($('#tab-spec'));
   if (section === 'qa') selectTab($('#tab-audit'));
   if (section === 'projects') selectTab($('#tab-registry'));
   if (section === 'publish') selectTab($('#tab-preview'));
@@ -47,20 +62,24 @@ $('#dashboard-back')?.addEventListener('click', () => {
   renderDashboard();
   $('#dash-search')?.focus({ preventScroll: true });
 });
-$('#dashboard')?.addEventListener('click', e => {
+$('#dashboard')?.addEventListener('click', async e => {
   const project = e.target.closest('[data-open-project]');
   if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
+  const example = e.target.closest('[data-open-example]');
+  if (example) {
+    const item = exampleProjects[Number(example.dataset.openExample)];
+    if (item) { load(item.raw, 'Пример открыт: ' + (item.brand || item.niche)); openWorkspace('create'); }
+    return;
+  }
   const action = e.target.closest('[data-dash]')?.dataset.dash;
   if (action && action !== 'home') openWorkspace(action);
   const filter = e.target.closest('[data-filter]')?.dataset.filter;
-  if (filter) { document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('selected',b.dataset.filter===filter)); renderDashboard(filter); }
+  if (filter) renderDashboard(filter);
 });
 $('#dash-search')?.addEventListener('input', e => {
-  const q=e.target.value.trim().toLowerCase();
-  document.querySelectorAll('.dash-project-card').forEach(card=>card.hidden=!card.textContent.toLowerCase().includes(q));
+  dashboardQuery = e.target.value;
+  renderDashboard();
 });
-
-
 // ---------- Описание формы ----------
 const LIST_HINT = 'Одна позиция на строку: Название | Описание';
 const GROUPS = [
@@ -1033,16 +1052,36 @@ $('#view-registry').addEventListener('click', e => {
   if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); }
 });
 
-fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(list => {
+fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async list => {
   const sel = $('#examples');
   for (const ex of list) sel.append(Object.assign(document.createElement('option'), { value: ex.file, textContent: `${ex.brand} — ${ex.niche}` }));
+  exampleProjects = await Promise.all(list.map(async ex => {
+    try {
+      const response = await fetch('../examples/' + ex.file);
+      if (!response.ok) throw new Error('Не удалось загрузить пример');
+      return { ...ex, raw: await response.json() };
+    } catch { return null; }
+  }));
+  exampleProjects = exampleProjects.filter(Boolean);
+  renderDashboard();
   sel.addEventListener('change', async () => {
     if (!sel.value) return;
-    const raw = await (await fetch('../examples/' + sel.value)).json();
-    sel.value = ''; load(raw, `Открыт пример: ${raw.brand}`);
+    const selected = list.find(ex => ex.file === sel.value);
+    sel.value = '';
+    if (!selected) return;
+    try {
+      const response = await fetch('../examples/' + selected.file);
+      if (!response.ok) throw new Error('Не удалось загрузить пример');
+      const raw = await response.json();
+      load(raw, `Открыт пример: ${raw.brand || raw.niche}`);
+      openWorkspace('create');
+    } catch (error) { toast(error.message || 'Не удалось открыть пример'); }
   });
-  if (!state.raw.brand && !state.raw.niche && list[0]) fetch('../examples/' + list[0].file).then(r => r.json()).then(raw => load(raw));
-}).catch(() => {});
+  if (!state.raw.brand && !state.raw.niche && list[0]) {
+    const first = exampleProjects[0];
+    if (first) load(first.raw);
+  }
+}).catch(() => { exampleProjects = []; renderDashboard(); });
 
 buildForm();
 run();
