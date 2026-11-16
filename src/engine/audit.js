@@ -29,6 +29,12 @@ export function auditSite(html, concept, input) {
   test(/<title>[^<]+<\/title>/.test(html), 'title', 'Есть заголовок страницы <title>', 'Пустой или отсутствующий <title>');
   test(of('meta').some(t => t.attrs.name === 'viewport'), 'viewport', 'Есть meta viewport для мобильных', 'Нет meta viewport');
   test(of('meta').some(t => t.attrs.name === 'description' && t.attrs.content), 'description', 'Есть meta description', 'Нет описания: нишу и предложение сложно понять за первые секунды, страдает SEO', 'warn');
+  const pageTitle = (html.match(/<title>[^<]*<\/title>/i)?.[0] || '').replace(/<\/?title>/gi, '').trim();
+  const metaDescription = of('meta').find(t => t.attrs.name === 'description')?.attrs.content || '';
+  if (pageTitle && (pageTitle.length < 30 || pageTitle.length > 60)) add('warn', 'seo-title-length', `Длина title — ${pageTitle.length} символов; ориентир для проверки — 30–60`);
+  if (metaDescription && (metaDescription.length < 120 || metaDescription.length > 160)) add('warn', 'seo-description-length', `Длина meta description — ${metaDescription.length} символов; ориентир — 120–160`);
+  test(of('meta').some(t => t.attrs.property === 'og:title' && t.attrs.content), 'og-title', 'Есть Open Graph title', 'Нет og:title для превью ссылок', 'warn');
+  test(of('meta').some(t => t.attrs.property === 'og:description' && t.attrs.content), 'og-description', 'Есть Open Graph description', 'Нет og:description для превью ссылок', 'warn');
   test(of('h1').length === 1, 'h1', 'Ровно один заголовок h1', `Заголовков h1: ${of('h1').length}, должен быть один`);
   test(of('main').length === 1 && of('nav').length >= 1, 'landmarks', 'Есть ориентиры main и nav', 'Нет семантических ориентиров main/nav');
   test(of('a').some(t => t.attrs.class === 'skip'), 'skip-link', 'Есть ссылка «Перейти к содержимому»', 'Нет skip-link');
@@ -55,6 +61,11 @@ export function auditSite(html, concept, input) {
   test(imgs.every(i => 'alt' in i.attrs), 'img-alt', `У всех изображений есть атрибут alt (${imgs.length})`, 'Есть изображения без атрибута alt');
   const emptyAlt = imgs.filter(i => 'alt' in i.attrs && !i.attrs.alt).length;
   if (emptyAlt) add('warn', 'img-alt-empty', `Изображений с пустым alt: ${emptyAlt}. Добавьте описание, если изображение несёт смысл`);
+  const descriptiveAlts = imgs.map(i => i.attrs.alt || '').filter(Boolean);
+  const repeatedAlts = descriptiveAlts.filter((alt, index) => descriptiveAlts.indexOf(alt) !== index);
+  if (repeatedAlts.length) add('warn', 'img-alt-duplicates', `Повторяются ALT-описания: ${[...new Set(repeatedAlts)].slice(0, 3).join('; ')}. Уточните описания для разных изображений`);
+  const weakAlts = descriptiveAlts.filter(alt => alt.length < 8 || alt.length > 160 || /\.(jpe?g|png|webp|gif|avif)$/i.test(alt) || /^img[_ -]?\d+/i.test(alt));
+  if (weakAlts.length) add('warn', 'img-alt-quality', `Есть ${weakAlts.length} ALT-описаний, похожих на имя файла, слишком коротких или длинных. Опишите смысл изображения кратко и конкретно`);
   const labelled = new Set(of('label').map(l => l.attrs.for).filter(Boolean));
   const controls = tags.filter(t => ['input', 'select', 'textarea'].includes(t.name) && t.attrs.type !== 'hidden');
   test(controls.every(c => (c.attrs.id && labelled.has(c.attrs.id)) || c.attrs['aria-label']), 'form-labels', `Поля форм подписаны (${controls.length})`, 'Есть поля формы без подписи <label>');
@@ -72,6 +83,29 @@ export function auditSite(html, concept, input) {
   test(!/<link\b[^>]*stylesheet|<script\b[^>]*\bsrc=/i.test(html), 'self-contained', 'Страница самодостаточна: нет внешних стилей, шрифтов и скриптов', 'Есть внешние ресурсы — проверьте скорость загрузки', 'warn');
   const kb = Math.round(html.length / 102.4) / 10;
   test(kb < 150, 'weight', `Вес HTML: ${kb} КБ`, `HTML весит ${kb} КБ — сократите встроенные изображения`, 'warn');
+
+  // Производительность: статические признаки, не реальные замеры Core Web Vitals.
+  const utf8Bytes = new TextEncoder().encode(html).length;
+  const inlineImages = imgs.map(i => i.attrs.src || '').filter(src => src.startsWith('data:image/'));
+  const inlineBytes = inlineImages.reduce((sum, src) => {
+    const payload = (src.split(',')[1] || '').replace(/\s/g, '');
+    const padding = payload.endsWith('==') ? 2 : payload.endsWith('=') ? 1 : 0;
+    return sum + Math.max(0, Math.floor(payload.length * 3 / 4) - padding);
+  }, 0);
+  const externalImages = imgs.filter(i => { const src = i.attrs.src || ''; return src.startsWith('http://') || src.startsWith('https://'); }).length;
+  const imageKb = Math.round(inlineBytes / 102.4) / 10;
+  const documentKb = Math.round(utf8Bytes / 102.4) / 10;
+  test(documentKb <= 250, 'performance-document-size', `Размер HTML: ${documentKb} КБ`, `HTML весит ${documentKb} КБ. Сократите встроенные данные и CSS; ориентир для автономного лендинга — до 250 КБ`, 'warn');
+  test(inlineBytes <= 250 * 1024, 'performance-inline-images', `Встроенные изображения: ${imageKb} КБ (${inlineImages.length})`, `Встроенные изображения занимают ${imageKb} КБ. Оптимизируйте фотографии или используйте внешнее CDN-хранилище`, 'warn');
+  const missingDimensions = imgs.filter(i => !i.attrs.width || !i.attrs.height);
+  test(!missingDimensions.length, 'performance-image-dimensions', 'У изображений заданы width и height', `У ${missingDimensions.length} изображений нет width/height. Задайте размеры или резервируйте место через aspect-ratio, чтобы снизить риск CLS`, 'warn');
+  const belowFoldWithoutLazy = imgs.slice(1).filter(i => i.attrs.loading !== 'lazy');
+  test(!belowFoldWithoutLazy.length, 'performance-lazy-images', 'Изображения после первого экрана загружаются лениво', `У ${belowFoldWithoutLazy.length} изображений после первого нет loading="lazy". Проверьте и включите отложенную загрузку`, 'warn');
+  const withoutAsyncDecode = imgs.filter(i => i.attrs.decoding !== 'async');
+  test(!withoutAsyncDecode.length, 'performance-image-decoding', 'Для изображений включён decoding="async"', `У ${withoutAsyncDecode.length} изображений нет decoding="async"`, 'warn');
+  const firstImage = imgs[0];
+  test(!firstImage || firstImage.attrs.fetchpriority === 'high', 'performance-hero-priority', 'Приоритет первого изображения повышен или изображений нет', 'Первое изображение не помечено fetchpriority="high"; проверьте, является ли оно LCP-элементом', 'warn');
+  if (externalImages) add('warn', 'performance-external-images', `Внешние изображения: ${externalImages}. Скорость и доступность зависят от стороннего хостинга`);
 
   // Ничего не выдумано
   const allowed = new Set(project.services.map(i => i.price).filter(Boolean));

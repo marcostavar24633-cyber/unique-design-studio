@@ -35,6 +35,12 @@
           <div class="field"><label for="auto-city">Город</label><input id="auto-city" placeholder="необязательно"></div>
         </div>
         <div class="field"><label for="auto-details">Что важно знать</label><textarea id="auto-details" placeholder="Необязательно: чем отличаетесь, для кого, что продаёте"></textarea></div>
+        <details class="ai" id="auto-prompt-box">
+          <summary>Свой промт</summary>
+          <div class="field"><label for="auto-prompt">Ваш промт для нейросети</label><textarea id="auto-prompt" class="prompt-area" maxlength="8000" placeholder="Например: пиши как для премиальной аудитории 35+, упор на ручную работу и редкие материалы, без слов «лучший» и «уникальный»…" aria-describedby="auto-prompt-h"></textarea>
+            <small id="auto-prompt-h">Уходит AI-серверу вместе с нишей и попадает в «Промт для AI». Запоминается в этом браузере. До 8000 знаков.</small></div>
+          <div class="field"><label for="auto-prompt-mode">Как использовать</label><select id="auto-prompt-mode"><option value="append">Дополнить стандартный промт — мои указания важнее</option><option value="replace">Заменить стандартный промт моим (контекст проекта и формат ответа студия добавит сама)</option></select></div>
+        </details>
         <div class="row2">
           <div class="field"><label for="auto-email">E-mail для заявок</label><input id="auto-email" type="email" placeholder="необязательно"></div>
           <div class="field"><label for="auto-phone">Телефон</label><input id="auto-phone" type="tel" placeholder="необязательно"></div>

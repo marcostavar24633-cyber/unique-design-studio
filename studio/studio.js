@@ -2,6 +2,11 @@
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
+const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 1024 * 1024;
+const MAX_IMAGE_DATA = 3_800_000;
+const MAX_IMAGE_EDGE = 1800;
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -13,7 +18,7 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
-const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { /* нет хранилища */ } };
+const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };
 
 // ---------- Описание формы ----------
 const LIST_HINT = 'Одна позиция на строку: Название | Описание';
@@ -28,16 +33,21 @@ const GROUPS = [
     ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
     ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
+    ['customPrompt', 'Свой промт', 'area', 'Ваши указания для нейросети: попадают в «Промт для AI» и во вкладку «ТЗ и анализ»'],
+    ['@promptMode', 'Как использовать свой промт', 'promptMode'],
     ['targetAudience', 'Аудитория', 'area', 'Если пусто — будет использована явно помеченная гипотеза'],
     ['brandCharacter', 'Характер бренда'],
   ]],
   ['Изображения', false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
-    ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись'],
+    ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG/PNG/WebP: до 8 МБ до оптимизации, WebP до 1 МБ после. GIF/AVIF: до 1 МБ.'],
+    ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись | ALT-текст (необязательно)'],
+    ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. Автооптимизация WebP; до 8 МБ исходник, до 1 МБ результат.'],
+    ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фото (автооптимизация WebP, до 8 МБ исходник).'],
   ]],
   ['Каталог / услуги / меню', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
-    ['services', 'Позиции', 'list', 'Одна позиция на строку: Название | Описание | Цена | URL картинки. Цена и картинка необязательны'],
+    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст. Последние поля необязательны'],
     ['categories', 'Категории', 'list', 'Одна категория на строку'],
   ]],
   ['О нас', false, [['aboutTitle', 'Заголовок'], ['aboutText', 'Текст', 'area']]],
@@ -60,17 +70,42 @@ function set(path, value) {
 }
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
-  if (path === 'gallery') return [r.src, r.caption].filter(Boolean).join(' | ');
-  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image];
+  if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
+  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt];
   const cells = a.map(x => x ?? '');
+  if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
   return cells.join(' | ');
 }).join('\n');
 function textToRows(text, path) {
   const rows = text.split('\n').map(l => l.split('|').map(s => s.trim())).filter(r => r.some(Boolean));
   if (path === 'categories') return rows.map(r => r[0]);
-  if (path === 'gallery') return rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[1] || '' }));
+  if (path === 'gallery') {
+    const embedded = (state.raw.gallery || []).filter(g => String(g.src || '').startsWith('data:image/'));
+    return [...rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[2] || '' })), ...embedded];
+  }
+  if (path === 'services') return rows.map((row, i) => {
+    const old = (state.raw.services || []).find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]);
+    const image = Array.isArray(old) ? old[3] : old?.image;
+    const oldAlt = Array.isArray(old) ? old[4] : old?.alt;
+    if (String(image || '').startsWith('data:image/')) row[3] = image;
+    if (!row[4] && oldAlt) row[4] = oldAlt;
+    return row;
+  });
   return rows;
+}
+
+function cropEditor(role, index = 0) {
+  const root = state.raw.imageArtDirection || {};
+  const entry = role === 'hero' ? root.hero : (root[role] || {})[index];
+  const viewports = [['desktop','Компьютер'],['tablet','Планшет'],['mobile','Телефон']];
+  return '<details class="crop-editor"><summary>Кадрирование для экранов</summary>' + viewports.map(([key,label]) => { const v = entry && entry[key] || {}; return '<fieldset><legend>' + label + '</legend>' + ['x','y'].map(axis => { const n = Math.max(0,Math.min(100,Number(v[axis]) || 50)); return '<label>' + (axis === 'x' ? 'По горизонтали' : 'По вертикали') + ' <output>' + n + '%</output><input type="range" min="0" max="100" value="' + n + '" data-crop="' + role + '" data-crop-index="' + index + '" data-crop-viewport="' + key + '" data-crop-axis="' + axis + '"></label>'; }).join('') + '</fieldset>'; }).join('') + '<p class="note">0% — левый/верхний край, 50% — центр, 100% — правый/нижний край.</p></details>';
+}
+function writeCrop(role, index, viewport, axis, value) {
+  const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
+  const bucket = role === 'hero' ? (root.hero || (root.hero = {})) : ((root[role] || (root[role] = {}))[index] || (root[role][index] = {}));
+  bucket[viewport] = bucket[viewport] || { x: 50, y: 50 };
+  bucket[viewport][axis] = Math.max(0, Math.min(100, Number(value) || 0));
 }
 
 function buildForm() {
@@ -90,9 +125,13 @@ function buildForm() {
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'promptMode') control = `<select id="${id}" data-special="promptMode">${[['append', 'Дополнить стандартный — мои указания важнее'], ['replace', 'Заменить стандартный моим']].map(([k, v]) => `<option value="${k}"${p.customPromptMode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'accent') control = `<div class="row"><input type="color" id="${id}" data-special="accent" value="${p.accent || '#888888'}"${p.accent ? '' : ' disabled'}><input type="checkbox" id="${id}-auto" data-special="accent-auto"${p.accent ? '' : ' checked'}><label for="${id}-auto">подобрать автоматически</label></div>`;
+    else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><label>ALT-текст <input type="text" data-hero-alt value="${esc(state.raw.images?.heroAlt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="hero">Удалить фото</button></figure>${cropEditor("hero")}` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
+    else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-gallery-alt="${i}" value="${esc(g.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="gallery:${i}">Удалить</button>${cropEditor("gallery", i)}</figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
+    else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<label for="${id}-target">Для какой позиции</label><select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-service-alt="${i}" value="${esc(Array.isArray(s) ? s[4] || '' : s.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="service:${i}">Удалить</button>${cropEditor("services", i)}</figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
@@ -132,23 +171,36 @@ $('#view-spec').addEventListener('click', async e => {
 });
 
 // ---------- Автопилот ----------
-try { $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || ''; } catch { /* нет хранилища */ }
+try {
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
+  $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
+  $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
+  if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
+} catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
+    customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
   const endpoint = $('#auto-endpoint').value.trim();
-  try { localStorage.setItem('uds:ai-endpoint', endpoint); } catch { /* нет хранилища */ }
+  try {
+    localStorage.setItem('uds:ai-endpoint', endpoint);
+    localStorage.setItem('uds:custom-prompt', input.customPrompt);
+    localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
+  } catch { /* нет хранилища */ }
   const status = $('#auto-status'), go = $('#auto-go');
   go.disabled = true;
   let draft = null, note = '';
   if (endpoint) {
     status.textContent = 'AI изучает нишу в интернете и пишет тексты — обычно это занимает до минуты…';
     try {
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+      // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
+      // а не только ниша: так AI пишет тексты внутри выбранной композиции.
+      const studioPrompt = autopilot(input, { registry: registry() }).prompt;
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
@@ -205,13 +257,135 @@ function renderConcept() {
   ])}</div>`;
 }
 
+let imageAuditRun = 0;
+function collectImageAssets() {
+  const out = [];
+  const hero = state.raw.images?.hero;
+  if (hero) out.push({ role: 'hero', label: 'Первый экран', src: hero });
+  (state.raw.gallery || []).forEach((g, i) => { if (g?.src) out.push({ role: 'gallery', label: g.caption || `Галерея ${i + 1}`, src: g.src }); });
+  (state.raw.services || []).forEach((s, i) => {
+    const src = Array.isArray(s) ? s[3] : s?.image;
+    if (src) out.push({ role: 'service', label: Array.isArray(s) ? s[0] : s.title || `Позиция ${i + 1}`, src });
+  });
+  return out;
+}
+function inspectImage(asset) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth, height = img.naturalHeight, ratio = width / Math.max(1, height);
+      const warnings = [], tips = [], minSide = Math.min(width, height);
+      if (asset.role === 'hero' && (width < 1200 || height < 650)) warnings.push('Для первого экрана разрешение может быть маловато; ориентир — от 1600 × 900 px.');
+      if (asset.role === 'gallery' && minSide < 700) warnings.push('Для галереи желательно не менее 700 px по короткой стороне.');
+      if (asset.role === 'service' && minSide < 600) warnings.push('Для карточки товара или услуги желательно не менее 600 px по короткой стороне.');
+      if (asset.role === 'hero') {
+        if (ratio < 1.25) tips.push('Широкий экран: кадр может выглядеть тесно. Подготовьте горизонтальную версию около 16:9.');
+        if (ratio > 2.1) tips.push('Мобильный экран: при заполнении блока по ширине верх и низ могут обрезаться. Проверьте важный объект в центральной безопасной зоне или подготовьте вертикальный кадр 4:5.');
+        else tips.push('Мобильный экран: проверьте, что главный объект остаётся в центральной части кадра; для портретного блока лучше отдельный кадр 4:5.');
+      } else if (asset.role === 'service') {
+        if (ratio < 0.78 || ratio > 1.35) tips.push('Карточка обычно лучше смотрится с квадратным кадром 1:1; при обрезке проверьте, что товар целиком виден.');
+      } else if (ratio < 0.72 || ratio > 1.8) tips.push('Галерея: необычные пропорции могут обрезаться в сетке. Проверьте кадрирование и главный объект.');
+      let brightness = null, detail = null;
+      if (asset.src.startsWith('data:image/')) {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 64; canvas.height = 64;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const pixels = ctx.getImageData(0, 0, 64, 64).data;
+            let sum = 0, count = 0, edges = 0, edgeCount = 0, prev = null;
+            for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+              const i = (y * 64 + x) * 4;
+              const l = .2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2];
+              sum += l; count++;
+              if (x && prev !== null) { edges += Math.abs(l - prev); edgeCount++; }
+              if (y) { const up = ((y - 1) * 64 + x) * 4; const ul = .2126 * pixels[up] + .7152 * pixels[up + 1] + .0722 * pixels[up + 2]; edges += Math.abs(l - ul); edgeCount++; }
+              prev = l;
+            }
+            brightness = count ? sum / count : null;
+            detail = edgeCount ? edges / edgeCount : null;
+          }
+        } catch { /* Проверка пикселей может быть недоступна для отдельных форматов. */ }
+      }
+      if (brightness !== null && brightness < 48) warnings.push('Кадр выглядит очень тёмным по средней яркости; проверьте детали в тенях.');
+      if (detail !== null && detail < 5) warnings.push('Мало мелких деталей на уменьшенной копии: возможна мягкость или расфокус. Проверьте фото визуально.');
+      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail });
+    };
+    img.onerror = () => resolve({ ...asset, error: 'Не удалось прочитать изображение. Проверьте ссылку или формат.', warnings: [], tips: [] });
+    img.src = asset.src;
+  });
+}
+async function renderImageIntelligence() {
+  const host = $('#image-intelligence');
+  if (!host) return;
+  const token = ++imageAuditRun;
+  const assets = collectImageAssets();
+  if (!assets.length) { host.innerHTML = '<p class="note">Фотографии пока не добавлены. Загрузите снимки в разделе «Изображения», чтобы проверить их качество и кадрирование.</p>'; return; }
+  host.innerHTML = '<p class="note">Проверяем разрешение, пропорции, яркость и детализацию загруженных фотографий…</p>';
+  const reports = await Promise.all(assets.map(inspectImage));
+  if (token !== imageAuditRun || !host.isConnected) return;
+  const warningCount = reports.reduce((n, r) => n + r.warnings.length, 0);
+  const sourceCounts = new Map();
+  reports.forEach(r => sourceCounts.set(r.src, (sourceCounts.get(r.src) || 0) + 1));
+  const duplicateCount = [...sourceCounts.values()].filter(n => n > 1).reduce((n, count) => n + count - 1, 0);
+  const missingRoles = ['hero','gallery','service'].filter(role => !reports.some(r => r.role === role));
+  const visual = renderVisualAssetDirector(reports, duplicateCount, missingRoles);
+  host.innerHTML = `<p class="summary ${warningCount || duplicateCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний по качеству: ${warningCount}. Возможных повторов: ${duplicateCount}.</p>
+  <div class="image-audit-grid">${reports.map(r => `<article class="image-audit-card">
+    <div class="image-audit-head"><b>${esc(r.label)}</b><span class="note">${r.role === 'hero' ? 'Первый экран' : r.role === 'service' ? 'Карточка' : 'Галерея'}</span></div>
+    <div class="image-audit-body"><img src="${esc(r.src)}" alt="" loading="lazy"><div><b>${r.error ? 'Не удалось проверить' : `${r.width} × ${r.height} px`}</b><span class="note">${r.error ? esc(r.error) : `Пропорции: ${r.ratio.toFixed(2)}:1`}</span>
+    ${r.warnings.map(w => `<p class="image-audit-warning">${esc(w)}</p>`).join('')}${r.tips.map(t => `<p class="image-audit-tip">${esc(t)}</p>`).join('')}${!r.warnings.length && !r.tips.length && !r.error ? '<p class="image-audit-ok">Явных проблем по базовым параметрам не обнаружено.</p>' : ''}</div></div>
+  </article>`).join('')}</div>
+  ${visual}
+  <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
+}
+function renderVisualAssetDirector(reports, duplicateCount, missingRoles) {
+  const p = normalizeProject(state.raw);
+  const dna = result.concept?.designDNA || {};
+  const direction = dna.imageDirection || result.analysis?.imageDirection || 'естественный свет, выразительная композиция и честные детали';
+  const style = [p.tier === 'luxury' ? 'редакционная премиальная съёмка, много воздуха' : p.tier === 'premium' ? 'профессиональный естественный свет, аккуратный фон' : 'чистый естественный свет, живые цвета', dna.colorDirection].filter(Boolean).join('; ');
+  const sourcePrompts = result.analysis?.imagePrompts || [];
+  const roleLabels = { hero: 'Первый экран', gallery: 'Галерея и детали', service: 'Товары и услуги' };
+  const fallback = {
+    hero: `Для сайта «${p.brand || p.niche}»: главный выразительный кадр по теме «${p.niche}». ${direction}. ${style}. Горизонтальный 16:9, оставьте свободную область под заголовок, без текста и водяных знаков.`,
+    gallery: `Фоторепортаж для сайта «${p.brand || p.niche}» о нише «${p.niche}»: реальные детали, фактуры и атмосфера. ${direction}. ${style}. Разнообразные планы, естественный свет, без надписей и водяных знаков.`,
+    service: `Предметная фотография для карточки товара или услуги в нише «${p.niche}». Покажите реальный объект целиком и его важные детали. ${direction}. ${style}. Квадратный кадр 1:1, чистый фон, без текста и водяных знаков.`
+  };
+  const prompts = {
+    hero: sourcePrompts[0] || fallback.hero,
+    gallery: sourcePrompts[4] || fallback.gallery,
+    service: sourcePrompts[1] || fallback.service
+  };
+  const coverage = ['hero','gallery','service'].map(role => {
+    const count = reports.filter(r => r.role === role).length;
+    return `<span class="asset-coverage ${count ? 'is-present' : 'is-missing'}">${esc(roleLabels[role])}: ${count ? count + ' шт.' : 'нет'}</span>`;
+  }).join('');
+  const notes = [];
+  if (duplicateCount) notes.push(`Обнаружено ${duplicateCount} точных повторов одного и того же источника. Проверьте, не используется ли один кадр вместо разных ракурсов.`);
+  if (missingRoles.length) notes.push(`Не заполнены роли: ${missingRoles.map(r => roleLabels[r]).join(', ')}. Это не ошибка для каждого типа сайта, но проверьте, нужны ли эти материалы.`);
+  const promptCards = Object.entries(prompts).map(([role,prompt]) => `<article class="asset-prompt"><div><b>${esc(roleLabels[role])}</b><p>${esc(prompt)}</p></div><button type="button" data-copy-asset-prompt="${esc(prompt)}">Копировать промпт</button></article>`).join('');
+  return `<section class="visual-asset-director" aria-labelledby="visual-asset-title">
+    <h3 id="visual-asset-title">Visual Asset Director</h3>
+    <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
+    <div class="asset-coverage-list">${coverage}</div>
+    ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
+    <h4>Задания на замену или новую съёмку</h4>
+    <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
+    <div class="asset-prompt-list">${promptCards}</div>
+    <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Она оценивает структуру материалов, точные повторы и технические признаки; визуальную релевантность подтверждает человек.</p>
+  </section>`;
+}
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
   $('#view-audit').innerHTML = `<p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
+<h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
+<h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
 <p class="note" style="margin-top:16px">Статическая проверка не заменяет просмотр на реальных устройствах: используйте переключатель ширины 320 / 768 в предпросмотре.</p>`;
+  renderImageIntelligence();
 }
 
 function renderRegistry() {
@@ -240,7 +414,8 @@ function download(name, text, type) {
 
 $('#form').addEventListener('input', e => {
   const t = e.target;
-  if (t.dataset.path) set(t.dataset.path, t.value);
+  if (t.dataset.crop) { writeCrop(t.dataset.crop, Number(t.dataset.cropIndex), t.dataset.cropViewport, t.dataset.cropAxis, t.value); const output = t.parentElement.querySelector('output'); if (output) output.value = t.value + '%'; }
+  else if (t.dataset.path) set(t.dataset.path, t.value);
   else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
   else if (t.dataset.special === 'arch') {
     const [mode, id] = t.value.split(':');
@@ -250,6 +425,7 @@ $('#form').addEventListener('input', e => {
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
   else if (t.dataset.special === 'tier') state.raw.tier = t.value;
+  else if (t.dataset.special === 'promptMode') state.raw.customPromptMode = t.value;
   else if (t.dataset.special === 'brand') {
     if (t.value) state.raw.brandProfile = t.value; else delete state.raw.brandProfile;
     // С брендом шрифты по умолчанию веб: обновляем переключатель, чтобы он показывал фактическое значение.
@@ -263,7 +439,113 @@ $('#form').addEventListener('input', e => {
   }
   schedule();
 });
+function imageDataSize() {
+  const values = [state.raw.images?.hero, ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image)];
+  return values.filter(v => typeof v === 'string' && v.startsWith('data:image/')).reduce((n, v) => n + v.length, 0);
+}
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Не удалось прочитать обработанное изображение.'));
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.readAsDataURL(blob);
+  });
+}
+function canvasBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+async function optimizeImage(file) {
+  if (!IMAGE_TYPES.has(file.type)) throw new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.');
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Исходный файл больше 8 МБ. Выберите изображение меньшего размера.');
+  const preserveOriginal = file.type === 'image/gif' || file.type === 'image/avif';
+  if (preserveOriginal) {
+    if (file.size > MAX_IMAGE_BYTES) throw new Error('GIF и AVIF сохраняются без преобразования, чтобы не потерять анимацию или особенности формата. Для этого файла нужен размер до 1 МБ.');
+    return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+  }
+  if (typeof createImageBitmap !== 'function') {
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Этот браузер не поддерживает оптимизацию изображений. Попробуйте современный Chrome, Edge или Firefox.');
+  }
+  let bitmap;
+  try { bitmap = await createImageBitmap(file); }
+  catch { 
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Не удалось открыть изображение для оптимизации. Проверьте файл или сохраните его как JPG/PNG.');
+  }
+  try {
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    const initialWidth = Math.max(1, Math.round(bitmap.width * scale));
+    const initialHeight = Math.max(1, Math.round(bitmap.height * scale));
+    const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900, 720, 540, 360, 240].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
+    for (const edge of edges) {
+      const factor = Math.min(1, edge / Math.max(initialWidth, initialHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(initialWidth * factor));
+      canvas.height = Math.max(1, Math.round(initialHeight * factor));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Не удалось создать холст для оптимизации фотографии.');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+        const blob = await canvasBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') break;
+        if (blob.size <= MAX_IMAGE_BYTES) {
+          const data = await blobToDataUrl(blob);
+          return { data, originalBytes: file.size, finalBytes: blob.size, optimized: true, width: canvas.width, height: canvas.height };
+        }
+      }
+    }
+    throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
+  } finally { bitmap.close?.(); }
+}
+async function handleImageUpload(input) {
+  const kind = input.dataset.upload, files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length) return;
+  if (kind === 'service' && !Array.isArray(state.raw.services)) return toast('Сначала добавьте позиции в разделе «Каталог / услуги / меню».');
+  const target = kind === 'service' ? Number($('#f--serviceUpload-target')?.value) : -1;
+  if (kind === 'service' && (!Number.isInteger(target) || target < 0 || target >= state.raw.services.length)) return toast('Выберите позицию товара или услуги.');
+  let added = 0;
+  for (const file of files) {
+    try {
+      const optimized = await optimizeImage(file);
+      const data = optimized.data;
+      const current = kind === 'hero' ? state.raw.images?.hero : kind === 'service' ? (Array.isArray(state.raw.services[target]) ? state.raw.services[target][3] : state.raw.services[target].image) : '';
+      const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
+      if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
+      const imageName = file.name.replace(/\.[^.]+$/, '');
+      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || '' };
+      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: '' }];
+      else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '', row.image || '', row.alt || '']; cells[3] = data; cells[4] = cells[4] || cells[0]; state.raw.services[target] = cells; }
+      added++;
+      if (optimized.optimized) toast('Фото оптимизировано: ' + (optimized.width + '×' + optimized.height) + ', ' + Math.round(optimized.finalBytes / 1024) + ' КБ вместо ' + Math.round(optimized.originalBytes / 1024) + ' КБ');
+    } catch (err) { toast(err.message); }
+  }
+  if (added) { buildForm(); run(); toast(added === 1 ? 'Фотография добавлена в проект' : 'Добавлено фотографий: ' + added); }
+}
+$('#form').addEventListener('change', e => {
+  const input = e.target;
+  let altChanged = false;
+  if (input.matches('[data-hero-alt]')) { state.raw.images = { ...(state.raw.images || {}), heroAlt: input.value }; altChanged = true; }
+  if (input.matches('[data-gallery-alt]')) { const g = state.raw.gallery[Number(input.dataset.galleryAlt)]; if (g) { g.alt = input.value; altChanged = true; } }
+  if (input.matches('[data-service-alt]')) { const row = state.raw.services[Number(input.dataset.serviceAlt)]; if (row) { if (Array.isArray(row)) row[4] = input.value; else row.alt = input.value; altChanged = true; } }
+  if (altChanged) run();
+  const upload = input.closest('[data-upload]'); if (upload) handleImageUpload(upload);
+});
+$('#form').addEventListener('click', e => {
+  const b = e.target.closest('[data-remove-image]'); if (!b) return;
+  const [kind, index] = b.dataset.removeImage.split(':');
+  if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: '', heroAlt: '' };
+  if (kind === 'gallery') state.raw.gallery.splice(Number(index), 1);
+  if (kind === 'service') { const row = state.raw.services[Number(index)]; if (Array.isArray(row)) { row[3] = ''; row[4] = ''; } else { row.image = ''; row.alt = ''; } }
+  buildForm(); run(); toast('Фотография удалена из проекта');
+});
 $('#form').addEventListener('submit', e => e.preventDefault());
+$('#view-audit').addEventListener('click', async e => {
+  const button = e.target.closest('[data-copy-asset-prompt]');
+  if (!button) return;
+  try { await navigator.clipboard.writeText(button.dataset.copyAssetPrompt); toast('Промпт скопирован'); }
+  catch { toast('Не удалось скопировать. Выделите текст промпта вручную.'); }
+});
 
 const tabs = [...document.querySelectorAll('[role=tab]')];
 function selectTab(tab) {

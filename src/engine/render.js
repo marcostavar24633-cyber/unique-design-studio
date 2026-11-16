@@ -48,8 +48,15 @@ const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${e
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
 const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>`;
 
+function artStyle(p, role, index = 0) {
+  const root = p.passthrough?.imageArtDirection || {};
+  const entry = role === 'hero' ? root.hero : root[role]?.[index];
+  const point = key => { const v = entry && entry[key] || {}; const x = Number.isFinite(Number(v.x)) ? Math.max(0, Math.min(100, Number(v.x))) : 50; const y = Number.isFinite(Number(v.y)) ? Math.max(0, Math.min(100, Number(v.y))) : 50; return x + '% ' + y + '%'; };
+  return 'class="ds-media ds-art" style="--ds-crop-desktop:' + point('desktop') + ';--ds-crop-tablet:' + point('tablet') + ';--ds-crop-mobile:' + point('mobile') + '"';
+}
+
 function visual(c, variant = 0) {
-  if (c.p.images.hero && !variant) return `<img class="ds-media" src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
+  if (c.p.images.hero && !variant) return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
   return motifSvg(c.vs, variant);
 }
 
@@ -84,8 +91,8 @@ function nav(c) {
 const HERO = {
   'product-first'(c) {
     const it = c.p.services[0];
-    const media = it && it.image
-      ? `<img class="ds-media" src="${esc(it.image)}" alt="${esc(it.title)}" fetchpriority="high" decoding="async">` : visual(c);
+    const media = c.p.images.hero ? visual(c) : it && it.image
+      ? `<img class="ds-media" src="${esc(it.image)}" alt="${esc(it.alt || it.title)}" fetchpriority="high" decoding="async">` : visual(c);
     const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#item-0">Подробнее</a></div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },
@@ -146,7 +153,7 @@ const SECTION = {
   items(c) {
     const v = c.vs.variants.items;
     const li = c.p.services.map((i, n) => {
-      const media = v === 'product' && i.image ? `<div class="item__media"><img class="ds-media" src="${esc(i.image)}" alt="${esc(i.title)}" loading="lazy" decoding="async"></div>` : '';
+      const media = i.image ? `<div class="item__media"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></div>` : '';
       return `<li class="item" id="item-${n}" data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}</div></li>`;
     }).join('');
     return wrap(c, 'items', `<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);
@@ -160,7 +167,7 @@ const SECTION = {
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
   gallery(c) {
-    const li = c.p.gallery.map(g => `<li data-reveal><figure><img src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure></li>`).join('');
+    const li = c.p.gallery.map(g => `<li data-reveal><figure><img ${artStyle(c.p, "gallery", c.p.gallery.indexOf(g))} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure></li>`).join('');
     return wrap(c, 'gallery', `<ul class="gallery" role="list">${li}</ul>`);
   },
   faq(c) {
@@ -204,9 +211,11 @@ export function renderCss(concept) {
   const used = concept.homepage.sectionOrder;
   return [
     CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype],
+    '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
+    used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
   ].join('\n').replace(/\n\s*/g, '');
 }
 

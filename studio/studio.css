@@ -67,3 +67,65 @@ button.wide{width:100%;min-height:44px}
 .spec-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .spec{white-space:pre-wrap;font:13px/1.6 ui-monospace,"Cascadia Code",Consolas,monospace;max-width:920px;margin:0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow-wrap:anywhere}
 .chips-src a{color:var(--accent)}
+
+/* Загрузка и управление фотографиями в редакторе */
+.media-preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.media-preview--grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.media-preview figure{display:grid;gap:6px;align-content:start;min-width:0;margin:0;padding:8px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.media-preview img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:5px;background:var(--bg)}
+.media-preview figcaption{overflow-wrap:anywhere;color:var(--muted);font-size:12px}
+.media-preview button{min-height:32px;padding:4px 8px;font-size:12px}
+.field input[type=file]{width:100%;min-width:0;padding:8px;border:1px dashed var(--line);border-radius:var(--radius);background:var(--card);font-size:13px}
+
+/* Image Intelligence */
+.audit-section-title{margin:24px 0 12px;font-size:18px}
+.image-audit-grid{display:grid;gap:12px;margin-top:12px}
+.image-audit-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:12px;min-width:0}
+.image-audit-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.image-audit-body{display:grid;grid-template-columns:minmax(100px,180px) minmax(0,1fr);gap:14px;align-items:start}
+.image-audit-body>img{display:block;width:100%;max-height:150px;object-fit:contain;border-radius:6px;background:var(--bg)}
+.image-audit-body>div{min-width:0}
+.image-audit-warning,.image-audit-tip,.image-audit-ok{font-size:13px;line-height:1.45;margin:8px 0 0}
+.image-audit-warning{color:var(--danger,#b45309)}
+.image-audit-tip{color:var(--muted)}
+.image-audit-ok{color:var(--success,#15803d)}
+@media(max-width:520px){.image-audit-body{grid-template-columns:1fr}.image-audit-body>img{max-width:220px;max-height:140px}}
+
+/* Smart Crop & Art Direction controls */
+.crop-editor{margin-top:8px;padding:9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.crop-editor summary{cursor:pointer;font-size:12px;font-weight:650}
+.crop-editor__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.crop-editor fieldset{min-width:0;margin:0;padding:7px;border:1px solid var(--line);border-radius:8px}
+.crop-editor legend{font-size:11px;font-weight:650}
+.crop-editor label{display:grid;gap:4px;margin:7px 0;font-size:11px}
+.crop-editor output{font-variant-numeric:tabular-nums;color:var(--accent)}
+.crop-editor input[type=range]{width:100%;min-width:0;padding:0;accent-color:var(--accent)}
+@media(max-width:520px){.crop-editor__grid{grid-template-columns:1fr}}
+
+/* Visual Asset Director */
+.visual-asset-director{max-width:920px;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.visual-asset-director h3{margin:0 0 8px;font-size:18px}
+.visual-asset-director h4{margin:18px 0 8px;font-size:15px}
+.asset-coverage-list{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.asset-coverage{padding:5px 10px;border:1px solid var(--line);border-radius:20px;font-size:12px}
+.asset-coverage.is-present{border-color:var(--ok);color:var(--ok)}
+.asset-coverage.is-missing{border-color:var(--warn);color:var(--warn)}
+.asset-director-notes{margin:10px 0;padding-left:20px;font-size:13px}
+.asset-director-notes li{margin:5px 0}
+.asset-prompt-list{display:grid;gap:10px;margin-top:10px}
+.asset-prompt{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.asset-prompt p{margin:5px 0 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.asset-prompt button{white-space:nowrap;font-size:12px}
+@media(max-width:600px){.asset-prompt{grid-template-columns:1fr}.asset-prompt button{width:100%}}
+
+/* Image SEO & Accessibility */
+.image-seo-panel{max-width:920px;margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.image-seo-panel h3{margin:0 0 8px;font-size:17px}
+.image-seo-panel label{display:grid;gap:5px;font-size:12px;font-weight:600}
+.image-seo-panel input{width:100%;min-width:0;padding:7px 9px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+.image-seo-panel .note{margin-top:8px}
+.media-preview figure>label{display:grid;gap:4px;font-size:11px;font-weight:600}
+.media-preview figure>label input{width:100%;min-width:0;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:inherit}
+.seo-check-list{display:grid;gap:6px;margin:10px 0;padding-left:20px;font-size:13px}
+/* Свой промт */
+.prompt-area{min-height:140px}

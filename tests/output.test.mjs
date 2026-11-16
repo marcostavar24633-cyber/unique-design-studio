@@ -87,3 +87,64 @@ test('ядро дизайн-системы подключено и синхро�
     assert.ok(tokens.includes(name) && html.split(CORE_CSS)[1].includes(`${name}:`), `профиль проекта переопределяет ${name}`);
   }
 });
+
+test('загруженные фотографии сохраняются в проекте и встраиваются в автономный HTML', () => {
+  const photo = 'data:image/png;base64,iVBORw0KGgo=';
+  const project = {
+    ...full,
+    images: { hero: photo, heroAlt: 'Главное фото проекта' },
+    gallery: [{ src: photo, alt: 'Фото в галерее', caption: 'Работа 1' }],
+    services: [['Позиция с фото', 'Описание', '1 500 ₽', photo]],
+  };
+  const { html, exported } = generate(project);
+  assert.ok(html.includes('alt="Главное фото проекта"'));
+  assert.ok(html.includes('alt="Фото в галерее"'));
+  assert.ok(html.includes('alt="Позиция с фото"'));
+  assert.ok((html.match(/src="data:image\/png;base64,iVBORw0KGgo="/g) || []).length >= 3);
+  assert.equal(exported.images.hero, photo);
+  assert.equal(exported.gallery[0].src, photo);
+  assert.equal(exported.services[0][3], photo);
+});
+
+test('отдельные focal points для hero, галереи и карточек применяются на разных ширинах', () => {
+  const r = generate({ ...full, services: [['Товар', 'Описание', '1 000 ₽', 'data:image/webp;base64,AA==']], images: { hero: 'data:image/webp;base64,AA==', heroAlt: 'Фото' }, imageArtDirection: { hero: { desktop: { x: 24, y: 36 }, tablet: { x: 50, y: 42 }, mobile: { x: 72, y: 60 } }, services: { 0: { desktop: { x: 35, y: 45 }, mobile: { x: 75, y: 85 } } } } });
+  assert.match(r.html, /--ds-crop-desktop:24% 36%/);
+  assert.match(r.html, /--ds-crop-tablet:50% 42%/);
+  assert.match(r.html, /--ds-crop-mobile:72% 60%/);
+  assert.ok(r.html.includes('object-position:var(--ds-crop-mobile'));
+  assert.match(r.html, /--ds-crop-desktop:35% 45%/);
+});
+
+ 
+test('ALT-описания карточек товаров сохраняются при импорте и выводятся в HTML', () => {
+  const photo = 'data:image/webp;base64,AA==';
+  const { html, exported } = generate({ ...full, services: [['Телескоп', 'Оптическая труба', '9 900 ₽', photo, 'Телескоп-рефрактор на штативе']] });
+  assert.ok(html.includes('alt="Телескоп-рефрактор на штативе"'));
+  assert.equal(exported.services[0][4], 'Телескоп-рефрактор на штативе');
+});
+ 
+test('SEO-аудит предупреждает о повторных и слабых ALT и длине метаданных', () => {
+  const project = { ...full, title: 'Коротко', description: 'Описание', images: { hero: 'data:image/webp;base64,AA==', heroAlt: 'photo.jpg' }, gallery: [{ src: 'data:image/webp;base64,AA==', alt: 'photo.jpg' }] };
+  const r = generate(project);
+  const ids = r.audit.warnings.map(w => w.id);
+  assert.ok(ids.includes('img-alt-duplicates'));
+  assert.ok(ids.includes('img-alt-quality'));
+  assert.ok(ids.includes('seo-title-length'));
+  assert.ok(ids.includes('seo-description-length'));
+});
+
+
+test('аудит производительности оценивает встроенные изображения и атрибуты загрузки', () => {
+  const largePhoto = 'data:image/webp;base64,' + 'A'.repeat(420_000);
+  const project = { ...full, architecture: 'editorial', images: { hero: largePhoto, heroAlt: 'Главное фото товара' } };
+  const r = generate(project);
+  const belowFold = '<img src="https://cdn.example.test/photo.webp" alt="Фото товара" decoding="async">';
+  const audited = auditSite(r.html + belowFold, r.concept, project);
+  const ids = audited.warnings.map(w => w.id);
+  assert.ok(ids.includes('performance-inline-images'));
+  assert.ok(ids.includes('performance-image-dimensions'));
+  assert.ok(ids.includes('performance-lazy-images'));
+  assert.match(r.html, /fetchpriority="high" decoding="async"/);
+  assert.ok(audited.checks.some(c => c.id === 'performance-document-size'));
+  assert.ok(audited.checks.some(c => c.id === 'performance-hero-priority' && c.level === 'ok'));
+});

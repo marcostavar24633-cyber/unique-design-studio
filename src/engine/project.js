@@ -21,11 +21,11 @@ const TEXT_FIELDS = [
   'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'contactTitle', 'contactText',
 ];
 
-/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка"] (формат Landing Studio) или объект. */
+/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT"] или объект. */
 function item(raw) {
-  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }) };
+  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }), alt: str(raw[4]) };
   if (raw && typeof raw === 'object') {
-    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }) };
+    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }), alt: str(raw.alt) };
   }
   return { title: str(raw), text: '', price: '', image: '' };
 }
@@ -66,6 +66,9 @@ export function normalizeProject(raw = {}) {
   p.palette = paletteMode(raw.palette);
   // Класс проекта: standard | premium | luxury (влияет на композицию, типографику, палитру и тон текстов).
   p.tier = tierOf(raw.tier);
+  // Свой промт заказчика: дополняет стандартный (append) или заменяет его (replace) — см. prompt.js.
+  p.customPrompt = str(raw.customPrompt).slice(0, 8000);
+  p.customPromptMode = raw.customPromptMode === 'replace' ? 'replace' : 'append';
   // Фирменный профиль живого проекта (src/engine/brands.js): цвета, гарнитуры и скругления бренда.
   const brandId = str(raw.brandProfile).toLowerCase();
   p.brandProfile = BRANDS[brandId] ? brandId : '';
@@ -89,14 +92,14 @@ export function normalizeProject(raw = {}) {
   p.ctaUrl = safeUrl(raw.ctaUrl);
   p.formAction = /^https:\/\//i.test(str(raw.formAction)) ? str(raw.formAction) : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
-  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier',
+  const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
     'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
   return p;
 }
 
-const toRow = i => { const row = [i.title, i.text]; if (i.price || i.image) row.push(i.price); if (i.image) row.push(i.image); return row; };
+const toRow = i => { const row = [i.title, i.text]; if (i.price || i.image || i.alt) row.push(i.price); if (i.image || i.alt) row.push(i.image); if (i.alt) row.push(i.alt); return row; };
 
 /** Экспорт в JSON, который читают и этот продукт, и редактор Landing Studio
  *  (списки — массивы строк, designArchitecture — значение из старого перечисления). */
@@ -118,6 +121,7 @@ export function exportProject(input, concept) {
   out.accentLocked = Boolean(p.accent);
   if (p.brandProfile) out.brandProfile = p.brandProfile;
   if (p.tier !== 'standard') out.tier = p.tier;
+  if (p.customPrompt) { out.customPrompt = p.customPrompt; out.customPromptMode = p.customPromptMode; }
   // Шрифты пишутся, только если отличаются от умолчания: иначе после импорта «system» стал бы
   // явным выбором и перекрыл бы веб-шрифты, которые фирменный профиль включает по умолчанию.
   if (p.fonts !== (p.brandProfile ? 'web' : 'system')) out.fonts = p.fonts;
