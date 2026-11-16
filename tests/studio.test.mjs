@@ -86,7 +86,12 @@ test('Smart Image Matching ranks image candidates using role-specific technical 
   assert.ok(source.includes("role === 'service'"));
 });
 
-test('Visual Quality Control checks hero tone zones and gallery tonal consistency', () => {
+test('Hero Readability QA measures actual preview at three responsive widths', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  for (const marker of ['function buildVisualQualityReport(reports)','zoneSums = [0,0,0]','brightnessZones','luminanceRange','Visual Quality Control — визуальный контроль','Левая зона','Разный тональный характер галереи','не измерение WCAG-контраста']) assert.ok(source.includes(marker), marker);
+  for (const marker of ['function parseRgb(color)','function relativeLuminance(rgb)','function contrastRatio(a,b)','function auditHeroReadability()','width:320,label:\'Телефон 320 px\'','width:768,label:\'Планшет 768 px\'','width:1280,label:\'Компьютер 1280 px\'','data-run-hero-readability','hero-readability-results','Контраст текста кнопки ниже 4.5:1']) assert.ok(source.includes(marker), marker);
+});
+
+test('Hero Readability QA restores preview sizing after responsive checks', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.match(source, /finally\s*\{\s*frame\.style\.width = originalWidth;\s*frame\.style\.height = originalHeight;/);
 });
