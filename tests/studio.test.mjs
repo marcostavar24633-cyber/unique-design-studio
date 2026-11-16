@@ -176,3 +176,19 @@ test('Site Content & Interaction QA checks images, links, CTAs and forms in the 
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function auditSiteContentAndInteractions()','function renderSiteContentInteractionChecks()','data-run-site-content-qa','site-content-qa-results','naturalWidth===0','Пустые или небезопасные ссылки','Внешние адреса требуют проверки','доставка не подтверждена','поля без подписи','aria-disabled']) assert.ok(source.includes(marker), marker);
 });
+
+test('вне главной панели она скрыта, а рабочая область генератора доступна', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.match(css, /body\.dashboard-mode>\.top,body\.dashboard-mode>\.layout\{display:none\}/);
+  assert.match(css, /body:not\(\.dashboard-mode\)>\.dashboard\{display:none\}/, 'иначе панель высотой 100vh вытесняет автопилот и предпросмотр');
+});
+
+test('автопилот читает библиотеку шаблонов, но не создаёт второй редактор и не ходит на чужие сайты', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  assert.ok(source.includes('referencesFor(readTemplateLibrary(), input)'));
+  assert.ok(source.includes("localStorage.getItem(LIBRARY_KEY)"));
+  assert.equal((html.match(/<form /g) || []).length, 2, 'в студии по-прежнему две формы: автопилот и редактор проекта');
+  assert.equal((html.match(/id="auto-library"/g) || []).length, 1);
+  assert.equal((html.match(/<textarea id="auto-prompt"/g) || []).length, 1, 'редактор промта один');
+});
