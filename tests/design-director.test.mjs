@@ -43,3 +43,42 @@ test('unapproved or empty patch does not alter project', () => {
   assert.equal(result.changed, false);
   assert.deepEqual(result.project, source);
 });
+
+test('Director does not offer a no-op patch for missing hero copy', () => {
+  const report = reviewDesign({ niche: 'Услуги', cta: 'Оставить заявку' });
+  const hero = report.recommendations.find(item => item.id === 'hero-clarity');
+  assert.ok(hero);
+  assert.equal(hero.patch, null);
+});
+
+test('fragment CTA does not count as a real conversion destination', () => {
+  const report = reviewDesign({
+    niche: 'Услуги', title: 'Услуги', cta: 'Оставить заявку',
+    ctaUrl: '#contact'
+  });
+  assert.ok(report.recommendations.some(item => item.id === 'conversion-destination'));
+});
+
+test('catalog recommendation respects the actual items section id', () => {
+  const input = { niche: 'Магазин', title: 'Каталог', cta: 'Купить', services: [
+    { title: 'Один' }, { title: 'Два' }, { title: 'Три' }
+  ] };
+  const report = reviewDesign(input, { concept: { homepage: { sectionOrder: ['hero', 'items'] } } });
+  assert.ok(!report.recommendations.some(item => item.id === 'catalog-visibility'));
+});
+
+test('Director reads the main audit errors and warnings fields', () => {
+  const report = reviewDesign({ niche: 'Магазин', title: 'Каталог', cta: 'Купить' }, {
+    audit: { errors: [{ id: 'cta' }], warnings: [{ id: 'seo' }, { id: 'image' }] }
+  });
+  const finding = report.recommendations.find(item => item.id === 'audit-issues');
+  assert.ok(finding);
+  assert.match(finding.reason, /3 замечаний \(1 ошибок, 2 предупреждений\)/);
+});
+
+test('approved CTA URL patch rejects javascript schemes, including normalized projects', () => {
+  const source = { __normalized: true, niche: 'Магазин', title: 'Каталог', ctaUrl: 'https://safe.example' };
+  const result = applyApprovedDesignPatch(source, { ctaUrl: 'javascript:alert(1)' }, ['ctaUrl']);
+  assert.equal(result.project.ctaUrl, '');
+  assert.equal(source.ctaUrl, 'https://safe.example');
+});
