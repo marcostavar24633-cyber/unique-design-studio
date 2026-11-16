@@ -2,6 +2,7 @@
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
+const PREVIEW_STORE = 'uds:design-preview:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
@@ -13,6 +14,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
 let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
+let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'all';
 let dashboardQuery = '';
@@ -211,10 +213,36 @@ function buildForm() {
 // ---------- Генерация и отображение ----------
 const registry = () => state.library.map(l => l.entry);
 
+function updateChangePreviewButton() {
+  const button = $('#change-preview');
+  if (!button) return;
+  try {
+    const preview = JSON.parse(localStorage.getItem(PREVIEW_STORE) || 'null');
+    const available = Boolean(preview?.beforeHtml && preview?.afterHtml && preview.projectId === state.raw.id);
+    button.disabled = !available;
+    button.title = available ? 'Открыть сравнение в отдельной вкладке' : 'Сначала внесите изменение в текущий проект';
+  } catch { button.disabled = true; }
+}
 function run() {
-  result = generate(state.raw, { registry: registry() });
+  const previousResult = result;
+  const previousRaw = lastRenderedRaw;
+  const nextResult = generate(state.raw, { registry: registry() });
+  if (previousResult && previousRaw && previousResult.project.id === nextResult.project.id && previousResult.html !== nextResult.html) {
+    try {
+      localStorage.setItem(PREVIEW_STORE, JSON.stringify({
+        version: 1, projectId: nextResult.project.id,
+        projectName: nextResult.project.brand || nextResult.project.niche || 'Проект',
+        changedAt: new Date().toISOString(),
+        beforeHtml: previousResult.html, afterHtml: nextResult.html,
+        beforeRaw: previousRaw, afterRaw: exportProject(normalizeProject(state.raw), nextResult.concept)
+      }));
+    } catch { toast('Не удалось сохранить сравнение: возможно, в браузере закончилось место. Основной проект не затронут.'); }
+  }
+  result = nextResult;
+  lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
   $('#frame').srcdoc = result.html;
   renderSpec(); renderConcept(); renderAudit(); renderRegistry();
+  updateChangePreviewButton();
   persist();
 }
 
@@ -1159,6 +1187,17 @@ document.querySelectorAll('.sizes button').forEach(b => b.addEventListener('clic
   selectTab($('#tab-preview'));
 }));
 
+$('#change-preview')?.addEventListener('click', () => {
+  updateChangePreviewButton();
+  if ($('#change-preview').disabled) return toast('Сначала внесите изменение в проект — тогда появится сравнение.');
+  const opened = window.open('preview.html', '_blank');
+  if (!opened) toast('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для студии.');
+});
+window.addEventListener('message', event => {
+  if (event.origin !== window.location.origin || event.data?.type !== 'uds:apply-preview' || !event.data.raw) return;
+  load(event.data.raw, 'Предложенная версия применена в редакторе. Проверьте её перед сохранением или публикацией.');
+  window.focus();
+});
 $('#new').addEventListener('click', () => load({ ...EMPTY }, 'Новый проект'));
 $('#import').addEventListener('click', () => $('#file').click());
 $('#file').addEventListener('change', async e => {
