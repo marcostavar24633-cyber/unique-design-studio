@@ -370,6 +370,45 @@ async function renderImageIntelligence() {
   ${visual}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
 }
+function scoreAssetForRole(report, role) {
+  if (!report || report.error) return { score: 0, reasons: ['Изображение не удалось проверить'] };
+  const reasons = [];
+  const ratio = Number(report.ratio) || 0;
+  const minSide = Math.min(Number(report.width) || 0, Number(report.height) || 0);
+  let score = 35;
+  if (role === 'hero') {
+    const ratioScore = ratio >= 1.45 && ratio <= 2.05 ? 25 : ratio >= 1.25 && ratio <= 2.3 ? 15 : 0;
+    score += ratioScore; reasons.push(ratioScore ? 'Подходит широкий формат' : 'Для Hero лучше отдельный широкий кадр');
+    const sizeScore = report.width >= 1600 && report.height >= 900 ? 25 : report.width >= 1200 && report.height >= 650 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Достаточное разрешение для большого экрана' : 'Нужно изображение большего разрешения');
+  } else if (role === 'gallery') {
+    const ratioScore = ratio >= 0.65 && ratio <= 2.0 ? 25 : 8;
+    score += ratioScore; reasons.push(ratioScore > 10 ? 'Формат пригоден для галерейной сетки' : 'Проверьте необычную пропорцию');
+    const sizeScore = minSide >= 1000 ? 25 : minSide >= 700 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Хороший запас разрешения' : 'Для крупного просмотра желательно больше пикселей');
+  } else {
+    const ratioScore = ratio >= 0.82 && ratio <= 1.25 ? 25 : ratio >= 0.65 && ratio <= 1.5 ? 15 : 0;
+    score += ratioScore; reasons.push(ratioScore ? 'Близко к квадратному формату карточки' : 'Подготовьте квадратный вариант 1:1');
+    const sizeScore = minSide >= 900 ? 25 : minSide >= 600 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Достаточное разрешение для карточки' : 'Нужно большее разрешение');
+  }
+  if (report.brightness !== null && report.brightness !== undefined) {
+    const lightScore = report.brightness >= 55 && report.brightness <= 220 ? 10 : 0;
+    score += lightScore; reasons.push(lightScore ? 'Средняя яркость в рабочем диапазоне' : 'Проверьте экспозицию и читаемость деталей');
+  }
+  if (report.detail !== null && report.detail !== undefined) {
+    const detailScore = report.detail >= 7 ? 5 : 0;
+    score += detailScore; reasons.push(detailScore ? 'Есть локальная детализация' : 'Проверьте резкость вручную');
+  }
+  return { score: Math.min(100, score), reasons };
+}
+function buildSmartImageMatches(reports) {
+  return ['hero','gallery','service'].map(role => {
+    const candidates = reports.map(report => ({ report, ...scoreAssetForRole(report, role) }))
+      .filter(item => !item.report.error).sort((a,b) => b.score - a.score);
+    return { role, best: candidates[0] || null, current: reports.filter(r => r.role === role).length };
+  });
+}
 function buildAssetRecommendations(reports, nearDuplicateCount = 0) {
   const recommendations = [];
   const hero = reports.find(r => r.role === 'hero');
@@ -443,6 +482,14 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     service: buildRolePrompt('service', sourcePrompts[1], fallback.service)
   };
   const recommendations = buildAssetRecommendations(reports, nearDuplicateCount);
+  const smartMatches = buildSmartImageMatches(reports);
+  const smartMatchCards = smartMatches.map(match => {
+    const label = roleLabels[match.role];
+    if (!match.best) return `<article class="smart-match"><b>${esc(label)}</b><p>Нет изображений, которые удалось проверить.</p></article>`;
+    const item = match.best;
+    const scoreLabel = item.score >= 80 ? 'Хорошее техническое соответствие' : item.score >= 60 ? 'Можно использовать после проверки' : 'Лучше подготовить другой кадр';
+    return `<article class="smart-match"><div class="smart-match__head"><b>${esc(label)}</b><strong>${item.score}/100</strong></div><p><b>Кандидат:</b> ${esc(item.report.label)} <span class="note">(${item.report.width} × ${item.report.height} px)</span></p><p>${scoreLabel}</p><ul>${item.reasons.map(reason => `<li>${esc(reason)}</li>`).join('')}</ul></article>`;
+  }).join('');
   const shotList = buildPhotoShotList(p.niche, p.tier);
   const shotCards = shotList.map((shot,index) => '<article class="photo-shot"><div class="photo-shot__head"><b>'+(index+1)+'. '+esc(shot.title)+'</b><span>'+esc(shot.format)+'</span></div><p><b>Сюжет:</b> '+esc(shot.scene)+'</p><p><b>План и ракурс:</b> '+esc(shot.plan)+'; '+esc(shot.angle)+'.</p><p><b>Свет:</b> '+esc(shot.light)+'</p><p><b>Фон:</b> '+esc(shot.background)+'</p><p><b>Композиция:</b> '+esc(shot.composition)+'</p><p><b>Файл:</b> '+esc(shot.resolution)+'</p></article>').join('');
   const shotListText = formatPhotoShotList(shotList);
@@ -460,7 +507,7 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <h3 id="visual-asset-title">Visual Asset Director</h3>
     <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
     <div class="asset-coverage-list">${coverage}</div>
-    <h4>Рекомендации по фотоконтенту</h4>
+    <h4>Smart Image Matching — подбор по техническим параметрам</h4>\n    <p class="note">Система ранжирует уже добавленные фотографии по пропорциям, разрешению, средней яркости и локальной детализации. Балл не означает, что сюжет фотографии подходит нише: содержание и композицию проверяйте глазами.</p>\n    <div class="smart-match-list">${smartMatchCards}</div>\n    <h4>Рекомендации по фотоконтенту</h4>
     <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
     ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
