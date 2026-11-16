@@ -551,6 +551,37 @@ $('#auto').addEventListener('submit', async e => {
     const workflowResult = await runWorkflow(input, {
       registry: registry(),
       draft,
+      ...(endpoint ? {
+        designDirector: async context => {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              task: 'design-review',
+              project: context.project,
+              analysis: context.analysis,
+              concept: {
+                designDNA: context.concept?.designDNA,
+                homepage: context.concept?.homepage,
+                designBrief: context.concept?.designBrief,
+              },
+              audit: context.audit,
+            }),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok || !body.review) {
+            return {
+              version: 1,
+              mode: 'workers-ai-unavailable',
+              status: 'review-needed',
+              recommendations: [],
+              warning: body.error || 'AI Design Director недоступен; автоматические изменения не выполнялись.',
+              safety: { autoApplied: false, requiresApproval: true },
+            };
+          }
+          return body.review;
+        },
+      } : {}),
       onStage: item => {
         workflowEvents.push(item);
         renderWorkflowProgress(workflowEvents);
