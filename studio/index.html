@@ -72,6 +72,11 @@
           <div class="field"><label for="auto-city">Город</label><input id="auto-city" placeholder="необязательно"></div>
         </div>
         <div class="field"><label for="auto-details">Что важно знать</label><textarea id="auto-details" placeholder="Необязательно: чем отличаетесь, для кого, что продаёте"></textarea></div>
+        <details class="ai generation-prompts" id="generation-prompts-box">
+          <summary>Этапы генерации и редактор промтов</summary>
+          <p class="note">Отметьте этапы, откройте нужный и измените инструкцию. Выбранные промты объединяются в один пакет и передаются AI вместе с нишей.</p>
+          <div id="generation-prompts-list" class="generation-prompts-list"></div>
+        </details>
         <details class="ai" id="auto-prompt-box">
           <summary>Свой промт</summary>
           <div class="field"><label for="auto-prompt">Ваш промт для нейросети</label><textarea id="auto-prompt" class="prompt-area" maxlength="8000" placeholder="Например: пиши как для премиальной аудитории 35+, упор на ручную работу и редкие материалы, без слов «лучший» и «уникальный»…" aria-describedby="auto-prompt-h"></textarea>
