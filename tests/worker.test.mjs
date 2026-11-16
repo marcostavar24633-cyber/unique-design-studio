@@ -72,7 +72,7 @@ test('monitor API requires bearer authentication and an exact host allowlist', a
   assert.equal(denied.status, 401);
   const badHost = await worker.fetch(new Request('https://worker.test/api/monitor/sites', {
     method: 'POST', headers: monitorHeaders,
-    body: JSON.stringify({ url: 'https://not-allowed.example/', label: 'External' }),
+    body: JSON.stringify({ url: 'https://not-allowed.invalid-domain.com/', label: 'External' }),
   }), env);
   assert.equal(badHost.status, 400);
   assert.match((await badHost.json()).error, /MONITOR_ALLOWED_HOSTS/);
