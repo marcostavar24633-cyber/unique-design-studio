@@ -71,7 +71,8 @@ function visual(c, variant = 0) {
   // Декоративные варианты (variant > 0) остаются мотивами и не дублируют фотографию.
   if (!variant) {
     if (c.p.images.hero) {
-      return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(c.p.images.heroAlt)}" fetchpriority="high" decoding="async">`;
+      const alt = c.p.images.heroAlt || c.p.title || c.p.brand || c.p.niche || "Главная фотография проекта";
+      return `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async">`;
     }
     if (c.p.gallery[0]?.src) {
       const photo = c.p.gallery[0];
