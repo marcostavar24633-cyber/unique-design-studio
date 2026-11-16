@@ -337,7 +337,7 @@ function renderWorkflowApprovalPreview() {
   root.replaceChildren();
   const recommendations = currentWorkflowReview?.recommendations || [];
   const chosen = recommendations.filter(item => selectedWorkflowRecommendations.has(item.id) && item.patch && typeof item.patch === 'object');
-  if (!chosen.length) {
+  if (!chosen.length && !Object.keys(manualWorkflowPatch).length) {
     const note = document.createElement('p');
     note.className = 'note';
     note.textContent = 'Выберите рекомендации с готовым безопасным предложением изменений. Текстовые рекомендации без patch требуют ручного редактирования.';
@@ -414,9 +414,6 @@ function renderWorkflowReview(review) {
   }
   root.append(heading, summary);
   if (recommendations.length) root.append(list);
-  const preview = document.createElement('div');
-  preview.id = 'workflow-approval-preview';
-  preview.className = 'workflow-approval-preview';
   const manual = document.createElement('form');
   manual.className = 'workflow-manual-proposal';
   manual.dataset.workflowManualProposal = 'true';
