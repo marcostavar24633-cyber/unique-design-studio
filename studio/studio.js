@@ -268,7 +268,7 @@ function renderPublishManager() {
     ['Ветка публикации', validBranch, 'Укажите допустимое имя ветки']
   ];
   const ready = checks.every(item => item[1]);
-  const command = 'node bin/uds.js deploy ' + result.project.id + '.json --project-name ' + projectName + ' --branch ' + branchName;
+  const command = ready ? 'node bin/uds.js deploy uds-project.json --project-name ' + projectName + ' --branch ' + branchName : 'Укажите корректное имя Pages project и ветку, затем повторите проверку.';
   host.innerHTML = `
     <section class="publish-manager">
       <header class="publish-manager__head"><div><span class="publish-manager__eyebrow">PRODUCTION CONTROL</span><h2>Центр публикации</h2><p>Подготовка проекта, проверка готовности и безопасная передача в Cloudflare Pages</p></div><span class="publish-manager__state ${ready ? 'is-ready' : 'is-blocked'}">${ready ? 'Готов к публикации' : 'Требует внимания'}</span></header>
@@ -283,7 +283,7 @@ function renderPublishManager() {
         <button type="button" id="publish-copy-command" class="primary" ${ready?'':'disabled'}>Копировать команду публикации</button>
       </div>
       <section class="publish-manager__terminal"><b>Команда для локального терминала</b><code id="publish-command">${esc(command)}</code><p>Перед запуском: установите Node.js 20+, откройте терминал в корне репозитория UNIQUE DESIGN STUDIO и один раз выполните <code>npx wrangler login</code>. Pages project должен быть создан заранее.</p></section>
-      <ol class="publish-manager__steps"><li>Скачайте JSON проекта и поместите его в корень локальной копии репозитория под именем <code>${esc(result.project.id)}.json</code>.</li><li>Убедитесь, что проект Pages существует в Cloudflare и выполнен вход через Wrangler.</li><li>Выполните команду выше. При ошибках аудита CLI остановит публикацию.</li><li>После успешной команды откройте URL, который выведет Wrangler. Подключение собственного домена настраивается отдельно в Cloudflare Pages → Custom domains.</li></ol>
+      <ol class="publish-manager__steps"><li>Скачайте JSON проекта и поместите его в корень локальной копии репозитория под именем <code>uds-project.json</code>.</li><li>Убедитесь, что проект Pages существует в Cloudflare и выполнен вход через Wrangler.</li><li>Выполните команду выше. При ошибках аудита CLI остановит публикацию.</li><li>После успешной команды откройте URL, который выведет Wrangler. Подключение собственного домена настраивается отдельно в Cloudflare Pages → Custom domains.</li></ol>
       <p class="publish-manager__disclaimer">Статус здесь отражает только локальную готовность. Панель не имеет доступа к Cloudflare аккаунту и не утверждает, что сайт опубликован. Запись в истории создаётся только после вашего подтверждения успешного deployment в Wrangler.</p>
       <section class="publish-history"><h3>История публикаций</h3><p class="note">Добавьте URL после того, как Wrangler подтвердил успешную публикацию. Проверка URL выполняется из браузера; некоторые сайты запрещают чтение ответа по CORS.</p>
         <div class="publish-history__form"><label for="publish-deployment-url">Фактический URL deployment</label><input id="publish-deployment-url" type="url" inputmode="url" placeholder="https://project.pages.dev" autocomplete="url"><label class="publish-history__confirm"><input id="publish-confirm-success" type="checkbox"> Я выполнил команду и Wrangler сообщил об успешной публикации</label><button type="button" id="publish-record-deployment" class="primary">Зафиксировать успешную публикацию</button></div>
@@ -292,7 +292,7 @@ function renderPublishManager() {
     </section>`;
   $('#publish-project-name').addEventListener('change', e => { publishSettings.projectName=e.target.value.trim().toLowerCase(); localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
   $('#publish-branch').addEventListener('change', e => { publishSettings.branch=e.target.value; localStorage.setItem('uds:publish:v1',JSON.stringify(publishSettings)); renderPublishManager(); });
-  $('#publish-download-json').addEventListener('click', () => download(`${result.project.id}.json`,JSON.stringify(result.exported,null,2)+'\\n','application/json'));
+  $('#publish-download-json').addEventListener('click', () => download('uds-project.json',JSON.stringify(result.exported,null,2)+'\\n','application/json'));
   $('#publish-download-html').addEventListener('click', () => download(`${result.project.id}.html`,result.html,'text/html'));
   $('#publish-copy-command').addEventListener('click', async () => { try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована'); } catch { toast('Не удалось скопировать. Выделите команду и скопируйте вручную.'); } });
   renderPublishHistory();
