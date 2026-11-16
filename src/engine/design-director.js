@@ -1,6 +1,7 @@
 // AI Design Director PRO — безопасный аудит и план улучшений поверх основного движка.
 // Не выбирает нишу и не дублирует buildConcept: анализирует уже собранный результат.
 import { normalizeProject } from './project.js';
+import { safeUrl } from './util.js';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const has = value => String(value ?? '').trim().length > 0;
@@ -25,12 +26,11 @@ export function reviewDesign(input, generated = null) {
     recommendations.push(recommendation(
       'hero-clarity', 'Усилить первый экран', 'conversion', 'high',
       'Главный заголовок и основное действие должны за несколько секунд объяснять предложение и следующий шаг.',
-      'Подготовить более конкретный заголовок и понятный CTA. Не придумывать цены, сроки и гарантии.',
-      { title: project.title, cta: project.cta }
+      'Подготовить более конкретный заголовок и понятный CTA. Не придумывать цены, сроки и гарантии.'
     ));
   }
 
-  if (!has(project.ctaUrl) && !has(project.formAction) && !has(project.contacts?.phone) && !has(project.contacts?.email)) {
+  if ((!has(project.ctaUrl) || project.ctaUrl.startsWith('#')) && !has(project.formAction) && !has(project.contacts?.phone) && !has(project.contacts?.email)) {
     recommendations.push(recommendation(
       'conversion-destination', 'Настроить реальное целевое действие', 'conversion', 'critical',
       'Кнопка без настроенного адреса или контакта не гарантирует получение заявки.',
@@ -38,7 +38,7 @@ export function reviewDesign(input, generated = null) {
     ));
   }
 
-  if (itemCount(project.services) >= 3 && !sections.includes('services')) {
+  if (itemCount(project.services) >= 3 && !sections.includes('items')) {
     recommendations.push(recommendation(
       'catalog-visibility', 'Показать каталог заметнее', 'structure', 'high',
       'В проекте есть несколько позиций, но каталог не попал в текущую структуру.',
@@ -78,10 +78,11 @@ export function reviewDesign(input, generated = null) {
     ));
   }
 
-  if (audit?.issues?.length) {
+  const auditFindings = itemCount(audit?.errors) + itemCount(audit?.warnings);
+  if (auditFindings) {
     recommendations.push(recommendation(
       'audit-issues', 'Исправить замечания технической проверки', 'quality', 'high',
-      `Основной аудит обнаружил ${audit.issues.length} замечаний.`,
+      `Основной аудит обнаружил ${auditFindings} замечаний (${itemCount(audit?.errors)} ошибок, ${itemCount(audit?.warnings)} предупреждений).`,
       'Разобрать замечания основного QA и исправлять их по одному с повторной проверкой.'
     ));
   }
@@ -125,7 +126,7 @@ export function applyApprovedDesignPatch(input, patch, approvedFields = []) {
   const applied = [];
   for (const key of allowed) {
     if (!Object.hasOwn(patch || {}, key)) continue;
-    next[key] = patch[key];
+    next[key] = key === 'ctaUrl' ? safeUrl(patch[key]) : patch[key];
     applied.push(key);
   }
   return { project: next, applied, changed: applied.length > 0 };
