@@ -144,7 +144,9 @@ function compose(project, profile, ranked, seed, avoid) {
   const button = primary === 'brutalist' ? 'block'
     : project.tier === 'luxury' ? pick(stream(seed, 'button'), ['outline', 'underline'])
     : pick(stream(seed, 'button'), primary === 'editorial' || primary === 'storytelling' ? ['solid', 'outline', 'underline'] : ['solid', 'solid', 'outline']);
-  return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button };
+  // Вариант подачи секций — отдельная композиционная ось, а не только оформление hero.
+  const sectionLayout = pick(stream(seed, 'section-layout'), ['editorial', 'offset', 'framed', 'quiet'], avoid.sectionLayouts || []);
+  return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button, sectionLayout };
 }
 
 export const fingerprintOf = d => ({
@@ -157,6 +159,7 @@ export const fingerprintOf = d => ({
   motif: d.motif,
   button: d.button,
   motion: ARCHETYPES[d.primary].motion,
+  sectionLayout: d.sectionLayout || 'editorial',
 });
 
 const tripleEqual = (a, b) => a.archetype === b.archetype && a.placement === b.placement && a.typeCharacter === b.typeCharacter;
@@ -194,7 +197,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const others = registry.filter(e => e && e.fingerprint && e.id !== project.id);
   const near = neighbors > 0 ? others.slice(-neighbors) : [];
 
-  const avoid = { archetypes: [], placements: [], types: [], navs: [], directions: [], shapes: [] };
+  const avoid = { archetypes: [], placements: [], types: [], navs: [], directions: [], shapes: [], sectionLayouts: [] };
   const repeated = [], actions = [];
   let design = compose(project, profile, ranked, seed, avoid);
 
@@ -262,6 +265,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       ['nav', 'navs', 'nav', 'навигационный паттерн', v => NAV_LABELS[v]],
       ['direction', 'directions', 'colorDirection', 'цветовое направление', v => DIRECTIONS[v].label],
       ['shape', 'shapes', 'shape', 'форма элементов', v => SHAPES[v].label],
+      ['sectionLayout', 'sectionLayouts', 'sectionLayout', 'композиция секций', v => ({ editorial: 'журнальная сетка', offset: 'смещённая двухколоночная сетка', framed: 'выделенные фоновые секции', quiet: 'минималистичный ритм и разделители' })[v]],
     ];
     for (const [key, avoidKey, fpKey, label, describe] of soft) {
       if (design[key] !== prev.fingerprint[fpKey]) continue;
@@ -368,7 +372,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
     visualSystem: {
       nicheId: profile.id, itemsLabel: profile.itemsLabel,
       archetype: design.primary, placement: design.placement, nav: design.nav,
-      palette, direction: design.direction,
+      palette, direction: design.direction, sectionLayout: design.sectionLayout,
       typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max },
       shape: brand ? { id: design.shape, ...SHAPES[design.shape], ...brand.radius, label: `скругления бренда «${brand.name}»` } : { id: design.shape, ...SHAPES[design.shape] },
       brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
