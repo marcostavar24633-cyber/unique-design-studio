@@ -28,6 +28,7 @@ test('код веб-редактора синтаксически коррект
     "visualHash",
     "Локальное сравнение обнаружило",
     "Похожие кадры — проверьте разнообразие",
+    "внешние URL не анализируются по пикселям",
     "различие hash: ${distance}/64",
     "function inspectImage(asset)",
     "async function renderImageIntelligence()",
