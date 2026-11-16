@@ -497,9 +497,15 @@ $('#workflow-review')?.addEventListener('click', event => {
   for (const [key, value] of Object.entries(manualWorkflowPatch)) patch[key] = value;
   const preview = applyApprovedDesignPatch(state.raw, patch, Object.keys(patch));
   if (!preview.changed) return toast('Нет безопасных подготовленных изменений для применения.');
-  load(preview.project, 'Одобренные изменения применены. Повторно проверяем сайт…');
+  load(preview.project, 'Одобренные изменения применены. Основной аудит пересчитан.');
+  state.workflow = { ...(state.workflow || {}), approvalStatus: 'applied', appliedFields: preview.applied, approvedAt: new Date().toISOString() };
+  currentWorkflowReview = null;
+  selectedWorkflowRecommendations = new Set();
+  manualWorkflowPatch = Object.create(null);
+  const reviewRoot = $('#workflow-review');
+  if (reviewRoot) reviewRoot.hidden = true;
   persist();
-  toast('Изменения применены. Запустите повторную проверку качества.');
+  toast('Изменения применены. HTML и основной аудит обновлены.');
   button.disabled = true;
 });
 $('#auto').addEventListener('submit', async e => {
