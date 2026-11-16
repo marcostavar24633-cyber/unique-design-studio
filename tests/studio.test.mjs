@@ -184,3 +184,25 @@ test('Site Content & Interaction QA checks images, links, CTAs and forms in the 
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function auditSiteContentAndInteractions()','function renderSiteContentInteractionChecks()','data-run-site-content-qa','site-content-qa-results','naturalWidth===0','Пустые или небезопасные ссылки','Внешние адреса требуют проверки','доставка не подтверждена','поля без подписи','aria-disabled']) assert.ok(source.includes(marker), marker);
 });
+
+test('Visual asset library applies the saved mobile focal point to a separate mobile photo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('const cropPreview = (item, role, index) => {');
+  const end = source.indexOf('return `<section class="asset-library"', start);
+  const cropPreview = source.slice(start, end);
+  assert.ok(cropPreview.includes("const src = viewport === 'mobile' && item.phone ? item.phone : item.desktop;"));
+  assert.ok(cropPreview.includes("const position = cropCoordinate(focal.x) + '% ' + cropCoordinate(focal.y) + '%';"));
+  assert.ok(!cropPreview.includes("? '50% 50%'"));
+});
+
+test('Opening a crop editor reveals collapsed settings and updates the toggle state', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
+  const end = source.indexOf("$('#form').addEventListener('submit'", start);
+  const handler = source.slice(start, end);
+  assert.ok(handler.includes("document.body.classList.contains('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("document.body.classList.remove('workspace-settings-collapsed')"));
+  assert.ok(handler.includes("toggle.setAttribute('aria-expanded', 'true')"));
+  assert.ok(handler.includes("toggle.textContent = 'Скрыть настройки'"));
+  assert.ok(handler.indexOf("classList.remove('workspace-settings-collapsed')") < handler.indexOf("group.open = true"));
+});
