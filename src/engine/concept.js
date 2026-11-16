@@ -4,6 +4,8 @@ import { contrast, ensureContrast, hexToHsl, hslToHex, mix, readableOn, rgba } f
 import { normalizeProject } from './project.js';
 import { BRAND_FONT_WEIGHTS, BRANDS } from './brands.js';
 import { between, hash, pick, stream, uniq } from './util.js';
+import { conceptIdentity, contextSignals } from './context.js';
+import { SECTION_LABELS, normalizeReferences } from './library.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -37,7 +39,7 @@ function contentSignals(p) {
 }
 
 // ---------- Выбор архитектуры ----------
-function rankArchetypes(project, profile, s) {
+function rankArchetypes(project, profile, s, refs = []) {
   const score = Object.fromEntries(Object.keys(ARCHETYPES).map(id => [id, 0]));
   const reasons = Object.fromEntries(Object.keys(ARCHETYPES).map(id => [id, []]));
   const add = (id, n, why) => { score[id] += n; if (why) reasons[id].push(why); };
@@ -55,6 +57,10 @@ function rankArchetypes(project, profile, s) {
     add('immersive', 4, 'люкс — крупный визуал и атмосфера'); add('minimal', 3); add('asymmetric', 2);
     add('catalog', -3); add('product-first', -2); add('brutalist', -6); add('split-utility', -2);
   }
+  // Контекст: характер бренда, аудитория и задача страницы — небольшие поправки к нишевой оценке.
+  for (const sig of contextSignals(project)) add(sig.id, sig.n, sig.why);
+  // Изученные сайты из библиотеки — это конкурентная среда: композицию их первого экрана не повторяем.
+  for (const ref of refs) if (ref.traits.archetypes[0]) add(ref.traits.archetypes[0], -4);
   const arch = project.architecture;
   let ids = Object.keys(ARCHETYPES);
   if (arch.mode === 'family') ids = LEGACY_FAMILIES[arch.family];
@@ -114,7 +120,7 @@ function compose(project, profile, ranked, seed, avoid) {
   const arch = ARCHETYPES[primary];
   const secondaryPick = project.secondaryArchitecture && project.secondaryArchitecture !== primary
     ? project.secondaryArchitecture
-    : (ranked.find(r => r.id !== primary && r.score > 0) || {}).id || '';
+    : (avoid.secondaryHint && avoid.secondaryHint !== primary ? avoid.secondaryHint : (ranked.find(r => r.id !== primary && r.score > 0) || {}).id) || '';
   const placement = pick(stream(seed, 'placement'), Object.keys(arch.placements), avoid.placements);
   // Премиум и люкс: контрастная дидона и старостильная антиква впереди нишевых характеров.
   const tierTypes = { premium: ['serif-editorial', 'didone-contrast', 'geometric-clean'], luxury: ['didone-contrast', 'serif-editorial'] }[project.tier];
@@ -214,16 +220,25 @@ function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', se
 }
 
 // ---------- Главная функция ----------
-export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
+export function buildConcept(input, { registry = [], neighbors = 2, references } = {}) {
   const project = normalizeProject(input);
   const profile = detectNiche(project);
   const s = contentSignals(project);
-  const ranked = rankArchetypes(project, profile, s);
+  // Профили библиотеки шаблонов: из опции или из поля проекта designReferences (сохраняется в экспорте).
+  const refs = normalizeReferences(references ?? project.passthrough.designReferences);
+  const ranked = rankArchetypes(project, profile, s, refs);
   const seed = hash(`${project.brand}|${project.niche}`);
   const others = registry.filter(e => e && e.fingerprint && e.id !== project.id);
   const near = neighbors > 0 ? others.slice(-neighbors) : [];
 
   const avoid = { archetypes: [], placements: [], types: [], navs: [], directions: [], shapes: [], sectionLayouts: [] };
+  // Фирменный характер источников не переносим: их типографику и форму элементов исключаем из выбора,
+  // а их архитектуру используем только как вспомогательную — от неё берётся подача блоков, но не первый экран.
+  for (const ref of refs) {
+    if (ref.traits.typeCharacter) avoid.types.push(ref.traits.typeCharacter);
+    if (ref.traits.shape) avoid.shapes.push(ref.traits.shape);
+    if (!avoid.secondaryHint && ref.traits.archetypes[0]) avoid.secondaryHint = ref.traits.archetypes[0];
+  }
   const repeated = [], actions = [];
   let design = compose(project, profile, ranked, seed, avoid);
 
@@ -282,6 +297,33 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       }
     }
   }
+  // Главный экран (архитектура + расположение визуала) не должен повторять ни один проект реестра.
+  // Если свободных расположений у выбранной архитектуры не осталось — берём следующую уместную для ниши
+  // архитектуру, у которой свободный первый экран ещё есть.
+  if (project.architecture.mode !== 'exact' && others.length) {
+    const taken = new Set(others.map(e => `${e.fingerprint.archetype}/${e.fingerprint.placement}`));
+    const heroOf = d => `${d.primary}/${d.placement}`;
+    if (taken.has(heroOf(design))) {
+      const twin = others.find(e => `${e.fingerprint.archetype}/${e.fingerprint.placement}` === heroOf(design));
+      const candidates = [ranked.find(r => r.id === design.primary), ...ranked.filter(r => r.id !== design.primary && r.score > 0 && !avoid.archetypes.includes(r.id))].filter(Boolean);
+      let fixed = false;
+      for (const cand of candidates) {
+        const occupied = Object.keys(ARCHETYPES[cand.id].placements).filter(k => taken.has(`${cand.id}/${k}`));
+        if (occupied.length === Object.keys(ARCHETYPES[cand.id].placements).length) continue;
+        const trialAvoid = { ...avoid, archetypes: uniq([...avoid.archetypes, ...ranked.slice(0, ranked.indexOf(cand)).map(r => r.id)]), placements: occupied };
+        const trial = compose(project, profile, ranked, seed, trialAvoid);
+        if (trial.primary !== cand.id || taken.has(heroOf(trial)) || near.some(n => tripleEqual(fingerprintOf(trial), n.fingerprint))) continue;
+        repeated.push(`Первый экран совпадал с проектом «${twin.brand || twin.id}»: ${ARCHETYPES[design.primary].name}, то же расположение визуала`);
+        actions.push(trial.primary === design.primary
+          ? `Изменено расположение основного визуала: «${ARCHETYPES[trial.primary].placements[trial.placement]}»`
+          : `Свободных композиций у архитектуры ${ARCHETYPES[design.primary].name} не осталось — выбрана ${ARCHETYPES[trial.primary].name} с собственным первым экраном`);
+        avoid.archetypes = trialAvoid.archetypes;
+        design = trial; fixed = true;
+        break;
+      }
+      if (!fixed) repeated.push(`Первый экран повторяет проект «${twin.brand || twin.id}»: все уместные для ниши композиции уже заняты в реестре`);
+    }
+  }
   const unresolved = near.some(n => tripleEqual(fingerprintOf(design), n.fingerprint));
 
   // Мягкие отличия от непосредственно предыдущего проекта: навигация, цвет, форма.
@@ -310,7 +352,9 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const type = TYPES[design.typeCharacter];
   const brand = project.brandProfile ? BRANDS[project.brandProfile] : null;
   // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
-  const order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
+  let order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
+  const libraryUse = refs.length ? applyReferences(refs, design, order, project) : null;
+  if (libraryUse) order = libraryUse.order;
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
@@ -346,6 +390,7 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
     top && top.reasons.length ? `Сигналы контента: ${top.reasons.join('; ')}.` : '',
     secondary ? `Вспомогательная архитектура — ${secondary.name}: от неё взята подача блоков (${secondary.summary}).` : '',
     actions.length ? 'Композиция скорректирована антишаблонной проверкой — см. uniquenessCheck.' : '',
+    libraryUse ? `Учтены профили библиотеки шаблонов (${refs.map(r => `«${r.name}»`).join(', ')}): взяты структурные и UX-решения, а композиция первого экрана, палитра и типографика — собственные.` : '',
   ].filter(Boolean).join(' ');
 
   const container = { compact: 1280, regular: 1200, airy: 1120 }[arch.rhythm];
@@ -356,7 +401,10 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const webFonts = web && project.fonts === 'web' ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
   const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
+  const identity = conceptIdentity(design, project);
+  const signals = uniq(contextSignals(project).map(x => x.why).filter(Boolean));
   return {
+    ...(libraryUse ? { libraryUse: { references: refs.map(r => ({ id: r.id, name: r.name, category: r.category, why: r.why })), applied: libraryUse.applied, divergence: libraryUse.divergence, patterns: libraryUse.patterns } } : {}),
     designBrief: {
       businessType: profile.label,
       product: project.mainOffer || project.title || project.niche,
@@ -367,8 +415,17 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
       contentPriority: profile.priority,
       constraints,
       assumptions,
+      // Что учтено при выборе концепции: ниша, аудитория, класс, характер бренда, задача страницы, конкурентная среда.
+      contextFactors: [
+        `Ниша: ${profile.label}`,
+        `Класс: ${{ standard: 'стандарт', premium: 'премиум', luxury: 'люкс' }[project.tier]}`,
+        ...signals.map(capitalize),
+        refs.length ? `Конкурентная среда: ${refs.length} ${refs.length === 1 ? 'профиль' : 'профиля'} из библиотеки шаблонов` : 'Конкурентная среда: в библиотеке шаблонов нет подходящих профилей — концепция построена только по нише и контенту',
+      ],
     },
     designDNA: {
+      conceptName: identity.name,
+      conceptFormula: identity.formula,
       primaryArchetype: design.primary,
       secondaryArchetype: design.secondary,
       selectionRationale: rationale,
@@ -412,6 +469,52 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
 }
 
 const capitalize = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+/**
+ * Применяет профили библиотеки к уже выбранной концепции: переносит принципы (что работает в изученных сайтах)
+ * и следит, чтобы итог не совпал ни с одним источником по композиции.
+ */
+function applyReferences(refs, design, baseOrder, project) {
+  const applied = [], divergence = [];
+  let order = [...baseOrder];
+  // Принцип: блок, которым изученные сайты открывают страницу, поднимается на шаг выше.
+  const votes = {};
+  for (const r of refs) { const first = r.traits.sectionOrder.find(id => id !== 'contact'); if (first) votes[first] = (votes[first] || 0) + 1; }
+  const fav = Object.entries(votes).sort((a, b) => b[1] - a[1])[0];
+  if (fav) {
+    const i = order.indexOf(fav[0]);
+    if (i > 0) { order.splice(i, 1); order.splice(i - 1, 0, fav[0]); applied.push(`Блок «${SECTION_LABELS[fav[0]]}» поднят на шаг выше: в изученных сайтах он идёт сразу после первого экрана`); }
+  }
+  if (design.secondary && refs.some(r => r.traits.archetypes[0] === design.secondary)) {
+    applied.push(`Подача блоков взята от архитектуры ${ARCHETYPES[design.secondary].name}, близкой изученным сайтам, — без переноса их первого экрана`);
+  }
+  const merged = key => uniq(refs.flatMap(r => r.patterns[key])).slice(0, 6);
+  const patterns = { structure: merged('structure'), ux: merged('ux'), content: merged('content'), ideas: merged('ideas'), avoid: merged('avoid') };
+  if (patterns.structure.length + patterns.ux.length + patterns.content.length) applied.push('Структурные, UX- и контентные решения источников переданы в ТЗ и промт как принципы для переосмысления');
+  // Защита от копирования: порядок секций не должен совпасть с порядком источника.
+  for (const r of refs) {
+    const same = () => { const theirs = r.traits.sectionOrder.filter(id => order.includes(id)); return theirs.length >= 3 && theirs.join('>') === order.filter(id => theirs.includes(id)).join('>'); };
+    if (!same()) continue;
+    const movable = r.traits.sectionOrder.filter(id => order.includes(id) && id !== 'contact');
+    if (movable.length >= 2) {
+      const x = order.indexOf(movable[movable.length - 2]), y = order.indexOf(movable[movable.length - 1]);
+      [order[x], order[y]] = [order[y], order[x]];
+      divergence.push(`Порядок секций совпадал с источником «${r.name}» — блоки «${SECTION_LABELS[movable[movable.length - 2]]}» и «${SECTION_LABELS[movable[movable.length - 1]]}» переставлены`);
+    }
+    if (same()) divergence.push(`Порядок секций остался близок к источнику «${r.name}»: в проекте слишком мало блоков, чтобы его изменить`);
+  }
+  for (const r of refs) {
+    const theirs = r.traits.archetypes[0];
+    if (!theirs) continue;
+    divergence.push(theirs !== design.primary
+      ? `Первый экран не повторяет «${r.name}»: у источника он ближе к ${ARCHETYPES[theirs].name}, в проекте — ${ARCHETYPES[design.primary].name}`
+      : project.architecture.mode === 'exact'
+        ? `Архитектура ${ARCHETYPES[theirs].name} задана вручную и совпадает с источником «${r.name}» — отличаются расположение визуала, порядок секций, палитра и типографика`
+        : `Архитектура ${ARCHETYPES[theirs].name} осталась самой уместной для ниши, хотя близка источнику «${r.name}», — отличаются расположение визуала, порядок секций, палитра и типографика`);
+  }
+  if (refs.some(r => r.traits.typeCharacter || r.traits.shape)) divergence.push('Характер типографики и форма элементов выбраны иными, чем у источников; палитра строится по нише проекта, а не по источникам');
+  return { order, applied, divergence, patterns };
+}
 
 /** Запись для реестра проектов: по ней сравниваются следующие генерации. */
 export function registryEntry(input, concept) {

@@ -174,6 +174,36 @@ try {
   await page.reload();
   check(await page.locator('.template').count() === 2, 'библиотека не сохранилась после перезагрузки');
   check(errors.length === 0, `ошибки скрипта: ${errors.join('; ')}`);
+  // --- Генератор студии использует сохранённые профили ---
+  await page.evaluate(() => { const k = 'uds:template-library:v1'; const items = JSON.parse(localStorage.getItem(k)); for (const t of items) if (t.profile.blocks.length) { t.category = 'Услуги и бизнес'; t.business = 'мебель на заказ'; } localStorage.setItem(k, JSON.stringify(items)); });
+  await page.goto(`${base}/studio/index.html`);
+  await page.evaluate(() => document.querySelector('.dash-nav [data-dash=create]').click());
+  const shell = await page.evaluate(() => ({ dash: getComputedStyle(document.querySelector('#dashboard')).display, h: document.querySelector('.layout').getBoundingClientRect().height }));
+  check(shell.dash === 'none' && shell.h > 400, `рабочая область генератора не открывается (панель: ${shell.dash}, высота: ${Math.round(shell.h)})`);
+  check((await page.textContent('#auto-library-h')).includes('Заполненных профилей: 1'), 'автопилот не видит профили библиотеки');
+  await page.fill('#auto-niche', 'мебель на заказ'); await page.fill('#auto-email', 'hello@example.com');
+  await page.click('#auto-go');
+  await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'));
+  check((await page.textContent('#auto-status')).includes('Учтены профили библиотеки'), 'в статусе автопилота нет учтённых профилей');
+  await page.click('#tab-concept');
+  const conceptText = await page.textContent('#view-concept');
+  check(conceptText.includes('Библиотека шаблонов') && conceptText.includes('Чем проект отличается'), 'во вкладке «Концепция» нет блока библиотеки');
+  check(conceptText.includes('Концепция') && conceptText.includes('Что учтено'), 'во вкладке «Концепция» нет имени концепции и учтённых факторов');
+  check(!conceptText.includes('#b4552d') && !conceptText.includes('Playfair'), 'в концепцию попали цвета или шрифты источника');
+  await page.click('#tab-spec');
+  check((await page.textContent('#view-spec')).includes('Профили библиотеки шаблонов'), 'в ТЗ нет раздела о профилях библиотеки');
+  await page.click('#tab-concept');
+  await page.click('#drop-references');
+  check(!(await page.textContent('#view-concept')).includes('Чем проект отличается'), 'профили не убираются из проекта');
+  await page.selectOption('#auto-library', 'off');
+  await page.click('#auto-go');
+  await page.waitForFunction(() => !document.querySelector('#auto-go').disabled);
+  check(!(await page.textContent('#auto-status')).includes('Учтены профили'), 'режим «не использовать» всё равно применил библиотеку');
+  await page.click('#tab-concept');
+  check(!(await page.textContent('#view-concept')).includes('Чем проект отличается'), 'самостоятельная генерация содержит блок библиотеки');
+  const studioOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check(studioOverflow <= 0, `студия: горизонтальная прокрутка ${studioOverflow}px`);
+  check(errors.length === 0, `ошибки скрипта студии: ${errors.join('; ')}`);
   if (process.argv.includes('--screenshots')) await page.screenshot({ path: `${root}tests/e2e/screenshots/templates-1280.png`, fullPage: true });
   await page.close();
 } finally {

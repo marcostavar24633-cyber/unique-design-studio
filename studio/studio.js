@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeProject, similarity } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -280,6 +280,25 @@ $('#view-spec').addEventListener('click', async e => {
   if (b.dataset.content === 'download') download(`${result.project.id}-content-director.txt`, contentPrompt(), 'text/plain');
 });
 
+// ---------- Библиотека шаблонов в автопилоте ----------
+// Профили хранит страница templates.html в этом же браузере; здесь они только читаются.
+function readTemplateLibrary() {
+  try { return normalizeLibrary(JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]')); } catch { return []; }
+}
+function renderLibraryHint() {
+  const hint = $('#auto-library-h'); if (!hint) return;
+  const filled = readTemplateLibrary().filter(t => t.status !== 'source-saved').length;
+  const link = '<a href="templates.html">Открыть библиотеку</a>';
+  hint.innerHTML = $('#auto-library').value === 'off' ? `Концепция строится только по нише и контенту. ${link}`
+    : filled ? `Заполненных профилей: ${filled}. Под нишу берутся только подходящие; их принципы переосмысляются, дизайн не копируется. ${link}`
+    : `В библиотеке пока нет заполненных профилей — концепция строится только по нише. ${link}`;
+}
+try { $('#auto-library').value = localStorage.getItem('uds:use-library') === 'off' ? 'off' : 'auto'; } catch { /* нет хранилища */ }
+$('#auto-library').addEventListener('change', () => { try { localStorage.setItem('uds:use-library', $('#auto-library').value); } catch { /* нет хранилища */ } renderLibraryHint(); });
+window.addEventListener('storage', e => { if (e.key === LIBRARY_KEY) renderLibraryHint(); });
+window.addEventListener('pageshow', renderLibraryHint);
+renderLibraryHint();
+
 // ---------- Автопилот ----------
 try {
   $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
@@ -295,6 +314,10 @@ $('#auto').addEventListener('submit', async e => {
     customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
+  // Подходящие профили библиотеки → компактные референсы без палитры, шрифтов и текстов источника.
+  const useLibrary = $('#auto-library').value !== 'off';
+  const references = useLibrary ? referencesFor(readTemplateLibrary(), input) : [];
+  if (references.length) input.designReferences = references;
   const endpoint = $('#auto-endpoint').value.trim();
   try {
     localStorage.setItem('uds:ai-endpoint', endpoint);
@@ -324,6 +347,8 @@ $('#auto').addEventListener('submit', async e => {
     draft = { project: local.project, analysis: local.analysis };
     if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
   }
+  note += references.length ? ` Учтены профили библиотеки: ${references.map(r => `«${r.name}»`).join(', ')}.`
+    : useLibrary && readTemplateLibrary().length ? ' Подходящих профилей в библиотеке не нашлось — концепция построена самостоятельно.' : '';
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
   status.textContent = note;
@@ -375,6 +400,7 @@ function renderConcept() {
   ])}</div>
 ${renderVisualAssetLibrary()}
 <h2>Design DNA</h2><div class="card">${kv([
+    ['Концепция', `<b>${esc(d.conceptName)}</b> <span class="note">— ${esc(d.conceptFormula)}</span>`], ['Что учтено', ul(b.contextFactors)],
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
     ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)],
@@ -386,6 +412,11 @@ ${renderVisualAssetLibrary()}
     ['Первый экран', esc(h.heroComposition)], ['Навигация', esc(h.navigationPattern)], ['Основной CTA', esc(h.primaryCTA)],
     ['Секции', `<ol style="margin:0;padding-left:20px">${h.sections.map(s => `<li><b>${esc(s.id)}</b> — ${esc(s.role)}</li>`).join('')}</ol>`],
   ])}</div>
+${c.libraryUse ? `<h2>Библиотека шаблонов</h2><div class="card">${kv([
+    ['Учтённые профили', ul(c.libraryUse.references.map(r => `${r.name} (${r.category})${r.why.length ? ' — ' + r.why.join('; ') : ''}`))],
+    ['Что применено', ul(c.libraryUse.applied)], ['Чем проект отличается', ul(c.libraryUse.divergence)],
+    ['Принципы для переосмысления', ul([...c.libraryUse.patterns.structure, ...c.libraryUse.patterns.ux, ...c.libraryUse.patterns.content])],
+  ])}<p class="note">В проект переданы только принципы: палитра, шрифты, тексты и изображения изученных сайтов не используются.</p><button type="button" id="drop-references">Убрать профили и пересобрать концепцию</button></div>` : ''}
 <h2>Антишаблонная проверка</h2><div class="card">${kv([
     ['Шаблонность', u.templateReuseDetected ? '<b style="color:var(--err)">обнаружена и не устранена</b>' : 'не обнаружена или устранена'],
     ['Найденные повторы', ul(u.repeatedPatterns)], ['Что изменено', ul(u.differentiationActions)],
@@ -1118,6 +1149,13 @@ $('#form').addEventListener('click', e => {
   buildForm(); run(); toast('Фотография удалена из проекта');
 });
 $('#view-concept').addEventListener('click', e => {
+  if (e.target.closest('#drop-references')) {
+    // Концепция пересобирается без профилей библиотеки: остаются только ниша и контент проекта.
+    delete state.raw.designReferences;
+    run();
+    toast('Профили библиотеки убраны из проекта');
+    return;
+  }
   if (e.target.closest('[data-open-image-settings]')) {
     const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
     if (group) { group.open = true; group.scrollIntoView({ behavior: 'smooth', block: 'start' }); }

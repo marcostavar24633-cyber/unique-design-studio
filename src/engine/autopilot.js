@@ -329,6 +329,8 @@ export function draftFromNiche(input = {}) {
     contactText: 'Ответим удобным способом и подскажем следующий шаг.',
     contacts: { email: str(input.email), phone: str(input.phone) },
     assumptions,
+    // Профили из библиотеки шаблонов, подобранные студией под нишу (см. library.js); без них генерация полностью самостоятельная.
+    ...(Array.isArray(input.designReferences) && input.designReferences.length ? { designReferences: input.designReferences } : {}),
   };
 
   const analysis = {
@@ -372,7 +374,7 @@ ${li(b.contentPriority)}
 ${a.marketResearch ? `\n## Исследование рынка\n${a.marketResearch}\n` : ''}${a.competitors && a.competitors.length ? `\nКонкуренты и типовые подходы:\n${li(a.competitors)}\n` : ''}${a.sources && a.sources.length ? `\nИсточники:\n${a.sources.map(s => `- [${s.title}](${s.url})`).join('\n')}\n` : ''}
 
 ## 4. Концепция (Design DNA)
-- Архитектура: **${ARCHETYPES[d.primaryArchetype].name}**${d.secondaryArchetype ? `, вспомогательная — ${ARCHETYPES[d.secondaryArchetype].name}` : ''}
+${d.conceptName ? `- Концепция: **${d.conceptName}** — ${d.conceptFormula}\n` : ''}- Архитектура: **${ARCHETYPES[d.primaryArchetype].name}**${d.secondaryArchetype ? `, вспомогательная — ${ARCHETYPES[d.secondaryArchetype].name}` : ''}
 - Почему: ${d.selectionRationale}
 - Первый экран: ${h.heroComposition}
 - Навигация: ${h.navigationPattern}
@@ -380,7 +382,19 @@ ${a.marketResearch ? `\n## Исследование рынка\n${a.marketResear
 - Типографика: ${d.typographyDirection}
 - Изображения: ${d.imageDirection}
 - Движение: ${d.motionDirection}
+${concept.libraryUse ? `
+### Профили библиотеки шаблонов
+Изучены: ${concept.libraryUse.references.map(r => `«${r.name}» (${r.category})`).join(', ')}. В проект перенесены принципы, а не дизайн источников.
 
+Что применено:
+${li(concept.libraryUse.applied)}
+
+Решения для переосмысления:
+${li([...concept.libraryUse.patterns.structure, ...concept.libraryUse.patterns.ux, ...concept.libraryUse.patterns.content])}
+
+Чем проект отличается от источников:
+${li(concept.libraryUse.divergence)}
+` : ''}
 ## 5. План фотосъёмки\n${li(a.imagePrompts)}\n\n## 6. Структура страницы
 ${h.sections.map((s, i) => `${i + 1}. **${s.id}** — ${s.role}`).join('\n')}
 
@@ -426,6 +440,7 @@ export function fromAiLanding(landing, input = {}) {
     contacts: { email: str(input.email), phone: str(input.phone) },
     assumptions: Array.isArray(l.assumptions) ? l.assumptions.map(String) : [],
     marketResearch: str(l.marketResearch), researchSources: Array.isArray(l.researchSources) ? l.researchSources : [],
+    ...(Array.isArray(input.designReferences) && input.designReferences.length ? { designReferences: input.designReferences } : {}),
   };
   if (LEGACY.includes(l.designArchitecture)) project.designArchitecture = l.designArchitecture;
   const list = v => (Array.isArray(v) ? v.map(String).filter(Boolean) : []);

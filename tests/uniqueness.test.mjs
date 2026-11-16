@@ -76,3 +76,21 @@ test('отпечаток дизайна учитывает графически�
   assert.equal(similarity(current, current), 1);
   assert.ok(similarity(current, { ...current, motif: 'different-motif', button: 'different-button', motion: 'different-motion' }) < 1);
 });
+
+test('главные экраны не повторяются в серии проектов из разных ниш', async () => {
+  const { autopilot } = await import('../src/engine/index.js');
+  const niches = ['салон красоты', 'ювелирная мастерская', 'доставка еды', 'стоматология', 'школа программирования', 'фотограф', 'ремонт квартир', 'фитнес-клуб',
+    'кофейня', 'интернет-магазин электроники', 'юридическая фирма', 'тату-студия', 'цветочный магазин', 'свадебное агентство', 'IT-сервис', 'магазин телескопов'];
+  let registry = [];
+  const heroes = new Map();
+  for (const niche of niches) {
+    const { project } = autopilot({ niche, email: 'hello@example.com' }, { registry });
+    const r = generate(project, { registry });
+    registry = r.registry;
+    const hero = `${r.concept.visualSystem.archetype}/${r.concept.visualSystem.placement}`;
+    assert.ok(!heroes.has(hero), `«${niche}» повторяет первый экран проекта «${heroes.get(hero)}»: ${hero}`);
+    heroes.set(hero, niche);
+    assert.deepEqual(r.audit.errors, [], niche);
+  }
+  assert.ok(new Set([...heroes.keys()].map(h => h.split('/')[0])).size >= 8, 'в серии используется не меньше восьми архитектур');
+});

@@ -181,7 +181,8 @@ export function matchTemplates(library, input = {}, { limit = 3 } = {}) {
     const common = [...stems(`${t.name} ${t.business} ${t.notes}`)].filter(w => want.has(w));
     if (common.length) { score += Math.min(6, common.length * 3); why.push('совпадают ключевые слова описания'); }
     if (t.category === 'Премиум и люкс' && ['premium', 'luxury'].includes(input.tier)) { score += 3; why.push('класс проекта — премиум/люкс'); }
-    if (t.category === 'Универсальный') { score += 1; if (!why.length) why.push('универсальный профиль'); }
+    // «Универсальный» — явное решение пользователя применять профиль к любым нишам; он проходит порог, но уступает точным совпадениям.
+    if (t.category === 'Универсальный') { score += 3; if (!why.length) why.push('универсальный профиль'); }
     if (score >= 3) out.push({ template: t, score, why });
   }
   return out.sort((a, b) => b.score - a.score || (a.template.updatedAt < b.template.updatedAt ? 1 : -1)).slice(0, limit);

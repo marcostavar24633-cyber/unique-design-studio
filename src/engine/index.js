@@ -12,11 +12,14 @@ export { autopilot, buildSpec, draftFromNiche, fromAiLanding } from './autopilot
 export { exportProject, normalizeProject, resolveArchitecture, tierOf, FORMAT_VERSION, TIERS } from './project.js';
 export { ARCHETYPES, ARCHETYPE_IDS, DIRECTIONS, LEGACY_FAMILIES, LEGACY_LABELS, NAV_LABELS, NICHES, TYPES, SHAPES, WEB_FONTS } from './data.js';
 export { contrast } from './color.js';
+export { analyzePage, buildProfile, stylesheetLinks } from './site-analysis.js';
+export { CATEGORIES, LIBRARY_KEY, PROFILE_FIELDS, PROFILE_GROUPS, matchTemplates, normalizeLibrary, normalizeReferences, normalizeTemplate, referencesFor } from './library.js';
+export { conceptIdentity, contextSignals } from './context.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
-export function generate(input, { registry = [], neighbors = 2 } = {}) {
+export function generate(input, { registry = [], neighbors = 2, references } = {}) {
   const project = normalizeProject(input);
-  const concept = buildConcept(project, { registry, neighbors });
+  const concept = buildConcept(project, { registry, neighbors, references });
   const html = renderSite(project, concept);
   const audit = auditSite(html, concept, project);
   const entry = registryEntry(project, concept);
