@@ -6,6 +6,7 @@ import { BRAND_FONT_WEIGHTS, BRANDS } from './brands.js';
 import { between, hash, pick, stream, uniq } from './util.js';
 import { conceptIdentity, contextSignals } from './context.js';
 import { SECTION_LABELS, normalizeReferences } from './library.js';
+import { chooseMotion } from './motion.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -402,6 +403,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
   const identity = conceptIdentity(design, project);
+  // Анимация подбирается под характер бренда, класс, нишу и архитектуру; бюджет механик ограничен интенсивностью.
+  const motionPlan = chooseMotion(project, { archetype: design.primary, motion: arch.motion, nicheId: profile.id, seed });
   const signals = uniq(contextSignals(project).map(x => x.why).filter(Boolean));
   return {
     ...(libraryUse ? { libraryUse: { references: refs.map(r => ({ id: r.id, name: r.name, category: r.category, why: r.why })), applied: libraryUse.applied, divergence: libraryUse.divergence, patterns: libraryUse.patterns } } : {}),
@@ -436,7 +439,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
         ? `Гарнитуры бренда: ${brand.display}${brand.body !== brand.display ? ' и ' + brand.body : ''}; иерархия — ${type.label}`
         : capitalize(type.label) + (web ? `: ${web[0][0]}${web[1][0] !== web[0][0] ? ' и ' + web[1][0] : ''} (Google Fonts)` : ''),
       imageDirection: capitalize(profile.image),
-      motionDirection: MOTION_LABELS[arch.motion],
+      motionDirection: motionPlan.label,
     },
     homepage: {
       heroComposition: arch.placements[design.placement],
@@ -461,7 +464,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },
-      motion: arch.motion, motif: design.motif,
+      motion: arch.motion, motionPlan, motif: design.motif,
       variants: { items: itemsVariant, advantages: arch.advantages, process: arch.process },
       seed,
     },
