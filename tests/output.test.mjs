@@ -148,3 +148,20 @@ test('аудит производительности оценивает вст�
   assert.ok(audited.checks.some(c => c.id === 'performance-document-size'));
   assert.ok(audited.checks.some(c => c.id === 'performance-hero-priority' && c.level === 'ok'));
 });
+
+
+test('форма не имитирует серверную отправку через mailto и сообщает реальный статус доставки', () => {
+  const mailOnly = generate({ ...full, formAction: '', contacts: { email: 'hello@example.org' } });
+  assert.equal(mailOnly.audit.formDelivery, 'mailto-fallback');
+  assert.ok(mailOnly.audit.warnings.some(w => w.id === 'form-delivery'));
+  assert.ok(!mailOnly.html.includes('<form class="form"'), 'без HTTPS endpoint не показываем форму с mailto action');
+  assert.ok(mailOnly.html.includes('mailto:hello@example.org'), 'email остаётся доступным как контакт');
+
+  const noHandler = generate({ ...full, formAction: '', contacts: {} });
+  assert.equal(noHandler.audit.formDelivery, 'not-configured');
+
+  const endpoint = generate({ ...full, formAction: 'https://forms.example.org/submit' });
+  assert.equal(endpoint.audit.formDelivery, 'endpoint-configured');
+  assert.ok(endpoint.html.includes('data-form-delivery="endpoint-configured"'));
+  assert.ok(endpoint.audit.warnings.some(w => w.id === 'form-delivery'), 'настройка endpoint не равна подтверждённой доставке');
+});
