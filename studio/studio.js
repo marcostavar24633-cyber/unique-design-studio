@@ -18,7 +18,42 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
-const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };
+const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };\n
+function renderDashboard(filter = 'all') {
+  const root = $('#dash-projects'); if (!root) return;
+  const entries = state.library.map((item, index) => ({...item, index, kind:'saved'}));
+  const shown = filter === 'saved' ? entries : entries;
+  $('#dash-project-count').textContent = String(entries.length);
+  $('#stat-projects').textContent = String(entries.length);
+  const exampleCount = Number($('#examples')?.options.length || 1) - 1;
+  $('#stat-examples').textContent = String(Math.max(0, exampleCount));
+  root.innerHTML = shown.length ? shown.map(item => {
+    const p = normalizeProject(item.raw), name = p.brand || p.niche || 'Без названия';
+    const image = p.images?.hero || p.gallery?.[0]?.src || '';
+    return '<article class="dash-project-card"><div class="dash-project-image">'+(image ? '<img src="'+esc(image)+'" alt="">' : '<span>✦</span>')+'</div><div class="dash-project-info"><b>'+esc(name)+'</b><small>'+esc(p.niche || 'Коммерческий сайт')+'</small><button data-open-project="'+item.index+'">Открыть проект →</button></div></article>';
+  }).join('') : '<div class="dash-empty"><b>Пока нет сохранённых проектов</b><p>Создайте сайт и нажмите «В реестр», чтобы он появился здесь.</p><button class="dash-primary" data-dash="create">Создать первый сайт</button></div>';
+}
+function openWorkspace(section = 'create') {
+  document.body.classList.remove('dashboard-mode');
+  if (section === 'create' || section === 'editor' || section === 'director') { selectTab($('#tab-preview')); $('#auto-niche')?.focus(); }
+  if (section === 'visual') selectTab($('#tab-concept'));
+  if (section === 'qa') selectTab($('#tab-audit'));
+  if (section === 'projects') selectTab($('#tab-registry'));
+  if (section === 'publish') selectTab($('#tab-preview'));
+}
+$('#dashboard')?.addEventListener('click', e => {
+  const project = e.target.closest('[data-open-project]');
+  if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
+  const action = e.target.closest('[data-dash]')?.dataset.dash;
+  if (action && action !== 'home') openWorkspace(action);
+  const filter = e.target.closest('[data-filter]')?.dataset.filter;
+  if (filter) { document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('selected',b.dataset.filter===filter)); renderDashboard(filter); }
+});
+$('#dash-search')?.addEventListener('input', e => {
+  const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.dash-project-card').forEach(card=>card.hidden=!card.textContent.toLowerCase().includes(q));
+});
+
 
 // ---------- Описание формы ----------
 const LIST_HINT = 'Одна позиция на строку: Название | Описание';
