@@ -266,3 +266,46 @@ test('Opening a crop editor reveals collapsed settings and updates the toggle st
   assert.ok(handler.includes("toggle.textContent = 'Скрыть настройки'"));
   assert.ok(handler.indexOf("classList.remove('workspace-settings-collapsed')") < handler.indexOf("group.open = true"));
 });
+
+test('AI Image Director handlers are delegated from the audit view that renders its controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(source.includes("$('#view-audit').addEventListener('input', e => {"));
+  assert.ok(source.includes("$('#view-audit').addEventListener('click', async e => {"));
+  assert.ok(!source.includes("$('#view-concept').addEventListener('input', e => {"));
+  // Кнопки AI Image Director рисуются в «Проверке», поэтому их обработчик не должен жить в «Концепции».
+  const concept = source.slice(source.indexOf("$('#view-concept').addEventListener('click', e => {"));
+  assert.ok(!concept.slice(0, concept.indexOf('\n});')).includes('data-image-director'));
+});
+
+test('Asset library buttons in the concept view keep a click handler there', () => {
+  // Библиотека изображений рисуется во вкладке «Концепция» (renderConcept → renderVisualAssetLibrary):
+  // без обработчика на #view-concept кнопки «Управлять фотографиями» и «Проверить фото» ничего не делают.
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const render = source.slice(source.indexOf('function renderConcept()'));
+  assert.ok(render.slice(0, render.indexOf('\n}\n')).includes('${renderVisualAssetLibrary()}'));
+  const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
+  assert.ok(start > 0, 'обработчик кликов вкладки «Концепция»');
+  const handler = source.slice(start, source.indexOf('\n});', start));
+  for (const marker of ['[data-open-image-settings]', '[data-open-image-audit]', '[data-open-crop-role]']) assert.ok(handler.includes(marker), marker);
+});
+
+test('AI Image Director package uses actual newline separators', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function imageDirectorPackage()');
+  const end = source.indexOf('\n}', start);
+  const body = source.slice(start, end);
+  assert.ok(body.includes(".join('\\n')"));
+  assert.ok(body.includes("card.innerText + '\\n' + additions"));
+  assert.ok(body.includes(".join('\\n\\n'"));
+  assert.ok(!body.includes(".join('\\\\n')"));
+});
+
+test('AI Image Director brief edits refresh exported JSON before save or export', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf("$('#view-audit').addEventListener('input', e => {");
+  const end = source.indexOf('\n});', start);
+  const handler = source.slice(start, end);
+  assert.ok(handler.includes('root.brief[field.dataset.imageBrief] = field.value;'));
+  assert.ok(handler.includes('result.exported = exportProject(state.raw, result.concept);'));
+  assert.ok(handler.indexOf('result.exported = exportProject') < handler.indexOf('persist();'));
+});

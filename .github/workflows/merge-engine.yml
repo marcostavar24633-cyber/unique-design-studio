@@ -1,0 +1,72 @@
+name: Merge Engine
+# Автономная проверка и безопасное слияние Pull Request в main (scripts/merge-engine.mjs).
+# По расписанию — только сводка. Слияние — только вручную: command=merge и execute=true.
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'status — сводка; check — полная проверка PR; merge — слияние'
+        type: choice
+        options: [status, check, merge]
+        default: status
+      pr:
+        description: 'Номер PR (для check и merge)'
+        required: false
+      execute:
+        description: 'Выполнить слияние (иначе пробный прогон)'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 */6 * * *'
+
+# Минимально необходимые права встроенного GITHUB_TOKEN. Отдельный токен не нужен.
+permissions:
+  contents: write       # слияние и удаление временной ветки
+  pull-requests: write  # слияние PR
+  checks: read          # статусы CI
+  statuses: read
+  actions: write        # запуск публикации после слияния (push от GITHUB_TOKEN её не запускает)
+
+# Защита от одновременных и повторных операций: в репозитории работает один исполнитель.
+concurrency:
+  group: merge-engine
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Ввод передаётся через переменные окружения, а не подстановкой в команду (защита от внедрения команд).
+      PR_NUMBER: ${{ inputs.pr }}
+      EXECUTE: ${{ inputs.execute && '--execute' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Номер PR
+        if: github.event_name == 'workflow_dispatch' && inputs.command != 'status'
+        run: '[[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "Укажите номер PR"; exit 1; }'
+      - name: Права и настройки
+        run: node scripts/merge-engine.mjs doctor
+      - name: Сводка
+        if: github.event_name == 'schedule' || inputs.command == 'status'
+        run: node scripts/merge-engine.mjs status --json report.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Проверка PR
+        if: github.event_name == 'workflow_dispatch' && inputs.command == 'check'
+        run: node scripts/merge-engine.mjs check "$PR_NUMBER" --json report.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Слияние
+        if: github.event_name == 'workflow_dispatch' && inputs.command == 'merge'
+        run: node scripts/merge-engine.mjs merge "$PR_NUMBER" $EXECUTE --json report.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Отчёт
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merge-engine-report
+          path: report.json
+          if-no-files-found: ignore

@@ -3,3 +3,6 @@ dist/
 out/
 .uds-registry.json
 tests/e2e/screenshots/
+
+# Журнал и блокировка Merge Engine (локальное состояние)
+.merge-engine/
