@@ -129,12 +129,13 @@ export async function handle(request, env = {}) {
   if (!origin) return json({ ok: false, reason: 'origin', message: 'Запросы принимаются только со страниц студии' }, 403, '');
   if (here.pathname !== '/fetch') return json({ ok: false, reason: 'not-found', message: 'Неизвестный адрес' }, 404, origin);
 
-  // Заголовок Origin защищает только от чужих сайтов в браузере: прямой клиент может его подделать.
-  // Поэтому при наличии привязки RATE_LIMITER (см. docs/site-analyzer.md) частота запросов ограничивается по IP.
-  if (env.RATE_LIMITER && typeof env.RATE_LIMITER.limit === 'function') {
-    const { success } = await env.RATE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
-    if (!success) return json({ ok: false, reason: 'rate-limit', message: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
+  // Origin/CORS не защищает Worker от прямых HTTP-клиентов: Origin можно подделать.
+  // Поэтому без реальной привязки RATE_LIMITER запросы к целевым сайтам запрещены (fail closed).
+  if (!env.RATE_LIMITER || typeof env.RATE_LIMITER.limit !== 'function') {
+    return json({ ok: false, reason: 'rate-limit-unconfigured', message: 'Сервис временно недоступен: ограничитель запросов не настроен.' }, 503, origin);
   }
+  const { success } = await env.RATE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
+  if (!success) return json({ ok: false, reason: 'rate-limit', message: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
   const kind = here.searchParams.get('kind') === 'css' ? 'css' : 'html';
   const target = validateTarget(here.searchParams.get('url'));
   if (!target.ok) return json(target, 400, origin);
