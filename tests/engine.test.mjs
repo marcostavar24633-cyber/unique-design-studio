@@ -54,11 +54,11 @@ test('адаптивное кадрирование фотографий учи�
 
 test('мобильное фото Hero экспортируется в picture, а старый проект остаётся совместимым', () => {
   const base = generate({ ...full, images: { hero: 'https://example.com/desktop.jpg', heroAlt: 'Главное фото' } });
-  assert.match(base.html, /<img[^>]+desktop\\.jpg/);
-  assert.doesNotMatch(base.html, /<picture class=\"ds-hero-picture\"/);
+  assert.ok(base.html.includes('src="https://example.com/desktop.jpg"'));
+  assert.ok(!base.html.includes('<picture class="ds-hero-picture">'));
   const responsive = generate({ ...full, images: { hero: 'https://example.com/desktop.jpg', heroMobile: 'https://example.com/mobile.jpg', heroAlt: 'Главное фото' } });
-  assert.match(responsive.html, /<picture class=\"ds-hero-picture\"><source media=\"\\(max-width:600px\\)\" srcset=\"https:\/\/example\\.com\/mobile\\.jpg\">/);
-  assert.match(responsive.html, /src=\"https:\/\/example\\.com\/desktop\\.jpg\"/);
+  assert.ok(responsive.html.includes('<picture class="ds-hero-picture"><source media="(max-width:600px)" srcset="https://example.com/mobile.jpg">'));
+  assert.ok(responsive.html.includes('src="https://example.com/desktop.jpg"'));
 });
 
 test('генерация детерминирована', () => {
