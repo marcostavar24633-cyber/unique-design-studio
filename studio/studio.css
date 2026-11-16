@@ -332,3 +332,19 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .publish-history__meta{display:grid;gap:5px;min-width:0}.publish-history__meta b{font-size:12px}.publish-history__meta small{font-size:11px;color:var(--muted)}.publish-history__meta a{overflow-wrap:anywhere;font-size:12px;color:#d6b46d}
 .publish-history__actions{display:flex;flex-wrap:wrap;gap:6px;flex:none}.publish-history__actions button{min-height:34px;padding:6px 9px;font-size:11px}
 @media(max-width:640px){.publish-history__item{align-items:flex-start;flex-direction:column}.publish-history__actions{width:100%}.publish-history__actions button{flex:1}}
+
+
+/* Deployment Monitor PRO */
+.deployment-monitor{display:grid;gap:14px;margin:14px 0 18px;padding:15px;border:1px solid rgba(201,164,94,.28);border-radius:13px;background:#0d1014}
+.deployment-monitor__top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.deployment-monitor__top h3{margin:5px 0;font-size:19px}
+.deployment-monitor__top p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+.deployment-monitor__top button{min-height:39px;padding:8px 12px;white-space:nowrap}
+.deployment-monitor__stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.deployment-monitor__stats>div{display:grid;gap:4px;padding:11px;border:1px solid var(--line);border-radius:9px;background:#14171c}
+.deployment-monitor__stats b{font-size:21px;font-variant-numeric:tabular-nums}
+.deployment-monitor__stats small{color:var(--muted);font-size:10px;line-height:1.35}
+.deployment-monitor__filters{display:flex;flex-wrap:wrap;gap:7px}
+.deployment-monitor__filters button{min-height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#14171c;color:var(--muted);font-size:11px}
+.deployment-monitor__filters button[aria-pressed="true"]{border-color:rgba(201,164,94,.65);background:rgba(201,164,94,.1);color:#f0d69f}
+@media(max-width:640px){.deployment-monitor__top{align-items:stretch;flex-direction:column}.deployment-monitor__top button{width:100%}.deployment-monitor__stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
