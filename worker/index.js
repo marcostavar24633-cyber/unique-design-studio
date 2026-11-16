@@ -1,4 +1,4 @@
-const MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
   'https://marcostavar24633-cyber.github.io',
 ]);
