@@ -1,0 +1,10 @@
+# Конфигурация Cloudflare Worker «анализатор-сервер». Секретов нет и быть не должно.
+# Развёртывание: см. docs/site-analyzer.md
+name = "uds-site-fetch"
+main = "site-fetch.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+[vars]
+# Список сайтов (Origin), которым разрешено обращаться к Worker, через запятую.
+ALLOWED_ORIGINS = "https://marcostavar24633-cyber.github.io"
