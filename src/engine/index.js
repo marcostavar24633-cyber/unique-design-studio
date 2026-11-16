@@ -23,3 +23,5 @@ export function generate(input, { registry = [], neighbors = 2 } = {}) {
   return { project, concept, html, audit, entry, registry: upsertRegistry(registry, entry), exported: exportProject(project, concept) };
 }
 export { BRANDS } from './brands.js';
+
+export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
