@@ -300,16 +300,23 @@ function inspectImage(asset) {
             ctx.drawImage(img, 0, 0, 64, 64);
             const pixels = ctx.getImageData(0, 0, 64, 64).data;
             let sum = 0, count = 0, edges = 0, edgeCount = 0, prev = null;
+            const zoneSums = [0,0,0], zoneCounts = [0,0,0];
+            let minLuminance = 255, maxLuminance = 0;
             for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
               const i = (y * 64 + x) * 4;
               const l = .2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2];
               sum += l; count++;
+              const zone = Math.min(2, Math.floor(x / (64 / 3)));
+              zoneSums[zone] += l; zoneCounts[zone]++;
+              minLuminance = Math.min(minLuminance, l); maxLuminance = Math.max(maxLuminance, l);
               if (x && prev !== null) { edges += Math.abs(l - prev); edgeCount++; }
               if (y) { const up = ((y - 1) * 64 + x) * 4; const ul = .2126 * pixels[up] + .7152 * pixels[up + 1] + .0722 * pixels[up + 2]; edges += Math.abs(l - ul); edgeCount++; }
               prev = l;
             }
             brightness = count ? sum / count : null;
             detail = edgeCount ? edges / edgeCount : null;
+            asset._brightnessZones = zoneSums.map((value,index) => zoneCounts[index] ? value / zoneCounts[index] : null);
+            asset._luminanceRange = maxLuminance - minLuminance;
             const hashCanvas = document.createElement('canvas');
             hashCanvas.width = 8; hashCanvas.height = 8;
             const hashContext = hashCanvas.getContext('2d', { willReadFrequently: true });
@@ -326,7 +333,7 @@ function inspectImage(asset) {
       }
       if (brightness !== null && brightness < 48) warnings.push('Кадр выглядит очень тёмным по средней яркости; проверьте детали в тенях.');
       if (detail !== null && detail < 5) warnings.push('Мало мелких деталей на уменьшенной копии: возможна мягкость или расфокус. Проверьте фото визуально.');
-      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail, visualHash });
+      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail, visualHash, brightnessZones: asset._brightnessZones || null, luminanceRange: asset._luminanceRange ?? null });
     };
     img.onerror = () => resolve({ ...asset, error: 'Не удалось прочитать изображение. Проверьте ссылку или формат.', warnings: [], tips: [] });
     img.src = asset.src;
@@ -370,6 +377,33 @@ async function renderImageIntelligence() {
   ${visual}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
 }
+
+function buildVisualQualityReport(reports) {
+  const valid = reports.filter(r => !r.error);
+  const hero = valid.find(r => r.role === 'hero');
+  const gallery = valid.filter(r => r.role === 'gallery');
+  const items = [];
+  if (hero?.brightnessZones) {
+    const names = ['Левая зона','Центр','Правая зона'];
+    const zones = hero.brightnessZones.map((value,index) => ({ name:names[index], value })).filter(z => z.value !== null);
+    const dark = zones.filter(z => z.value < 55);
+    const bright = zones.filter(z => z.value > 205);
+    if (dark.length) items.push({level:'check',title:'Тёмные зоны на Hero',text:dark.map(z => z.name.toLowerCase()).join(', ') + ' заметно темнее. Светлый текст может читаться лучше, но проверьте реальный контраст.'});
+    if (bright.length) items.push({level:'check',title:'Светлые зоны на Hero',text:bright.map(z => z.name.toLowerCase()).join(', ') + ' очень светлые. Для белого текста может понадобиться затемняющий overlay.'});
+    if (!dark.length && !bright.length) items.push({level:'manual',title:'Проверить контраст текста на Hero',text:'Средняя яркость зон без крайних значений. Проверьте фактический цвет текста, градиент и читаемость на реальном макете.'});
+    if (hero.luminanceRange !== null && hero.luminanceRange < 55) items.push({level:'check',title:'Низкий тональный диапазон Hero',text:'Кадр выглядит довольно равномерным. Убедитесь, что текст не теряется на похожем по яркости фоне.'});
+  } else if (hero) items.push({level:'manual',title:'Контраст Hero не измерен',text:'Для этого источника пиксельный анализ недоступен. Проверьте контраст заголовка вручную.'});
+  const tonal = gallery.filter(r => Number.isFinite(r.brightness));
+  if (tonal.length >= 2) {
+    const values = tonal.map(r => r.brightness);
+    const spread = Math.max(...values) - Math.min(...values);
+    if (spread > 75) items.push({level:'check',title:'Разный тональный характер галереи',text:'Разброс средней яркости кадров около ' + Math.round(spread) + ' пунктов. Проверьте единообразие экспозиции и цветокоррекции.'});
+    else items.push({level:'good',title:'Тональная серия выглядит согласованно',text:'Разброс средней яркости невелик. Дополнительно проверьте баланс белого и насыщенность глазами.'});
+  } else if (gallery.length) items.push({level:'manual',title:'Согласованность галереи',text:'Недостаточно доступных измерений для сравнения тональности. Сверьте баланс белого и цветокоррекцию вручную.'});
+  if (!items.length) items.push({level:'manual',title:'Визуальная проверка',text:'Добавьте изображения с доступным локальным анализом или проверьте освещение и читаемость вручную.'});
+  return items;
+}
+
 function scoreAssetForRole(report, role) {
   if (!report || report.error) return { score: 0, reasons: ['Изображение не удалось проверить'] };
   const reasons = [];
@@ -482,6 +516,8 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     service: buildRolePrompt('service', sourcePrompts[1], fallback.service)
   };
   const recommendations = buildAssetRecommendations(reports, nearDuplicateCount);
+  const visualQuality = buildVisualQualityReport(reports);
+  const visualQualityCards = visualQuality.map(item => `<article class="visual-quality-card is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('');
   const smartMatches = buildSmartImageMatches(reports);
   const smartMatchCards = smartMatches.map(match => {
     const label = roleLabels[match.role];
@@ -507,7 +543,10 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <h3 id="visual-asset-title">Visual Asset Director</h3>
     <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
     <div class="asset-coverage-list">${coverage}</div>
-    <h4>Smart Image Matching — подбор по техническим параметрам</h4>\n    <p class="note">Система ранжирует уже добавленные фотографии по пропорциям, разрешению, средней яркости и локальной детализации. Балл не означает, что сюжет фотографии подходит нише: содержание и композицию проверяйте глазами.</p>\n    <div class="smart-match-list">${smartMatchCards}</div>\n    <h4>Рекомендации по фотоконтенту</h4>
+    <h4>Smart Image Matching — подбор по техническим параметрам</h4>\n    <p class="note">Система ранжирует уже добавленные фотографии по пропорциям, разрешению, средней яркости и локальной детализации. Балл не означает, что сюжет фотографии подходит нише: содержание и композицию проверяйте глазами.</p>\n    <div class="smart-match-list">${smartMatchCards}</div>\n    <h4>Visual Quality Control — визуальный контроль</h4>
+    <p class="note">Локально оцениваются средняя яркость трёх вертикальных зон Hero и разброс яркости фотографий галереи. Это предварительная подсказка, а не измерение WCAG-контраста: итоговую читаемость проверяйте на реальном макете.</p>
+    <div class="visual-quality-list">${visualQualityCards}</div>
+    <h4>Рекомендации по фотоконтенту</h4>
     <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
     ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
