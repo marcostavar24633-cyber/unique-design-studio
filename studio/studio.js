@@ -370,6 +370,29 @@ async function renderImageIntelligence() {
   ${visual}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
 }
+function buildAssetRecommendations(reports, nearDuplicateCount = 0) {
+  const recommendations = [];
+  const hero = reports.find(r => r.role === 'hero');
+  const gallery = reports.filter(r => r.role === 'gallery' && !r.error);
+  const serviceImages = reports.filter(r => r.role === 'service' && !r.error);
+  const serviceCount = Array.isArray(state.raw.services) ? state.raw.services.length : 0;
+  if (!hero) recommendations.push({ level: 'important', title: 'Главный кадр не добавлен', text: 'Добавьте горизонтальную фотографию 16:9 от 1600 × 900 px. Оставьте свободную область под заголовок и кнопку.' });
+  else {
+    if (hero.width < 1600 || hero.height < 900) recommendations.push({ level: 'check', title: 'Усилить главный кадр', text: 'Для большого экрана подготовьте исходник от 1600 × 900 px, чтобы сохранить детализацию.' });
+    if (hero.ratio < 1.35 || hero.ratio > 2.2) recommendations.push({ level: 'check', title: 'Проверить пропорции Hero', text: 'Подготовьте отдельный горизонтальный вариант 16:9 и проверьте мобильную обрезку.' });
+    recommendations.push({ level: 'manual', title: 'Проверить свободную зону под текст', text: 'Убедитесь, что заголовок и CTA не закрывают лицо, товар или важную деталь. Алгоритм не распознаёт сюжет и свободное пространство на фотографии.' });
+  }
+  if (gallery.length < 4) recommendations.push({ level: 'important', title: 'Расширить фотогалерею', text: 'Добавьте 4–6 разных кадров: общий план, средний план, деталь, процесс и атмосферный контекст.' });
+  else {
+    const formats = new Set(gallery.map(r => r.ratio < 0.82 ? 'portrait' : r.ratio > 1.25 ? 'landscape' : 'square'));
+    if (formats.size === 1) recommendations.push({ level: 'check', title: 'Разнообразить композицию галереи', text: 'Добавьте вертикальный или квадратный ракурс, чередуйте общие планы и крупные детали.' });
+    else recommendations.push({ level: 'good', title: 'Форматы галереи разнообразны', text: 'В наборе есть разные пропорции. Проверьте, что каждый кадр показывает новую сторону работы или продукта.' });
+  }
+  if (nearDuplicateCount) recommendations.push({ level: 'important', title: 'Заменить похожие кадры', text: 'Оставьте наиболее сильный кадр, а похожий замените другим ракурсом или сценой.' });
+  if (serviceCount && serviceImages.length < serviceCount) recommendations.push({ level: 'check', title: 'Добавить фото к позициям', text: 'Не у каждой позиции есть фотография. Добавьте отдельное изображение для каждого товара или услуги, если это уместно.' });
+  if (!serviceCount && !serviceImages.length) recommendations.push({ level: 'manual', title: 'Фото карточек не обязательны', text: 'Если сайт не показывает отдельные товары или услуги карточками, этот тип изображений можно не добавлять.' });
+  return recommendations;
+}
 function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs = []) {
   const p = normalizeProject(state.raw);
   const dna = result.concept?.designDNA || {};
@@ -399,6 +422,7 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     gallery: buildRolePrompt('gallery', sourcePrompts[4], fallback.gallery),
     service: buildRolePrompt('service', sourcePrompts[1], fallback.service)
   };
+  const recommendations = buildAssetRecommendations(reports, nearDuplicateCount);
   const coverage = ['hero','gallery','service'].map(role => {
     const count = reports.filter(r => r.role === role).length;
     return `<span class="asset-coverage ${count ? 'is-present' : 'is-missing'}">${esc(roleLabels[role])}: ${count ? count + ' шт.' : 'нет'}</span>`;
@@ -413,6 +437,8 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <h3 id="visual-asset-title">Visual Asset Director</h3>
     <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
     <div class="asset-coverage-list">${coverage}</div>
+    <h4>Рекомендации по фотоконтенту</h4>
+    <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
     ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
     <h4>Задания на замену или новую съёмку</h4>
