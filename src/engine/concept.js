@@ -167,7 +167,7 @@ const tripleEqual = (a, b) => a.archetype === b.archetype && a.placement === b.p
 /** Доля совпавших признаков визуального характера (0…1) — для отчёта о похожести.
  *  Старые записи реестра без новых полей совместимы: отсутствующие признаки не учитываются. */
 export function similarity(a, b) {
-  const w = { archetype: 3, placement: 2, typeCharacter: 2, nav: 1, colorDirection: 1, shape: 1, motif: 1, button: 1, motion: 1, sectionLayout: 1 };
+  const w = { archetype: 3, placement: 2, typeCharacter: 2, nav: 1, colorDirection: 1, shape: 1, motif: 1, button: 1, motion: 1, sectionLayout: 1, sectionOrder: 2 };
   let total = 0, same = 0;
   for (const [k, v] of Object.entries(w)) {
     if (a[k] == null || b[k] == null || a[k] === '' || b[k] === '') continue;
@@ -178,23 +178,38 @@ export function similarity(a, b) {
 }
 
 // ---------- Секции ----------
-function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial') {
+function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', seed = hash(project.id || project.brand)) {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
     gallery: s.gallery > 0, faq: s.faqs > 0, contact: true,
   };
-  // Ведущие секции ниши сохраняют приоритет; остальные меняют последовательность
-  // в зависимости от редакционной композиции, а не идут одним универсальным списком.
+  // Ведущие секции ниши сохраняют приоритет. Внутри выбранного ритма есть
+  // два редакционных маршрута: порядок не сводится к одной схеме на всю нишу.
   const lead = uniq(profile.lead || []).filter(id => id !== 'contact' && has[id]);
   const base = uniq(arch.order).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
-  const preference = {
-    editorial: ['about', 'gallery', 'items', 'advantages', 'process', 'faq'],
-    offset: ['gallery', 'advantages', 'about', 'items', 'faq', 'process'],
-    framed: ['items', 'advantages', 'process', 'gallery', 'about', 'faq'],
-    quiet: ['about', 'process', 'faq', 'advantages', 'items', 'gallery'],
-  }[sectionLayout] || [];
+  const preferences = {
+    editorial: [
+      ['about', 'gallery', 'items', 'advantages', 'process', 'faq'],
+      ['gallery', 'about', 'advantages', 'items', 'process', 'faq'],
+    ],
+    offset: [
+      ['gallery', 'advantages', 'about', 'items', 'faq', 'process'],
+      ['advantages', 'gallery', 'items', 'about', 'process', 'faq'],
+    ],
+    framed: [
+      ['items', 'advantages', 'process', 'gallery', 'about', 'faq'],
+      ['process', 'items', 'gallery', 'advantages', 'about', 'faq'],
+    ],
+    quiet: [
+      ['about', 'process', 'faq', 'advantages', 'items', 'gallery'],
+      ['faq', 'about', 'advantages', 'process', 'gallery', 'items'],
+    ],
+  }[sectionLayout] || [['about', 'items', 'advantages', 'process', 'gallery', 'faq']];
+  const preference = pick(stream(seed, 'section-order-variant'), preferences);
   const rank = id => { const i = preference.indexOf(id); return i < 0 ? preference.length : i; };
-  const rest = base.map((id, index) => ({ id, index })).sort((a, b) => rank(a.id) - rank(b.id) || a.index - b.index).map(x => x.id);
+  const rest = base.map((id, index) => ({ id, index }))
+    .sort((a, b) => rank(a.id) - rank(b.id) || a.index - b.index)
+    .map(x => x.id);
   return [...lead, ...rest, 'contact'];
 }
 
@@ -295,9 +310,9 @@ export function buildConcept(input, { registry = [], neighbors = 2 } = {}) {
   const type = TYPES[design.typeCharacter];
   const brand = project.brandProfile ? BRANDS[project.brandProfile] : null;
   // В отпечатке у фирменного проекта цвет — это бренд, а не случайное цветовое направление.
-  const finalPrint = { ...fingerprintOf(design), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
+  const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
-  const order = sectionOrder(project, profile, arch, s, design.sectionLayout);
+  const order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
   const itemsVariant = profile.id === 'cafe' ? 'menu'
     : s.prices || s.itemImages ? 'product'
