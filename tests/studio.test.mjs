@@ -214,3 +214,25 @@ test('Gallery supports drag-and-drop ordering and shifts associated indexed vari
   assert.match(css, /\.is-dragging/);
   assert.match(css, /\.is-drop-target/);
 });
+
+
+test('Gallery supports primary image selection and accessible fullscreen preview', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-gallery-primary=',
+    'Сделать главным',
+    'gallery-primary-badge',
+    'data-preview-gallery=',
+    'Просмотр',
+    'function openGalleryLightbox(index)',
+    'function closeGalleryLightbox()',
+    'function renderGalleryLightbox()',
+    'aria-modal',
+    'ArrowLeft',
+    'ArrowRight',
+    'reorderGalleryImage(Number(primary.dataset.galleryPrimary), 0)'
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(css, /\.gallery-lightbox/);
+  assert.match(css, /\.gallery-primary-badge/);
+});
