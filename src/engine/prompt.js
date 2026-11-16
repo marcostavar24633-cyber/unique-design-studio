@@ -38,6 +38,9 @@ export function buildPrompt(input, concept, analysis) {
     a.marketResearch ? `Уже собранное исследование:\n${a.marketResearch}` : '',
   ].filter(Boolean).join('\n\n');
 
+  const lib = concept.libraryUse;
+  const libraryBlock = lib ? `\nРешения из библиотеки шаблонов (изучены: ${lib.references.map(r => `«${r.name}»`).join(', ')}):\n${list([...lib.patterns.structure, ...lib.patterns.ux, ...lib.patterns.content])}\nЗапрещено: копировать тексты, изображения, логотипы, палитру и фирменный стиль источников. Используй только обобщённые UX- и структурные принципы, создавая оригинальное решение.\n` : '';
+
   const full = `Ты — команда из четырёх специалистов: исследователь рынка, бренд-стратег, UX-копирайтер и арт-директор. Подготовь тексты главной страницы на русском языке строго внутри дизайн-концепции ниже. Не задавай вопросов — где данных нет, используй осторожные формулировки и вынеси вопрос в assumptions.
 
 # 1. Проект
@@ -72,7 +75,7 @@ ${TIER_RULES[tier]}
 - Короткие предложения; одна мысль — одно предложение. Проверь каждую фразу: сказал бы так живой человек вслух?
 
 # 6. Дизайн-концепция (уже выбрана — не меняй её)
-Архитектура: ${ARCHETYPES[d.primaryArchetype].name}${d.secondaryArchetype ? `; вспомогательная: ${ARCHETYPES[d.secondaryArchetype].name}` : ''}
+${d.conceptName ? `Концепция: ${d.conceptName} (${d.conceptFormula})\n` : ''}Архитектура: ${ARCHETYPES[d.primaryArchetype].name}${d.secondaryArchetype ? `; вспомогательная: ${ARCHETYPES[d.secondaryArchetype].name}` : ''}
 Обоснование: ${d.selectionRationale}
 Первый экран: ${h.heroComposition}
 Навигация: ${h.navigationPattern}
@@ -80,7 +83,7 @@ ${TIER_RULES[tier]}
 Типографика: ${d.typographyDirection}
 Изображения: ${d.imageDirection}
 Движение: ${d.motionDirection}
-
+${libraryBlock}
 # 7. Секции и требования к текстам
 ${h.sections.map(s => `- ${s.id} — ${s.role}`).join('\n')}
 Требования:
