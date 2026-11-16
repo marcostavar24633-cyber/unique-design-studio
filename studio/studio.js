@@ -990,6 +990,11 @@ tabs.forEach((t, i) => {
     if (d) { const n = tabs[(i + d + tabs.length) % tabs.length]; selectTab(n); n.focus(); }
   });
 });
+$('#toggle-settings')?.addEventListener('click', () => {
+  const collapsed = document.body.classList.toggle('workspace-settings-collapsed');
+  $('#toggle-settings').setAttribute('aria-expanded', String(!collapsed));
+  $('#toggle-settings').textContent = collapsed ? 'Показать настройки' : 'Скрыть настройки';
+});
 document.querySelectorAll('.sizes button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.sizes button').forEach(x => x.setAttribute('aria-pressed', x === b));
   const w = b.dataset.w; $('#frame').style.width = w ? w + 'px' : '100%'; $('#view-preview').classList.toggle('sized', Boolean(w));
