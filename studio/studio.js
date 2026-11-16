@@ -561,7 +561,7 @@ function parseRgb(color) {
   const match = String(color || '').match(/rgba?\\(([^)]+)\\)/i);
   if (!match) return null;
   const values = match[1].split(',').map(v => Number.parseFloat(v.trim()));
-  if (values.length < 3 || values.slice(0,3).some(v => !Number.isFinite(v))) return null;
+  if (values.length < 3 || values.slice(0,3).some(v => !Number.isFinite(v)) || (values.length > 3 && values[3] < .999)) return null;
   return values.slice(0,3).map(v => Math.max(0,Math.min(255,v)));
 }
 function relativeLuminance(rgb) {
@@ -579,6 +579,7 @@ function auditHeroReadability() {
   if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки страницы в окне предпросмотра.'}];
   const originalWidth = frame.style.width;
   const originalHeight = frame.style.height;
+  const originalMaxWidth = frame.style.maxWidth;
   const checks = [];
   const viewports = [{width:320,label:'Телефон 320 px'},{width:768,label:'Планшет 768 px'},{width:1280,label:'Компьютер 1280 px'}];
   const rectsOverlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -618,7 +619,7 @@ function auditHeroReadability() {
   } finally {
     frame.style.width = originalWidth;
     frame.style.height = originalHeight;
-    frame.style.maxWidth = '';
+    frame.style.maxWidth = originalMaxWidth;
   }
   return checks;
 }
