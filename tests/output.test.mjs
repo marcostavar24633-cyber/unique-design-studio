@@ -168,6 +168,7 @@ test('форма не имитирует серверную отправку ч�
 
 test('композиция секций выбирается отдельно от hero и реально применяется в HTML/CSS', () => {
   const layouts = new Set();
+  const orders = new Set();
   for (let i = 0; i < 16; i++) {
     const result = generate({ ...full, id: `section-layout-${i}`, brand: `Разный бренд ${i}`, niche: 'кофейня' });
     const layout = result.concept.visualSystem.sectionLayout;
@@ -175,6 +176,8 @@ test('композиция секций выбирается отдельно о
     assert.ok(result.html.includes(`section-layout-${layout}`), `класс секций ${layout} не попал в HTML`);
     assert.ok(result.html.includes(`.ds-section.section-layout--${layout}`), `CSS для ${layout} не попал в HTML`);
     layouts.add(layout);
+    orders.add(result.concept.homepage.sectionOrder.join('|'));
   }
   assert.ok(layouts.size >= 2, `ожидалось несколько композиций секций, получено: ${[...layouts].join(', ')}`);
+  assert.ok(orders.size >= 2, 'разные композиции должны менять и последовательность секций');
 });
