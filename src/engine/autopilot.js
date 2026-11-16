@@ -477,6 +477,7 @@ export function fromAiLanding(landing, input = {}) {
     brand: str(input.brand) || str(l.brand), niche: str(input.niche) || str(l.niche), tier,
     customPrompt: str(input.customPrompt), customPromptMode: input.customPromptMode === 'replace' ? 'replace' : 'append',
     title: str(l.title), description: str(l.description), cta: str(l.cta),
+    seoTitle: str(l.seoTitle), seoDescription: str(l.seoDescription),
     targetAudience: str(l.targetAudience), mainOffer: str(l.mainOffer), visualDirection: str(l.visualDirection), strategySummary: str(l.strategySummary),
     aboutTitle: str(l.aboutTitle), aboutText: str(l.aboutText), servicesTitle: str(l.servicesTitle), servicesIntro: str(l.servicesIntro), services: pairs(l.services),
     advantagesTitle: str(l.advantagesTitle), advantages: pairs(l.advantages), processTitle: str(l.processTitle), process: pairs(l.process),

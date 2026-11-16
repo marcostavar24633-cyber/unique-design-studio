@@ -312,3 +312,28 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .image-director-brief input,.image-director-brief textarea{width:100%;min-width:0;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;font-weight:400}
 .image-director-actions{display:flex;gap:9px;flex-wrap:wrap}
 @media(max-width:560px){.image-director-actions button{width:100%}}
+
+/* Производство: этапы конвейера, замечания по направлениям, история проверок */
+.production{max-width:980px}
+.production__head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
+.production__head h2{margin:4px 0}
+.production .eyebrow{font-size:10px;letter-spacing:.18em;color:var(--accent,#c9a45e);font-weight:800}
+.production__actions{display:flex;gap:8px;flex-wrap:wrap}
+.production__actions button:disabled{opacity:.5;cursor:not-allowed}
+.production__stages{list-style:none;counter-reset:stage;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin:0 0 22px;padding:0}
+.production__stages li{counter-increment:stage;display:grid;gap:3px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;border-left-width:4px}
+.production__stages li b::before{content:counter(stage) ". ";color:var(--muted,#8a8a8a);font-weight:600}
+.production__stages small{color:var(--muted,#8a8a8a);font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.production__state{font-size:12px;font-weight:700}
+.production__stages .is-done{border-left-color:var(--ok)}.production__stages .is-done .production__state{color:var(--ok)}
+.production__stages .is-attention{border-left-color:var(--err)}.production__stages .is-attention .production__state{color:var(--err)}
+.production__stages .is-input{border-left-color:var(--warn)}.production__stages .is-input .production__state{color:var(--warn)}
+.production__stages .is-manual{border-left-color:var(--line)}
+.production__group h4{margin:16px 0 6px}
+.production__group ul{list-style:none;margin:0;padding:0}
+.production__group li{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.sev{display:inline-block;text-align:center;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;border:1px solid currentColor}
+.sev--critical{color:#ff6b6b}.sev--high{color:var(--err)}.sev--medium{color:var(--warn)}.sev--low{color:var(--muted,#8a8a8a)}
+.production__auto{font-size:11px;font-style:normal;color:var(--ok);white-space:nowrap}
+.production__history{margin:0;padding-left:18px;font-size:13px;color:var(--muted,#8a8a8a)}
+@media(max-width:640px){.production__group li{grid-template-columns:1fr}.production__auto{white-space:normal}}

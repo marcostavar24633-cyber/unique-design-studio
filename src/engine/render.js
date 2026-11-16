@@ -254,8 +254,8 @@ export function renderSite(input, concept) {
   const project = normalizeProject(input);
   const c = context(project, concept);
   const vs = c.vs;
-  const desc = project.description || project.mainOffer || '';
-  const pageTitle = c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`;
+  const desc = project.seoDescription || project.description || project.mainOffer || '';
+  const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
   const sections = c.order.map(id => SECTION[id](c)).join('\n');
   const foot = [project.contacts.phone, project.contacts.email, project.contacts.address].filter(Boolean).map(esc).join(' · ');
   return `<!doctype html>

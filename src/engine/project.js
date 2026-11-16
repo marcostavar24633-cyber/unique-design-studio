@@ -19,6 +19,8 @@ const TEXT_FIELDS = [
   'brand', 'niche', 'title', 'description', 'cta', 'targetAudience', 'mainOffer', 'brandCharacter', 'visualDirection',
   'primaryGoal', 'strategySummary', 'style', 'aboutTitle', 'aboutText', 'servicesTitle', 'servicesIntro',
   'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'contactTitle', 'contactText',
+  // SEO: необязательные отдельные title и description страницы (иначе берутся заголовок и описание).
+  'seoTitle', 'seoDescription',
 ];
 
 /** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT"] или объект. */
