@@ -7,7 +7,7 @@
 <meta name="description" content="Студия уникальных главных страниц: Design Brief, Design DNA, генерация HTML и антишаблонная проверка.">
 <link rel="stylesheet" href="studio.css">
 </head>
-<body>
+<body class="dashboard-mode">
 <header class="top">
   <div class="top__brand"><span class="logo" aria-hidden="true"></span><strong>Unique Design Studio</strong></div>
   <div class="top__actions">
@@ -22,7 +22,41 @@
     <button type="button" id="download" class="primary">Скачать HTML</button>
   </div>
 </header>
-<div class="layout">
+<section class="dashboard" id="dashboard" aria-label="Главная панель студии">
+  <aside class="dash-sidebar">
+    <a class="dash-brand" href="#dashboard"><span class="dash-mark">✦</span><span><b>UNIQUE<br>DESIGN STUDIO</b><small>AI Web Design Studio</small></span></a>
+    <nav class="dash-nav" aria-label="Навигация студии">
+      <button class="is-active" data-dash="home">⌂ <span>Главная</span></button>
+      <button data-dash="create">＋ <span>Создать сайт</span></button>
+      <button data-dash="director">✧ <span>AI Design Director</span></button>
+      <button data-dash="editor">▧ <span>Редактор сайтов</span></button>
+      <button data-dash="visual"><span>▧</span> <span>Фотографии и визуал</span></button>
+      <button data-dash="motion">◇ <span>Анимации и эффекты</span></button>
+      <button data-dash="seo">⌕ <span>SEO и контент</span></button>
+      <button data-dash="qa">⬡ <span>Качество и тесты</span></button>
+      <button data-dash="publish">☁ <span>Публикация</span></button>
+      <div class="dash-nav-sep"></div>
+      <button data-dash="projects">▱ <span>Проекты</span></button>
+      <button data-dash="settings">⚙ <span>Настройки</span></button>
+    </nav>
+    <div class="dash-pro"><span>♛</span><b>STUDIO PRO</b><small>Инструменты для создания сайтов</small></div>
+  </aside>
+  <main class="dash-main">
+    <header class="dash-top"><div><small>Добро пожаловать в</small><h1>UNIQUE DESIGN STUDIO</h1><p>AI-студия для создания уникальных коммерческих сайтов</p></div><div class="dash-search"><span>⌕</span><input id="dash-search" type="search" placeholder="Поиск проектов, сайтов, идей…"></div></header>
+    <section class="dash-create">
+      <div class="dash-orb" aria-hidden="true"></div><div class="dash-create-copy"><small>ВАШ СЛЕДУЮЩИЙ ПРОЕКТ</small><h2>Создать новый сайт</h2><p>Полный цикл: от анализа ниши до готовой страницы</p></div>
+      <button class="dash-primary" data-dash="create">＋ Создать сайт</button>
+      <div class="dash-steps"><span>▥ <small>Анализ и стратегия</small></span><i>›</i><span>▱ <small>Дизайн-концепция</small></span><i>›</i><span>▧ <small>Контент и визуал</small></span><i>›</i><span>‹/› <small>Разработка сайта</small></span><i>›</i><span>⬡ <small>Проверка качества</small></span><i>›</i><span>☁ <small>Публикация</small></span></div>
+    </section>
+    <section class="dash-project-head"><div><h2>Мои проекты <span id="dash-project-count">0</span></h2><small>Проекты, сохранённые в реестр этого браузера</small></div><div class="dash-filters"><button class="selected" data-filter="all">Все проекты</button><button data-filter="saved">В реестре</button><button data-filter="examples">Примеры</button></div></section>
+    <section class="dash-projects" id="dash-projects"><div class="dash-empty"><b>Пока нет сохранённых проектов</b><p>Создайте сайт и нажмите «В реестр», чтобы он появился здесь.</p><button class="dash-primary" data-dash="create">Создать первый сайт</button></div></section>
+  </main>
+  <aside class="dash-right">
+    <section class="dash-widget"><h3>Статистика студии</h3><div class="dash-stats"><div><b id="stat-projects">0</b><small>Проектов в реестре</small></div><div><b id="stat-examples">—</b><small>Готовых примеров</small></div><div><b id="stat-quality">—</b><small>Последняя проверка</small></div><div><b>Local</b><small>Хранение проектов</small></div></div></section>
+    <section class="dash-widget"><h3>Быстрый доступ</h3><div class="dash-quick"><button data-dash="visual">▧ <span>Фотографии и визуал</span><i>→</i></button><button data-dash="qa">⬡ <span>Проверка качества</span><i>→</i></button><button data-dash="publish">☁ <span>Экспорт и публикация</span><i>→</i></button></div></section>
+    <section class="dash-widget dash-note"><h3>Рабочий процесс</h3><p>Создайте проект, настройте дизайн и контент, проверьте адаптивность и скачайте готовый HTML. Проекты реестра хранятся локально в браузере.</p></section>
+  </aside>
+</section>\n<div class="layout">
   <aside class="panel" aria-label="Настройки проекта">
     <section class="auto" aria-labelledby="auto-h">
       <h2 id="auto-h">Автопилот</h2>
