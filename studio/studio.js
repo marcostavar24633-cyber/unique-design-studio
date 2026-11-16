@@ -681,7 +681,8 @@ function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, 
     <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
     ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
     ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
-    <h4>Photo Art Direction — план фотосессии</h4>\n    <p class="note">Shot list для фотографа: сюжеты, планы, ракурсы, свет, фон, композиция, ориентация и разрешение. Список учитывает нишу и уровень проекта, не выдумывая свойства товара или услуги.</p>\n    <div class="photo-shot-actions"><button type="button" data-copy-photo-shotlist="${esc(shotListText)}">Скопировать весь план фотосъёмки</button></div>\n    <div class="photo-shot-list">${shotCards}</div>\n    <h4>Задания на замену или новую съёмку</h4>
+    <h4>Photo Art Direction — план фотосессии</h4>\n    <p class="note">Shot list для фотографа: сюжеты, планы, ракурсы, свет, фон, композиция, ориентация и разрешение. Список учитывает нишу и уровень проекта, не выдумывая свойства товара или услуги.</p>\n    <div class="photo-shot-actions"><button type="button" data-copy-photo-shotlist="${esc(shotListText)}">Скопировать весь план фотосъёмки</button></div>\n    <div class="photo-shot-list">${shotCards}</div>\n    <h4>AI Image Director — уточнение арт-дирекшна</h4><p class="note">Дополните промты конкретным сюжетом, настроением и обязательными деталями. Уточнения сохраняются в проекте и учитываются при копировании полного пакета заданий.</p><div class="image-director-brief"><label>Сюжет и объект съёмки<textarea rows="2" maxlength="1200" data-image-brief="subject" placeholder="Какой объект или результат нужно показать?"></textarea></label><label>Настроение и художественный приём<input type="text" maxlength="500" data-image-brief="mood" placeholder="Например: тёплый минимализм, мягкий утренний свет"></label><label>Что обязательно показать<textarea rows="2" maxlength="800" data-image-brief="mustShow" placeholder="Реальные детали, материал, ракурс, окружение"></textarea></label><label>Чего избегать<textarea rows="2" maxlength="800" data-image-brief="avoid" placeholder="Лишний декор, вымышленные детали, надписи…"></textarea></label><div class="image-director-actions"><button type="button" data-image-director="copy">Скопировать полный пакет промтов</button><button type="button" data-image-director="download">Скачать пакет (.txt)</button></div></div>
+     <h4>Задания на замену или новую съёмку</h4>
     <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
     <div class="asset-prompt-list">${promptCards}</div>
     <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Локальное сравнение похожести работает для встроенных в проект изображений; внешние URL не анализируются по пикселям из-за ограничений безопасности браузера. Технические признаки и повторы — ориентир, визуальную релевантность подтверждает человек.</p>
@@ -1117,7 +1118,34 @@ $('#form').addEventListener('click', e => {
   }
   buildForm(); run(); toast('Фотография удалена из проекта');
 });
+function imageDirectorPackage() {
+  const brief = state.raw.imageArtDirection?.brief || {};
+  const cards = [...document.querySelectorAll('.visual-asset-director .asset-prompt')];
+  const additions = [
+    brief.subject && 'СЮЖЕТ: '+brief.subject,
+    brief.mood && 'НАСТРОЕНИЕ: '+brief.mood,
+    brief.mustShow && 'ОБЯЗАТЕЛЬНО ПОКАЗАТЬ: '+brief.mustShow,
+    brief.avoid && 'ИЗБЕГАТЬ: '+brief.avoid,
+    'Не добавлять неподтверждённые свойства, текст, логотипы и водяные знаки.'
+  ].filter(Boolean).join('\\n');
+  return cards.map(card => card.innerText + '\\n' + additions).join('\\n\\n' + '='.repeat(48) + '\\n\\n');
+}
+$('#view-concept').addEventListener('input', e => {
+  const field = e.target.closest('[data-image-brief]');
+  if (!field) return;
+  const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
+  root.brief = root.brief || {};
+  root.brief[field.dataset.imageBrief] = field.value;
+  persist();
+});
 $('#view-concept').addEventListener('click', e => {
+  const directorButton = e.target.closest('[data-image-director]');
+  if (directorButton) {
+    const text = imageDirectorPackage();
+    if (directorButton.dataset.imageDirector === 'download') download('ai-image-director-'+(result.project.id || 'project')+'.txt', text, 'text/plain');
+    else { try { await navigator.clipboard.writeText(text); toast('Пакет промтов AI Image Director скопирован'); } catch { download('ai-image-director-'+(result.project.id || 'project')+'.txt', text, 'text/plain'); } }
+    return;
+  }
   if (e.target.closest('[data-open-image-settings]')) {
     const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
     if (group) { group.open = true; group.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
