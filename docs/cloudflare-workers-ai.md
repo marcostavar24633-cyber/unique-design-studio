@@ -40,7 +40,7 @@ https://unique-design-studio-ai.<ваш-subdomain>.workers.dev/health
 
 ## 3. Модель и ограничения
 
-По умолчанию используется `@cf/meta/llama-3.1-8b-instruct`. Вызов идёт через binding `env.AI`, без хранения ключей в браузере или GitHub Secrets.
+По умолчанию используется `@cf/google/gemma-4-26b-a4b-it` — актуальная модель из каталога Cloudflare Workers AI. Вызов идёт через binding `env.AI`, без хранения ключей в браузере или GitHub Secrets.
 
 Worker принимает POST JSON, ограничивает размер тела запроса и разрешает CORS только для GitHub Pages origin этого проекта. Если домен студии изменится, обновите `ALLOWED_ORIGINS` в `worker/index.js`.
 
