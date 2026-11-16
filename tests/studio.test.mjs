@@ -176,3 +176,21 @@ test('Site Content & Interaction QA checks images, links, CTAs and forms in the 
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   for (const marker of ['function auditSiteContentAndInteractions()','function renderSiteContentInteractionChecks()','data-run-site-content-qa','site-content-qa-results','naturalWidth===0','Пустые или небезопасные ссылки','Внешние адреса требуют проверки','доставка не подтверждена','поля без подписи','aria-disabled']) assert.ok(source.includes(marker), marker);
 });
+
+
+test('Gallery reordering controls are available and preserve image art direction variants', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-move-gallery=',
+    'data-direction="-1"',
+    'data-direction="1"',
+    'Переместить фото выше',
+    'Переместить фото ниже',
+    'function swapIndexedEntries(bucket, from, to)',
+    'function moveGalleryImage(from, direction)',
+    'swapIndexedEntries(art.gallery, from, to)',
+    'swapIndexedEntries(mobile, from, to)',
+    "moveGalleryImage(Number(move.dataset.moveGallery), Number(move.dataset.direction))",
+    'Порядок фотографий обновлён'
+  ]) assert.ok(source.includes(marker), marker);
+});
