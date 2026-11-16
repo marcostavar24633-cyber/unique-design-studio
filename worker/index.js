@@ -62,6 +62,66 @@ export default {
       return json({ error: 'Некорректный JSON' }, 400, origin);
     }
 
+    if (input.task === 'design-review') {
+      const project = input.project && typeof input.project === 'object' ? input.project : {};
+      const context = {
+        niche: String(project.niche || '').slice(0, 180),
+        brand: String(project.brand || '').slice(0, 160),
+        title: String(project.title || '').slice(0, 300),
+        description: String(project.description || '').slice(0, 1200),
+        cta: String(project.cta || '').slice(0, 120),
+        targetAudience: String(project.targetAudience || '').slice(0, 600),
+        mainOffer: String(project.mainOffer || '').slice(0, 800),
+        aboutTitle: String(project.aboutTitle || '').slice(0, 200),
+        aboutText: String(project.aboutText || '').slice(0, 1000),
+        servicesTitle: String(project.servicesTitle || '').slice(0, 200),
+        servicesIntro: String(project.servicesIntro || '').slice(0, 600),
+        advantagesTitle: String(project.advantagesTitle || '').slice(0, 200),
+        processTitle: String(project.processTitle || '').slice(0, 200),
+        faqTitle: String(project.faqTitle || '').slice(0, 200),
+        contactTitle: String(project.contactTitle || '').slice(0, 200),
+        contactText: String(project.contactText || '').slice(0, 600),
+      };
+      const allowed = new Set(['title','description','cta','targetAudience','mainOffer','aboutTitle','aboutText','servicesTitle','servicesIntro','advantagesTitle','processTitle','faqTitle','contactTitle','contactText']);
+      const system = [
+        'Ты AI Design Director коммерческих сайтов. Проведи конкретное ревью проекта и предложи улучшения.',
+        'Верни только JSON: {"recommendations":[{"id":"...","title":"...","category":"...","priority":"high|medium|low","reason":"...","action":"...","patch":{"field":"новое значение"}}]}.',
+        'Предлагай до 6 рекомендаций. Для каждого patch используй только одно или несколько полей из allowlist.',
+        'Не выдумывай цены, гарантии, сроки, отзывы, сертификаты, цифры, адреса, ассортимент или факты о компании.',
+        'Если факт не подтверждён, не включай его в patch. Не генерируй HTML, CSS, JavaScript, URL, изображения или произвольные поля.',
+        'Тексты на русском, короткие, конкретные. Не меняй поле, если улучшение неочевидно.',
+      ].join('\n');
+      const user = JSON.stringify({ project: context, analysis: input.analysis || {}, concept: input.concept || {}, audit: input.audit || {} });
+      try {
+        const result = await env.AI.run(MODEL, {
+          messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+          max_tokens: 1800,
+          temperature: 0.35,
+        });
+        const parsed = extractJson(result?.response ?? result?.result?.response ?? result);
+        const recommendations = (Array.isArray(parsed?.recommendations) ? parsed.recommendations : []).slice(0, 6).map((item, index) => {
+          const patch = {};
+          if (item?.patch && typeof item.patch === 'object' && !Array.isArray(item.patch)) {
+            for (const [key, value] of Object.entries(item.patch)) {
+              if (allowed.has(key) && typeof value === 'string' && value.trim() && value.length <= 1800) patch[key] = value.trim();
+            }
+          }
+          return {
+            id: String(item?.id || 'ai-review-' + index).replace(/[^a-z0-9-]/gi, '').slice(0, 64) || 'ai-review-' + index,
+            title: String(item?.title || 'Улучшение проекта').slice(0, 180),
+            category: String(item?.category || 'content').slice(0, 40),
+            priority: ['high','medium','low'].includes(item?.priority) ? item.priority : 'medium',
+            reason: String(item?.reason || '').slice(0, 600),
+            action: String(item?.action || '').slice(0, 600),
+            patch: Object.keys(patch).length ? patch : null,
+          };
+        });
+        return json({ review: { version: 1, mode: 'workers-ai', status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка AI Design Director' }, 502, origin);
+      }
+    }
+
     const niche = String(input.niche || '').trim().slice(0, 180);
     if (!niche) return json({ error: 'Укажите нишу проекта' }, 400, origin);
     const studioPrompt = String(input.studioPrompt || '').slice(0, 16000);
