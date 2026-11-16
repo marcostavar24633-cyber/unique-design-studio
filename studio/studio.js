@@ -18,6 +18,8 @@ let dashboardFilter = 'all';
 let dashboardQuery = '';
 let currentWorkflowReview = null;
 let selectedWorkflowRecommendations = new Set();
+let manualWorkflowPatch = Object.create(null);
+const MANUAL_APPROVAL_FIELDS = ['title','description','cta','ctaUrl','targetAudience','mainOffer','aboutTitle','aboutText','servicesTitle','servicesIntro','advantagesTitle','processTitle','faqTitle','contactTitle','contactText'];
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
@@ -344,6 +346,7 @@ function renderWorkflowApprovalPreview() {
   }
   const patch = Object.create(null);
   for (const item of chosen) for (const [key, value] of Object.entries(item.patch)) patch[key] = value;
+  for (const [key, value] of Object.entries(manualWorkflowPatch)) patch[key] = value;
   const fields = Object.keys(patch);
   const preview = applyApprovedDesignPatch(state.raw, patch, fields);
   const heading = document.createElement('b');
@@ -374,6 +377,7 @@ function renderWorkflowReview(review) {
   if (!root || !review) return;
   currentWorkflowReview = review;
   selectedWorkflowRecommendations = new Set();
+  manualWorkflowPatch = Object.create(null);
   root.hidden = false;
   root.replaceChildren();
   const heading = document.createElement('h4');
@@ -413,6 +417,32 @@ function renderWorkflowReview(review) {
   const preview = document.createElement('div');
   preview.id = 'workflow-approval-preview';
   preview.className = 'workflow-approval-preview';
+  const manual = document.createElement('form');
+  manual.className = 'workflow-manual-proposal';
+  manual.dataset.workflowManualProposal = 'true';
+  const manualTitle = document.createElement('b');
+  manualTitle.textContent = 'Подготовить своё изменение';
+  const field = document.createElement('select');
+  field.dataset.workflowManualField = 'true';
+  for (const key of MANUAL_APPROVAL_FIELDS) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    field.append(option);
+  }
+  const value = document.createElement('input');
+  value.type = 'text';
+  value.maxLength = 2000;
+  value.placeholder = 'Введите новое значение поля';
+  value.dataset.workflowManualValue = 'true';
+  const add = document.createElement('button');
+  add.type = 'submit';
+  add.textContent = 'Добавить в предпросмотр';
+  manual.append(manualTitle, field, value, add);
+  root.append(manual);
+  const preview = document.createElement('div');
+  preview.id = 'workflow-approval-preview';
+  preview.className = 'workflow-approval-preview';
   root.append(preview);
   renderWorkflowApprovalPreview();
 }
@@ -441,6 +471,18 @@ function renderWorkflowProgress(events) {
     root.append(li);
   }
 }
+$('#workflow-review')?.addEventListener('submit', event => {
+  const form = event.target.closest('[data-workflow-manual-proposal]');
+  if (!form) return;
+  event.preventDefault();
+  const field = form.querySelector('[data-workflow-manual-field]')?.value;
+  const value = form.querySelector('[data-workflow-manual-value]')?.value.trim();
+  if (!MANUAL_APPROVAL_FIELDS.includes(field) || !value) return toast('Выберите поле и введите новое значение.');
+  manualWorkflowPatch[field] = value;
+  form.querySelector('[data-workflow-manual-value]').value = '';
+  renderWorkflowApprovalPreview();
+  toast('Изменение добавлено в предпросмотр. Пока ничего не применено.');
+});
 $('#workflow-review')?.addEventListener('change', event => {
   const checkbox = event.target.closest('[data-workflow-recommendation]');
   if (!checkbox) return;
@@ -455,6 +497,7 @@ $('#workflow-review')?.addEventListener('click', event => {
   const chosen = recommendations.filter(item => selectedWorkflowRecommendations.has(item.id) && item.patch && typeof item.patch === 'object');
   const patch = Object.create(null);
   for (const item of chosen) for (const [key, value] of Object.entries(item.patch)) patch[key] = value;
+  for (const [key, value] of Object.entries(manualWorkflowPatch)) patch[key] = value;
   const preview = applyApprovedDesignPatch(state.raw, patch, Object.keys(patch));
   if (!preview.changed) return toast('Нет безопасных подготовленных изменений для применения.');
   load(preview.project, 'Одобренные изменения применены. Повторно проверяем сайт…');
