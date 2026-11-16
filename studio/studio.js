@@ -1185,10 +1185,10 @@ function reorderIndexedEntries(bucket, from, to) {
     bucket.splice(to, 0, value);
     return;
   }
-  const numeric = Object.entries(bucket).filter(([key]) => /^\\d+$/.test(key));
+  const numeric = Object.entries(bucket).filter(([key]) => Number.isInteger(Number(key)) && String(Number(key)) === key);
   const values = new Map(numeric.map(([key, value]) => [Number(key), value]));
   const next = new Map();
-  for (const [key, value] of Object.entries(bucket)) if (!/^\\d+$/.test(key)) next.set(key, value);
+  for (const [key, value] of Object.entries(bucket)) if (!(Number.isInteger(Number(key)) && String(Number(key)) === key)) next.set(key, value);
   for (const [index, value] of values) {
     let target = index;
     if (index === from) target = to;
