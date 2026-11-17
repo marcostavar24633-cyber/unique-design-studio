@@ -12,13 +12,13 @@ export const COPYWRITING_MODULES = Object.freeze([
   { id: 'quality-control', title: 'Quality Control', task: 'Проверь достоверность, связность, конкретику, отсутствие повторов, соответствие аудитории, конверсионную логику и готовность данных к сборке.' },
 ]);
 
-const lines = values => (Array.isArray(values) && values.length ? values.map(v => '- ' + v).join('\\n') : '- Нет подтверждённых данных — не выдумывать.');
+const lines = values => (Array.isArray(values) && values.length ? values.map(v => '- ' + v).join('\n') : '- Нет подтверждённых данных — не выдумывать.');
 
 export function buildCopywritingSystemBrief(project, concept, analysis = {}) {
   const p = project || {};
   const d = concept?.designDNA || concept?.designBrief || {};
   const homepage = concept?.homepage || {};
-  const modules = COPYWRITING_MODULES.map((m, i) => `${i + 1}. ${m.title}: ${m.task}`).join('\\n');
+  const modules = COPYWRITING_MODULES.map((m, i) => `${i + 1}. ${m.title}: ${m.task}`).join('\n');
   return `# AUTONOMOUS CONTENT & BRAND SYSTEM — SPECIALIST MODULES
 
 Работай как слаженная команда специализированных направлений. Выполняй этапы последовательно, но без остановки на согласование промежуточных результатов. Не имитируй реальное исследование: если веб-поиск недоступен, явно укажи это и сформируй проверяемые гипотезы.
