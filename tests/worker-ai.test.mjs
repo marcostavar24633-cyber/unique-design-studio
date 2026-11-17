@@ -1,14 +1,14 @@
 // Worker AI-генерации (worker/index.js): полнота ответа, повтор, ограничение частоты.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput } from '../worker/index.js';
+import worker, { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/index.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
 const request = (body, { origin = ORIGIN, from = `10.0.0.${++ip}` } = {}) => new Request('https://w.dev/api/generate-landing', {
   method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'CF-Connecting-IP': from }, body: JSON.stringify(body),
 });
-const full = { title: 'Заголовок', description: 'Описание', cta: 'Записаться', services: [['Услуга', 'Описание']] };
+const full = { title: 'Заголовок', description: 'Кофейня у дома', cta: 'Записаться', services: [['Услуга', 'Описание']] };
 const aiReturning = (...answers) => {
   const calls = [];
   return { calls, AI: { run: async (model, opts) => { calls.push(opts); const a = answers[Math.min(calls.length - 1, answers.length - 1)]; if (a instanceof Error) throw a; return { response: a }; } } };
@@ -29,7 +29,7 @@ test('оборванный JSON — одна повторная попытка �
   assert.equal(res.status, 200);
   assert.equal(body.attempts, 2);
   assert.equal(env.calls.length, 2);
-  assert.match(env.calls[1].messages[1].content, /Ответь короче/);
+  assert.match(env.calls[1].messages[0].content, /Ответь короче/);
 });
 
 test('после двух неудач — честная ошибка, а не пустая страница; третьей попытки нет', async () => {
@@ -95,4 +95,35 @@ test('при неполном ответе ошибка называет клю�
   const body = await (await worker.fetch(request({ niche: 'кофейня' }), env)).json();
   assert.match(body.error, /ключи ответа модели: choices, usage/);
   assert.doesNotMatch(body.error, /секрет/);
+});
+
+test('бриф идёт одним сообщением, и данные бизнеса стоят в нём текстом, а не теряются', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({ niche: 'кофейня', brand: 'Зерно', city: 'Казань' }), env);
+  const msgs = env.calls[0].messages;
+  assert.equal(msgs.length, 1);
+  assert.equal(msgs[0].role, 'user');
+  assert.match(msgs[0].content, /Ниша бизнеса клиента: кофейня\.\nНазвание бренда: Зерно\.\nГород: Казань\./);
+  assert.match(msgs[0].content, /не для веб-студии/);
+});
+
+test('текст не про нишу владельца — повтор, затем честная ошибка', async () => {
+  const studio = { title: 'Разработка сайтов', description: 'Веб-дизайн под ключ', cta: 'Обсудить', services: [['Лендинг', 'Сайт']] };
+  const env = aiReturning(JSON.stringify(studio));
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  assert.equal(res.status, 502);
+  assert.match((await res.json()).error, /не про нишу «кофейня»/);
+  assert.equal(env.calls.length, 2);
+  assert.equal(aboutNiche({ title: 'Свежий кофе' }, 'кофейня'), true);
+  assert.equal(aboutNiche({ title: 'Диваны' }, 'магазин мебели'), false);
+  assert.equal(aboutNiche({ title: 'x' }, 'СПА'), true, 'короткая ниша не блокирует ответ');
+});
+
+test('бренд и ниша в ответе — из ввода владельца, «Не указано» не попадает на сайт', async () => {
+  const env = aiReturning(JSON.stringify({ ...full, brand: 'Не указано', niche: 'Веб-дизайн' }));
+  const body = await (await worker.fetch(request({ niche: 'кофейня' }), env)).json();
+  assert.equal(body.landing.niche, 'кофейня');
+  assert.equal(body.landing.brand, '');
+  const env2 = aiReturning(JSON.stringify({ ...full, brand: 'Другое' }));
+  assert.equal((await (await worker.fetch(request({ niche: 'кофейня', brand: 'Зерно' }), env2)).json()).landing.brand, 'Зерно');
 });
