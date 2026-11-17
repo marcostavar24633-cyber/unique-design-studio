@@ -63,3 +63,62 @@ body.dashboard-mode{background:#0a0b0d;color:#f2eee4}
 .dash-quick button:hover{border-color:rgba(201,164,94,.35);background:#24231f}
 .dashboard button:focus-visible,.dashboard a:focus-visible,.dashboard input:focus-visible{outline-color:#e2c27c}
 @media(max-width:760px){.dash-sidebar{background:rgba(10,11,13,.97)}}
+
+/* ---------- Главная 2026-11: быстрый старт, «Продолжить работу», состояние студии ---------- */
+.dash-quickstart{position:relative;overflow:hidden;padding:24px;border:1px solid var(--uds-line);border-radius:18px;background:radial-gradient(ellipse at 100% 0%,rgba(201,164,94,.16),transparent 55%),linear-gradient(145deg,#16181c,#101114);box-shadow:0 18px 44px rgba(0,0,0,.28)}
+.qs-copy small{color:var(--uds-accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.qs-copy h2{margin:6px 0 6px;font-size:clamp(20px,1.9vw,27px);line-height:1.15}
+.qs-copy p{margin:0 0 18px;color:var(--uds-muted);font-size:13.5px;max-width:62ch}
+.qs-form{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,.9fr) auto;gap:10px;align-items:end}
+.qs-field{display:grid;gap:6px;min-width:0}
+.qs-field label{font-size:11.5px;color:#b8bfcc;letter-spacing:.02em}
+.qs-field input,.qs-field select{width:100%;min-width:0;min-height:46px;padding:0 13px;border:1px solid #2b2f36;border-radius:11px;background:#0d0e11;color:var(--uds-text);font:inherit;font-size:14px}
+.qs-field input:focus,.qs-field select:focus{outline:2px solid var(--uds-accent);outline-offset:1px;border-color:transparent}
+.qs-submit{width:auto!important;background:linear-gradient(135deg,#d7b56f,#b58b45)!important;min-height:46px;padding:0 20px;color:#14110b;font-weight:700;white-space:nowrap}
+.qs-examples{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(201,164,94,.12)}
+.qs-examples>span{color:var(--uds-muted);font-size:12.5px}
+.qs-chips{display:flex;flex-wrap:wrap;gap:6px}
+.qs-chips button{min-height:32px;padding:0 12px;border:1px solid #2c3037;border-radius:999px;background:#15171b;color:#d6dbe5;font-size:12.5px}
+.qs-chips button:hover{border-color:var(--uds-accent);color:#f1d79b}
+
+.dash-continue{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:18px;align-items:center;margin-top:16px;padding:16px;border:1px solid var(--uds-line);border-radius:16px;background:linear-gradient(145deg,#15171b,#111215)}
+.dash-continue[hidden]{display:none}
+.dash-continue-look{position:relative;height:84px;border-radius:12px;border:1px solid rgba(255,255,255,.08)}
+.dash-continue-copy small{color:var(--uds-accent);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.dash-continue-copy h2{margin:3px 0 2px;font-size:19px}
+.dash-continue-copy p{margin:0 0 8px;color:var(--uds-muted);font-size:13px}
+.dash-continue-actions{display:flex;flex-direction:column;gap:7px;min-width:190px}
+.dash-continue-actions button{min-height:38px;padding:0 14px;border:1px solid #2c3037;border-radius:10px;background:#16181c;color:#dfe3ea;font-size:13px}
+.dash-continue-actions .dash-primary{width:100%;color:#14110b;font-weight:700;background:linear-gradient(135deg,#d7b56f,#b58b45);border-color:rgba(226,194,124,.5)}
+.dash-badges{display:flex;flex-wrap:wrap;gap:6px}
+.dash-badge{display:inline-flex;align-items:center;min-height:24px;padding:0 9px;border-radius:999px;background:#1f2228;color:#b8bfcc;font-size:11.5px}
+.dash-badge--ok{background:rgba(131,183,138,.14);color:#9fd2a6}.dash-badge--warn{background:rgba(214,173,98,.14);color:#e3c07e}.dash-badge--err{background:rgba(224,120,112,.15);color:#ee9a92}
+
+.dash-swatches{position:absolute;left:8px;bottom:8px;display:flex;gap:3px}
+.dash-swatches i{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.35);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.dash-project-image{position:relative;overflow:hidden;min-height:96px}
+.dash-project-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.dash-cover-type{font:700 40px/1 Georgia,"Times New Roman",serif;opacity:.92}
+.dash-project-info .dash-arch{color:#8f98a8;font-size:11.5px;margin-top:2px}
+.dash-project-info button{margin-top:9px}
+
+.dash-status{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.dash-status li{display:grid;grid-template-columns:12px minmax(0,1fr);gap:10px;align-items:start}
+.dash-status i{width:9px;height:9px;margin-top:5px;border-radius:50%;background:#5b616c;box-shadow:0 0 0 3px rgba(91,97,108,.18)}
+.dash-status li[data-level="ok"] i{background:#83b78a;box-shadow:0 0 0 3px rgba(131,183,138,.18)}
+.dash-status li[data-level="warn"] i{background:#d6ad62;box-shadow:0 0 0 3px rgba(214,173,98,.18)}
+.dash-status b{display:block;font-size:13px}
+.dash-status small{display:block;color:var(--uds-muted);font-size:12px;line-height:1.4}
+.dash-meter{height:8px;border-radius:999px;background:#1f2228;overflow:hidden}
+.dash-meter span{display:block;height:100%;width:2%;border-radius:inherit;background:#83b78a;transition:width .3s}
+.dash-meter[data-level="warn"] span{background:#d6ad62}.dash-meter[data-level="err"] span{background:#e07870}
+.dash-meter-note{margin:9px 0 0;color:var(--uds-muted);font-size:12px;line-height:1.45}
+.dash-tips ol{margin:0;padding-left:18px;display:grid;gap:7px;color:#b8bfcc;font-size:12.5px;line-height:1.45}
+.dash-tips b{color:var(--uds-text)}
+.dash-dev-link{display:block;margin-top:auto;padding:12px 13px;border:1px dashed #2c3037;border-radius:11px;color:#8f98a8;font-size:12px;text-decoration:none}
+.dash-dev-link small{display:block;color:#666e7a;font-size:10.5px;margin-top:2px}
+.dash-dev-link:hover{border-color:var(--uds-accent);color:#e2c27c}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media(max-width:1100px){.qs-form{grid-template-columns:1fr 1fr}.qs-field--wide{grid-column:1/-1}.qs-submit{grid-column:1/-1}.dash-continue{grid-template-columns:72px minmax(0,1fr)}.dash-continue-actions{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;min-width:0}.dash-continue-actions button{flex:1 1 150px}}
+@media(max-width:560px){.dash-quickstart{padding:18px}.qs-form{grid-template-columns:1fr}.dash-continue{grid-template-columns:1fr}.dash-continue-look{height:56px}.dash-dev-link{display:none}}

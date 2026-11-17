@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -16,6 +16,7 @@ function renderAiUsageStats(data, error = '') {
   if (!node) return;
   if (error) {
     node.title = 'Реальная статистика Cloudflare недоступна: ' + error;
+    setDashStatus('neurons', 'off', 'Статистика недоступна');
     $('#ai-usage-count').textContent = '—';
     const details = $('#ai-usage-details');
     if (details) details.textContent = 'Ошибка подключения: ' + error;
@@ -23,6 +24,7 @@ function renderAiUsageStats(data, error = '') {
   }
   if (!data) return;
   $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  setDashStatus('neurons', 'ok', Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов');
   const details = $('#ai-usage-details');
   if (details) details.textContent = 'Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов · ' +
     Number(data.totalTokens || 0).toLocaleString('ru-RU') + ' токенов';
@@ -69,6 +71,7 @@ if ($('#ai-usage-range')) {
   try { $('#ai-usage-range').value = localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
 }
 refreshAiUsage();
+renderConnections();
 $('#ai-usage-range')?.addEventListener('change', event => {
   try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
   refreshAiUsage();
@@ -90,7 +93,7 @@ let aiDesignReview = null;
 let aiDesignReviewLoading = false;
 let lastRenderedRaw = null;
 let exampleProjects = [];
-let dashboardFilter = 'all';
+let dashboardFilter = 'saved';
 let dashboardQuery = '';
 // Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
 // а вызывается из обработчика кнопок этой вкладки.
@@ -111,6 +114,94 @@ const persist = () => {
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
   || (Array.isArray(raw.services) && raw.services.length > 0);
 
+// ---------- Главная панель ----------
+// Состояние подключений в правой колонке: ok — работает, warn — требует внимания, off — не подключено.
+function setDashStatus(key, level, text) {
+  const item = document.querySelector('#dash-status [data-status="' + key + '"]');
+  if (!item) return;
+  item.dataset.level = level;
+  item.querySelector('small').textContent = text;
+}
+// Палитра и архитектура проекта для карточки: концепция без реестра и без рендера HTML.
+const conceptCache = new Map();
+function projectLook(raw) {
+  const key = JSON.stringify(raw);
+  if (!conceptCache.has(key)) {
+    try {
+      const vs = buildConcept(raw, { registry: [] }).visualSystem;
+      conceptCache.set(key, { palette: vs.palette, archetype: ARCHETYPES[vs.archetype]?.name || vs.archetype });
+    } catch { conceptCache.set(key, null); }
+    if (conceptCache.size > 60) conceptCache.delete(conceptCache.keys().next().value);
+  }
+  return conceptCache.get(key);
+}
+const swatches = look => look ? '<span class="dash-swatches" aria-hidden="true">' + ['bg', 'surface', 'accent', 'text'].map(k => '<i style="background:' + esc(look.palette[k] || '#333') + '"></i>').join('') + '</span>' : '';
+function projectCard(item) {
+  const p = normalizeProject(item.raw), name = p.brand || p.niche || 'Без названия', look = projectLook(item.raw);
+  const image = p.images?.hero || p.gallery?.[0]?.src || '';
+  const accent = look?.palette.accent || '#c9a45e', bg = look?.palette.bg || '#15171b', text = look?.palette.text || '#f2f4fa';
+  const cover = image
+    ? '<img src="' + esc(image) + '" alt="">'
+    : '<span class="dash-cover-type" style="color:' + esc(text) + '">' + esc(name.slice(0, 1).toUpperCase()) + '</span>';
+  const action = item.kind === 'saved'
+    ? '<button type="button" data-open-project="' + item.index + '">Открыть</button>'
+    : '<button type="button" data-open-example="' + item.index + '">Открыть пример</button>';
+  return '<article class="dash-project-card"><div class="dash-project-image" style="background:linear-gradient(135deg,' + esc(bg) + ',' + esc(bg) + ' 55%,' + esc(accent) + ')">' + cover + swatches(look) + '</div>' +
+    '<div class="dash-project-info"><b>' + esc(name) + '</b><small>' + esc(p.niche || 'Коммерческий сайт') + '</small>' +
+    (look ? '<small class="dash-arch">' + esc(look.archetype) + (item.kind === 'example' ? ' · пример' : '') + '</small>' : '') + action + '</div></article>';
+}
+// Карточка «Продолжить работу»: текущий проект рабочей области, если он не пустой.
+function renderContinue() {
+  const box = $('#dash-continue'); if (!box) return;
+  const p = result?.project;
+  if (!p || (!p.brand && !p.niche)) { box.hidden = true; box.innerHTML = ''; return; }
+  const audit = result.audit, vs = result.concept.visualSystem;
+  const arch = ARCHETYPES[vs.archetype]?.name || vs.archetype;
+  const status = audit.ok
+    ? (audit.warnings.length ? '<span class="dash-badge dash-badge--warn">Предупреждений: ' + audit.warnings.length + '</span>' : '<span class="dash-badge dash-badge--ok">Проверка пройдена</span>')
+    : '<span class="dash-badge dash-badge--err">Ошибок: ' + audit.errors.length + '</span>';
+  const inLibrary = state.library.some(item => item?.entry?.id === result.entry.id);
+  box.hidden = false;
+  box.innerHTML = '<div class="dash-continue-look" style="background:linear-gradient(135deg,' + esc(vs.palette.bg) + ' 0 55%,' + esc(vs.palette.accent) + ')">' + swatches({ palette: vs.palette }) + '</div>' +
+    '<div class="dash-continue-copy"><small>Продолжить работу</small><h2>' + esc(p.brand || p.niche) + '</h2><p>' + esc(p.niche || '') + ' · ' + esc(arch) + '</p><div class="dash-badges">' + status +
+    (inLibrary ? '' : '<span class="dash-badge">Не сохранён в реестр</span>') + '</div></div>' +
+    '<div class="dash-continue-actions"><button type="button" class="dash-primary" data-dash="editor">Открыть редактор</button><button type="button" data-dash="qa">Проверка и выпуск</button><button type="button" data-continue="download">Скачать HTML</button></div>';
+}
+// Сколько студия занимает в хранилище браузера (около 5 МБ на сайт): большие фото быстро его заполняют.
+function renderStorage() {
+  const meter = $('#dash-storage'); if (!meter) return;
+  let bytes = 0;
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); bytes += (k.length + (localStorage.getItem(k) || '').length) * 2; } } catch { /* хранилище недоступно */ }
+  const LIMIT = 5 * 1024 * 1024, pct = Math.min(100, Math.round(bytes / LIMIT * 100));
+  meter.setAttribute('aria-valuenow', String(pct));
+  meter.dataset.level = pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok';
+  meter.querySelector('span').style.width = Math.max(2, pct) + '%';
+  const mb = (bytes / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+  $('#dash-storage-note').textContent = 'Занято ' + mb + ' из ~5 МБ (' + pct + '%). ' + (pct >= 65
+    ? 'Скачайте JSON важных проектов и удалите лишние фото или записи реестра.'
+    : 'Проекты и фото хранятся только в этом браузере — сохраняйте важное через «Экспорт JSON».');
+}
+// Подключения: проверяем /health серверов, адреса которых заданы в этом браузере.
+async function pingHealth(endpoint) {
+  let url; try { url = new URL(endpoint); } catch { return false; }
+  url.pathname = '/health'; url.search = '';
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 6000);
+  try { const res = await fetch(url.href, { signal: controller.signal, cache: 'no-store' }); return res.ok; } catch { return false; } finally { clearTimeout(timer); }
+}
+function renderConnections() {
+  let ai = '', analyzer = '';
+  try { ai = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim(); analyzer = localStorage.getItem('uds:analyzer-endpoint') || ''; } catch { /* нет хранилища */ }
+  const mode = $('#qs-mode');
+  if (!ai) {
+    setDashStatus('ai', 'off', 'Сервер не задан — работает локальный автопилот');
+    if (mode) mode.textContent = 'AI-сервер не подключён: сайт соберёт локальный автопилот — анализ, стартовые тексты, концепция и проверка.';
+  } else pingHealth(ai).then(ok => {
+    setDashStatus('ai', ok ? 'ok' : 'warn', ok ? 'Cloudflare Workers AI подключён' : 'Сервер не ответил — будет локальный автопилот');
+    if (mode) mode.textContent = ok ? 'Тексты и структуру пишет AI по вашему брифу, затем студия собирает и проверяет сайт.' : 'AI-сервер сейчас не отвечает: сайт соберёт локальный автопилот.';
+  });
+  if (!analyzer) setDashStatus('analyzer', 'off', 'Не подключён — настройка в «Анализ сайтов и шаблоны»');
+  else pingHealth(analyzer).then(ok => setDashStatus('analyzer', ok ? 'ok' : 'warn', ok ? 'Анализатор-сервер отвечает' : 'Анализатор-сервер не ответил'));
+}
 function renderDashboard(filter = dashboardFilter) {
   const root = $('#dash-projects'); if (!root) return;
   dashboardFilter = filter;
@@ -123,25 +214,15 @@ function renderDashboard(filter = dashboardFilter) {
     return !q || [p.brand, p.niche, p.title].some(value => String(value || '').toLowerCase().includes(q));
   });
   $('#dash-project-count').textContent = String(saved.length);
-  $('#stat-projects').textContent = String(saved.length);
-  $('#stat-examples').textContent = String(exampleProjects.length);
-  const qualityStat = $('#stat-quality');
-  if (qualityStat) {
-    const audit = result && result.audit;
-    qualityStat.textContent = audit ? (audit.ok ? 'Проверено' : audit.errors.length + ' ошибок') : '—';
-    qualityStat.title = audit
-      ? 'Текущий проект: ' + audit.errors.length + ' ошибок, ' + audit.warnings.length + ' предупреждений'
-      : 'Создайте или откройте проект, чтобы увидеть результат проверки';
-  }
+  const chips = $('#dash-example-chips');
+  if (chips) chips.innerHTML = exampleProjects.map((item, index) => '<button type="button" data-open-example="' + index + '" title="' + esc(item.niche || '') + '">' + esc(item.brand || item.niche) + '</button>').join('');
   document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected', button.dataset.filter === filter));
-  root.innerHTML = shown.length ? shown.map(item => {
-    const p = normalizeProject(item.raw), name = p.brand || p.niche || 'Без названия';
-    const image = p.images?.hero || p.gallery?.[0]?.src || '';
-    const action = item.kind === 'saved'
-      ? '<button type="button" data-open-project="' + item.index + '">Открыть проект →</button>'
-      : '<button type="button" data-open-example="' + item.index + '">Открыть пример →</button>';
-    return '<article class="dash-project-card"><div class="dash-project-image">' + (image ? '<img src="' + esc(image) + '" alt="">' : '<span>✦</span>') + '</div><div class="dash-project-info"><b>' + esc(name) + '</b><small>' + esc(p.niche || 'Коммерческий сайт') + (item.kind === 'example' ? ' · Пример' : '') + '</small>' + action + '</div></article>';
-  }).join('') : '<div class="dash-empty"><b>' + (q ? 'Ничего не найдено' : filter === 'examples' ? 'Примеры пока не загружены' : 'Пока нет сохранённых проектов') + '</b><p>' + (q ? 'Измените поисковый запрос.' : 'Создайте сайт и нажмите «В реестр», чтобы сохранить его здесь.') + '</p>' + (filter !== 'examples' && !q ? '<button class="dash-primary" data-dash="create">Создать сайт</button>' : '') + '</div>';
+  const empty = q ? '<b>Ничего не найдено</b><p>Измените поисковый запрос.</p>'
+    : filter === 'examples' ? '<b>Примеры пока не загружены</b>'
+    : '<b>Здесь появятся ваши сайты</b><p>Соберите сайт выше и нажмите «В реестр» в рабочей области. Проект сохранится в этом браузере, а новые сайты будут сверяться с ним на непохожесть.</p>';
+  root.innerHTML = shown.length ? shown.map(projectCard).join('') : '<div class="dash-empty">' + empty + '</div>';
+  renderContinue();
+  renderStorage();
 }
 function openWorkspace(section = 'create') {
   document.body.classList.remove('dashboard-mode');
@@ -168,6 +249,7 @@ function openWorkspace(section = 'create') {
 $('#dashboard-back')?.addEventListener('click', () => {
   document.body.classList.add('dashboard-mode');
   renderDashboard();
+  renderConnections();
   $('#dash-search')?.focus({ preventScroll: true });
 });
 $('#dashboard')?.addEventListener('click', async e => {
@@ -186,10 +268,28 @@ $('#dashboard')?.addEventListener('click', async e => {
     if (item) { load(item.raw, 'Пример открыт: ' + (item.brand || item.niche)); openWorkspace('create'); }
     return;
   }
+  if (e.target.closest('[data-continue="download"]')) { $('#download').click(); return; }
   const action = e.target.closest('[data-dash]')?.dataset.dash;
+  if (action === 'projects') {
+    renderDashboard('saved');
+    $('#dash-projects-head')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.dash-nav [data-dash]').forEach(button => button.classList.toggle('is-active', button.dataset.dash === 'projects'));
+    return;
+  }
   if (action && action !== 'home') openWorkspace(action);
   const filter = e.target.closest('[data-filter]')?.dataset.filter;
   if (filter) renderDashboard(filter);
+});
+// Быстрый старт с главной: те же поля автопилота и тот же запуск, без лишнего перехода.
+$('#quick-start')?.addEventListener('submit', e => {
+  e.preventDefault();
+  const niche = $('#qs-niche').value.trim();
+  if (!niche) { $('#qs-niche').focus(); return; }
+  $('#auto-niche').value = niche;
+  $('#auto-brand').value = $('#qs-brand').value.trim();
+  $('#auto-tier').value = $('#qs-tier').value;
+  openWorkspace('create');
+  $('#auto').requestSubmit();
 });
 $('#dash-search')?.addEventListener('input', e => {
   dashboardQuery = e.target.value;

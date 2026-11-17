@@ -32,11 +32,16 @@ try {
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
 
-  // Открываем автопилот и создаём уникальный тестовый проект без обращения к внешнему AI.
-  await page.click('#dashboard [data-dash="create"]');
-  await page.fill('#auto-niche', 'Тестовая студия интерьерного света');
-  await page.fill('#auto-brand', 'LUMEN E2E');
-  await page.click('#auto-go');
+  // Главная: примеры — компактными кнопками, состояние студии и хранилище видны сразу.
+  await page.waitForFunction(() => document.querySelectorAll('#dash-example-chips [data-open-example]').length > 0);
+  check(await page.locator('#dash-status [data-status="ai"]').count() === 1, 'нет виджета состояния AI');
+  check(/Занято .* из ~5 МБ/.test(await page.textContent('#dash-storage-note')), 'не показано заполнение хранилища');
+
+  // Быстрый старт с главной создаёт уникальный тестовый проект без обращения к внешнему AI.
+  await page.fill('#qs-niche', 'Тестовая студия интерьерного света');
+  await page.fill('#qs-brand', 'LUMEN E2E');
+  await page.click('#quick-start [type="submit"]');
+  check(!await page.evaluate(() => document.body.classList.contains('dashboard-mode')), 'быстрый старт не открыл рабочую область');
   await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'), null, { timeout: 20000 });
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'генератор не сформировал предпросмотр с тестовым брендом');
 
@@ -57,7 +62,7 @@ try {
   await page.click('#tab-preview');
 
   // Упрощённая навигация ведёт в объединённые рабочие разделы.
-  check(await page.locator('#dash-nav [data-dash]').count() === 8, 'главное меню не сокращено до основных разделов');
+  check(await page.locator('#dash-nav [data-dash]').count() === 7, 'главное меню не сокращено до основных разделов');
   check(await page.locator('#dash-nav').textContent().then(t => t.includes('Дизайн и визуал') && t.includes('Проверка и выпуск')), 'объединённые разделы не отображаются');
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="visual"]');
@@ -144,6 +149,12 @@ try {
   await page.click('#dashboard-back');
   await page.waitForFunction(() => document.querySelector('#dash-project-count').textContent === '1');
   check((await page.textContent('#dash-projects')).includes('LUMEN E2E'), 'сохранённый проект не появился на главной панели');
+  // «Продолжить работу» показывает текущий проект и ведёт обратно в редактор.
+  check(await page.locator('#dash-continue').isVisible(), 'нет карточки «Продолжить работу»');
+  check((await page.textContent('#dash-continue')).includes('LUMEN E2E'), 'карточка «Продолжить работу» показывает не тот проект');
+  await page.click('#dash-continue [data-dash="editor"]');
+  check(!await page.evaluate(() => document.body.classList.contains('dashboard-mode')), '«Открыть редактор» не открыл рабочую область');
+  await page.click('#dashboard-back');
 
   // Поиск и фильтры главной панели должны находить проект и переключать набор карточек.
   await page.fill('#dash-search', 'LUMEN');
