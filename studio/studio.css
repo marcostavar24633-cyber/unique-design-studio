@@ -337,3 +337,12 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .production__auto{font-size:11px;font-style:normal;color:var(--ok);white-space:nowrap}
 .production__history{margin:0;padding-left:18px;font-size:13px;color:var(--muted,#8a8a8a)}
 @media(max-width:640px){.production__group li{grid-template-columns:1fr}.production__auto{white-space:normal}}
+
+/* AI Image Director PRO: задания по местам для изображений */
+.image-tasks{margin-top:22px}
+.image-tasks__list{display:grid;gap:8px;margin-top:10px}
+.image-task{border:1px solid var(--line);border-radius:10px;border-left-width:4px;padding:0 12px}
+.image-task.is-missing{border-left-color:var(--warn)}.image-task.is-filled{border-left-color:var(--ok)}
+.image-task summary{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:44px;cursor:pointer}
+.image-task summary span{color:var(--muted,#8a8a8a);font-size:12px;white-space:nowrap}
+.image-task pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:13px;line-height:1.5;margin:0 0 12px}

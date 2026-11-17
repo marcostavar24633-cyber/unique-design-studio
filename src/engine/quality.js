@@ -6,6 +6,7 @@
 import { reviewDesign } from './design-director.js';
 import { detectNiche } from './concept.js';
 import { normalizeProject } from './project.js';
+import { reviewImageSet } from './image-director.js';
 
 export const SEVERITIES = Object.freeze(['critical', 'high', 'medium', 'low']);
 export const SEVERITY_LABELS = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
@@ -105,9 +106,12 @@ export function qualityReport(generated) {
     add({ id: `audit:${c.id}`, source: 'audit', category: categoryOfAudit(c.id), severity: severityOfAudit(c), message: c.message, autoFix: Boolean(AUTO_FIXES[c.id]) && Boolean(AUTO_FIXES[c.id](project)) });
   }
 
+  const images = reviewImageSet(project, generated.concept);
+  for (const f of images.findings) add(f);
   const review = reviewDesign(project, generated);
   for (const r of review.recommendations) {
     if (r.id === 'audit-issues') continue; // уже разложено по отдельным замечаниям выше
+    if (r.id === 'hero-visual' && images.findings.some(f => f.id === 'images:hero-missing')) continue; // то же, что замечание Image Director
     add({ id: `director:${r.id}`, source: 'design-director', category: DIRECTOR_CATEGORY[r.category] || 'ux', severity: r.priority, message: `${r.title}. ${r.reason}`, action: r.action });
   }
 
