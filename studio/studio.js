@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -66,6 +66,8 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
 let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
+let aiDesignReview = null;
+let aiDesignReviewLoading = false;
 let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'all';
@@ -1180,16 +1182,36 @@ function renderSiteContentInteractionChecks() {
   host.innerHTML=auditSiteContentAndInteractions().map(item=>'<article class="visual-quality-card is-'+esc(item.level)+'"><b>'+esc(item.title)+'</b><p>'+esc(item.text)+'</p></article>').join('');
 }
 
+function renderAiDesignReview() {
+  const root = $('#ai-design-review-results');
+  if (!root) return;
+  if (aiDesignReviewLoading) {
+    root.innerHTML = '<p class="note">AI Design Director анализирует проект…</p>';
+    return;
+  }
+  if (!aiDesignReview) {
+    root.innerHTML = '<p class="note">AI-рекомендации появятся здесь. Они не применяются автоматически.</p>';
+    return;
+  }
+  const items = aiDesignReview.recommendations || [];
+  root.innerHTML = items.length ? items.map((item, index) => {
+    const patch = item.patch && Object.keys(item.patch).length;
+    return '<article class="visual-quality-card is-' + esc(item.priority) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.reason) + '</p><p>' + esc(item.action) + '</p>' +
+      (patch ? '<button type="button" data-apply-ai-review="' + index + '">Применить предложенный текст</button>' : '<span class="note">Рекомендация без готового изменения</span>') +
+      '</article>';
+  }).join('') : '<p class="note">AI не нашёл дополнительных рекомендаций.</p>';
+}
 function renderAudit() {
   const a = result.audit;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
-  $('#view-audit').innerHTML = `<section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+  $('#view-audit').innerHTML = `<section class="ai-design-review"><h3>AI Design Director</h3><p class="note">Нейросеть оценивает предложение, структуру и тексты сайта. Каждое изменение можно отдельно проверить и применить вручную.</p><button type="button" data-run-ai-design-review>Запустить AI-аудит дизайна и контента</button><div id="ai-design-review-results" class="visual-quality-list" aria-live="polite"></div></section><section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
 <h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
 <h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
 <p class="note" style="margin-top:16px">Статическая проверка не заменяет просмотр на реальных устройствах: используйте переключатель ширины 320 / 768 в предпросмотре.</p>`;
   renderImageIntelligence();
+  renderAiDesignReview();
 }
 
 function renderRegistry() {
@@ -1697,6 +1719,63 @@ $('#view-audit').addEventListener('click', async e => {
 });
 $('#form').addEventListener('submit', e => e.preventDefault());
 $('#view-audit').addEventListener('click', async e => {
+  if (e.target.closest('[data-run-ai-design-review]')) {
+    const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
+    let target;
+    try {
+      target = new URL(endpoint, location.href);
+      if (!/\/api\/generate-landing\/?$/i.test(target.pathname)) throw new Error('Укажите адрес Worker с путём /api/generate-landing');
+    } catch (error) {
+      toast(error.message || 'Сначала настройте адрес AI-сервера в автопилоте');
+      return;
+    }
+    aiDesignReviewLoading = true;
+    renderAiDesignReview();
+    try {
+      const response = await fetch(target.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          task: 'design-review',
+          project: {
+            niche: result.project.niche, brand: result.project.brand, title: result.project.title,
+            description: result.project.description, cta: result.project.cta,
+            targetAudience: result.project.targetAudience, mainOffer: result.project.mainOffer,
+            services: (result.project.services || []).slice(0, 12),
+            advantages: (result.project.advantages || []).slice(0, 12),
+            faqs: (result.project.faqs || []).slice(0, 10),
+          },
+          analysis: currentAnalysis() || {},
+          concept: { designBrief: result.concept.designBrief, designDNA: result.concept.designDNA },
+          audit: { errors: result.audit.errors, warnings: result.audit.warnings },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
+      if (!payload.review || !Array.isArray(payload.review.recommendations)) throw new Error('Сервер вернул некорректный отчёт');
+      aiDesignReview = payload.review;
+      toast('AI Design Director завершил проверку');
+    } catch (error) {
+      aiDesignReview = null;
+      toast('AI-аудит не выполнен: ' + error.message);
+    } finally {
+      aiDesignReviewLoading = false;
+      renderAiDesignReview();
+    }
+    return;
+  }
+  const applyReview = e.target.closest('[data-apply-ai-review]');
+  if (applyReview && aiDesignReview?.recommendations) {
+    const item = aiDesignReview.recommendations[Number(applyReview.dataset.applyAiReview)];
+    if (!item?.patch) return;
+    try {
+      const preview = applyApprovedDesignPatch(state.raw, item.patch, Object.keys(item.patch));
+      if (!preview.changed) throw new Error('В рекомендации нет поддерживаемых полей');
+      load(preview.project, 'Одобренное изменение AI Design Director применено. Проверьте предпросмотр.');
+      aiDesignReview = null;
+      return;
+    } catch (error) { toast('Не удалось применить изменение: ' + error.message); return; }
+  }
   if (e.target.closest('[data-run-site-content-qa]')) { renderSiteContentInteractionChecks(); return; }
   if (e.target.closest('[data-run-responsive-a11y]')) { renderResponsiveAccessibilityChecks(); return; }
   if (e.target.closest('[data-run-hero-readability]')) { renderHeroReadabilityChecks(); return; }
