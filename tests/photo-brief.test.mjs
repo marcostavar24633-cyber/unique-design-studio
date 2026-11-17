@@ -1,0 +1,84 @@
+// Английский бриф для генератора фото: ниша → кухня и обстановка, позиция → точное блюдо или товар.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { generate } from '../src/engine/index.js';
+import { autopilot } from '../src/engine/autopilot.js';
+import { imageSlots } from '../src/engine/image-director.js';
+import { itemSubject, nicheVisual, photoPrompt, translit } from '../src/engine/photo-brief.js';
+
+const site = (niche, services, extra = {}) => {
+  const p = { ...autopilot({ niche, email: 'a@b.ru', ...extra }, { registry: [] }).project };
+  if (services) p.services = services.map(t => [t, '']);
+  const g = generate(p);
+  return { g, slots: imageSlots(g.project, g.concept).slots };
+};
+
+test('вьетнамское кафе: блюда в карточках — фо, нем, бан ми, вьетнамский кофе, а не интерьер', () => {
+  const { g, slots } = site('кафе вьетнамская кухня', ['Фо Бо', 'Нем', 'Бан Ми', 'Кофе'], { city: 'Ульяновск', tier: 'luxury' });
+  const items = slots.filter(s => s.role === 'service').map(s => photoPrompt(s, g.project));
+  assert.match(items[0], /pho bo: a large deep bowl of Vietnamese beef noodle soup/);
+  assert.match(items[1], /nem ran: crispy golden Vietnamese fried spring rolls/);
+  assert.match(items[2], /banh mi: a crispy Vietnamese baguette sandwich/);
+  assert.match(items[3], /phin drip filter/);
+  for (const p of items) {
+    assert.match(p, /Vietnamese cafe/);
+    assert.match(p, /Avoid: not a European bistro/);
+    assert.match(p, /close-up from 45 degrees/, 'блюдо крупно, а не общий план зала');
+  }
+});
+
+test('первый экран и галерея показывают обстановку и блюда своей кухни', () => {
+  const { g, slots } = site('кафе вьетнамская кухня', ['Фо Бо', 'Нем']);
+  const all = slots.map(s => photoPrompt(s, g.project));
+  for (const p of all) assert.match(p, /Vietnamese/, p.slice(0, 80));
+  const hero = slots.find(s => s.id === 'hero');
+  if (hero) assert.match(photoPrompt(hero, g.project), /authentic Vietnamese dishes, pho bo in the center/);
+});
+
+test('кухня определяется и по названиям блюд, если в нише её нет', () => {
+  const v = nicheVisual({ niche: 'кафе', services: [['Рамен', ''], ['Суши сет', '']] });
+  assert.equal(v.cuisine.id, 'japanese');
+  assert.match(itemSubject('Рамен', v), /ramen/);
+});
+
+test('незнакомое блюдо: транслит и контекст кухни, без кириллицы', () => {
+  const v = nicheVisual({ niche: 'вьетнамская кухня', services: [] });
+  const s = itemSubject('Каштановый пирог', v);
+  assert.match(s, /authentic Vietnamese dish called "Kashtanovyy pirog"/);
+});
+
+test('ниши вне кухни получают свою сцену', () => {
+  assert.match(nicheVisual({ niche: 'раковарня', services: [] }).hero, /crayfish/);
+  assert.match(nicheVisual({ niche: 'стоматология', services: [] }).en, /dental clinic/);
+  assert.match(nicheVisual({ niche: 'автосервис', services: [] }).en, /car service/);
+  assert.match(nicheVisual({ niche: 'гончарная мастерская', services: [] }).en, /Goncharnaya masterskaya/i, 'незнакомая ниша — транслит');
+});
+
+test('ни один промпт не содержит кириллицы: FLUX её не понимает и может нарисовать буквы', () => {
+  const idx = JSON.parse(readFileSync(new URL('../examples/index.json', import.meta.url), 'utf8'));
+  const projects = idx.map(e => JSON.parse(readFileSync(new URL('../examples/' + e.file, import.meta.url), 'utf8')));
+  for (const n of ['кафе вьетнамская кухня', 'суши-бар', 'грузинский ресторан', 'кофейня', 'магазин мебели', 'стоматология', 'фотограф', 'школа гончарного дела'])
+    projects.push(autopilot({ niche: n, email: 'a@b.ru' }, { registry: [] }).project);
+  for (const raw of projects) {
+    const g = generate(raw);
+    for (const slot of imageSlots(g.project, g.concept).slots) {
+      const p = photoPrompt(slot, g.project);
+      assert.doesNotMatch(p, /[а-яё]/i, `${g.project.niche} / ${slot.id}: ${p.slice(0, 120)}`);
+      assert.match(p, /No text, no letters, no logos/);
+      assert.ok(p.length < 2000, 'промпт помещается в лимит Worker');
+    }
+  }
+});
+
+test('транслитерация сохраняет регистр и убирает кавычки', () => {
+  assert.equal(translit('«Щука» Ёж'), 'Shchuka Yozh');
+});
+
+test('студия отправляет генератору английский бриф, а ALT фото — для посетителей, не текст задания', () => {
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.match(js, /const prompt = photoPrompt\(slot, result\.project\)/);
+  assert.doesNotMatch(js, /'Business niche: ' \+/);
+  assert.doesNotMatch(js, /heroAlt: slot\.subject|alt: slot\.subject|row\[4\] = slot\.subject/);
+  assert.match(js, /function generatedAlt\(slot, project\)/);
+});
