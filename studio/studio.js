@@ -34,8 +34,13 @@ async function refreshAiUsage() {
   if (aiUsageLoading) return;
   const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
-  const usageUrl = endpoint.replace(/\/api\/generate-landing\/?$/i, '/api/usage');
-  if (usageUrl === endpoint) return renderAiUsageStats(null, 'неверный адрес AI-сервера');
+  let usageUrl;
+  try {
+    const parsed = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(parsed.pathname)) throw new Error('неверный путь');
+    parsed.pathname = parsed.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage');
+    usageUrl = parsed.toString();
+  } catch { return renderAiUsageStats(null, 'неверный адрес AI-сервера'); }
   aiUsageLoading = true;
   try {
     const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
@@ -551,7 +556,7 @@ $('#auto').addEventListener('submit', async e => {
   if (endpoint) {
     status.textContent = note + ' Подготавливаю фотографии для сайта…';
     try {
-      const images = await generateProjectImages(endpoint);
+      const images = await generateProjectImages(endpoint, draft.project.id);
       if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
       else note += ' Для выбранной композиции отдельные фотографии не требуются.';
     } catch (error) {
@@ -1342,9 +1347,11 @@ async function optimizeGeneratedImage(dataUri) {
   const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
   return optimizeImage(file);
 }
-async function generateProjectImages(endpoint) {
-  const imageEndpoint = endpoint.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
-  if (imageEndpoint === endpoint) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
+async function generateProjectImages(endpoint, expectedProjectId) {
+  const parsedEndpoint = new URL(endpoint, location.href);
+  if (!/\/api\/generate-landing\/?$/i.test(parsedEndpoint.pathname)) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
+  parsedEndpoint.pathname = parsedEndpoint.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
+  const imageEndpoint = parsedEndpoint.toString();
   const slots = imageSlots(result.project, result.concept).slots;
   const hero = slots.find(slot => slot.id === 'hero');
   const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
@@ -1369,6 +1376,7 @@ async function generateProjectImages(endpoint) {
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.image) throw new Error(payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').');
     const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
+    if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
     const data = optimized.data;
     if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.');
     if (slot.id === 'hero') {
