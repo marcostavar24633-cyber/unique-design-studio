@@ -109,6 +109,9 @@ try {
   });
   await page.reload({ waitUntil: 'networkidle' });
 
+  // После перезагрузки открываем рабочую область: кнопки экспорта и сохранения скрыты на главной панели.
+  await page.click('#dashboard [data-dash="create"]');
+
   // Сохраняем проект в реестр, затем возвращаемся на главную панель.
   await page.click('#save');
   await page.click('#dashboard-back');
