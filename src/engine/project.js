@@ -23,11 +23,11 @@ const TEXT_FIELDS = [
   'seoTitle', 'seoDescription',
 ];
 
-/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT"] или объект. */
+/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT","Категория"] или объект. */
 function item(raw) {
-  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }), alt: str(raw[4]) };
+  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }), alt: str(raw[4]), category: str(raw[5]) };
   if (raw && typeof raw === 'object') {
-    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }), alt: str(raw.alt) };
+    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }), alt: str(raw.alt), category: str(raw.category) };
   }
   return { title: str(raw), text: '', price: '', image: '' };
 }
@@ -84,6 +84,8 @@ export function normalizeProject(raw = {}) {
   p.process = items(raw.process);
   p.faqs = items(raw.faqs);
   p.categories = Array.isArray(raw.categories) ? raw.categories.map(str).filter(Boolean) : [];
+  // Каталог с корзиной-заявкой: true — включить, false — выключить, иначе решает движок по нише и ценам.
+  if (typeof raw.commerce === 'boolean') p.commerce = raw.commerce;
   p.assumptions = Array.isArray(raw.assumptions) ? raw.assumptions.map(str).filter(Boolean) : [];
   p.gallery = (Array.isArray(raw.gallery) ? raw.gallery : []).map(g => (typeof g === 'string' ? { src: g } : g || {}))
     .map(g => ({ src: safeUrl(g.src, { image: true }), alt: str(g.alt), caption: str(g.caption) })).filter(g => g.src);
@@ -95,13 +97,20 @@ export function normalizeProject(raw = {}) {
   p.formAction = /^https:\/\//i.test(str(raw.formAction)) ? str(raw.formAction) : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
   const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
-    'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
+    'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
   return p;
 }
 
-const toRow = i => { const row = [i.title, i.text]; if (i.price || i.image || i.alt) row.push(i.price); if (i.image || i.alt) row.push(i.image); if (i.alt) row.push(i.alt); return row; };
+const toRow = i => {
+  const row = [i.title, i.text];
+  if (i.price || i.image || i.alt || i.category) row.push(i.price);
+  if (i.image || i.alt || i.category) row.push(i.image);
+  if (i.alt || i.category) row.push(i.alt);
+  if (i.category) row.push(i.category);
+  return row;
+};
 
 /** Экспорт в JSON, который читают и этот продукт, и редактор Landing Studio
  *  (списки — массивы строк, designArchitecture — значение из старого перечисления). */
@@ -132,6 +141,7 @@ export function exportProject(input, concept) {
   out.process = p.process.map(toRow);
   out.faqs = p.faqs.map(toRow);
   out.categories = p.categories;
+  if (typeof p.commerce === 'boolean') out.commerce = p.commerce;
   out.assumptions = p.assumptions;
   out.gallery = p.gallery;
   out.images = p.images;

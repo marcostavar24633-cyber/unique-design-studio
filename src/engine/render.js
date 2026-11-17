@@ -3,6 +3,7 @@ import { CORE_CSS } from './core-css.js';
 import { ADV_CSS, BASE_CSS, BUTTON_CSS, HERO_CSS, ITEMS_CSS, NAV_CSS, PROC_CSS, tokensCss } from './css.js';
 import { motifSvg } from './motif.js';
 import { motionCss, motionScript } from './motion.js';
+import { COMMERCE_CSS, addButton, cartPanel, catalogControls, commerceScript, itemAttrs } from './commerce.js';
 import { normalizeProject } from './project.js';
 import { esc } from './util.js';
 
@@ -185,9 +186,10 @@ const SECTION = {
       const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.services?.[n];
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
-      return `<li class="item" id="item-${n}" data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}</div></li>`;
+      const shop = c.vs.commerce?.tools || c.vs.commerce?.cart;
+      return `<li class="item" id="item-${n}"${shop ? itemAttrs(i) : ''} data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}${c.vs.commerce?.cart ? addButton(i, n) : ''}</div></li>`;
     }).join('');
-    return wrap(c, 'items', `<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);
+    return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);
   },
   advantages(c) {
     const li = c.p.advantages.map(a => `<li data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
@@ -224,6 +226,7 @@ function script(c) {
   if (c.vs.motion !== 'static') parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
   if (c.vs.motion === 'parallax') parts.push(`var px=document.querySelector('[data-parallax]');if(px&&!${reduce}){var tick=false;addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){px.style.transform='translate3d(0,'+Math.min(scrollY*.08,40)+'px,0)';tick=false})},{passive:true})}`);
   if (c.vs.archetype === 'catalog' && c.p.services.length >= 4) parts.push(`var sf=document.querySelector('[data-search]');if(sf){sf.hidden=false;var st=document.querySelector('[data-search-status]');sf.addEventListener('submit',function(e){e.preventDefault();document.getElementById('items').scrollIntoView()});sf.querySelector('input').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase(),n=0;document.querySelectorAll('#items .item').forEach(function(li){var ok=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!ok;if(ok)n++});st.textContent=q?'Найдено: '+n:''})}`);
+  if ((c.vs.commerce?.tools || c.vs.commerce?.cart) && c.order.includes('items')) parts.push(commerceScript(c.p));
   const motion = motionScript(c.vs.motionPlan);
   if (motion) parts.push(motion);
   return parts.length ? `<script>(function(){${parts.join(';')}})();</script>` : '';
@@ -246,6 +249,7 @@ export function renderCss(concept) {
     CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     motionCss(vs.motionPlan),
+    (vs.commerce?.tools || vs.commerce?.cart) && used.includes('items') ? COMMERCE_CSS : '',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
@@ -285,6 +289,7 @@ ${nav(c)}
 ${sections}
 </main>
 <footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>
+${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
 ${script(c)}
 </body>
 </html>

@@ -132,7 +132,7 @@ const GROUPS = [
   ]],
   ['Каталог / услуги / меню', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
-    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст. Последние поля необязательны'],
+    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст | Категория. Последние поля необязательны. У магазина цены и категории включают фильтры, сортировку и корзину-заявку'],
     ['categories', 'Категории', 'list', 'Одна категория на строку'],
   ]],
   ['О нас', false, [['aboutTitle', 'Заголовок'], ['aboutText', 'Текст', 'area']]],
@@ -156,7 +156,7 @@ function set(path, value) {
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
   if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
-  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt];
+  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt, r.category];
   const cells = a.map(x => x ?? '');
   if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
