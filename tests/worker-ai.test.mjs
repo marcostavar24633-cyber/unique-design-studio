@@ -196,3 +196,31 @@ test('статистика Cloudflare требует секреты и пров�
   assert.equal(invalidRange.status, 400);
 });
 
+test('AI Design Director returns bounded recommendations and allowlisted draft patches', async () => {
+  const answer = JSON.stringify({ recommendations: [
+    { id: 'hero-copy', title: 'Уточнить первый экран', category: 'conversion', priority: 'high', reason: 'Заголовок общий', action: 'Добавить конкретику', patch: { title: 'Авторские диваны для вашего интерьера', privateNote: 'не пропускать' } },
+    ...Array.from({ length: 8 }, (_, i) => ({ id: 'extra-' + i, title: 'Дополнительная рекомендация', priority: 'low' })),
+  ] });
+  const env = aiReturning(answer);
+  const res = await worker.fetch(request({ task: 'design-review', project: { niche: 'диваны', title: 'Диваны', services: [] } }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.review.mode, 'workers-ai');
+  assert.equal(body.review.recommendations.length, 6);
+  assert.deepEqual(body.review.recommendations[0].patch, { title: 'Авторские диваны для вашего интерьера' });
+  assert.equal(body.review.safety.autoApplied, false);
+  assert.equal(body.review.safety.requiresApproval, true);
+  assert.equal(env.calls[0].max_tokens, 1800);
+});
+
+test('AI Design Director rejects unauthorized origins and unavailable AI without calling a model', async () => {
+  const blocked = await worker.fetch(request({ task: 'design-review', project: {} }, { origin: 'https://evil.example' }), aiReturning('{}'));
+  assert.equal(blocked.status, 403);
+  const unavailable = await worker.fetch(request({ task: 'design-review', project: {} }), {});
+  assert.equal(unavailable.status, 503);
+});
+
+test('AI Design Director reports malformed model output as a gateway error', async () => {
+  const res = await worker.fetch(request({ task: 'design-review', project: { niche: 'кофейня' } }), aiReturning('not-json'));
+  assert.equal(res.status, 502);
+});
