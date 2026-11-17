@@ -58,6 +58,14 @@ function renderDashboard(filter = dashboardFilter) {
   $('#dash-project-count').textContent = String(saved.length);
   $('#stat-projects').textContent = String(saved.length);
   $('#stat-examples').textContent = String(exampleProjects.length);
+  const qualityStat = $('#stat-quality');
+  if (qualityStat) {
+    const audit = result && result.audit;
+    qualityStat.textContent = audit ? (audit.ok ? 'Проверено' : audit.errors.length + ' ошибок') : '—';
+    qualityStat.title = audit
+      ? 'Текущий проект: ' + audit.errors.length + ' ошибок, ' + audit.warnings.length + ' предупреждений'
+      : 'Создайте или откройте проект, чтобы увидеть результат проверки';
+  }
   document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected', button.dataset.filter === filter));
   root.innerHTML = shown.length ? shown.map(item => {
     const p = normalizeProject(item.raw), name = p.brand || p.niche || 'Без названия';

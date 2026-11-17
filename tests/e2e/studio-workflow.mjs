@@ -40,6 +40,22 @@ try {
   await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'), null, { timeout: 20000 });
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'генератор не сформировал предпросмотр с тестовым брендом');
 
+  // Проверяем вкладки результата, размеры предпросмотра и сворачивание панели.
+  for (const tab of ['spec', 'concept', 'audit', 'production', 'registry', 'preview']) {
+    await page.click('#tab-' + tab);
+    check(await page.locator('#view-' + tab).isVisible(), 'вкладка «' + tab + '» не открылась');
+  }
+  for (const width of ['390', '768', '1280', '']) {
+    await page.click('.sizes button[data-w="' + width + '"]');
+    const actualWidth = await page.locator('#frame').evaluate(node => node.style.width);
+    check(actualWidth === (width ? width + 'px' : '100%'), 'режим ширины ' + (width || 'full') + ' не применился');
+  }
+  await page.click('#toggle-settings');
+  check(await page.locator('#toggle-settings').getAttribute('aria-expanded') === 'false', 'панель настроек не скрылась');
+  await page.click('#toggle-settings');
+  check(await page.locator('#toggle-settings').getAttribute('aria-expanded') === 'true', 'панель настроек не раскрылась');
+  await page.click('#tab-preview');
+
   // Навигация «Настройки» должна открывать существующие поля проекта.
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="settings"]');
