@@ -80,4 +80,11 @@ Worker принимает POST JSON, ограничивает размер те�
 
 Откройте URL Worker из лога Wrangler и проверьте `/health`, затем выполните тестовую генерацию из студии через endpoint `/api/generate-landing`. Сам факт успешной сборки CI или GitHub Pages не подтверждает публикацию Worker.
 
-Статистика `/api/usage` настраивается отдельно: ей нужны Worker secrets/vars `CF_ANALYTICS_TOKEN` и `CF_ACCOUNT_ID`. Это не те же самые настройки, что GitHub Actions secrets для публикации. Не создавайте их, если статистика пока не нужна.
+Статистика `/api/usage` настраивается отдельно. Чтобы включить счётчик AI Neurons в студии:
+
+1. В Cloudflare откройте **Workers & Pages → unique-design-studio-ai → Settings → Variables and Secrets**.
+2. Добавьте secret `CF_ANALYTICS_TOKEN`. Создайте отдельный API Token в Cloudflare → My Profile → API Tokens → Create Custom Token. Дайте ему только разрешение **Account → Account Analytics → Read** и ограничьте доступ нужным аккаунтом. Сохраните токен сразу в Worker Secret; не вставляйте его в GitHub, код или чат. Для GraphQL Analytics требуется именно Account Analytics: Read. [Документация Cloudflare](https://developers.cloudflare.com/analytics/graphql-api/getting-started/authentication/api-token-auth/).
+3. Добавьте обычную переменную `CF_ACCOUNT_ID` со значением Account ID вашего Cloudflare-аккаунта (не Zone ID и не Worker ID).
+4. Сохраните настройки Worker. Откройте сайт студии заново: счётчик запрашивает `/api/usage` при запуске, после генерации, при смене периода и затем автоматически раз в минуту.
+
+Это не те же самые настройки, что GitHub Actions secrets для публикации Worker. Пока оба значения не заданы, `/api/usage` вернёт HTTP 503, а счётчик покажет «Статистика не подключена».

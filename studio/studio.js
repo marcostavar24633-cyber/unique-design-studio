@@ -8,6 +8,8 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
+const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
+const getDefaultAiEndpoint = () => location.hostname === 'marcostavar24633-cyber.github.io' ? DEFAULT_AI_ENDPOINT : '';
 let aiUsageLoading = false;
 function renderAiUsageStats(data, error = '') {
   const node = $('#ai-usage');
@@ -31,7 +33,7 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -59,6 +61,12 @@ $('#ai-usage-range')?.addEventListener('change', event => {
   try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
   refreshAiUsage();
 });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshAiUsage();
+});
+setInterval(() => {
+  if (!document.hidden) refreshAiUsage();
+}, 60_000);
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -489,7 +497,7 @@ renderLibraryHint();
 
 // ---------- Автопилот ----------
 try {
-  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint();
   $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
   $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
   if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
@@ -512,11 +520,28 @@ $('#auto').addEventListener('submit', async e => {
     localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
   } catch { /* нет хранилища */ }
   const setAutoStatus = value => { const node = $('#auto-status'); if (node) node.textContent = value; };
+  const setAutoProgress = (percent, stage, detail = '') => {
+    const root = $('#auto-progress'), bar = $('#auto-progress-bar');
+    const value = $('#auto-progress-value'), label = $('#auto-progress-stage');
+    const extra = $('#auto-progress-detail');
+    if (!root || !bar || !value || !label) return;
+    root.hidden = false;
+    const safe = Math.max(0, Math.min(100, Math.round(percent)));
+    bar.style.width = safe + '%';
+    const track = root.querySelector('[role="progressbar"]');
+    if (track) track.setAttribute('aria-valuenow', String(safe));
+    value.textContent = safe + '%';
+    label.textContent = stage;
+    if (extra) extra.textContent = detail;
+    root.dataset.state = safe >= 100 ? 'complete' : 'running';
+  };
   const go = $('#auto-go');
   go.disabled = true;
+  setAutoProgress(3, 'Подготовка проекта', 'Проверяем бриф и параметры генерации');
   let draft = null, note = '';
   if (endpoint) {
-    setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…');
+    setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — ход генерации отображается ниже…');
+    setAutoProgress(12, 'AI формирует тексты и структуру', 'Отправляем бриф в Cloudflare Workers AI');
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
@@ -524,25 +549,30 @@ $('#auto').addEventListener('submit', async e => {
       const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
+      setAutoProgress(48, 'AI подготовил ответ', 'Проверяем и собираем данные проекта');
       draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
+      setAutoProgress(35, 'Переключение на локальный режим', 'AI недоступен — продолжаем без сервера');
     }
   }
   if (!draft) {
+    setAutoProgress(52, 'Локальная сборка проекта', 'Формируем структуру и контент');
     const local = autopilot(input, { registry: registry() });
     draft = { project: local.project, analysis: local.analysis };
     if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
   }
   note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
+  setAutoProgress(58, 'Сборка сайта', 'Подготавливаем предпросмотр, SEO и проверку качества');
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
   if (endpoint) {
     setAutoStatus(note + ' Подготавливаю фотографии для сайта…');
+    setAutoProgress(65, 'Генерация изображений', 'Подготавливаем визуальные материалы');
     try {
-      const images = await generateProjectImages(endpoint, draft.project.id);
+      const images = await generateProjectImages(endpoint, draft.project.id, (done, total, subject) => setAutoProgress(65 + (done / Math.max(1, total)) * 30, 'Генерация изображений', 'Готово ' + done + ' из ' + total + ': ' + subject));
       if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
       else note += ' Для выбранной композиции отдельные фотографии не требуются.';
     } catch (error) {
@@ -554,6 +584,7 @@ $('#auto').addEventListener('submit', async e => {
   // Статус обязателен и для локального режима без AI endpoint.
   // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
   setAutoStatus(note);
+  setAutoProgress(100, 'Генерация завершена', note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -1360,7 +1391,7 @@ async function optimizeGeneratedImage(dataUri) {
   const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
   return optimizeImage(file);
 }
-async function generateProjectImages(endpoint, expectedProjectId) {
+async function generateProjectImages(endpoint, expectedProjectId, onProgress = () => {}) {
   const parsedEndpoint = new URL(endpoint, location.href);
   if (!/\/api\/generate-landing\/?$/i.test(parsedEndpoint.pathname)) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
   parsedEndpoint.pathname = parsedEndpoint.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
@@ -1374,6 +1405,7 @@ async function generateProjectImages(endpoint, expectedProjectId) {
   let generated = 0;
   for (let index = 0; index < targets.length; index++) {
     const slot = targets[index];
+    onProgress(index, targets.length, slot.subject);
     const prompt = [
       'Photorealistic premium commercial photography, not an illustration, no text, no typography, no logos, no watermark.',
       'Subject: ' + slot.subject + '.',

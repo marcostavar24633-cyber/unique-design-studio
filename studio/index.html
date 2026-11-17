@@ -92,6 +92,11 @@
             <small id="auto-endpoint-h">Cloudflare Workers AI генерирует тексты, структуру и до 4 изображений для сайта. Изображения создаются автоматически после сборки проекта. Веб-поиск не выполняется. Вставьте адрес Worker с путём /api/generate-landing. Пусто — локальный автопилот без AI.</small></div>
         </details>
         <button type="submit" class="primary wide" id="auto-go">Сгенерировать всё</button>
+        <div id="auto-progress" class="auto-progress" hidden data-state="running" aria-live="polite">
+          <div class="auto-progress-heading"><b id="auto-progress-stage">Подготовка проекта</b><strong id="auto-progress-value">0%</strong></div>
+          <div class="auto-progress-track" role="progressbar" aria-label="Ход генерации" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="auto-progress-bar"></span></div>
+          <small id="auto-progress-detail">Ожидание запуска</small>
+        </div>
         <p class="note" id="auto-status" role="status" aria-live="polite"></p>
       </form>
     </section>
