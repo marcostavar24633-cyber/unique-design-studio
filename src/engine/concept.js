@@ -8,6 +8,7 @@ import { conceptIdentity, contextSignals } from './context.js';
 import { SECTION_LABELS, normalizeReferences } from './library.js';
 import { chooseMotion } from './motion.js';
 import { commerceEnabled } from './commerce.js';
+import { chooseMechanic } from './mechanics.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -467,7 +468,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       layout: { container, rhythm: arch.rhythm },
       motion: arch.motion, motionPlan, motif: design.motif,
       commerce: commerceEnabled(project, profile.id),
-      variants: { items: itemsVariant, advantages: arch.advantages, process: arch.process },
+      variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,
     },
   };

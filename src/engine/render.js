@@ -6,6 +6,7 @@ import { motionCss, motionScript } from './motion.js';
 import { COMMERCE_CSS, addButton, cartPanel, catalogControls, commerceScript, itemAttrs } from './commerce.js';
 import { normalizeProject } from './project.js';
 import { esc } from './util.js';
+import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -193,14 +194,23 @@ const SECTION = {
   about: c => `<section id="about" class="${sectionClass(c, 'about')}" aria-labelledby="about-h"><div class="ds-container"><header class="sec__head"><h2 id="about-h">${esc(c.titles.about)}</h2></header><p class="about__text" data-reveal>${esc(c.p.aboutText)}</p></div></section>`,
   items(c) {
     const v = c.vs.variants.items;
+    const mech = c.vs.variants.itemsMechanic || 'none';
     const li = c.p.services.map((i, n) => {
       const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.services?.[n];
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
       const shop = c.vs.commerce?.tools || c.vs.commerce?.cart;
-      return `<li class="item" id="item-${n}"${shop ? itemAttrs(i) : ''} data-reveal>${media}<div class="item__body"><h3>${esc(i.title)}</h3>${i.text ? `<p>${esc(i.text)}</p>` : ''}${i.price ? `<p class="price">${esc(i.price)}</p>` : ''}${c.vs.commerce?.cart ? addButton(i, n) : ''}</div></li>`;
+      const parts = { media, title: `<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '' };
+      const flip = mech === 'flip' && media && parts.text;
+      // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
+      const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
+      return `<li class="item${flip ? ' item--flip' : ''}" id="item-${n}"${shop ? itemAttrs(i) : ''}${attrs} data-reveal>${mechanicBody(mech, parts)}</li>`;
     }).join('');
-    return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}<ul class="items items--${v}" role="list">${li}</ul>`, c.p.servicesIntro);
+    const list = `<ul class="items items--${v}${mech !== 'none' ? ` items--mech-${mech}` : ''}" role="list">${li}</ul>`;
+    const body = mech === 'rail'
+      ? `<div class="rail" role="region" aria-label="${esc(c.labels.items)}: прокрутите вбок" tabindex="0">${list}</div><p class="rail__hint" aria-hidden="true">Листайте вбок →</p>`
+      : list;
+    return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}${body}`, c.p.servicesIntro);
   },
   advantages(c) {
     const li = c.p.advantages.map(a => `<li data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
@@ -264,6 +274,7 @@ export function renderCss(concept) {
     motionCss(vs.motionPlan),
     (vs.commerce?.tools || vs.commerce?.cart) && used.includes('items') ? COMMERCE_CSS : '',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
+    used.includes('items') ? MECHANIC_CSS[vs.variants.itemsMechanic || 'none'] || '' : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
     used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
