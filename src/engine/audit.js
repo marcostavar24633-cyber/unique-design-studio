@@ -63,7 +63,8 @@ export function auditSite(html, concept, input) {
   // Изображения и формы
   const imgs = of('img');
   test(imgs.every(i => 'alt' in i.attrs), 'img-alt', `У всех изображений есть атрибут alt (${imgs.length})`, 'Есть изображения без атрибута alt');
-  const emptyAlt = imgs.filter(i => 'alt' in i.attrs && !i.attrs.alt).length;
+  // data-decorative — фоновое фото первого экрана: смысл передают заголовок и текст, alt="" здесь верен.
+  const emptyAlt = imgs.filter(i => 'alt' in i.attrs && !i.attrs.alt && i.attrs['data-decorative'] !== 'hero-bg').length;
   if (emptyAlt) add('warn', 'img-alt-empty', `Изображений с пустым alt: ${emptyAlt}. Добавьте описание, если изображение несёт смысл`);
   const descriptiveAlts = imgs.map(i => i.attrs.alt || '').filter(Boolean);
   const repeatedAlts = descriptiveAlts.filter((alt, index) => descriptiveAlts.indexOf(alt) !== index);
