@@ -54,3 +54,23 @@ export async function allowRequest(request, env, now = Date.now()) {
   return true;
 }
 
+
+/**
+ * Токены, которые модель фактически сообщила в ответе (формат OpenAI или Workers AI). Ничего не оценивает:
+ * если модель не вернула usage — null. Используется для журнала AI-операций в студии.
+ */
+export function usageOf(result) {
+  const u = result?.usage || result?.result?.usage;
+  if (!u || typeof u !== 'object') return null;
+  const input = Number(u.prompt_tokens ?? u.input_tokens ?? 0) || 0;
+  const output = Number(u.completion_tokens ?? u.output_tokens ?? 0) || 0;
+  const total = Number(u.total_tokens ?? input + output) || input + output;
+  return total ? { inputTokens: input, outputTokens: output, totalTokens: total } : null;
+}
+
+/** Складывает usage нескольких попыток: неудачные попытки тоже тратят квоту. */
+export function addUsage(a, b) {
+  if (!b) return a;
+  if (!a) return { ...b };
+  return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, totalTokens: a.totalTokens + b.totalTokens };
+}

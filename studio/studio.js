@@ -24,7 +24,9 @@ function renderAiUsageStats(data, error = '') {
   }
   if (!data) return;
   $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-  setDashStatus('neurons', 'ok', Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов');
+  const neurons = Number(data.neurons || 0);
+  const share = data.range === '24h' ? ' (' + Math.round(neurons / WORKERS_AI_FREE_NEURONS * 100) + '% от ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' бесплатных в сутки — ориентир по документации Cloudflare)' : '';
+  setDashStatus('neurons', neurons > WORKERS_AI_FREE_NEURONS * 0.8 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
   const details = $('#ai-usage-details');
   if (details) details.textContent = 'Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов · ' +
     Number(data.totalTokens || 0).toLocaleString('ru-RU') + ' токенов';
@@ -114,6 +116,40 @@ const persist = () => {
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
   || (Array.isArray(raw.services) && raw.services.length > 0);
 
+// ---------- Журнал AI-операций ----------
+// Каждый запрос студии к AI (тексты сайта, каждое фото): время, итог, длительность и токены, которые модель
+// фактически вернула. Ничего не оценивается: нет usage в ответе — поле пустое. Хранится в этом браузере.
+// Расход Neurons — отдельно, из аналитики Cloudflare: журнал и счётчик не складываются, двойного учёта нет.
+const AI_JOURNAL_KEY = 'uds:ai-journal:v1';
+// Бесплатный суточный объём Workers AI по документации Cloudflare. API лимит не сообщает — это ориентир.
+const WORKERS_AI_FREE_NEURONS = 10000;
+function aiJournal() { try { const list = JSON.parse(localStorage.getItem(AI_JOURNAL_KEY) || '[]'); return Array.isArray(list) ? list : []; } catch { return []; } }
+function logAi(entry) {
+  try {
+    const list = aiJournal();
+    list.unshift({ at: new Date().toISOString(), ...entry });
+    localStorage.setItem(AI_JOURNAL_KEY, JSON.stringify(list.slice(0, 100)));
+  } catch { /* хранилище недоступно — журнал не ведётся */ }
+  renderAiJournal();
+}
+function renderAiJournal() {
+  const box = $('#dash-ai-journal'); if (!box) return;
+  const list = aiJournal();
+  const today = new Date().toDateString();
+  const todays = list.filter(e => new Date(e.at).toDateString() === today);
+  const tokens = todays.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
+  const errors = todays.filter(e => e.status !== 'ok').length;
+  const time = iso => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const row = e => '<li data-status="' + (e.status === 'ok' ? 'ok' : 'err') + '"><span>' + time(e.at) + '</span><b>' + esc(e.label) + '</b><small>' +
+    esc([e.status === 'ok' ? 'готово' : 'ошибка: ' + (e.error || ''), e.ms ? (e.ms / 1000).toFixed(1) + ' с' : '', e.tokens ? Number(e.tokens).toLocaleString('ru-RU') + ' ток.' : ''].filter(Boolean).join(' · ')) + '</small></li>';
+  box.innerHTML = list.length
+    ? '<p class="dash-meter-note">Сегодня: ' + todays.length + ' запросов' + (tokens ? ', ' + tokens.toLocaleString('ru-RU') + ' токенов' : '') + (errors ? ', ошибок: ' + errors : '') + '</p><ol class="dash-journal">' + list.slice(0, 6).map(row).join('') + '</ol>' +
+      (list.length > 6 ? '<details class="dash-journal-more"><summary>Все записи (' + list.length + ')</summary><ol class="dash-journal">' + list.slice(6).map(row).join('') + '</ol></details>' : '') +
+      '<button type="button" class="dash-journal-clear" data-journal-clear>Очистить журнал</button>'
+    : '<p class="dash-meter-note">Запросов к AI ещё не было. Здесь появятся генерации текстов и фото с итогом, временем и токенами.</p>';
+}
+
+renderAiJournal();
 // ---------- Главная панель ----------
 // Состояние подключений в правой колонке: ok — работает, warn — требует внимания, off — не подключено.
 function setDashStatus(key, level, text) {
@@ -268,6 +304,7 @@ $('#dashboard')?.addEventListener('click', async e => {
     if (item) { load(item.raw, 'Пример открыт: ' + (item.brand || item.niche)); openWorkspace('create'); }
     return;
   }
+  if (e.target.closest('[data-journal-clear]')) { try { localStorage.removeItem(AI_JOURNAL_KEY); } catch { /* нет хранилища */ } renderAiJournal(); return; }
   if (e.target.closest('[data-continue="download"]')) { $('#download').click(); return; }
   const action = e.target.closest('[data-dash]')?.dataset.dash;
   if (action === 'projects') {
@@ -689,8 +726,13 @@ $('#auto').addEventListener('submit', async e => {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
       const studioPrompt = autopilot(input, { registry: registry() }).prompt;
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
-      const body = await res.json().catch(() => ({}));
+      const aiStarted = Date.now();
+      let res, body;
+      try {
+        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
+        body = await res.json().catch(() => ({}));
+      } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
+      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем и собираем данные проекта');
       draft = fromAiLanding(body.landing, input);
@@ -1565,10 +1607,13 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     const alt = generatedAlt(slot, result.project);
     // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
     const prompt = photoPrompt(slot, result.project).slice(0, 2000);
-    const response = await fetch(imageEndpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt })
-    });
-    const payload = await response.json().catch(() => ({}));
+    const imageStarted = Date.now();
+    let response, payload;
+    try {
+      response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+      payload = await response.json().catch(() => ({}));
+    } catch (error) { logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - imageStarted }); throw error; }
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: response.ok && payload.image ? 'ok' : 'error', error: payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms: Date.now() - imageStarted, model: payload.model || '' });
     if (!response.ok || !payload.image) throw new Error(payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').');
     const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
     if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
