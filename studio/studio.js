@@ -31,6 +31,46 @@ function renderAiUsageStats(data, error = '') {
     '. Neurons: ' + Number(data.neurons || 0).toLocaleString('ru-RU') +
     '. Данные аналитики могут поступать с задержкой.';
 }
+async function checkAiConnection() {
+  const button = $('#ai-connection-check');
+  const status = $('#ai-connection-status');
+  const details = $('#ai-connection-details');
+  if (!button || !status || !details) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  button.disabled = true;
+  status.textContent = 'Проверяем Worker…';
+  details.replaceChildren();
+  try {
+    const parsed = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(parsed.pathname)) throw new Error('Укажите адрес с путём /api/generate-landing');
+    parsed.pathname = parsed.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/diagnostics');
+    parsed.search = '';
+    const response = await fetch(parsed.toString(), { headers: { Accept: 'application/json' } });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'Worker ответил HTTP ' + response.status);
+    const checks = [
+      ['Worker доступен', true],
+      ['Workers AI binding (AI)', Boolean(payload.runtime?.workersAiBindingConfigured)],
+      ['CF_ACCOUNT_ID', Boolean(payload.runtime?.accountIdConfigured)],
+      ['CF_ANALYTICS_TOKEN', Boolean(payload.runtime?.analyticsTokenConfigured)]
+    ];
+    for (const [label, ok] of checks) {
+      const item = document.createElement('li');
+      item.textContent = (ok ? '✓ ' : '✕ ') + label + (ok ? ' — OK' : ' — не настроено');
+      details.append(item);
+    }
+    status.textContent = checks.every(([, ok]) => ok) ? 'Подключение полностью настроено' : 'Worker доступен, но конфигурация неполная';
+  } catch (error) {
+    status.textContent = 'Проверка не пройдена: ' + error.message;
+    const item = document.createElement('li');
+    item.textContent = 'Проверьте адрес Worker, публикацию и разрешённый источник GitHub Pages.';
+    details.append(item);
+  } finally {
+    button.disabled = false;
+  }
+}
+$('#ai-connection-check')?.addEventListener('click', checkAiConnection);
+
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
   const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
