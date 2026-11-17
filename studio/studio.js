@@ -94,9 +94,9 @@ function openWorkspace(section = 'create') {
   }
   if (section === 'visual' || section === 'motion') selectTab($('#tab-concept'));
   if (section === 'seo') selectTab($('#tab-spec'));
-  if (section === 'qa') selectTab($('#tab-audit'));
+  if (section === 'qa') selectTab($('#tab-production'));
   if (section === 'projects') selectTab($('#tab-registry'));
-  if (section === 'publish') selectTab($('#tab-preview'));
+
 }
 $('#dashboard-back')?.addEventListener('click', () => {
   document.body.classList.add('dashboard-mode');
