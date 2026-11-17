@@ -69,7 +69,6 @@ async function checkAiConnection() {
     button.disabled = false;
   }
 }
-$('#ai-connection-check')?.addEventListener('click', checkAiConnection);
 
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
