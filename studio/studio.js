@@ -7,7 +7,6 @@ const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
-const AI_USAGE_KEY = 'uds:ai-success-count';
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 let aiUsageLoading = false;
 function renderAiUsageStats(data, error = '') {
@@ -52,21 +51,6 @@ async function refreshAiUsage() {
     renderAiUsageStats(null, error.message);
   } finally { aiUsageLoading = false; }
 }
-function renderAiUsage() {
-  const node = $('#ai-usage-count');
-  if (!node) return;
-  let count = 0;
-  try { count = Math.max(0, Number(localStorage.getItem(AI_USAGE_KEY)) || 0); } catch { /* локальное хранилище недоступно */ }
-  node.textContent = String(count);
-}
-function recordAiUsage() {
-  try {
-    const count = Math.max(0, Number(localStorage.getItem(AI_USAGE_KEY)) || 0) + 1;
-    localStorage.setItem(AI_USAGE_KEY, String(count));
-  } catch { /* счётчик недоступен без localStorage */ }
-  renderAiUsage();
-}
-renderAiUsage();
 if ($('#ai-usage-range')) {
   try { $('#ai-usage-range').value = localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
 }
@@ -539,7 +523,6 @@ $('#auto').addEventListener('submit', async e => {
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
-      recordAiUsage();
       refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
