@@ -33,33 +33,49 @@
     <button type="button" class="dash-menu-toggle" id="dash-menu-toggle" aria-expanded="false" aria-controls="dash-nav">☰ <span>Разделы студии</span><span class="dash-menu-chevron" aria-hidden="true">⌄</span></button>
     <nav class="dash-nav" id="dash-nav" aria-label="Навигация студии">
       <button class="is-active" data-dash="home">⌂ <span>Главная</span></button>
-      <button data-dash="create">＋ <span>Создать сайт</span></button>
-      <button data-dash="director">✧ <span>AI Design Director</span></button>
-      <a class="dash-nav-link" href="templates.html">▤ <span>Библиотека шаблонов</span></a>
-      <a class="dash-nav-link" href="merge.html">⇄ <span>Merge Control Center</span></a>
-      <button data-dash="editor">▧ <span>Редактор сайтов</span></button>
-      <button data-dash="visual">▧ <span>Дизайн и визуал</span></button>
-      <button data-dash="qa">⬡ <span>Проверка и выпуск</span></button>
+      <button data-dash="create">＋ <span>Новый сайт</span></button>
+      <button data-dash="projects">▱ <span>Мои проекты</span></button>
       <div class="dash-nav-sep"></div>
-      <button data-dash="projects">▱ <span>Проекты</span></button>
-      <button data-dash="settings">⚙ <span>Настройки</span></button>
+      <button data-dash="editor">✎ <span>Редактор</span></button>
+      <button data-dash="visual">◐ <span>Дизайн и визуал</span></button>
+      <button data-dash="qa">✓ <span>Проверка и выпуск</span></button>
+      <a class="dash-nav-link" href="templates.html">▤ <span>Анализ сайтов и шаблоны</span></a>
+      <div class="dash-nav-sep"></div>
+      <button data-dash="settings">⚙ <span>Настройки проекта</span></button>
     </nav>
-    <div class="dash-pro"><span>♛</span><b>STUDIO PRO</b><small>Инструменты для создания сайтов</small></div>
+    <a class="dash-dev-link" href="merge.html">⇄ Merge Control Center <small>для разработчика</small></a>
   </aside>
   <main class="dash-main">
-    <header class="dash-top"><div><small>Добро пожаловать в</small><h1>UNIQUE DESIGN STUDIO</h1><p>AI-студия для создания уникальных коммерческих сайтов</p></div><div class="dash-search"><span>⌕</span><input id="dash-search" type="search" placeholder="Поиск проектов, сайтов, идей…"></div></header>
-    <section class="dash-create">
-      <div class="dash-orb" aria-hidden="true"></div><div class="dash-create-copy"><small>ВАШ СЛЕДУЮЩИЙ ПРОЕКТ</small><h2>Создать новый сайт</h2><p>Полный цикл: от анализа ниши до готовой страницы</p></div>
-      <button class="dash-primary" data-dash="create">＋ Создать сайт</button>
-      <div class="dash-steps"><span>▥ <small>Анализ и стратегия</small></span><i>›</i><span>▱ <small>Дизайн-концепция</small></span><i>›</i><span>▧ <small>Контент и визуал</small></span><i>›</i><span>‹/› <small>Разработка сайта</small></span><i>›</i><span>⬡ <small>Проверка качества</small></span><i>›</i><span>☁ <small>Публикация</small></span></div>
+    <header class="dash-top"><div><small>UNIQUE DESIGN STUDIO</small><h1>Главная</h1><p>Уникальный коммерческий сайт для любой ниши — от брифа до готового HTML</p></div><div class="dash-search"><span aria-hidden="true">⌕</span><label class="vh" for="dash-search">Поиск по проектам</label><input id="dash-search" type="search" placeholder="Поиск по проектам…"></div></header>
+    <section class="dash-quickstart" aria-labelledby="qs-h">
+      <div class="qs-copy"><small>Новый сайт</small><h2 id="qs-h">Опишите бизнес — студия соберёт сайт</h2><p id="qs-mode">Анализ ниши, тексты, концепция, сборка страницы и проверка качества.</p></div>
+      <form id="quick-start" class="qs-form" autocomplete="off">
+        <div class="qs-field qs-field--wide"><label for="qs-niche">Ниша</label><input id="qs-niche" required placeholder="Кофейня, магазин мебели, стоматология…"></div>
+        <div class="qs-field"><label for="qs-brand">Бренд</label><input id="qs-brand" placeholder="необязательно"></div>
+        <div class="qs-field"><label for="qs-tier">Класс</label><select id="qs-tier"><option value="standard">Стандарт</option><option value="premium">Премиум</option><option value="luxury">Люкс</option></select></div>
+        <button class="dash-primary qs-submit" type="submit">Собрать сайт →</button>
+      </form>
+      <div class="qs-examples"><span>Или начните с готового примера:</span><div class="qs-chips" id="dash-example-chips"></div></div>
     </section>
-    <section class="dash-project-head"><div><h2>Мои проекты <span id="dash-project-count">0</span></h2><small>Проекты, сохранённые в реестр этого браузера</small></div><div class="dash-filters"><button class="selected" data-filter="all">Все проекты</button><button data-filter="saved">В реестре</button><button data-filter="examples">Примеры</button></div></section>
-    <section class="dash-projects" id="dash-projects"><div class="dash-empty"><b>Пока нет сохранённых проектов</b><p>Создайте сайт и нажмите «В реестр», чтобы он появился здесь.</p><button class="dash-primary" data-dash="create">Создать первый сайт</button></div></section>
+    <section class="dash-continue" id="dash-continue" aria-label="Текущий проект" hidden></section>
+    <section class="dash-project-head" id="dash-projects-head"><div><h2>Мои проекты <span id="dash-project-count">0</span></h2><small>Сохранены кнопкой «В реестр» в этом браузере</small></div><div class="dash-filters"><button data-filter="saved">Мои</button><button data-filter="examples">Примеры</button><button data-filter="all">Все</button></div></section>
+    <section class="dash-projects" id="dash-projects"></section>
   </main>
   <aside class="dash-right">
-    <section class="dash-widget"><h3>Статистика студии</h3><div class="dash-stats"><div><b id="stat-projects">0</b><small>Проектов в реестре</small></div><div><b id="stat-examples">—</b><small>Готовых примеров</small></div><div><b id="stat-quality">—</b><small>Последняя проверка</small></div><div><b>Local</b><small>Хранение проектов</small></div></div></section>
-    <section class="dash-widget"><h3>Быстрый доступ</h3><div class="dash-quick"><button data-dash="visual">▧ <span>Дизайн и визуал</span><i>→</i></button><button data-dash="qa">⬡ <span>Проверка и выпуск</span><i>→</i></button></div></section>
-    <section class="dash-widget dash-note"><h3>Рабочий процесс</h3><p>Создайте проект, настройте дизайн и контент, проверьте адаптивность и скачайте готовый HTML. Проекты реестра хранятся локально в браузере.</p></section>
+    <section class="dash-widget" aria-labelledby="sys-h"><h3 id="sys-h">Состояние студии</h3>
+      <ul class="dash-status" id="dash-status">
+        <li data-status="ai"><i></i><div><b>AI-генерация</b><small>Проверяем…</small></div></li>
+        <li data-status="analyzer"><i></i><div><b>Анализ сайтов</b><small>Проверяем…</small></div></li>
+        <li data-status="neurons"><i></i><div><b>Расход AI за сутки</b><small>—</small></div></li>
+      </ul>
+    </section>
+    <section class="dash-widget" aria-labelledby="storage-h"><h3 id="storage-h">Хранилище браузера</h3>
+      <div class="dash-meter" id="dash-storage" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="storage-h"><span></span></div>
+      <p class="dash-meter-note" id="dash-storage-note">—</p>
+    </section>
+    <section class="dash-widget dash-tips" aria-labelledby="tips-h"><h3 id="tips-h">Как работать</h3>
+      <ol><li><b>Соберите</b> сайт по нише или откройте пример.</li><li><b>Поправьте</b> тексты, фото и дизайн в редакторе.</li><li><b>Проверьте</b> во вкладке «Производство» и скачайте HTML.</li><li><b>Сохраните</b> в реестр — так новые сайты не будут похожи на прошлые.</li></ol>
+    </section>
   </aside>
 </section>
 <div class="layout">
