@@ -1,7 +1,7 @@
 // Worker AI-генерации (worker/index.js): полнота ответа, повтор, ограничение частоты.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields } from '../worker/index.js';
+import worker, { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput } from '../worker/index.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
@@ -69,4 +69,30 @@ test('чужой сайт и пустая ниша отклоняются без
   assert.equal((await worker.fetch(request({ niche: 'кофейня' }, { origin: 'https://evil.example' }), env)).status, 403);
   assert.equal((await worker.fetch(request({ niche: '' }), env)).status, 400);
   assert.equal(env.calls.length, 0);
+});
+
+test('ответ в формате OpenAI (Gemma 4 на Workers AI) разбирается, а не считается пустым', async () => {
+  const openai = { choices: [{ message: { role: 'assistant', content: '```json\n' + JSON.stringify(full) + '\n```' } }], usage: { total_tokens: 900 } };
+  const env = { AI: { run: async () => openai } };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).landing.title, 'Заголовок');
+});
+
+test('текст ответа извлекается из всех известных форматов Workers AI', () => {
+  const t = JSON.stringify(full);
+  assert.equal(modelOutput({ response: t }), t);
+  assert.deepEqual(modelOutput({ response: full }), full);
+  assert.equal(modelOutput({ result: { response: t } }), t);
+  assert.equal(modelOutput({ choices: [{ message: { content: t } }] }), t);
+  assert.equal(modelOutput({ choices: [{ message: { content: [{ type: 'text', text: t }] } }] }), t);
+  assert.equal(modelOutput({ choices: [{ text: t }] }), t);
+  assert.equal(modelOutput(t), t);
+});
+
+test('при неполном ответе ошибка называет ключи ответа модели, но не его содержимое', async () => {
+  const env = { AI: { run: async () => ({ choices: [{ message: { content: '{"title":"секрет"}' } }], usage: {} }) } };
+  const body = await (await worker.fetch(request({ niche: 'кофейня' }), env)).json();
+  assert.match(body.error, /ключи ответа модели: choices, usage/);
+  assert.doesNotMatch(body.error, /секрет/);
 });

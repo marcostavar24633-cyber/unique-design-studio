@@ -33,6 +33,24 @@ function extractJson(value) {
   throw new Error('Модель вернула ответ не в формате JSON');
 }
 
+/**
+ * Текст ответа модели из любого формата Workers AI: классического ({ response }), вложенного
+ * ({ result: { response } }) и совместимого с OpenAI ({ choices: [{ message: { content } }] }) — его
+ * возвращают новые модели, например Gemma 4. Раньше такой ответ проверялся как пустая обёртка.
+ */
+export function modelOutput(result) {
+  if (result == null || typeof result === 'string') return result;
+  const partsText = content => (Array.isArray(content) ? content.map(p => (typeof p === 'string' ? p : p?.text || '')).join('') : content);
+  const choice = result.choices?.[0];
+  const candidates = [
+    result.response, result.result?.response,
+    partsText(choice?.message?.content), choice?.text,
+    result.output_text,
+  ];
+  const found = candidates.find(v => v != null && v !== '');
+  return found ?? result;
+}
+
 // 3000 токенов не хватало на полный JSON лендинга — ответ обрывался посередине (см. PR #45).
 export const MAX_OUTPUT_TOKENS = 6000;
 export const RETRY_NOTE = '\n\nПредыдущий ответ оборвался или был неполным. Ответь короче: тексты — до двух предложений, списки — до 4 элементов. Верни только один полный валидный JSON-объект.';
@@ -220,11 +238,12 @@ export default {
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
         });
-        const rawOutput = result?.response ?? result?.result?.response ?? result;
-        const landing = extractJson(rawOutput);
+        const landing = extractJson(modelOutput(result));
         const missing = missingFields(landing);
         if (!missing.length) return json({ landing, attempts: attempt + 1 }, 200, origin);
-        lastError = `AI вернул неполный результат: нет ${missing.join(', ')}`;
+        // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
+        const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
+        lastError = `AI вернул неполный результат: нет ${missing.join(', ')} (ключи ответа модели: ${keys || 'нет'})`;
       } catch (error) {
         lastError = error?.message || 'Ошибка генерации Workers AI';
       }
