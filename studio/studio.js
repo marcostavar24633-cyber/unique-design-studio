@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -636,12 +636,23 @@ function hammingDistance(a, b) {
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) distance++;
   return distance;
 }
+// AI Image Director PRO: задание на каждое место для изображения на странице — и до загрузки фото тоже.
+function renderImageTasks() {
+  if (!result) return '';
+  const { slots, filled, total } = imageSlots(result.project, result.concept);
+  return `<section class="image-tasks" aria-labelledby="image-tasks-title">
+    <h3 id="image-tasks-title">Задания на изображения</h3>
+    <p class="note">Заполнено мест: <b>${filled} из ${total}</b>. Для каждого места — сюжет, ракурс, свет, фон, композиция и формат под выбранную раскладку. Студия не генерирует изображения: задание можно отдать фотографу или во внешний генератор.</p>
+    <div class="spec-actions"><button type="button" data-image-tasks="copy">Скопировать все задания</button><button type="button" data-image-tasks="download">Скачать задания (.txt)</button></div>
+    <div class="image-tasks__list">${slots.map(slot => `<details class="image-task ${slot.filled ? 'is-filled' : 'is-missing'}"><summary><b>${esc(slot.label)}</b><span>${slot.filled ? 'фото есть' : 'нужно фото'} · ${esc(slot.aspect)}</span></summary><pre>${esc(slotBrief(slot, result.project))}</pre></details>`).join('')}</div>
+  </section>`;
+}
 async function renderImageIntelligence() {
   const host = $('#image-intelligence');
   if (!host) return;
   const token = ++imageAuditRun;
   const assets = collectImageAssets();
-  if (!assets.length) { host.innerHTML = '<p class="note">Фотографии пока не добавлены. Загрузите снимки в разделе «Изображения», чтобы проверить их качество и кадрирование.</p>'; return; }
+  if (!assets.length) { host.innerHTML = '<p class="note">Фотографии пока не добавлены. Загрузите снимки в разделе «Изображения», чтобы проверить их качество и кадрирование.</p>' + renderImageTasks(); return; }
   host.innerHTML = '<p class="note">Проверяем разрешение, пропорции, яркость и детализацию загруженных фотографий…</p>';
   const reports = await Promise.all(assets.map(inspectImage));
   if (token !== imageAuditRun || !host.isConnected) return;
@@ -666,6 +677,7 @@ async function renderImageIntelligence() {
     ${r.warnings.map(w => `<p class="image-audit-warning">${esc(w)}</p>`).join('')}${r.tips.map(t => `<p class="image-audit-tip">${esc(t)}</p>`).join('')}${!r.warnings.length && !r.tips.length && !r.error ? '<p class="image-audit-ok">Явных проблем по базовым параметрам не обнаружено.</p>' : ''}</div></div>
   </article>`).join('')}</div>
   ${visual}
+  ${renderImageTasks()}
   <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
 }
 
@@ -1467,6 +1479,14 @@ $('#view-audit').addEventListener('input', e => {
   persist();
 });
 $('#view-audit').addEventListener('click', async e => {
+  const tasks = e.target.closest('[data-image-tasks]');
+  if (tasks && result) {
+    const text = imageTaskPackage(result.project, result.concept);
+    const file = 'image-tasks-' + (result.project.id || 'project') + '.txt';
+    if (tasks.dataset.imageTasks === 'download') download(file, text, 'text/plain');
+    else { try { await navigator.clipboard.writeText(text); toast('Задания на изображения скопированы'); } catch { download(file, text, 'text/plain'); } }
+    return;
+  }
   const directorButton = e.target.closest('[data-image-director]');
   if (directorButton) {
     const text = imageDirectorPackage();

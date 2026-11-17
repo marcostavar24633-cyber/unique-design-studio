@@ -17,6 +17,7 @@ export { analyzePage, buildProfile, stylesheetLinks, headingType } from './site-
 export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIELDS } from './design-director.js';
 export { qualityReport, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
 export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
+export { imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
 export function generate(input, { registry = [], neighbors = 2 } = {}) {
