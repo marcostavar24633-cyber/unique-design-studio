@@ -82,3 +82,15 @@ test('студия отправляет генератору английски�
   assert.doesNotMatch(js, /heroAlt: slot\.subject|alt: slot\.subject|row\[4\] = slot\.subject/);
   assert.match(js, /function generatedAlt\(slot, project\)/);
 });
+
+test('фон первого экрана в текстовых архитектурах — спокойная атмосфера, а не блюдо в центре', async () => {
+  const { autopilot: ap } = await import('../src/engine/autopilot.js');
+  const p = { ...ap({ niche: 'кафе вьетнамская кухня', email: 'a@b.ru' }, { registry: [] }).project, designArchitecture: 'minimal', architecture: 'minimal', architectureMode: 'manual' };
+  const g = generate(p);
+  const hero = imageSlots(g.project, g.concept).slots.find(s => s.id === 'hero');
+  if (g.concept.visualSystem.archetype !== 'minimal') return;
+  assert.ok(hero.asBackground);
+  const prompt = photoPrompt(hero, g.project);
+  assert.match(prompt, /no single dominant object in the center, low contrast/);
+  assert.match(prompt, /Vietnamese/);
+});

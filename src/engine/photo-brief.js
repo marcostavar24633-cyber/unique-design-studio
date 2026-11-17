@@ -143,7 +143,11 @@ export function photoPrompt(slot, project) {
   const visual = nicheVisual(project);
   const luxury = project.tier === 'luxury', premium = project.tier === 'premium';
   let subject, angle, background;
-  if (slot.role === 'hero') {
+  if (slot.role === 'hero' && slot.asBackground) {
+    // Фон под текстом: атмосфера места, без одного главного предмета и мелких контрастных деталей.
+    subject = `the atmosphere of ${visual.setting}, calm and softly lit, no single dominant object in the center, low contrast, gentle depth of field, suitable as a background behind text`;
+    angle = 'wide shot at eye level'; background = visual.setting;
+  } else if (slot.role === 'hero') {
     subject = visual.hero; angle = 'wide establishing shot at eye level'; background = visual.setting;
   } else if (slot.role === 'service') {
     subject = itemSubject(slot.label, visual); angle = visual.cuisine ? 'close-up from 45 degrees, the plate fills most of the frame' : 'front or three-quarter view, the subject fills most of the frame';
