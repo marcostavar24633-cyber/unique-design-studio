@@ -9,6 +9,7 @@ const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
+const getDefaultAiEndpoint = () => location.hostname === 'marcostavar24633-cyber.github.io' ? DEFAULT_AI_ENDPOINT : '';
 let aiUsageLoading = false;
 function renderAiUsageStats(data, error = '') {
   const node = $('#ai-usage');
@@ -32,7 +33,7 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || DEFAULT_AI_ENDPOINT).trim();
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -496,7 +497,7 @@ renderLibraryHint();
 
 // ---------- Автопилот ----------
 try {
-  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || DEFAULT_AI_ENDPOINT;
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint();
   $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
   $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
   if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
