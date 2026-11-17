@@ -1,4 +1,4 @@
-import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest } from './ai-utils.js';
+import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage } from './ai-utils.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -308,6 +308,8 @@ export default {
 
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
+    let usage = null; // фактические токены всех попыток — для журнала AI-операций студии
+    const started = Date.now();
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const result = await env.AI.run(MODEL, {
@@ -315,6 +317,7 @@ export default {
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
         });
+        usage = addUsage(usage, usageOf(result));
         const landing = extractJson(modelOutput(result));
         const missing = missingFields(landing);
         if (!missing.length && !aboutNiche(landing, brief.niche)) {
@@ -326,7 +329,7 @@ export default {
           landing.niche = brief.niche;
           if (brief.brand) landing.brand = brief.brand;
           else if (/не указ/i.test(String(landing.brand || ''))) landing.brand = '';
-          return json({ landing, attempts: attempt + 1 }, 200, origin);
+          return json({ landing, attempts: attempt + 1, model: MODEL, usage, durationMs: Date.now() - started }, 200, origin);
         }
         // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
         const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
@@ -335,6 +338,6 @@ export default {
         lastError = error?.message || 'Ошибка генерации Workers AI';
       }
     }
-    return json({ error: lastError }, 502, origin);
+    return json({ error: lastError, attempts: 2, model: MODEL, usage, durationMs: Date.now() - started }, 502, origin);
   },
 };

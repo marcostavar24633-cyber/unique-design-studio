@@ -224,3 +224,27 @@ test('AI Design Director reports malformed model output as a gateway error', asy
   const res = await worker.fetch(request({ task: 'design-review', project: { niche: 'кофейня' } }), aiReturning('not-json'));
   assert.equal(res.status, 502);
 });
+
+test('Worker возвращает модель, попытки и фактические токены всех попыток — для журнала студии', async () => {
+  const { usageOf, addUsage } = await import('../worker/ai-utils.js');
+  assert.deepEqual(usageOf({ usage: { prompt_tokens: 900, completion_tokens: 2100, total_tokens: 3000 } }), { inputTokens: 900, outputTokens: 2100, totalTokens: 3000 });
+  assert.equal(usageOf({ response: 'x' }), null, 'нет usage — нет выдуманных токенов');
+  assert.deepEqual(addUsage({ inputTokens: 1, outputTokens: 2, totalTokens: 3 }, { inputTokens: 10, outputTokens: 20, totalTokens: 30 }), { inputTokens: 11, outputTokens: 22, totalTokens: 33 });
+  let n = 0;
+  const env = { AI: { run: async () => (++n === 1
+    ? { choices: [{ message: { content: '{"title":"Только"}' } }], usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 } }
+    : { choices: [{ message: { content: JSON.stringify(full) } }], usage: { prompt_tokens: 120, completion_tokens: 400, total_tokens: 520 } }) } };
+  const body = await (await worker.fetch(request({ niche: 'кофейня' }), env)).json();
+  assert.equal(body.attempts, 2);
+  assert.match(body.model, /gemma/);
+  assert.deepEqual(body.usage, { inputTokens: 220, outputTokens: 450, totalTokens: 670 }, 'неудачная попытка тоже учтена');
+  assert.equal(typeof body.durationMs, 'number');
+});
+
+test('при ошибке генерации Worker тоже сообщает потраченные токены', async () => {
+  const env = { AI: { run: async () => ({ choices: [{ message: { content: '{"title":"Только"}' } }], usage: { total_tokens: 80, prompt_tokens: 50, completion_tokens: 30 } }) } };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 502);
+  assert.equal(body.usage.totalTokens, 160);
+});
