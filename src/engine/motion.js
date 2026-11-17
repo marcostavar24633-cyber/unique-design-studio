@@ -39,6 +39,11 @@ const LOUD_WORDS = /дерзк|ярк|энерги|смел|живой|игри�
  */
 export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
   const requestedStyle = project.passthrough?.motionStyle || 'auto';
+  if (requestedStyle === 'static') {
+    return { intensity: 'calm', mechanics: ['microinteractions'], duration: 900, distance: 0,
+      rationale: ['Минимальный режим: только короткий отклик на действия пользователя'],
+      label: 'Минимум движения: только базовый отклик кнопок. Учитывает prefers-reduced-motion.' };
+  }
   if (requestedStyle === 'cinematic') {
     const mechanics = ['scroll-reveal', 'cinematic-reveal', 'kinetic-type', 'parallax', 'glass-cards', 'tilt-cards', 'magnetic-buttons', 'dynamic-gradient', 'microinteractions'];
     return { intensity: 'expressive', mechanics, duration: 650, distance: 20,
@@ -48,7 +53,6 @@ export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
   const character = `${project.brandCharacter || ''} ${project.visualDirection || ''}`;
   const why = [];
   let intensity = 'balanced';
-  if (requestedStyle === 'static') motion = 'static';
   if (project.tier === 'luxury') { intensity = 'calm'; why.push('люкс — сдержанное, медленное движение'); }
   else if (CALM_NICHES.has(nicheId) || CALM_WORDS.test(character)) { intensity = 'calm'; why.push('ниша и характер требуют спокойной подачи'); }
   else if (EXPRESSIVE_NICHES.has(nicheId) || LOUD_WORDS.test(character)) { intensity = 'expressive'; why.push('характер бренда допускает выразительное движение'); }
@@ -111,7 +115,7 @@ export function motionCss(plan) {
   if (has(plan, 'glass-cards')) motionOk.push(`.ds-card,.item,.spotlight,.tool{background:color-mix(in srgb,var(--ds-surface,var(--ds-bg)) 76%,transparent);border:1px solid color-mix(in srgb,var(--ds-text,currentColor) 14%,transparent);box-shadow:0 18px 55px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.16);backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%)}@supports not (backdrop-filter:blur(1px)){.ds-card,.item,.spotlight,.tool{background:var(--ds-surface,var(--ds-bg))}}`);
   const pointer = [];
   if (has(plan, 'tilt-cards')) pointer.push(`.item,.ds-card{transition:transform .28s var(--m-ease),box-shadow .28s var(--m-ease);transform:perspective(1000px) rotateX(var(--m-rx,0deg)) rotateY(var(--m-ry,0deg));transform-style:preserve-3d;will-change:transform}`);
-  if (has(plan, 'magnetic-buttons')) pointer.push(`[data-cta="primary"]{transition:transform .25s var(--m-ease);transform:translate3d(var(--m-mx,0px),var(--m-my,0px),0)}`);
+  if (has(plan, 'magnetic-buttons')) pointer.push(`[data-cta="primary"]{transition:transform .25s var(--m-ease),box-shadow .25s var(--m-ease);transform:translate3d(var(--m-mx,0px),var(--m-my,0px),0) translateY(var(--m-hover-y,0px))}`);
   if (motionOk.length) out.push(`@media(prefers-reduced-motion:no-preference){${motionOk.join('')}}`);
   if (pointer.length) out.push(`@media(prefers-reduced-motion:no-preference) and (hover:hover) and (pointer:fine){${pointer.join('')}}`);
   if (has(plan, 'scroll-progress')) out.push(`@media(prefers-reduced-motion:reduce){.m-progress{display:none}}`);
@@ -131,6 +135,6 @@ export function motionScript(plan) {
   if (has(plan, 'kinetic-type')) parts.push(`var h=document.getElementById('hero-h');if(h&&${ok}&&!h.children.length){var t=h.textContent;h.setAttribute('aria-label',t);h.textContent='';t.split(/(\\s+)/).forEach(function(w,i){var s=document.createElement('span');s.className='m-word';s.setAttribute('aria-hidden','true');s.style.setProperty('--i',String(Math.floor(i/2)));s.textContent=w;h.appendChild(s)})}`);
   if (has(plan, 'scroll-progress')) parts.push(`if(${ok}){var pb=document.createElement('div');pb.className='m-progress';pb.setAttribute('aria-hidden','true');document.body.appendChild(pb);var pt=false;addEventListener('scroll',function(){if(pt)return;pt=true;requestAnimationFrame(function(){var m=document.documentElement.scrollHeight-innerHeight;pb.style.setProperty('--m-p',m>0?String(Math.min(1,scrollY/m)):'0');pt=false})},{passive:true})}`);
   if (has(plan, 'tilt-cards')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('.item,.ds-card').forEach(function(el){el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-ry',((e.clientX-b.left)/b.width-.5)*6+'deg');el.style.setProperty('--m-rx',(.5-(e.clientY-b.top)/b.height)*6+'deg')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-rx');el.style.removeProperty('--m-ry')})})`);
-  if (has(plan, 'magnetic-buttons')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('[data-cta="primary"]').forEach(function(el){el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-mx',(e.clientX-b.left-b.width/2)*.18+'px');el.style.setProperty('--m-my',(e.clientY-b.top-b.height/2)*.25+'px')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-mx');el.style.removeProperty('--m-my')})})`);
+  if (has(plan, 'magnetic-buttons')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('[data-cta="primary"]').forEach(function(el){el.addEventListener('pointerenter',function(){el.style.setProperty('--m-hover-y','-2px')});el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-mx',(e.clientX-b.left-b.width/2)*.18+'px');el.style.setProperty('--m-my',(e.clientY-b.top-b.height/2)*.25+'px')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-mx');el.style.removeProperty('--m-my');el.style.removeProperty('--m-hover-y')})})`);
   return parts.join(';');
 }
