@@ -70,6 +70,18 @@ try {
   await page.waitForFunction(() => document.querySelector('#dash-project-count').textContent === '1');
   check((await page.textContent('#dash-projects')).includes('LUMEN E2E'), 'сохранённый проект не появился на главной панели');
 
+  // Поиск и фильтры главной панели должны находить проект и переключать набор карточек.
+  await page.fill('#dash-search', 'LUMEN');
+  check((await page.textContent('#dash-projects')).includes('LUMEN E2E'), 'поиск не нашёл сохранённый проект');
+  await page.fill('#dash-search', 'несуществующий проект');
+  check((await page.textContent('#dash-projects')).includes('Ничего не найдено'), 'пустой результат поиска не показан');
+  await page.fill('#dash-search', '');
+  await page.click('#dashboard [data-filter="examples"]');
+  check(await page.locator('#dash-projects [data-open-example]').count() > 0, 'фильтр примеров не показал проекты');
+  await page.click('#dashboard [data-filter="saved"]');
+  check(await page.locator('#dash-projects [data-open-project]').count() === 1, 'фильтр реестра показал неверное число проектов');
+  await page.click('#dashboard [data-filter="all"]');
+
   // Перезагрузка должна восстановить проект и реестр из localStorage.
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelector('#dash-project-count').textContent === '1');
