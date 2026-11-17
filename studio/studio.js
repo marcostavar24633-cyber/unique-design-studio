@@ -8,6 +8,45 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_KEY = 'uds:ai-success-count';
+const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
+let aiUsageLoading = false;
+function renderAiUsageStats(data, error = '') {
+  const node = $('#ai-usage');
+  if (!node) return;
+  if (error) {
+    node.title = 'Реальная статистика Cloudflare недоступна: ' + error;
+    $('#ai-usage-count').textContent = '—';
+    const details = $('#ai-usage-details');
+    if (details) details.textContent = 'Статистика не подключена';
+    return;
+  }
+  if (!data) return;
+  $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const details = $('#ai-usage-details');
+  if (details) details.textContent = 'Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов · ' +
+    Number(data.totalTokens || 0).toLocaleString('ru-RU') + ' токенов';
+  node.title = 'Cloudflare AI · ' + data.range + '. Вход: ' + Number(data.inputTokens || 0).toLocaleString('ru-RU') +
+    ' токенов; выход: ' + Number(data.outputTokens || 0).toLocaleString('ru-RU') +
+    '. Neurons: ' + Number(data.neurons || 0).toLocaleString('ru-RU') +
+    '. Данные аналитики могут поступать с задержкой.';
+}
+async function refreshAiUsage() {
+  if (aiUsageLoading) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
+  if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
+  const usageUrl = endpoint.replace(/\/api\/generate-landing\/?$/i, '/api/usage');
+  if (usageUrl === endpoint) return renderAiUsageStats(null, 'неверный адрес AI-сервера');
+  aiUsageLoading = true;
+  try {
+    const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
+    const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), { headers: { Accept: 'application/json' } });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
+    renderAiUsageStats(payload);
+  } catch (error) {
+    renderAiUsageStats(null, error.message);
+  } finally { aiUsageLoading = false; }
+}
 function renderAiUsage() {
   const node = $('#ai-usage-count');
   if (!node) return;
@@ -23,6 +62,11 @@ function recordAiUsage() {
   renderAiUsage();
 }
 renderAiUsage();
+refreshAiUsage();
+$('#ai-usage-range')?.addEventListener('change', event => {
+  try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
+  refreshAiUsage();
+});
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -487,6 +531,7 @@ $('#auto').addEventListener('submit', async e => {
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
       recordAiUsage();
+      refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
@@ -510,6 +555,7 @@ $('#auto').addEventListener('submit', async e => {
       note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
     }
     status.textContent = note;
+    refreshAiUsage();
   }
   go.disabled = false;
   selectTab($('#tab-preview'));
