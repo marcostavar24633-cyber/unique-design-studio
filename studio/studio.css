@@ -350,3 +350,53 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .image-task summary{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:44px;cursor:pointer}
 .image-task summary span{color:var(--muted,#8a8a8a);font-size:12px;white-space:nowrap}
 .image-task pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:13px;line-height:1.5;margin:0 0 12px}
+
+
+/* Mobile workspace: keep the studio identity and usage counter in separate rows. */
+@media(max-width:900px){
+  body:not(.dashboard-mode)>.top{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    align-items:stretch;
+    gap:10px;
+    padding:12px 14px;
+  }
+  body:not(.dashboard-mode)>.top .top__brand{
+    min-width:0;
+    width:100%;
+    gap:9px;
+    font-size:clamp(15px,3.8vw,20px);
+  }
+  body:not(.dashboard-mode)>.top .top__brand strong{
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  body:not(.dashboard-mode)>.top .top__actions{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:7px;
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    padding:2px 0 7px;
+    scrollbar-width:thin;
+  }
+  body:not(.dashboard-mode)>.top .top__actions>*{flex:0 0 auto}
+  body:not(.dashboard-mode)>.top .ai-usage{position:static;max-width:100%}
+  body:not(.dashboard-mode)>.layout{grid-template-columns:minmax(0,1fr)}
+  body:not(.dashboard-mode)>.layout>.panel{max-height:none;min-width:0;border-right:0}
+  body:not(.dashboard-mode)>.layout>.stage{min-width:0;width:100%}
+  body:not(.dashboard-mode) .view--preview{width:100%;min-width:0;overflow:auto}
+  body:not(.dashboard-mode) #frame{display:block;width:100%;max-width:100%;min-width:0}
+}
+@media(max-width:560px){
+  body:not(.dashboard-mode)>.top{padding:10px 12px}
+  body:not(.dashboard-mode)>.top .logo{flex:0 0 22px}
+  body:not(.dashboard-mode)>.top .top__brand strong{font-size:16px;line-height:1.2}
+  body:not(.dashboard-mode)>.top .ai-usage{font-size:12px}
+  body:not(.dashboard-mode) .view--preview{padding:0}
+  body:not(.dashboard-mode) .view--preview.sized{padding:8px}
+  body:not(.dashboard-mode) .view--preview.sized #frame{max-width:100%}
+}
