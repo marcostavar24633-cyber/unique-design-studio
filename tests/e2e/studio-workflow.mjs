@@ -56,11 +56,23 @@ try {
   check(await page.locator('#toggle-settings').getAttribute('aria-expanded') === 'true', 'панель настроек не раскрылась');
   await page.click('#tab-preview');
 
+  // Упрощённая навигация ведёт в объединённые рабочие разделы.
+  check(await page.locator('#dash-nav [data-dash]').count() === 7, 'главное меню не сокращено до основных разделов');
+  check(await page.locator('#dash-nav').textContent().then(t => t.includes('Дизайн и визуал') && t.includes('Проверка и выпуск')), 'объединённые разделы не отображаются');
+  await page.click('#dashboard-back');
+  await page.click('#dashboard [data-dash="visual"]');
+  check(await page.locator('#tab-concept').getAttribute('aria-selected') === 'true', 'раздел «Дизайн и визуал» не открыл концепцию');
+  await page.click('#dashboard-back');
+  await page.click('#dashboard [data-dash="qa"]');
+  check(await page.locator('#tab-production').getAttribute('aria-selected') === 'true', 'раздел «Проверка и выпуск» не открыл производственный конвейер');
+
   // Навигация «Настройки» должна открывать существующие поля проекта.
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="settings"]');
   check(!await page.locator('body').evaluate(node => node.classList.contains('dashboard-mode')), 'пункт «Настройки» не открыл рабочую область');
   check(await page.locator('#form .group').first().evaluate(node => node.open), 'пункт «Настройки» не раскрыл поля проекта');
+  check(await page.locator('#form .group').nth(1).evaluate(node => !node.open), 'второстепенные настройки должны быть свёрнуты по умолчанию');
+  check(await page.locator('#form .group').count() === 6, 'настройки не сгруппированы в шесть понятных разделов');
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="create"]');
 
