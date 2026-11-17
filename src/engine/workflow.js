@@ -61,7 +61,7 @@ export async function runWorkflow(input, {
     item.analysis
       ? `${item.name} (${item.url}): проанализирована публичная страница; структура: ${(item.analysis.structure?.order || []).join(', ') || 'не определена'}.`
       : `${item.name} (${item.url}): доступен только поисковый результат, полноценный анализ страницы не выполнен.`
-  ).join('\\n');
+  ).join('\n');
   report('market_research', marketIntelligence.status === 'performed' ? 'completed' : marketIntelligence.status === 'partial' ? 'needs_attention' : 'needs_input', marketIntelligence);
 
   report('analysis', 'completed', {
