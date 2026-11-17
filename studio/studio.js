@@ -566,6 +566,9 @@ $('#auto').addEventListener('submit', async e => {
     setAutoStatus(note);
     refreshAiUsage();
   }
+  // Статус обязателен и для локального режима без AI endpoint.
+  // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
+  setAutoStatus(note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
