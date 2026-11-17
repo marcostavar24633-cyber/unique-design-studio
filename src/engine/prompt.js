@@ -118,7 +118,7 @@ segments [{name, need}], objections [строки], triggers [строки], key
 aboutTitle, aboutText, servicesTitle, servicesIntro, services [[заголовок, текст]],
 advantagesTitle, advantages [[заголовок, текст]], processTitle, process [[заголовок, текст]],
 faqs [[вопрос, ответ]], contactTitle, contactText,
-imagePrompts [строки], researchSources [{title, url}], assumptions [строки].
+imagePrompts [строки], researchSources [{title, url}], assumptions [строки],\nbrandStrategy {positioning, promise, differentiators, proofNeeded, brandVoice},\naudienceProfiles [{segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers}],\ncompetitorAnalysis [{name, offer, strengths, gaps, sourceUrl}],\nconversionMap [{sectionId, decisionStage, visitorQuestion, objection, response, desiredAction}],\nsectionContent [{id, goal, headline, subheadline, body, cta, visualBrief}],\nvisualBrief [{sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio}],\nmotionBrief {intensity, selectedMechanics, rationale, accessibility},\nqualityReport {score, checks, issues, revisions}, researchStatus.
 Этот JSON импортируется в Unique Design Studio и в Landing Studio без изменений.`;
   return withCustomPrompt(full, p.customPrompt, p.customPromptMode);
 }
