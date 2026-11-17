@@ -41,10 +41,12 @@ try {
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'генератор не сформировал предпросмотр с тестовым брендом');
 
   // Навигация «Настройки» должна открывать существующие поля проекта.
+  await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="settings"]');
   check(!await page.locator('body').evaluate(node => node.classList.contains('dashboard-mode')), 'пункт «Настройки» не открыл рабочую область');
   check(await page.locator('#form .group').first().evaluate(node => node.open), 'пункт «Настройки» не раскрыл поля проекта');
   await page.click('#dashboard-back');
+  await page.click('#dashboard [data-dash="create"]');
 
   // Сохраняем проект в реестр, затем возвращаемся на главную панель.
   await page.click('#save');
