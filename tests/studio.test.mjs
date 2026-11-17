@@ -310,6 +310,11 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
   assert.ok(handler.indexOf('result.exported = exportProject') < handler.indexOf('persist();'));
 });
 
+test('Studio stylesheet URL is versioned to refresh mobile navigation styles in cached browsers', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  assert.ok(html.includes('href="studio.css?v=mobile-nav-20261117"'));
+});
+
 test('Mobile dashboard navigation wraps into a two-column menu instead of clipping horizontally', () => {
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
   const mobile = css.slice(css.indexOf('@media(max-width:760px){body.dashboard-mode'), css.indexOf('@media(max-width:420px){.dash-projects'));
