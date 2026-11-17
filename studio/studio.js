@@ -43,15 +43,27 @@ async function refreshAiUsage() {
     usageUrl = parsed.toString();
   } catch { return renderAiUsageStats(null, 'неверный адрес AI-сервера'); }
   aiUsageLoading = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
     const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
-    const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), { headers: { Accept: 'application/json' } });
+    const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
+    if (!Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
+      throw new Error('Cloudflare вернул некорректную статистику');
+    }
     renderAiUsageStats(payload);
   } catch (error) {
-    renderAiUsageStats(null, error.message);
-  } finally { aiUsageLoading = false; }
+    renderAiUsageStats(null, error.name === 'AbortError' ? 'тайм-аут: Worker не ответил за 12 секунд' : error.message);
+  } finally {
+    clearTimeout(timeout);
+    aiUsageLoading = false;
+  }
 }
 if ($('#ai-usage-range')) {
   try { $('#ai-usage-range').value = localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}

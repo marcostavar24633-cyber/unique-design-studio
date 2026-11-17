@@ -100,14 +100,17 @@ try {
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="create"]');
 
-  // Подкладываем тестовый AI-анализ в сохранённое состояние: проверяем перенос вместе с проектом.
-  await page.evaluate(() => {
-    const key = 'uds:studio:v1';
-    const saved = JSON.parse(localStorage.getItem(key));
-    saved.analysis = { projectId: saved.raw.id, data: { source: 'ai', audience: 'Покупатели интерьерного света', segments: [{ name: 'Дизайнеры', need: 'Подбор освещения' }], objections: ['Сложность выбора'], triggers: ['Новый интерьер'], keywords: ['интерьерный свет'], imagePrompts: ['Тёплый свет в интерьере'] } };
-    localStorage.setItem(key, JSON.stringify(saved));
-  });
+  // Передаём тестовый AI-анализ так же, как пользователь: импортом JSON проекта с __udsAnalysis.
+  // Раньше тест писал анализ прямо в localStorage, а отложенное автосохранение студии (220 мс)
+  // иногда срабатывало до перезагрузки и затирало запись состоянием из памяти — тест падал случайно.
+  const currentRaw = await page.evaluate(() => JSON.parse(localStorage.getItem('uds:studio:v1')).raw);
+  const withAnalysis = { ...currentRaw, __udsAnalysis: { data: { source: 'ai', audience: 'Покупатели интерьерного света', segments: [{ name: 'Дизайнеры', need: 'Подбор освещения' }], objections: ['Сложность выбора'], triggers: ['Новый интерьер'], keywords: ['интерьерный свет'], imagePrompts: ['Тёплый свет в интерьере'] } } };
+  await page.locator('#file').setInputFiles({ name: 'with-analysis.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(withAnalysis)) });
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Импортирован проект'));
+  // Анализ должен попасть в сохранённое состояние и пережить перезагрузку.
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('uds:studio:v1') || '{}').analysis?.data?.source === 'ai');
   await page.reload({ waitUntil: 'networkidle' });
+  check(await page.evaluate(() => JSON.parse(localStorage.getItem('uds:studio:v1') || '{}').analysis?.data?.source === 'ai'), 'AI-анализ потерян после перезагрузки');
 
   // После перезагрузки открываем рабочую область: кнопки экспорта и сохранения скрыты на главной панели.
   await page.click('#dashboard [data-dash="create"]');
