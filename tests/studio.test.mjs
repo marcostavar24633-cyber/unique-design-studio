@@ -309,3 +309,11 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
   assert.ok(handler.includes('result.exported = exportProject(state.raw, result.concept);'));
   assert.ok(handler.indexOf('result.exported = exportProject') < handler.indexOf('persist();'));
 });
+
+test('AI generation status does not claim web research when the Worker has no search tool', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('AI формирует тексты и структуру проекта по вашему брифу'));
+  assert.ok(source.includes('Готово: AI сформировал тексты и структуру проекта по вашему брифу.'));
+  assert.ok(!source.includes('AI изучает нишу в интернете'));
+  assert.ok(!source.includes('Готово: AI изучил нишу'));
+});
