@@ -1219,7 +1219,11 @@ function load(raw, message) {
     const sourceId = String(cleanRaw?.id || '');
     const selected = state.library.find(item => item?.raw && String(item.raw.id || '') === sourceId && item.analysis);
     if (selected) state.analysis = { projectId: state.raw.id, data: selected.analysis };
-    else if (state.analysis.projectId !== state.raw.id) state.analysis = null;
+    else if (state.analysis.projectId === sourceId) {
+      // Сохраняем анализ при нормализации экспортированного проекта:
+      // исходный ID может отличаться от канонического ID после normalizeProject().
+      state.analysis = { projectId: state.raw.id, data: state.analysis.data };
+    } else if (state.analysis.projectId !== state.raw.id) state.analysis = null;
   }
   buildForm(); run();
   if (message) toast(message);
