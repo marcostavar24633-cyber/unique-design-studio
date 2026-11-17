@@ -122,6 +122,8 @@ export default {
         const groups = payload.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups || [];
         const neurons = groups.reduce((total, item) => total + Number(item.sum?.totalNeurons || 0), 0);
         const requests = groups.reduce((total, item) => total + Number(item.count || 0), 0);
+        const inputTokens = groups.reduce((total, item) => total + Number(item.sum?.totalInputTokens || 0), 0);
+        const outputTokens = groups.reduce((total, item) => total + Number(item.sum?.totalOutputTokens || 0), 0);
         const models = {};
         for (const item of groups) {
           const name = item.dimensions?.modelId || 'unknown';
@@ -134,6 +136,9 @@ export default {
           start: start.toISOString(),
           end: end.toISOString(),
           neurons: Number(neurons.toFixed(4)),
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
           requests,
           models,
           source: 'Cloudflare GraphQL Analytics',
