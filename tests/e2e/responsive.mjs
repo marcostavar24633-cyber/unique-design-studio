@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { ARCHETYPES, ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { examples, full, root } from '../helpers.mjs';
+import { hiddenCheck, runLayoutMatrix, selfCheck } from './layout-matrix.mjs';
 
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); }
@@ -75,6 +76,14 @@ for (const { name, html } of pages) {
   if (hidden) failures.push(`без JS скрыто блоков: ${hidden}`);
   await ctx.close(); checks++;
 }
+// Раскладка в браузере: перекрытый, обрезанный и выходящий за экран текст, контраст на фактическом фоне —
+// на матрице архитектур × механик карточек × форм × эффектов текста, светлая и тёмная палитры.
+const missed = await selfCheck(browser);
+if (missed.length) failures.push(`проверка раскладки не нашла на сломанной странице: ${missed.join(', ')}`);
+const falseHidden = await hiddenCheck(browser);
+if (falseHidden.length) failures.push(`проверка раскладки ругается на скрытый текст: ${falseHidden.map(f => f.text).join(', ')}`);
+const layoutRuns = await runLayoutMatrix(browser, failures);
+checks += layoutRuns;
 await browser.close();
 if (failures.length) { console.error(`Провалено проверок: ${failures.length}\n- ${failures.join('\n- ')}`); process.exit(1); }
-console.log(`Браузерные проверки пройдены: ${pages.length} страниц × ${WIDTHS.length} ширины, всего ${checks} прогонов.`);
+console.log(`Браузерные проверки пройдены: ${pages.length} страниц × ${WIDTHS.length} ширины и ${layoutRuns} прогонов проверки раскладки, всего ${checks}.`);
