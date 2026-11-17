@@ -100,6 +100,18 @@ try {
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="create"]');
 
+  // Подкладываем тестовый AI-анализ в сохранённое состояние: проверяем перенос вместе с проектом.
+  await page.evaluate(() => {
+    const key = 'uds:studio:v1';
+    const saved = JSON.parse(localStorage.getItem(key));
+    saved.analysis = { projectId: saved.raw.id, data: { source: 'ai', audience: 'Покупатели интерьерного света', segments: [{ name: 'Дизайнеры', need: 'Подбор освещения' }], objections: ['Сложность выбора'], triggers: ['Новый интерьер'], keywords: ['интерьерный свет'], imagePrompts: ['Тёплый свет в интерьере'] } };
+    localStorage.setItem(key, JSON.stringify(saved));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+
+  // После перезагрузки открываем рабочую область: кнопки экспорта и сохранения скрыты на главной панели.
+  await page.click('#dashboard [data-dash="create"]');
+
   // Сохраняем проект в реестр, затем возвращаемся на главную панель.
   await page.click('#save');
   await page.click('#dashboard-back');
@@ -133,6 +145,14 @@ try {
   const { readFileSync: readDownloaded } = await import('node:fs');
   const exported = JSON.parse(readDownloaded(jsonPath, 'utf8'));
   check(exported.brand === 'LUMEN E2E' || exported.niche === 'Тестовая студия интерьерного света', 'экспорт JSON не содержит текущий проект');
+  check(exported.__udsAnalysis?.data?.segments?.[0]?.name === 'Дизайнеры', 'экспорт JSON потерял AI-анализ аудитории');
+  // Импортируем тот же файл и проверяем, что анализ не теряется при повторном экспорте.
+  await page.locator('#file').setInputFiles({ name: 'analysis-roundtrip.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Импортирован проект'));
+  const [roundtripDownload] = await Promise.all([page.waitForEvent('download'), page.click('#export')]);
+  const roundtripPath = await roundtripDownload.path();
+  const roundtrip = JSON.parse(readDownloaded(roundtripPath, 'utf8'));
+  check(roundtrip.__udsAnalysis?.data?.segments?.[0]?.name === 'Дизайнеры', 'AI-анализ не пережил импорт и повторный экспорт');
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
   const htmlPath = await htmlDownload.path();
   check(readDownloaded(htmlPath, 'utf8').includes('LUMEN E2E'), 'экспорт HTML не содержит текущий проект');
