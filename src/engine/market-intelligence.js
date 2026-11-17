@@ -8,12 +8,12 @@ const safeUrl = value => {
   try {
     const url = new URL(String(value || ''));
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
-    if (!url.hostname.includes('.') || /(^|\\.)(localhost|local|internal|intranet|lan|home|corp|test|invalid|example)$/.test(url.hostname)) return null;
+    if (!url.hostname.includes('.') || /(^|\.)(localhost|local|internal|intranet|lan|home|corp|test|invalid|example)$/.test(url.hostname)) return null;
     url.hash = '';
     return url.href;
   } catch { return null; }
 };
-const clean = (value, max = 500) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, max);
+const clean = (value, max = 500) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 /**
  * @param {{project:object, search?:Function, fetchPage?:Function, limit?:number}} options
