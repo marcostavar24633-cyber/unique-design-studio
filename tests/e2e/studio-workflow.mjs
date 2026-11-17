@@ -113,7 +113,9 @@ try {
   await page.click('#dashboard [data-dash="create"]');
 
   // Сохраняем проект в реестр, затем возвращаемся на главную панель.
+  console.log('DEBUG before save', await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('uds:studio:v1')); return { rawId: s?.raw?.id, brand: s?.raw?.brand, analysis: s?.analysis, library: s?.library?.length }; }));
   await page.click('#save');
+  console.log('DEBUG after save', await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('uds:studio:v1')); return { analysis: s?.analysis, library: s?.library?.map(x => ({ id: x.raw?.id, analysis: x.analysis })) }; }));
   await page.click('#dashboard-back');
   await page.waitForFunction(() => document.querySelector('#dash-project-count').textContent === '1');
   check((await page.textContent('#dash-projects')).includes('LUMEN E2E'), 'сохранённый проект не появился на главной панели');
@@ -140,6 +142,7 @@ try {
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'проект не открылся из реестра');
 
   // Проверяем скачивание JSON и готового HTML — не только наличие кнопок.
+  console.log('DEBUG before export', await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('uds:studio:v1')); return { analysis: s?.analysis, library: s?.library?.map(x => ({ id: x.raw?.id, analysis: x.analysis })) }; }));
   const [jsonDownload] = await Promise.all([page.waitForEvent('download'), page.click('#export')]);
   const jsonPath = await jsonDownload.path();
   const { readFileSync: readDownloaded } = await import('node:fs');
