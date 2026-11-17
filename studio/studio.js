@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -1528,6 +1528,13 @@ async function optimizeGeneratedImage(dataUri) {
   const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
   return optimizeImage(file);
 }
+// ALT для созданного фото: что видит посетитель, а не служебный текст задания для фотографа.
+function generatedAlt(slot, project) {
+  const place = [project.brand, project.niche].filter(Boolean).join(' — ') || 'Наш проект';
+  if (slot.role === 'service') return slot.label + ' — ' + (project.niche || project.brand || 'позиция каталога');
+  if (slot.role === 'gallery') return place + ': ' + slot.label.toLowerCase();
+  return place;
+}
 async function generateProjectImages(endpoint, expectedProjectId, onProgress = () => {}) {
   const parsedEndpoint = new URL(endpoint, location.href);
   if (!/\/api\/generate-landing\/?$/i.test(parsedEndpoint.pathname)) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
@@ -1542,16 +1549,10 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
   let generated = 0;
   for (let index = 0; index < targets.length; index++) {
     const slot = targets[index];
-    onProgress(index, targets.length, slot.subject);
-    const prompt = [
-      'Photorealistic premium commercial photography, not an illustration, no text, no typography, no logos, no watermark.',
-      'Subject: ' + slot.subject + '.',
-      'Business niche: ' + (result.project.niche || 'local business') + '.',
-      'Composition: ' + slot.composition + '. Camera angle: ' + slot.angle + '.',
-      'Lighting: ' + slot.light + '. Background: ' + slot.background + '.',
-      result.project.tier === 'luxury' ? 'Luxury editorial art direction, refined materials, cinematic controlled light.' : 'High-end authentic commercial photography, natural textures and believable details.',
-      'Create a visually distinctive image suitable for a real business website. Do not invent readable labels, product branding, awards or certifications.'
-    ].join(' ').slice(0, 2000);
+    onProgress(index, targets.length, slot.label);
+    const alt = generatedAlt(slot, result.project);
+    // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
+    const prompt = photoPrompt(slot, result.project).slice(0, 2000);
     const response = await fetch(imageEndpoint, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt })
     });
@@ -1562,21 +1563,21 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     const data = optimized.data;
     if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.');
     if (slot.id === 'hero') {
-      state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: slot.subject };
+      state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: alt };
     } else if (slot.role === 'service') {
       const services = Array.isArray(state.raw.services) ? [...state.raw.services] : [];
       const sourceIndex = Number.isInteger(slot.sourceIndex) ? slot.sourceIndex : Number(slot.id.split('-')[1]);
       const current = services[sourceIndex];
       if (Array.isArray(current)) {
-        const row = [...current]; row[3] = data; row[4] = slot.subject; services[sourceIndex] = row;
+        const row = [...current]; row[3] = data; row[4] = alt; services[sourceIndex] = row;
       } else if (current && typeof current === 'object') {
-        services[sourceIndex] = { ...current, image: data, alt: slot.subject };
+        services[sourceIndex] = { ...current, image: data, alt };
       }
       state.raw.services = services;
     } else if (slot.role === 'gallery') {
       const items = Array.isArray(state.raw.gallery) ? [...state.raw.gallery] : [];
       const galleryIndex = Number(slot.id.split('-')[1]);
-      items[galleryIndex] = { ...(items[galleryIndex] || {}), src: data, alt: slot.subject, caption: slot.label };
+      items[galleryIndex] = { ...(items[galleryIndex] || {}), src: data, alt, caption: slot.label };
       state.raw.gallery = items;
     }
     generated++;
