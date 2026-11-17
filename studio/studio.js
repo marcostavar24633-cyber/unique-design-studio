@@ -1384,11 +1384,12 @@ async function generateProjectImages(endpoint, expectedProjectId) {
       state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: slot.subject };
     } else if (slot.role === 'service') {
       const services = Array.isArray(state.raw.services) ? [...state.raw.services] : [];
-      const current = services[Number(slot.id.split('-')[1])];
+      const sourceIndex = Number.isInteger(slot.sourceIndex) ? slot.sourceIndex : Number(slot.id.split('-')[1]);
+      const current = services[sourceIndex];
       if (Array.isArray(current)) {
-        const row = [...current]; row[3] = data; row[4] = slot.subject; services[Number(slot.id.split('-')[1])] = row;
+        const row = [...current]; row[3] = data; row[4] = slot.subject; services[sourceIndex] = row;
       } else if (current && typeof current === 'object') {
-        services[Number(slot.id.split('-')[1])] = { ...current, image: data, alt: slot.subject };
+        services[sourceIndex] = { ...current, image: data, alt: slot.subject };
       }
       state.raw.services = services;
     } else if (slot.role === 'gallery') {
