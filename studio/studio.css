@@ -400,3 +400,13 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
   body:not(.dashboard-mode) .view--preview.sized{padding:8px}
   body:not(.dashboard-mode) .view--preview.sized #frame{max-width:100%}
 }
+
+/* Generation progress */
+.auto-progress { margin: 12px 0 8px; padding: 13px 14px; border: 1px solid var(--line, #d8d8d8); border-radius: 12px; background: var(--panel, rgba(128,128,128,.06)); }
+.auto-progress[hidden] { display: none; }
+.auto-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.auto-progress-heading strong { font-variant-numeric: tabular-nums; }
+.auto-progress-track { height: 7px; margin: 10px 0 8px; overflow: hidden; border-radius: 99px; background: rgba(128,128,128,.18); }
+.auto-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent, #b89554); transition: width .35s ease; }
+.auto-progress[data-state="complete"] .auto-progress-track span { background: #299764; }
+.auto-progress small { display: block; color: var(--muted, #777); line-height: 1.45; }
