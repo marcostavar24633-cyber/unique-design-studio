@@ -1531,7 +1531,7 @@ $('#view-audit').addEventListener('click', async e => {
   const button = e.target.closest('[data-copy-asset-prompt]');
   if (!button) return;
   try { await navigator.clipboard.writeText(button.dataset.copyAssetPrompt); toast('Промпт скопирован'); }
-  catch { toast('Не удалось скопировать. Выделите текст промпта вручную.'); }
+  catch { download('image-prompt.txt', button.dataset.copyAssetPrompt, 'text/plain'); toast('Буфер обмена недоступен — промпт скачан в TXT'); }
 });
 
 const tabs = [...document.querySelectorAll('[role=tab]')];
