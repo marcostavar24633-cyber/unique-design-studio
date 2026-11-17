@@ -64,6 +64,17 @@ export function missingFields(landing) {
   return missing;
 }
 
+/**
+ * Текст действительно про нишу владельца: хотя бы одна основа слова ниши (первые 4 буквы слов от 4 букв)
+ * встречается в заголовке, описании, оффере или услугах. Ловит ответ «про веб-студию» вместо кофейни.
+ */
+export function aboutNiche(landing, niche) {
+  const stems = String(niche || '').toLowerCase().split(/[^a-zа-яё0-9]+/i).filter(w => w.length >= 4).map(w => w.slice(0, 4));
+  if (!stems.length) return true;
+  const text = JSON.stringify([landing.title, landing.description, landing.mainOffer, landing.services, landing.aboutText]).toLowerCase();
+  return stems.some(s => text.includes(s));
+}
+
 // Ограничение частоты: проверка Origin не защищает от прямых запросов, а каждый запрос тратит квоту Workers AI.
 // Если к Worker привязан Rate Limiting (AI_RATE_LIMITER) — используется он; иначе — запасной счётчик в памяти
 // экземпляра (не общий для всех серверов Cloudflare, поэтому лишь сдерживает, а не гарантирует лимит).
@@ -206,8 +217,19 @@ export default {
       customPromptMode: input.customPromptMode === 'replace' ? 'replace' : 'append',
     };
 
+    // Факты о бизнесе — первыми и обычным текстом: Gemma на Workers AI теряла бриф из JSON после длинной
+    // инструкции и писала сайт про саму «студию веб-дизайна» (brand «Не указано», niche «Веб-дизайн»).
+    const facts = [
+      `Ниша бизнеса клиента: ${brief.niche}.`,
+      brief.brand ? `Название бренда: ${brief.brand}.` : 'Название бренда не указано — не придумывай его.',
+      brief.city ? `Город: ${brief.city}.` : '',
+      `Уровень: ${brief.tier}.`,
+      brief.details ? `Подробности от владельца: ${brief.details}` : '',
+      brief.customPrompt ? `Пожелания владельца (${brief.customPromptMode === 'replace' ? 'главнее задания студии' : 'дополнительно'}): ${brief.customPrompt}` : '',
+    ].filter(Boolean).join('\n');
+
     const system = [
-      'Ты AI-копирайтер и стратег для студии веб-дизайна.',
+      `Ты AI-копирайтер и стратег. Пишешь тексты для сайта бизнеса клиента в нише «${brief.niche}» — не для веб-студии и не про создание сайтов.`,
       'Верни только один валидный JSON-объект без Markdown и пояснений.',
       'Не выдумывай цены, адреса, отзывы, сертификаты, гарантии, статистику и названия конкурентов.',
       'Если данных нет, укажи это в assumptions. Не утверждай, что проводил веб-поиск: у тебя нет инструмента поиска.',
@@ -220,27 +242,36 @@ export default {
     ].join('\n');
 
     const user = [
-      'Данные проекта:',
-      JSON.stringify(brief),
+      'ДАННЫЕ БИЗНЕСА:',
+      facts,
       studioPrompt ? '\nЗадание и требования движка студии:\n' + studioPrompt : '',
-      '\nСформируй контент и анализ по указанной JSON-структуре.',
+      `\nСформируй контент и анализ по указанной JSON-структуре. Все тексты — про бизнес в нише «${brief.niche}».`,
     ].join('\n');
+    // Одно сообщение: шаблон чата Gemma не поддерживает отдельную системную роль.
+    const prompt = system + '\n\n' + user;
 
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const result = await env.AI.run(MODEL, {
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: attempt === 0 ? user : user + RETRY_NOTE },
-          ],
+          messages: [{ role: 'user', content: attempt === 0 ? prompt : prompt + RETRY_NOTE }],
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
         });
         const landing = extractJson(modelOutput(result));
         const missing = missingFields(landing);
-        if (!missing.length) return json({ landing, attempts: attempt + 1 }, 200, origin);
+        if (!missing.length && !aboutNiche(landing, brief.niche)) {
+          lastError = `AI написал текст не про нишу «${brief.niche}»`;
+          continue;
+        }
+        if (!missing.length) {
+          // Бренд и ниша — факты владельца, а не догадка модели.
+          landing.niche = brief.niche;
+          if (brief.brand) landing.brand = brief.brand;
+          else if (/не указ/i.test(String(landing.brand || ''))) landing.brand = '';
+          return json({ landing, attempts: attempt + 1 }, 200, origin);
+        }
         // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
         const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
         lastError = `AI вернул неполный результат: нет ${missing.join(', ')} (ключи ответа модели: ${keys || 'нет'})`;
