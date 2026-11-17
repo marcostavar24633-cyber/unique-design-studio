@@ -99,14 +99,18 @@ export function buildBrandPalette(brand, { accent = '' } = {}) {
 }
 
 function finishPalette(dark, bg, surface, text, mutedBase, ac) {
+  // Тонированная поверхность (блок контактов, карточки преимуществ) — третий фон: вторичный и акцентный текст
+  // выверяются и по ней. Проверка раскладки в браузере нашла 4,08:1 на ней при норме 4,5:1.
+  const tint = mix(bg, ac, dark ? 0.16 : 0.1);
   let muted = ensureContrast(mutedBase, bg, 4.6);
   muted = ensureContrast(muted, surface, 4.6);
+  muted = ensureContrast(muted, tint, 4.6);
   let accentText = readableOn(ac, hslToHex(hexToHsl(ac)[0], 30, 8), '#ffffff');
   // На средних по светлоте акцентах тонированный тёмный не дотягивает до 4.5:1 — берём чистый чёрный или белый.
   if (contrast(accentText, ac) < 4.5) accentText = readableOn(ac, '#000000', '#ffffff');
   let accentInk = ensureContrast(ac, bg, 4.6);
   accentInk = ensureContrast(accentInk, surface, 4.6);
-  const tint = mix(bg, ac, dark ? 0.16 : 0.1);
+  accentInk = ensureContrast(accentInk, tint, 4.6);
   return {
     mode: dark ? 'dark' : 'light', bg, surface, text, muted, accent: ac, accentText, accentInk, tint,
     border: rgba(text, dark ? 0.2 : 0.16), focus: accentInk,
@@ -114,6 +118,7 @@ function finishPalette(dark, bg, surface, text, mutedBase, ac) {
       ['текст / фон', text, bg], ['текст / поверхность', text, surface], ['вторичный текст / фон', muted, bg],
       ['вторичный текст / поверхность', muted, surface], ['текст кнопки / акцент', accentText, ac],
       ['акцентный текст / фон', accentInk, bg], ['текст / тонированная поверхность', text, tint],
+      ['вторичный текст / тонированная поверхность', muted, tint], ['акцентный текст / тонированная поверхность', accentInk, tint],
     ].map(([name, fg, bgc]) => ({ name, fg, bg: bgc, ratio: Math.round(contrast(fg, bgc) * 100) / 100 })),
   };
 }
