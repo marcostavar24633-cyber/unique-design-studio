@@ -128,6 +128,7 @@ export async function runWorkflow(input, {
     designReview = await runDesignReview({
       project: generated.project,
       analysis,
+      marketIntelligence,
       concept: generated.concept,
       html: generated.html,
       audit: generated.audit,
