@@ -7,6 +7,7 @@ import { stream } from './util.js';
 /** Реализованные механики. Других движок не обещает. */
 export const MECHANICS = Object.freeze({
   'scroll-reveal': 'Появление блоков при прокрутке',
+  'glass-cards': 'Стеклянные карточки с мягким размытием и световой кромкой',
   'cinematic-reveal': 'Кинематографичное появление первого экрана: заголовок, текст и действие выходят по очереди',
   'kinetic-type': 'Кинетическая типографика: слова заголовка поднимаются по одному',
   parallax: 'Лёгкий параллакс визуала первого экрана',
@@ -17,6 +18,8 @@ export const MECHANICS = Object.freeze({
   'nav-underline': 'Анимированное подчёркивание пунктов навигации',
   microinteractions: 'Микровзаимодействия: отклик кнопок на нажатие, плавные состояния ссылок',
 });
+
+export const MOTION_STYLES = Object.freeze({ auto: 'Автоматически по бренду и нише', cinematic: 'Cinematic Motion Design — полный набор эффектов', static: 'Минимум движения' });
 
 export const INTENSITY = Object.freeze({
   calm: { label: 'спокойная', budget: 2, duration: 900, distance: 10 },
@@ -35,9 +38,17 @@ const LOUD_WORDS = /дерзк|ярк|энерги|смел|живой|игри�
  * @param {{archetype:string, motion:string, nicheId:string, seed:number}} ctx
  */
 export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
+  const requestedStyle = project.passthrough?.motionStyle || 'auto';
+  if (requestedStyle === 'cinematic') {
+    const mechanics = ['scroll-reveal', 'cinematic-reveal', 'kinetic-type', 'parallax', 'glass-cards', 'tilt-cards', 'magnetic-buttons', 'dynamic-gradient', 'microinteractions'];
+    return { intensity: 'expressive', mechanics, duration: 650, distance: 20,
+      rationale: mechanics.map(id => `${MECHANICS[id]} — включено профилем Cinematic Motion Design`),
+      label: 'Cinematic Motion Design: параллакс, стеклянные 3D-карточки, кинетический заголовок, динамический фон и микроанимации. Учитывает prefers-reduced-motion.' };
+  }
   const character = `${project.brandCharacter || ''} ${project.visualDirection || ''}`;
   const why = [];
   let intensity = 'balanced';
+  if (requestedStyle === 'static') motion = 'static';
   if (project.tier === 'luxury') { intensity = 'calm'; why.push('люкс — сдержанное, медленное движение'); }
   else if (CALM_NICHES.has(nicheId) || CALM_WORDS.test(character)) { intensity = 'calm'; why.push('ниша и характер требуют спокойной подачи'); }
   else if (EXPRESSIVE_NICHES.has(nicheId) || LOUD_WORDS.test(character)) { intensity = 'expressive'; why.push('характер бренда допускает выразительное движение'); }
@@ -96,9 +107,10 @@ export function motionCss(plan) {
   if (has(plan, 'dynamic-gradient')) motionOk.push(`.hero{position:relative;isolation:isolate}.hero::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(60% 50% at 20% 30%,color-mix(in srgb,var(--ds-accent,currentColor) 18%,transparent),transparent 70%),radial-gradient(50% 40% at 80% 70%,color-mix(in srgb,var(--ds-accent,currentColor) 12%,transparent),transparent 70%);background-size:160% 160%;animation:m-drift 22s ease-in-out infinite alternate}@keyframes m-drift{from{background-position:0% 0%}to{background-position:100% 100%}}`);
   if (has(plan, 'scroll-progress')) motionOk.push(`.m-progress{position:fixed;inset:0 0 auto 0;height:3px;z-index:60;transform-origin:0 50%;transform:scaleX(var(--m-p,0));background:var(--ds-accent,currentColor);pointer-events:none}`);
   if (has(plan, 'nav-underline')) motionOk.push(`nav a:not(.ds-button){background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size var(--m-dur) var(--m-ease)}nav a:not(.ds-button):hover,nav a:not(.ds-button):focus-visible{background-size:100% 1px}`);
-  if (has(plan, 'microinteractions')) motionOk.push(`.ds-button{transition:transform .18s var(--m-ease),box-shadow .18s var(--m-ease)}.ds-button:active{transform:scale(.97)}`);
+  if (has(plan, 'microinteractions')) motionOk.push(`.ds-button{transition:transform .22s var(--m-ease),box-shadow .22s var(--m-ease),filter .22s var(--m-ease)}.ds-button:hover,.ds-button:focus-visible{box-shadow:0 8px 28px color-mix(in srgb,var(--ds-accent,currentColor) 28%,transparent);filter:brightness(1.06);transform:translateY(-2px)}.ds-button:active{transform:translateY(0) scale(.97)}`);
+  if (has(plan, 'glass-cards')) motionOk.push(`.ds-card,.item,.spotlight,.tool{background:color-mix(in srgb,var(--ds-surface,var(--ds-bg)) 76%,transparent);border:1px solid color-mix(in srgb,var(--ds-text,currentColor) 14%,transparent);box-shadow:0 18px 55px rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.16);backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%)}@supports not (backdrop-filter:blur(1px)){.ds-card,.item,.spotlight,.tool{background:var(--ds-surface,var(--ds-bg))}}`);
   const pointer = [];
-  if (has(plan, 'tilt-cards')) pointer.push(`.item{transition:transform .25s var(--m-ease);transform:perspective(900px) rotateX(var(--m-rx,0deg)) rotateY(var(--m-ry,0deg))}`);
+  if (has(plan, 'tilt-cards')) pointer.push(`.item,.ds-card{transition:transform .28s var(--m-ease),box-shadow .28s var(--m-ease);transform:perspective(1000px) rotateX(var(--m-rx,0deg)) rotateY(var(--m-ry,0deg));transform-style:preserve-3d;will-change:transform}`);
   if (has(plan, 'magnetic-buttons')) pointer.push(`[data-cta="primary"]{transition:transform .25s var(--m-ease);transform:translate3d(var(--m-mx,0px),var(--m-my,0px),0)}`);
   if (motionOk.length) out.push(`@media(prefers-reduced-motion:no-preference){${motionOk.join('')}}`);
   if (pointer.length) out.push(`@media(prefers-reduced-motion:no-preference) and (hover:hover) and (pointer:fine){${pointer.join('')}}`);
@@ -118,7 +130,7 @@ export function motionScript(plan) {
   // Слова заголовка оборачиваются только при разрешённом движении; текст для экранных дикторов сохраняется в aria-label.
   if (has(plan, 'kinetic-type')) parts.push(`var h=document.getElementById('hero-h');if(h&&${ok}&&!h.children.length){var t=h.textContent;h.setAttribute('aria-label',t);h.textContent='';t.split(/(\\s+)/).forEach(function(w,i){var s=document.createElement('span');s.className='m-word';s.setAttribute('aria-hidden','true');s.style.setProperty('--i',String(Math.floor(i/2)));s.textContent=w;h.appendChild(s)})}`);
   if (has(plan, 'scroll-progress')) parts.push(`if(${ok}){var pb=document.createElement('div');pb.className='m-progress';pb.setAttribute('aria-hidden','true');document.body.appendChild(pb);var pt=false;addEventListener('scroll',function(){if(pt)return;pt=true;requestAnimationFrame(function(){var m=document.documentElement.scrollHeight-innerHeight;pb.style.setProperty('--m-p',m>0?String(Math.min(1,scrollY/m)):'0');pt=false})},{passive:true})}`);
-  if (has(plan, 'tilt-cards')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('.item').forEach(function(el){el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-ry',((e.clientX-b.left)/b.width-.5)*6+'deg');el.style.setProperty('--m-rx',(.5-(e.clientY-b.top)/b.height)*6+'deg')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-rx');el.style.removeProperty('--m-ry')})})`);
+  if (has(plan, 'tilt-cards')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('.item,.ds-card').forEach(function(el){el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-ry',((e.clientX-b.left)/b.width-.5)*6+'deg');el.style.setProperty('--m-rx',(.5-(e.clientY-b.top)/b.height)*6+'deg')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-rx');el.style.removeProperty('--m-ry')})})`);
   if (has(plan, 'magnetic-buttons')) parts.push(`if(${ok}&&${fine})document.querySelectorAll('[data-cta="primary"]').forEach(function(el){el.addEventListener('pointermove',function(e){var b=el.getBoundingClientRect();el.style.setProperty('--m-mx',(e.clientX-b.left-b.width/2)*.18+'px');el.style.setProperty('--m-my',(e.clientY-b.top-b.height/2)*.25+'px')});el.addEventListener('pointerleave',function(){el.style.removeProperty('--m-mx');el.style.removeProperty('--m-my')})})`);
   return parts.join(';');
 }
