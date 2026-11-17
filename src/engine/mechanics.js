@@ -83,7 +83,12 @@ export const MECHANIC_CSS = {
   stack: `
 .items--mech-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(14px,2vw,22px)}
 @media(min-width:700px){
-  .items--mech-stack .item{position:sticky;top:calc(var(--stack-top,84px) + var(--stack-i,0) * 14px);box-shadow:0 -10px 30px rgba(0,0,0,.12)}
+  .items--mech-stack .item{position:sticky;top:calc(var(--stack-top,84px) + var(--stack-i,0) * 14px);box-shadow:0 -10px 30px rgba(0,0,0,.12);background:var(--ds-bg);padding-block:clamp(12px,1.6vw,20px)}
+  /* Карточка колоды должна помещаться в экран: иначе следующая «прилипает» поверх недочитанного текста.
+     Фото слева, текст справа, высота фото ограничена. */
+  .items--mech-stack .item:has(.item__media){display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);align-items:center;gap:clamp(16px,2.4vw,32px)}
+  .items--mech-stack .item__media{position:relative;aspect-ratio:4/3;max-height:min(300px,42vh);overflow:hidden}
+  .items--mech-stack .item__media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   .items--mech-stack .item:last-child{margin-bottom:0}
 }`,
   rail: `
