@@ -7,6 +7,8 @@ import { hexToHsl } from './color.js';
 // Архитектуры, в которых первый экран построен на тексте, каталоге или форме: фото здесь — фон под текстом
 // с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
 export const HERO_AS_BACKGROUND = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
+/** @deprecated Прежнее имя того же набора архитектур: сохранено для совместимости внешнего кода. */
+export const HERO_WITHOUT_PHOTO = HERO_AS_BACKGROUND;
 const HERO_ASPECT = { immersive: '16:9', storytelling: '16:9', 'modular-grid': '4:3', catalog: '16:9', 'product-first': '4:5', editorial: '3:2', asymmetric: '4:5', 'split-utility': '16:9', brutalist: '16:9', minimal: '16:9' };
 const TEXT_ZONE = {
   'bleed-bottom-left': 'оставьте спокойный нижний левый угол под заголовок', 'bleed-center': 'оставьте спокойный центр кадра под заголовок',
