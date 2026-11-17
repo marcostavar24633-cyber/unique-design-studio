@@ -525,11 +525,12 @@ $('#auto').addEventListener('submit', async e => {
     localStorage.setItem('uds:custom-prompt', input.customPrompt);
     localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
   } catch { /* нет хранилища */ }
-  const status = $('#auto-status'), go = $('#auto-go');
+  const setAutoStatus = value => { const node = $('#auto-status'); if (node) node.textContent = value; };
+  const go = $('#auto-go');
   go.disabled = true;
   let draft = null, note = '';
   if (endpoint) {
-    status.textContent = 'AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…';
+    setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…');
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
@@ -554,7 +555,7 @@ $('#auto').addEventListener('submit', async e => {
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
   if (endpoint) {
-    status.textContent = note + ' Подготавливаю фотографии для сайта…';
+    setAutoStatus(note + ' Подготавливаю фотографии для сайта…');
     try {
       const images = await generateProjectImages(endpoint, draft.project.id);
       if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
@@ -562,7 +563,7 @@ $('#auto').addEventListener('submit', async e => {
     } catch (error) {
       note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
     }
-    status.textContent = note;
+    setAutoStatus(note);
     refreshAiUsage();
   }
   go.disabled = false;
