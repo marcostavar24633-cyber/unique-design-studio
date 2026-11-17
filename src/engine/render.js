@@ -117,6 +117,17 @@ function nav(c) {
   return out + '</header>';
 }
 
+// Фото фоном первого экрана — в архитектурах, где первый экран построен на тексте, каталоге или форме.
+// Фото декоративное (alt=""): смысл первого экрана передают заголовок и текст; вуаль цвета палитры
+// держит контраст текста таким же, как без фото.
+const HERO_PHOTO_BG = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
+function heroBackground(c) {
+  if (!HERO_PHOTO_BG.has(c.vs.archetype) || !c.p.images.hero) return '';
+  const img = `<img ${artStyle(c.p, 'hero')} src="${esc(c.p.images.hero)}" alt="" data-decorative="hero-bg" fetchpriority="high" decoding="async">`;
+  const media = c.p.images.heroMobile ? `<picture><source media="(max-width:600px)" srcset="${esc(c.p.images.heroMobile)}">${img}</picture>` : img;
+  return `<div class="hero__photo-bg" aria-hidden="true">${media}</div>`;
+}
+
 // ---------- Hero: 10 композиций ----------
 const HERO = {
   'product-first'(c) {
@@ -248,6 +259,8 @@ export function renderCss(concept) {
   return [
     CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
+    // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
+    HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
     motionCss(vs.motionPlan),
     (vs.commerce?.tools || vs.commerce?.cart) && used.includes('items') ? COMMERCE_CSS : '',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
@@ -285,7 +298,7 @@ ${jsonLd(c)}
 <a class="skip" href="#main">Перейти к содержимому</a>
 ${nav(c)}
 <main id="main">
-<section class="hero hero--${vs.archetype} is-${vs.placement}" aria-labelledby="hero-h">${HERO[vs.archetype](c)}</section>
+<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" aria-labelledby="hero-h">${heroBackground(c)}${HERO[vs.archetype](c)}</section>
 ${sections}
 </main>
 <footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>

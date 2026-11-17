@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { generate } from '../src/engine/index.js';
 import { autopilot } from '../src/engine/autopilot.js';
 import { qualityReport } from '../src/engine/quality.js';
-import { HERO_WITHOUT_PHOTO, imageSlots, imageTaskPackage, reviewImageSet, slotBrief } from '../src/engine/image-director.js';
+import { HERO_AS_BACKGROUND, imageSlots, imageTaskPackage, reviewImageSet, slotBrief } from '../src/engine/image-director.js';
 
 const site = (input, arch) => {
   const p = { ...autopilot({ email: 'hello@example.com', ...input }, { registry: [] }).project };
@@ -42,14 +42,27 @@ test('свет следует за палитрой и классом', () => {
   if (/^#[0-3]/.test(darkBg)) assert.match(light, /низкий ключ/);
 });
 
-test('архитектуры без фото на первом экране не требуют его, а загруженное фото — повод для замечания', () => {
-  for (const arch of HERO_WITHOUT_PHOTO) {
+test('текстовые архитектуры: фото первого экрана становится фоном под вуалью, а не пропадает', () => {
+  for (const arch of HERO_AS_BACKGROUND) {
     const g = site({ niche: 'кофейня' }, arch);
-    assert.ok(!imageSlots(g.project, g.concept).slots.some(s => s.id === 'hero'), arch);
-    assert.ok(!reviewImageSet(g.project, g.concept).findings.some(f => f.id === 'images:hero-missing'), arch);
+    if (g.concept.visualSystem.archetype !== arch) continue;
+    const hero = imageSlots(g.project, g.concept).slots.find(s => s.id === 'hero');
+    assert.ok(hero?.asBackground, `${arch}: есть место «Фон первого экрана»`);
+    assert.equal(hero.aspect, '16:9');
+    assert.equal(reviewImageSet(g.project, g.concept).findings.find(f => f.id === 'images:hero-missing')?.severity, 'medium', arch);
     const withHero = generate({ ...g.project, images: { hero: 'https://example.com/a.jpg' } });
-    if (withHero.concept.visualSystem.archetype === arch) assert.ok(reviewImageSet(withHero.project, withHero.concept).findings.some(f => f.id === 'images:hero-unused'), arch);
+    assert.match(withHero.html, /class="hero hero--[a-z-]+ is-[a-z-]+ has-photo-bg"/, arch);
+    assert.match(withHero.html, /<div class="hero__photo-bg" aria-hidden="true"><img [^>]*alt="" data-decorative="hero-bg"/, arch);
+    assert.match(withHero.html, /\.hero__photo-bg::after\{content:"";position:absolute;inset:0;background:var\(--ds-bg\);opacity:\.9\}/, 'вуаль цвета фона');
+    assert.ok(withHero.audit.ok, withHero.audit.errors.map(e => e.message).join('; '));
+    assert.ok(!withHero.audit.warnings.some(w => w.id === 'img-alt-empty'), 'декоративный фон не считается фото без описания');
+    assert.ok(!reviewImageSet(withHero.project, withHero.concept).findings.some(f => f.id === 'images:hero-mobile'), 'фон обрезается сам, мобильная версия не обязательна');
   }
+});
+
+test('архитектуры с отдельной картинкой первого экрана не получают фон-дубль', () => {
+  const g = generate({ ...site({ niche: 'фотограф' }, 'immersive').project, images: { hero: 'https://example.com/a.jpg' } });
+  assert.doesNotMatch(g.html, /hero__photo-bg/);
 });
 
 test('проверка набора: ALT, повторы, частично заполненные карточки, http и мобильная версия', () => {

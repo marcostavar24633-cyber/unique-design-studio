@@ -4,9 +4,12 @@
 // пикселей (яркость, резкость и похожие кадры оцениваются в браузере студии отдельно).
 import { hexToHsl } from './color.js';
 
-// Архитектуры, в которых первый экран построен на тексте, каталоге или форме и фото не показывает.
-export const HERO_WITHOUT_PHOTO = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
-const HERO_ASPECT = { immersive: '16:9', storytelling: '16:9', 'modular-grid': '4:3', catalog: '4:3', 'product-first': '4:5', editorial: '3:2', asymmetric: '4:5', 'split-utility': '3:2', brutalist: '1:1', minimal: '3:2' };
+// Архитектуры, в которых первый экран построен на тексте, каталоге или форме: фото здесь — фон под текстом
+// с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
+export const HERO_AS_BACKGROUND = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
+/** @deprecated Прежнее имя того же набора архитектур: сохранено для совместимости внешнего кода. */
+export const HERO_WITHOUT_PHOTO = HERO_AS_BACKGROUND;
+const HERO_ASPECT = { immersive: '16:9', storytelling: '16:9', 'modular-grid': '4:3', catalog: '16:9', 'product-first': '4:5', editorial: '3:2', asymmetric: '4:5', 'split-utility': '16:9', brutalist: '16:9', minimal: '16:9' };
 const TEXT_ZONE = {
   'bleed-bottom-left': 'оставьте спокойный нижний левый угол под заголовок', 'bleed-center': 'оставьте спокойный центр кадра под заголовок',
   'spotlight-right': 'объект справа, левая половина свободна', 'spotlight-left': 'объект слева, правая половина свободна',
@@ -39,13 +42,15 @@ export function imageSlots(project, concept) {
   const slots = [];
   const art = project.passthrough?.imageArtDirection || {};
 
-  if (!HERO_WITHOUT_PHOTO.has(vs.archetype)) slots.push({
-    ...base, id: 'hero', role: 'hero', label: 'Первый экран',
+  const asBackground = HERO_AS_BACKGROUND.has(vs.archetype);
+  slots.push({
+    ...base, id: 'hero', role: 'hero', label: asBackground ? 'Фон первого экрана' : 'Первый экран', asBackground,
     filled: Boolean(project.images.hero), mobileFilled: Boolean(project.images.heroMobile),
     aspect: HERO_ASPECT[vs.archetype] || '3:2', mobileAspect: '4:5', minWidth: 1920,
-    subject: `главный сюжет ниши «${niche}»: ${direction}`,
-    angle: vs.archetype === 'immersive' ? 'широкий общий план на уровне глаз' : 'средний план, лёгкий ракурс 3/4',
-    background: 'чистый, без случайных предметов', composition: TEXT_ZONE[vs.placement] || 'один главный объект, второстепенные детали не спорят с ним',
+    subject: asBackground ? `атмосфера ниши «${niche}»: обстановка и фактура, без одного главного предмета в центре` : `главный сюжет ниши «${niche}»: ${direction}`,
+    angle: asBackground || vs.archetype === 'immersive' ? 'широкий общий план на уровне глаз' : 'средний план, лёгкий ракурс 3/4',
+    background: 'чистый, без случайных предметов',
+    composition: asBackground ? 'спокойный кадр без мелких контрастных деталей: поверх ляжет текст и вуаль цвета сайта' : TEXT_ZONE[vs.placement] || 'один главный объект, второстепенные детали не спорят с ним',
     alt: project.images.heroAlt || '',
   });
 
@@ -105,9 +110,9 @@ export function reviewImageSet(project, concept) {
   const add = (id, severity, message, category = 'images') => findings.push({ id: `images:${id}`, source: 'image-director', category, severity, message });
   const used = slots.filter(s => s.filled);
   const hero = slots.find(s => s.id === 'hero');
-  if (!hero && project.images.hero) add('hero-unused', 'medium', `Фото первого экрана загружено, но выбранная архитектура «${concept.visualSystem.archetype}» его не показывает. Выберите архитектуру с визуалом или используйте фото в галерее.`);
+  if (hero?.asBackground && !project.images.hero) add('hero-missing', 'medium', 'Нет фона первого экрана: первый экран держится только на тексте. Добавьте спокойное фото обстановки — оно ляжет фоном под вуаль цвета сайта.');
   else if (hero && !project.images.hero) add('hero-missing', 'high', 'Нет фото первого экрана — посетитель не видит предмет предложения. Задание для съёмки — во вкладке «Проверка».');
-  else if (hero && !project.images.heroMobile && ['16:9', '3:2'].includes(hero.aspect)) add('hero-mobile', 'medium', `Фото первого экрана горизонтальное (${hero.aspect}), а мобильной версии нет: на телефоне главный объект может обрезаться.`);
+  else if (hero && !hero.asBackground && !project.images.heroMobile && ['16:9', '3:2'].includes(hero.aspect)) add('hero-mobile', 'medium', `Фото первого экрана горизонтальное (${hero.aspect}), а мобильной версии нет: на телефоне главный объект может обрезаться.`);
   const items = slots.filter(s => s.role === 'service');
   const withImg = items.filter(s => s.filled).length;
   if (withImg && withImg < items.length) add('items-partial', 'medium', `Фото есть у ${withImg} из ${items.length} позиций — карточки без фото выглядят незавершёнными. Добавьте недостающие или уберите фото у всех.`);
