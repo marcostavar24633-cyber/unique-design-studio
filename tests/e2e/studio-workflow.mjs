@@ -57,7 +57,7 @@ try {
   await page.click('#tab-preview');
 
   // Упрощённая навигация ведёт в объединённые рабочие разделы.
-  check(await page.locator('#dash-nav [data-dash]').count() === 7, 'главное меню не сокращено до основных разделов');
+  check(await page.locator('#dash-nav [data-dash]').count() === 8, 'главное меню не сокращено до основных разделов');
   check(await page.locator('#dash-nav').textContent().then(t => t.includes('Дизайн и визуал') && t.includes('Проверка и выпуск')), 'объединённые разделы не отображаются');
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="visual"]');
