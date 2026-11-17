@@ -50,8 +50,8 @@ export function imageSlots(project, concept) {
   });
 
   if (order.includes('items')) {
-    project.services.filter(i => i.title).forEach((item, n) => slots.push({
-      ...base, id: `item-${n}`, role: 'service', label: item.title,
+    project.services.map((item, sourceIndex) => ({ item, sourceIndex })).filter(entry => entry.item.title).forEach(({ item, sourceIndex }, n) => slots.push({
+      ...base, id: `item-${n}`, sourceIndex, role: 'service', label: item.title,
       filled: Boolean(item.image), mobileFilled: Boolean(art.mobileSources?.services?.[n]),
       aspect: '4:3', mobileAspect: '4:3', minWidth: 1200,
       subject: `«${item.title}»${item.text ? ` — ${lowerFirst(clean(item.text))}` : ''}; показать именно эту позицию, а не похожую`,
