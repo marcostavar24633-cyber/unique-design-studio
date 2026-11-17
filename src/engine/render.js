@@ -7,6 +7,7 @@ import { COMMERCE_CSS, addButton, cartPanel, catalogControls, commerceScript, it
 import { normalizeProject } from './project.js';
 import { esc } from './util.js';
 import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
+import { dividerHtml, formsCss } from './forms.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -275,6 +276,7 @@ export function renderCss(concept) {
     (vs.commerce?.tools || vs.commerce?.cart) && used.includes('items') ? COMMERCE_CSS : '',
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('items') ? MECHANIC_CSS[vs.variants.itemsMechanic || 'none'] || '' : '',
+    vs.forms ? formsCss(vs.forms) : '',
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
     used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
@@ -288,7 +290,8 @@ export function renderSite(input, concept) {
   const vs = c.vs;
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
-  const sections = c.order.map(id => SECTION[id](c)).join('\n');
+  // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.
+  const sections = c.order.map(id => SECTION[id](c)).join('\n' + dividerHtml(c.vs.forms?.divider) + '\n');
   const foot = [project.contacts.phone, project.contacts.email, project.contacts.address].filter(Boolean).map(esc).join(' · ');
   return `<!doctype html>
 <html lang="${esc(project.lang)}">
