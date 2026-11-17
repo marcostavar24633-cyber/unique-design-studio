@@ -38,18 +38,6 @@ const LOUD_WORDS = /дерзк|ярк|энерги|смел|живой|игри�
  * @param {{archetype:string, motion:string, nicheId:string, seed:number}} ctx
  */
 export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
-  const requestedStyle = project.passthrough?.motionStyle || 'auto';
-  if (requestedStyle === 'static') {
-    return { intensity: 'calm', mechanics: ['microinteractions'], duration: 900, distance: 0,
-      rationale: ['Минимальный режим: только короткий отклик на действия пользователя'],
-      label: 'Минимум движения: только базовый отклик кнопок. Учитывает prefers-reduced-motion.' };
-  }
-  if (requestedStyle === 'cinematic') {
-    const mechanics = ['scroll-reveal', 'cinematic-reveal', 'kinetic-type', 'parallax', 'glass-cards', 'tilt-cards', 'magnetic-buttons', 'dynamic-gradient', 'microinteractions'];
-    return { intensity: 'expressive', mechanics, duration: 650, distance: 20,
-      rationale: mechanics.map(id => `${MECHANICS[id]} — включено профилем Cinematic Motion Design`),
-      label: 'Cinematic Motion Design: параллакс, стеклянные 3D-карточки, кинетический заголовок, динамический фон и микроанимации. Учитывает prefers-reduced-motion.' };
-  }
   const character = `${project.brandCharacter || ''} ${project.visualDirection || ''}`;
   const why = [];
   let intensity = 'balanced';
@@ -65,7 +53,8 @@ export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
 
   if (motion === 'static') why.push('архитектура задаёт статичную подачу — только микровзаимодействия');
   else want('scroll-reveal', 5, 'появление блоков по мере чтения');
-  if (motion === 'parallax') want('parallax', 4, 'полноэкранный визуал выигрывает от глубины');
+  if (motion === 'parallax' || (['immersive', 'editorial'].includes(archetype) && intensity !== 'calm')) want('parallax', 3.5, 'глубина первого экрана соответствует визуальной концепции');
+  if (['luxury', 'premium'].includes(project.tier) || (['immersive', 'editorial'].includes(archetype) && intensity !== 'calm')) want('glass-cards', 3.8, 'стеклянные поверхности поддерживают выбранную визуальную систему');
 
   want('microinteractions', 3, 'понятный отклик интерфейса');
   if (motion !== 'static') {
