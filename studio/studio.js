@@ -298,7 +298,7 @@ function run() {
 
 // ---------- ТЗ и анализ ----------
 // Анализ хранится вместе с проектом, для которого его сделал автопилот; у проектов из редактора — пусто.
-const currentAnalysis = () => (state.analysis && state.analysis.projectId === state.raw.id ? state.analysis.data : null);
+const currentAnalysis = () => (state.analysis && state.analysis.data ? state.analysis.data : null);
 function renderSpec() {
   const a = currentAnalysis();
   const spec = buildSpec(result.project, result.concept, a || {});
