@@ -65,3 +65,19 @@ Worker принимает POST JSON, ограничивает размер те�
 После публикации Worker сам начнёт использовать `AI_RATE_LIMITER`. Это изменение настроек развёртывания, поэтому вносит его владелец.
 
 Веб-поиск и авторизация пользователей здесь не реализованы. Не используйте этот публичный endpoint для конфиденциальных данных.
+## 5. Публикация через GitHub Actions
+
+В репозитории доступен workflow **Deploy AI Worker to Cloudflare** (`.github/workflows/deploy-worker.yml`). Он запускается вручную и публикует только AI Worker из `worker/wrangler.jsonc`; GitHub Pages и Worker анализатора сайтов не затрагиваются.
+
+Перед первым запуском добавьте два секрета в GitHub:
+1. Откройте **Settings → Secrets and variables → Actions → New repository secret**.
+2. Создайте `CLOUDFLARE_API_TOKEN` — API Token Cloudflare с разрешением **Workers Scripts: Edit** для нужного аккаунта.
+3. Создайте `CLOUDFLARE_ACCOUNT_ID` — Account ID этого же аккаунта Cloudflare.
+
+Не вставляйте токен в исходники, настройки сайта или сообщения. Не используйте Global API Key. После добавления секретов откройте **Actions → Deploy AI Worker to Cloudflare → Run workflow**. Успешный запуск должен завершиться публикацией Worker; URL будет указан в логе Wrangler. Если секреты не настроены, workflow остановится на проверке с понятной ошибкой.
+
+## 6. Проверка после публикации
+
+Откройте URL Worker из лога Wrangler и проверьте `/health`, затем выполните тестовую генерацию из студии через endpoint `/api/generate-landing`. Сам факт успешной сборки CI или GitHub Pages не подтверждает публикацию Worker.
+
+Статистика `/api/usage` настраивается отдельно: ей нужны Worker secrets/vars `CF_ANALYTICS_TOKEN` и `CF_ACCOUNT_ID`. Это не те же самые настройки, что GitHub Actions secrets для публикации. Не создавайте их, если статистика пока не нужна.
