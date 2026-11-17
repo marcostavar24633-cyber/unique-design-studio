@@ -325,7 +325,6 @@ const GROUPS = [
     ['@mechanic', 'Поведение карточек', 'mechanic', 'Авто — движок выбирает по архитектуре и данным: раскрытие, переворот, колода, лента или мозаика. Всё работает с клавиатуры и без анимации'],
     ['@imageMask', 'Форма фотографий', 'imageMask', 'Авто — по форме углов и характеру бренда. Маска применяется только к фото, рамки фокуса не обрезаются'],
     ['@sectionDivider', 'Разделители секций', 'sectionDivider', 'Авто — по мотиву бренда: волна, зигзаг, ступени, точки или линия'],
-    ['@motionStyle', 'Motion Design Engine', 'motionStyle', 'Авто — по нише и бренду. Cinematic — параллакс, стеклянные 3D-карточки, кинетические заголовки, динамический градиент и микроанимации. Системное ограничение движения всегда соблюдается.'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
@@ -437,7 +436,6 @@ function buildForm() {
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'mechanic') control = `<select id="${id}" data-special="mechanic"${d}><option value="">Авто</option>${Object.entries(MECHANICS).map(([k, v]) => `<option value="${k}"${state.raw.itemsMechanic === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
     else if (type === 'imageMask' || type === 'sectionDivider') { const dict = type === 'imageMask' ? MASKS : DIVIDERS; control = `<select id="${id}" data-special="${type}"${d}><option value="">Авто</option>${Object.entries(dict).map(([k, v]) => `<option value="${k}"${state.raw[type] === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`; }
-    else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}>${[['auto','Автоматически по бренду и нише'],['cinematic','Cinematic Motion Design — полный набор'],['static','Минимум движения']].map(([k,v]) => `<option value="${k}"${(state.raw.motionStyle || 'auto') === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'textEffect') control = `<select id="${id}" data-special="textEffect"${d}><option value="">Авто</option>${Object.entries(TEXT_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.textEffect === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
     else if (type === 'fontPair') control = `<select id="${id}" data-special="fontPair"${d}><option value="">Авто</option>${Object.values(WEB_FONT_PAIRS).flat().map(pr => `<option value="${esc(pr.display[0])}"${state.raw.fontPair === pr.display[0] ? ' selected' : ''}>${esc(pr.display[0] + ' + ' + pr.body[0])}${pr.accent ? ' · акцент ' + esc(pr.accent[0]) : ''}</option>`).join('')}</select>`;
     else if (type === 'fonts') control = `<select id="${id}" data-special="fonts"${d}>${[['system', 'Системные'], ['web', 'Google Fonts (с кириллицей)']].map(([k, v]) => `<option value="${k}"${p.fonts === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
@@ -1459,7 +1457,6 @@ $('#form').addEventListener('input', e => {
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
-  else if (t.dataset.special === 'motionStyle') { if (t.value === 'auto') delete state.raw.motionStyle; else state.raw.motionStyle = t.value; }
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
   else if (t.dataset.special === 'imageMask' || t.dataset.special === 'sectionDivider') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
   else if (t.dataset.special === 'mechanic') { if (t.value) state.raw.itemsMechanic = t.value; else delete state.raw.itemsMechanic; }
