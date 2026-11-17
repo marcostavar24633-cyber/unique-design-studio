@@ -1,5 +1,5 @@
 // Design Brief → Design DNA → структура главной → антишаблонная проверка (§2–§9 спецификации).
-import { ARCHETYPES, BUTTONS, DIRECTIONS, GENERIC_NICHE, LEGACY_FAMILIES, MOTION_LABELS, NAV_LABELS, NICHES, ROLES, SHAPES, TYPES, WEB_FONTS } from './data.js';
+import { ARCHETYPES, BUTTONS, DIRECTIONS, GENERIC_NICHE, LEGACY_FAMILIES, MOTION_LABELS, NAV_LABELS, NICHES, ROLES, SHAPES, TYPES, WEB_FONTS, WEB_FONT_PAIRS } from './data.js';
 import { contrast, ensureContrast, hexToHsl, hslToHex, mix, readableOn, rgba } from './color.js';
 import { normalizeProject } from './project.js';
 import { BRAND_FONT_WEIGHTS, BRANDS } from './brands.js';
@@ -10,6 +10,7 @@ import { chooseMotion } from './motion.js';
 import { commerceEnabled } from './commerce.js';
 import { chooseMechanic } from './mechanics.js';
 import { chooseForms } from './forms.js';
+import { chooseTextEffect } from './text-effects.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -400,8 +401,13 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const container = { compact: 1280, regular: 1200, airy: 1120 }[arch.rhythm];
   const [h1min, h1max] = arch.h1.map(v => Math.round(v * type.k * 100) / 100);
   // Гарнитуры: у бренда — его собственные, иначе — веб-пара характера типографики (если fonts: "web").
+  // Пара выбирается из нескольких на характер (воспроизводимо по seed); владелец может закрепить её по шрифту заголовков.
+  const pairs = WEB_FONT_PAIRS[design.typeCharacter] || [];
+  const fontPair = !brand && project.fonts === 'web' && pairs.length
+    ? Object.values(WEB_FONT_PAIRS).flat().find(p => p.display[0] === project.passthrough?.fontPair) || pick(stream(seed, 'font-pair'), pairs)
+    : null;
   const web = brand ? [[brand.display, BRAND_FONT_WEIGHTS[brand.display]], [brand.body, BRAND_FONT_WEIGHTS[brand.body]]]
-    : project.fonts === 'web' ? WEB_FONTS[design.typeCharacter] : null;
+    : fontPair ? [fontPair.display, fontPair.body, ...(fontPair.accent ? [fontPair.accent] : [])] : null;
   const webFonts = web && project.fonts === 'web' ? uniq(web.map(([family]) => family)).map(family => ({ family, weights: web.find(w => w[0] === family)[1] })) : [];
   const fontStack = (family, stack) => (family ? `"${family}", ${stack}` : stack);
 
@@ -462,13 +468,14 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       nicheId: profile.id, itemsLabel: profile.itemsLabel,
       archetype: design.primary, placement: design.placement, nav: design.nav,
       palette, direction: design.direction, sectionLayout: design.sectionLayout,
-      typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max },
+      typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: fontPair?.dw ?? type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max, accent: fontPair?.accent ? fontStack(fontPair.accent[0], 'cursive') : '', pair: fontPair ? fontPair.display[0] + ' + ' + fontPair.body[0] : '' },
       shape: brand ? { id: design.shape, ...SHAPES[design.shape], ...brand.radius, label: `скругления бренда «${brand.name}»` } : { id: design.shape, ...SHAPES[design.shape] },
       brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },
       motion: arch.motion, motionPlan, motif: design.motif,
       commerce: commerceEnabled(project, profile.id),
+      textEffect: chooseTextEffect(project, { archetype: design.primary, intensity: motionPlan.intensity }, seed),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,

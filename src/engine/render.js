@@ -8,6 +8,7 @@ import { normalizeProject } from './project.js';
 import { esc } from './util.js';
 import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
 import { dividerHtml, formsCss } from './forms.js';
+import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -60,7 +61,8 @@ const cta = (c, cls = '') => `<a class="ds-button${cls}" data-cta="primary" href
 const secondary = (c, id) => (c.order.includes(id) ? `<a class="ds-button ds-button--secondary" href="#${id}">${esc(c.labels[id])}</a>` : '');
 const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${esc(c.p.niche)}</p>` : '');
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
-const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>`;
+// Сменяющиеся фразы (эффект «исчезающий текст») идут сразу под заголовком первого экрана.
+const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>${c.vs.textEffect === 'fade-words' ? fadeWordsHtml(c.p) : ''}`;
 
 function artStyle(p, role, index = 0) {
   const root = p.passthrough?.imageArtDirection || {};
@@ -277,6 +279,7 @@ export function renderCss(concept) {
     used.includes('items') ? ITEMS_CSS[vs.variants.items] : '',
     used.includes('items') ? MECHANIC_CSS[vs.variants.itemsMechanic || 'none'] || '' : '',
     vs.forms ? formsCss(vs.forms) : '',
+    textEffectCss(vs.textEffect),
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
     used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
