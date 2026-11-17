@@ -5,6 +5,20 @@ main = "site-fetch.js"
 compatibility_date = "2025-01-01"
 workers_dev = true
 
+# Ограничитель частоты запросов (Workers Rate Limiting). Без него /fetch намеренно отвечает 503 (fail-closed).
+# Синтаксис сверен с developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/ (17.11.2026), нужен Wrangler 4.36.0+.
+# 60 запросов за 60 секунд с одного IP: даже при постоянной нагрузке один адрес не исчерпает
+# суточный лимит бесплатного плана (100 000 запросов). Счётчик ведётся отдельно в каждой локации Cloudflare,
+# поэтому лимит приблизительный.
+[[ratelimits]]
+name = "RATE_LIMITER"
+# Любое целое число, уникальное в пределах вашего аккаунта Cloudflare.
+namespace_id = "4101"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
 [vars]
 # Список сайтов (Origin), которым разрешено обращаться к Worker, через запятую.
 ALLOWED_ORIGINS = "https://marcostavar24633-cyber.github.io"

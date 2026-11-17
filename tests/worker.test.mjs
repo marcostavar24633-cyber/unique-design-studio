@@ -125,3 +125,13 @@ test('при подключённом ограничителе частоты л
   assert.equal((await handle(req('203.0.113.9'), env)).status, 429);
   assert.equal((await handle(req('203.0.113.10'), env)).status, 400, 'обычный запрос доходит до проверки адреса');
 });
+
+test('wrangler.toml содержит привязку RATE_LIMITER: без неё развёрнутый Worker отвечал бы 503 на каждый запрос', () => {
+  const toml = readFileSync(root + 'worker/wrangler.toml', 'utf8');
+  const block = /\[\[ratelimits\]\]\s*\n([\s\S]*?)(?=\n\[(?!ratelimits\.)|$)/.exec(toml);
+  assert.ok(block, 'нет секции [[ratelimits]]');
+  assert.match(block[1], /^name = "RATE_LIMITER"$/m);
+  assert.match(block[1], /^namespace_id = "\d+"$/m, 'namespace_id — целое число в строке');
+  assert.match(block[1], /^\s*limit = \d+$/m);
+  assert.match(block[1], /^\s*period = (10|60)$/m, 'период может быть только 10 или 60 секунд');
+});
