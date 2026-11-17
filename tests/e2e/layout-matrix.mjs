@@ -80,3 +80,18 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
   }
   return runs;
 }
+
+// Скрытое содержимое не должно попадать в замечания: закрытый <details> и content-visibility:hidden.
+export const HIDDEN_PAGE = `<!doctype html><html lang="ru"><body style="margin:0;font:16px sans-serif">
+<details><summary>Подробнее</summary><p id="in-details">Скрытый текст под картинкой</p></details>
+<div style="content-visibility:hidden;height:40px"><p>Ещё скрытый текст</p></div>
+<div style="position:absolute;top:0;left:0;width:400px;height:120px;background:#c00;z-index:-1"></div>
+</body></html>`;
+
+export async function hiddenCheck(browser) {
+  const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+  await page.setContent(HIDDEN_PAGE);
+  const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})()`);
+  await page.close();
+  return found.filter(f => /Скрытый|скрытый/.test(f.text));
+}

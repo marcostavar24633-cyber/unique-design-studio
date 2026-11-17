@@ -19,6 +19,11 @@ export function layoutQA(opts = {}) {
     return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls : '');
   }
   function shown(el) {
+    // Содержимое закрытого <details> (кроме summary) не отображается. Новые Chromium скрывают его через
+    // content-visibility, сохраняя размеры, — без этой проверки скрытый текст считался «перекрытым».
+    const closed = el.closest('details:not([open])');
+    if (closed && !el.closest('summary')) return false;
+    if (el.checkVisibility && !el.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true })) return false;
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const cs = getComputedStyle(n);
       if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) return false;

@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { ARCHETYPES, ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { examples, full, root } from '../helpers.mjs';
-import { runLayoutMatrix, selfCheck } from './layout-matrix.mjs';
+import { hiddenCheck, runLayoutMatrix, selfCheck } from './layout-matrix.mjs';
 
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); }
@@ -80,6 +80,8 @@ for (const { name, html } of pages) {
 // на матрице архитектур × механик карточек × форм × эффектов текста, светлая и тёмная палитры.
 const missed = await selfCheck(browser);
 if (missed.length) failures.push(`проверка раскладки не нашла на сломанной странице: ${missed.join(', ')}`);
+const falseHidden = await hiddenCheck(browser);
+if (falseHidden.length) failures.push(`проверка раскладки ругается на скрытый текст: ${falseHidden.map(f => f.text).join(', ')}`);
 const layoutRuns = await runLayoutMatrix(browser, failures);
 checks += layoutRuns;
 await browser.close();
