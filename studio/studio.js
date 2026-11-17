@@ -8,6 +8,7 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
+const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
 let aiUsageLoading = false;
 function renderAiUsageStats(data, error = '') {
   const node = $('#ai-usage');
@@ -31,7 +32,7 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || DEFAULT_AI_ENDPOINT).trim();
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -59,6 +60,12 @@ $('#ai-usage-range')?.addEventListener('change', event => {
   try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
   refreshAiUsage();
 });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshAiUsage();
+});
+setInterval(() => {
+  if (!document.hidden) refreshAiUsage();
+}, 60_000);
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -489,7 +496,7 @@ renderLibraryHint();
 
 // ---------- Автопилот ----------
 try {
-  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || '';
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || DEFAULT_AI_ENDPOINT;
   $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
   $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
   if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
