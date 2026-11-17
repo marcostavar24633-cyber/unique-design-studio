@@ -47,7 +47,7 @@ const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state))
 function renderDashboard(filter = dashboardFilter) {
   const root = $('#dash-projects'); if (!root) return;
   dashboardFilter = filter;
-  const saved = state.library.map((item, index) => ({ raw: item.raw, index, kind: 'saved' }));
+  const saved = state.library.map((item, index) => ({ raw: item.raw, analysis: item.analysis || null, index, kind: 'saved' }));
   const examples = exampleProjects.map((item, index) => ({ raw: item.raw, index, kind: 'example' }));
   const entries = filter === 'saved' ? saved : filter === 'examples' ? examples : [...saved, ...examples];
   const q = dashboardQuery.trim().toLowerCase();
@@ -112,7 +112,7 @@ $('#dashboard')?.addEventListener('click', async e => {
     return;
   }
   const project = e.target.closest('[data-open-project]');
-  if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
+  if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
   const example = e.target.closest('[data-open-example]');
   if (example) {
     const item = exampleProjects[Number(example.dataset.openExample)];
@@ -1149,7 +1149,13 @@ function renderRegistry() {
 // ---------- События ----------
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
-  state.raw = exportProject(normalizeProject(raw));
+  const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
+  const attachedAnalysis = hasAttachedAnalysis ? raw.__udsAnalysis : undefined;
+  const cleanRaw = raw && typeof raw === 'object' ? { ...raw } : raw;
+  if (cleanRaw && typeof cleanRaw === 'object') delete cleanRaw.__udsAnalysis;
+  state.raw = exportProject(normalizeProject(cleanRaw));
+  if (hasAttachedAnalysis) state.analysis = attachedAnalysis && attachedAnalysis.data ? { projectId: state.raw.id, data: attachedAnalysis.data } : null;
+  else if (state.analysis && state.analysis.projectId !== state.raw.id) state.analysis = null;
   buildForm(); run();
   if (message) toast(message);
 }
@@ -1612,7 +1618,10 @@ $('#file').addEventListener('change', async e => {
     load(raw, `Импортирован проект: ${file.name}`);
   } catch (err) { toast(`Не удалось импортировать: ${err.message}`); }
 });
-$('#export').addEventListener('click', () => download(`${result.project.id}.json`, JSON.stringify(result.exported, null, 2) + '\n', 'application/json'));
+$('#export').addEventListener('click', () => {
+  const exported = { ...result.exported, __udsAnalysis: currentAnalysis() ? { data: currentAnalysis() } : null };
+  download(`${result.project.id}.json`, JSON.stringify(exported, null, 2) + '\n', 'application/json');
+});
 $('#download').addEventListener('click', () => {
   download(`${result.project.id}.html`, result.html, 'text/html');
   if (!result.audit.ok) toast(`HTML скачан, но проверка не пройдена: ошибок — ${result.audit.errors.length}. См. вкладку «Проверка».`);
@@ -1624,12 +1633,12 @@ $('#prompt').addEventListener('click', async () => {
 });
 $('#save').addEventListener('click', () => {
   if (!result.project.brand && !result.project.niche) return toast('Укажите бренд или нишу, чтобы сохранить проект');
-  state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry }];
+  state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry, analysis: currentAnalysis() }];
   run(); toast(`«${result.entry.brand}» сохранён в реестр`);
 });
 $('#view-registry').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.load) load(state.library[b.dataset.load].raw, 'Проект открыт из реестра');
+  if (b.dataset.load) { const item = state.library[b.dataset.load]; state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из реестра'); }
   if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); }
 });
 
