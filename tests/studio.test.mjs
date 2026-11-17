@@ -257,14 +257,19 @@ test('Visual asset library applies the saved mobile focal point to a separate mo
 
 test('Opening a crop editor reveals collapsed settings and updates the toggle state', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  // Логика вынесена в openPhotoGroup(): её используют «Настроить кадрирование» и «Управлять фотографиями».
+  const helper = source.slice(source.indexOf('function openPhotoGroup()'), source.indexOf('const GROUPS = ['));
+  assert.ok(helper.includes("document.body.classList.contains('workspace-settings-collapsed')"));
+  assert.ok(helper.includes("document.body.classList.remove('workspace-settings-collapsed')"));
+  assert.ok(helper.includes("toggle.setAttribute('aria-expanded', 'true')"));
+  assert.ok(helper.includes("toggle.textContent = 'Скрыть настройки'"));
+  assert.ok(helper.indexOf("classList.remove('workspace-settings-collapsed')") < helper.indexOf('group.open = true'));
+  assert.ok(helper.includes('=== PHOTO_GROUP'), 'группа ищется по тому же названию, что и в GROUPS');
+  assert.ok(source.includes('[PHOTO_GROUP, false, ['), 'группа фотографий в GROUPS использует ту же константу');
   const start = source.indexOf("$('#view-concept').addEventListener('click', e => {");
-  const end = source.indexOf("$('#form').addEventListener('submit'", start);
-  const handler = source.slice(start, end);
-  assert.ok(handler.includes("document.body.classList.contains('workspace-settings-collapsed')"));
-  assert.ok(handler.includes("document.body.classList.remove('workspace-settings-collapsed')"));
-  assert.ok(handler.includes("toggle.setAttribute('aria-expanded', 'true')"));
-  assert.ok(handler.includes("toggle.textContent = 'Скрыть настройки'"));
-  assert.ok(handler.indexOf("classList.remove('workspace-settings-collapsed')") < handler.indexOf("group.open = true"));
+  const handler = source.slice(start, source.indexOf("$('#form').addEventListener('submit'", start));
+  assert.equal(handler.split('openPhotoGroup()').length - 1, 2, 'обе кнопки используют общий помощник');
+  assert.ok(!source.includes("=== 'Изображения')"), 'группы «Изображения» в форме нет');
 });
 
 test('AI Image Director handlers are delegated from the audit view that renders its controls', () => {
