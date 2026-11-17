@@ -1348,7 +1348,7 @@ async function generateProjectImages(endpoint) {
   const slots = imageSlots(result.project, result.concept).slots;
   const hero = slots.find(slot => slot.id === 'hero');
   const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
-  const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 0 : 3);
+  const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 1 : 3);
   const targets = [...(hero ? [hero] : []), ...products, ...gallery].slice(0, 4);
   if (!targets.length) return { generated: 0, skipped: true };
   let generated = 0;
