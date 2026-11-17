@@ -100,7 +100,16 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
 } catch { /* хранилище недоступно — работаем без сохранения */ }
-const persist = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch { toast('Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.'); } };
+// Последняя запись в хранилище не удалась: сообщения «сохранено» не должны перекрывать предупреждение.
+let persistFailed = false;
+const PERSIST_ERROR = 'Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.';
+const persist = () => {
+  try { localStorage.setItem(STORE, JSON.stringify(state)); persistFailed = false; return true; }
+  catch { persistFailed = true; toast(PERSIST_ERROR); return false; }
+};
+// Похож ли объект на проект студии: пустой или чужой JSON не должен молча заменять текущую работу.
+const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
+  || (Array.isArray(raw.services) && raw.services.length > 0);
 
 function renderDashboard(filter = dashboardFilter) {
   const root = $('#dash-projects'); if (!root) return;
@@ -1283,7 +1292,10 @@ function renderRegistry() {
 }
 
 // ---------- События ----------
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+function toast(msg) {
+  // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
+  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${PERSIST_ERROR}`;
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
   const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
   const attachedAnalysis = hasAttachedAnalysis ? raw.__udsAnalysis : undefined;
@@ -1872,8 +1884,10 @@ $('#file').addEventListener('change', async e => {
   const file = e.target.files[0]; e.target.value = '';
   if (!file) return;
   try {
-    const raw = JSON.parse(await file.text());
+    let raw;
+    try { raw = JSON.parse(await file.text()); } catch { throw new Error('файл повреждён или не является JSON'); }
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('ожидался объект проекта');
+    if (!looksLikeProject(raw)) throw new Error('в файле нет проекта студии: нет бренда, ниши, заголовка и позиций. Текущий проект не изменён');
     load(raw, `Импортирован проект: ${file.name}`);
   } catch (err) { toast(`Не удалось импортировать: ${err.message}`); }
 });
@@ -1893,7 +1907,9 @@ $('#prompt').addEventListener('click', async () => {
 $('#save').addEventListener('click', () => {
   if (!result.project.brand && !result.project.niche) return toast('Укажите бренд или нишу, чтобы сохранить проект');
   state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry, analysis: currentAnalysis() }];
-  run(); toast(`«${result.entry.brand}» сохранён в реестр`);
+  run();
+  if (persistFailed) return toast(PERSIST_ERROR);
+  toast(`«${result.entry.brand}» сохранён в реестр`);
 });
 $('#view-registry').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;

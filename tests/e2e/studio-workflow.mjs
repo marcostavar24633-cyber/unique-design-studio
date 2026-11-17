@@ -183,6 +183,37 @@ try {
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
   const htmlPath = await htmlDownload.path();
   check(readDownloaded(htmlPath, 'utf8').includes('LUMEN E2E'), 'экспорт HTML не содержит текущий проект');
+  // Защита данных при импорте: битый, чужой или пустой файл не заменяет текущий проект.
+  const toastText = () => page.evaluate(() => document.querySelector('#toast').textContent);
+  const storedBrand = () => page.evaluate(() => JSON.parse(localStorage.getItem('uds:studio:v1')).raw.brand);
+  const brandBeforeImports = await storedBrand();
+  for (const [name, body, expected] of [
+    ['broken.json', '{not json', 'файл повреждён или не является JSON'],
+    ['array.json', '[1,2]', 'ожидался объект проекта'],
+    ['empty.json', '{}', 'в файле нет проекта студии'],
+  ]) {
+    await page.locator('#file').setInputFiles({ name, mimeType: 'application/json', buffer: Buffer.from(body) });
+    await page.waitForFunction(text => document.querySelector('#toast').textContent.includes(text), expected);
+    check(await storedBrand() === brandBeforeImports, `импорт ${name} изменил текущий проект`);
+  }
+
+  // Переполнение хранилища: «сохранён в реестр» нельзя показывать, если запись не удалась.
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    window.__restoreStorage = () => { Storage.prototype.setItem = original; };
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'uds:studio:v1') throw new DOMException('quota', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  });
+  await page.click('#save');
+  const quotaToast = await toastText();
+  check(quotaToast.includes('Не удалось сохранить проект в браузере') && !quotaToast.includes('сохранён в реестр'), `при переполнении хранилища показан успех: «${quotaToast}»`);
+  await page.locator('#file').setInputFiles({ name: 'ok.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ brand: 'Импорт при полном хранилище', niche: 'кофейня' })) });
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Импортирован проект'));
+  check((await toastText()).includes('Не удалось сохранить проект в браузере'), 'сообщение об импорте скрыло ошибку сохранения');
+  await page.evaluate(() => window.__restoreStorage());
+
   check(errors.length === 0, `ошибки браузерного JavaScript: ${errors.join('; ')}`);
   await context.close();
 } finally {
