@@ -18,7 +18,7 @@ function renderAiUsageStats(data, error = '') {
     node.title = 'Реальная статистика Cloudflare недоступна: ' + error;
     $('#ai-usage-count').textContent = '—';
     const details = $('#ai-usage-details');
-    if (details) details.textContent = 'Статистика не подключена';
+    if (details) details.textContent = 'Ошибка подключения: ' + error;
     return;
   }
   if (!data) return;
