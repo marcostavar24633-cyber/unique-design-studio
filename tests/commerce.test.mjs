@@ -77,6 +77,14 @@ test('скрипт каталога синтаксически корректе�
   assert.match(js, /e\.key==='Escape'/);
 });
 
+test('поиск и фильтр категорий применяются совместно, не сбрасывая друг друга', () => {
+  const js = commerceScript(normalizeProject(furniture()));
+  assert.match(js, /var sf=document\.querySelector\('\[data-search\] input'\)/);
+  assert.match(js, /categoryOk=!cat\|\|li\.getAttribute\('data-category'\)===cat/);
+  assert.match(js, /searchOk=!q\|\|li\.textContent\.toLowerCase\(\)\.indexOf\(q\)>-1/);
+  assert.match(js, /tools\.addEventListener\('uds:catalog-search',apply\)/);
+});
+
 test('названия позиций в атрибутах и подписях экранируются', () => {
   const g = generate(furniture({ services: [['Диван "<b>x</b>"', '', '1 000 ₽', '', '', 'Кат"<i>'], ['Кресло', '', '2 000 ₽', '', '', 'Б']] }));
   assert.doesNotMatch(g.html, /<b>x<\/b>|<i>/);
