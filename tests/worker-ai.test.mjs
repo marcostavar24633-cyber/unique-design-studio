@@ -144,3 +144,55 @@ test('бренд и ниша в ответе — из ввода владель�
   const env2 = aiReturning(JSON.stringify({ ...full, brand: 'Другое' }));
   assert.equal((await (await worker.fetch(request({ niche: 'кофейня', brand: 'Зерно' }), env2)).json()).landing.brand, 'Зерно');
 });
+
+const imageRequest = (body, { origin = ORIGIN, from = `10.1.0.${++ip}`, method = 'POST' } = {}) =>
+  new Request('https://w.dev/api/generate-image', {
+    method,
+    headers: { Origin: origin, 'Content-Type': 'application/json', 'CF-Connecting-IP': from },
+    body: method === 'GET' ? undefined : JSON.stringify(body),
+  });
+
+test('генерация изображения возвращает base64 и использует FLUX.1 Schnell', async () => {
+  let called = null;
+  const env = { AI: { run: async (model, options) => {
+    called = { model, options };
+    return { image: 'aGVsbG8=' };
+  } } };
+  const res = await worker.fetch(imageRequest({ prompt: 'premium coffee product photo' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.image, 'aGVsbG8=');
+  assert.equal(body.mimeType, 'image/jpeg');
+  assert.equal(called.model, '@cf/black-forest-labs/flux-1-schnell');
+  assert.deepEqual(called.options, { prompt: 'premium coffee product photo', steps: 4 });
+});
+
+test('генерация изображения отклоняет пустой prompt и не расходует AI', async () => {
+  let calls = 0;
+  const env = { AI: { run: async () => { calls++; return { image: 'aGVsbG8=' }; } } };
+  const res = await worker.fetch(imageRequest({ prompt: '   ' }), env);
+  assert.equal(res.status, 400);
+  assert.equal(calls, 0);
+});
+
+test('генерация изображения защищена Origin и rate limit', async () => {
+  let calls = 0;
+  const env = {
+    AI: { run: async () => { calls++; return { image: 'aGVsbG8=' }; } },
+    AI_RATE_LIMITER: { limit: async () => ({ success: false }) },
+  };
+  assert.equal((await worker.fetch(imageRequest({ prompt: 'coffee' }, { origin: 'https://evil.example' }), env)).status, 403);
+  assert.equal((await worker.fetch(imageRequest({ prompt: 'coffee' }), env)).status, 429);
+  assert.equal(calls, 0);
+});
+
+test('статистика Cloudflare требует секреты и проверяет период без внешнего запроса', async () => {
+  const noSecrets = await worker.fetch(new Request('https://w.dev/api/usage', { headers: { Origin: ORIGIN } }), {});
+  assert.equal(noSecrets.status, 503);
+  const invalidRange = await worker.fetch(new Request('https://w.dev/api/usage?range=all', { headers: { Origin: ORIGIN } }), {
+    CF_ANALYTICS_TOKEN: 'test-token',
+    CF_ACCOUNT_ID: 'test-account',
+  });
+  assert.equal(invalidRange.status, 400);
+});
+
