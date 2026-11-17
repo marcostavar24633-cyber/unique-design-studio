@@ -1,7 +1,8 @@
 // Worker AI-генерации (worker/index.js): полнота ответа, повтор, ограничение частоты.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import worker, { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/index.js';
+import worker from '../worker/index.js';
+import { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/ai-utils.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
