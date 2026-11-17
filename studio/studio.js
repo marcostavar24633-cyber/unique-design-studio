@@ -1162,7 +1162,14 @@ function load(raw, message) {
   if (cleanRaw && typeof cleanRaw === 'object') delete cleanRaw.__udsAnalysis;
   state.raw = exportProject(normalizeProject(cleanRaw));
   if (hasAttachedAnalysis) state.analysis = attachedAnalysis && attachedAnalysis.data ? { projectId: state.raw.id, data: attachedAnalysis.data } : null;
-  else if (state.analysis && state.analysis.projectId !== state.raw.id) state.analysis = null;
+  else if (state.analysis?.data) {
+    // При открытии записи реестра raw.id может отличаться от нормализованного ID проекта.
+    // Анализ уже выбранной записи привязываем к каноническому ID после нормализации.
+    const sourceId = String(cleanRaw?.id || '');
+    const selected = state.library.find(item => item?.raw && String(item.raw.id || '') === sourceId && item.analysis);
+    if (selected) state.analysis = { projectId: state.raw.id, data: selected.analysis };
+    else if (state.analysis.projectId !== state.raw.id) state.analysis = null;
+  }
   buildForm(); run();
   if (message) toast(message);
 }
