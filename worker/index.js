@@ -48,6 +48,18 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
     const url = new URL(request.url);
+    if (url.pathname === '/' && request.method === 'GET') {
+      return json({
+        ok: true,
+        service: 'unique-design-studio-ai',
+        status: 'online',
+        endpoints: {
+          health: '/health',
+          usage: '/api/usage',
+          generate: 'POST /api/generate-landing',
+        },
+      }, 200, origin);
+    }
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'unique-design-studio-ai' }, 200, origin);
     }
