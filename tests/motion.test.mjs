@@ -93,3 +93,9 @@ test('Cinematic Motion Design включается из настроек ген�
   assert.match(css, /prefers-reduced-motion:no-preference/);
   assert.match(motionScript(plan), /\.item,\.ds-card/);
 });
+
+
+test('режим минимального движения не включает параллакс, наклон или кинетику', () => {
+  const plan = chooseMotion({ tier: 'premium', passthrough: { motionStyle: 'static' } }, { archetype: 'immersive', motion: 'parallax', nicheId: 'studio', seed: 8 });
+  assert.deepEqual(plan.mechanics, ['microinteractions']);
+});
