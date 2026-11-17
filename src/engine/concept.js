@@ -9,6 +9,7 @@ import { SECTION_LABELS, normalizeReferences } from './library.js';
 import { chooseMotion } from './motion.js';
 import { commerceEnabled } from './commerce.js';
 import { chooseMechanic } from './mechanics.js';
+import { chooseForms } from './forms.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -468,6 +469,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       layout: { container, rhythm: arch.rhythm },
       motion: arch.motion, motionPlan, motif: design.motif,
       commerce: commerceEnabled(project, profile.id),
+      forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,
     },

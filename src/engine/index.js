@@ -31,3 +31,4 @@ export function generate(input, { registry = [], neighbors = 2 } = {}) {
 export { BRANDS } from './brands.js';
 export { nicheVisual, itemSubject, photoPrompt, translit } from './photo-brief.js';
 export { MECHANICS, chooseMechanic } from './mechanics.js';
+export { MASKS, DIVIDERS, chooseForms } from './forms.js';
