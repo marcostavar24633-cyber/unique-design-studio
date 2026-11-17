@@ -1260,21 +1260,48 @@ async function handleImageUpload(input) {
   const kind = input.dataset.upload, files = [...(input.files || [])];
   input.value = '';
   if (!files.length) return;
-  if (kind === 'service' && !Array.isArray(state.raw.services)) return toast('Сначала добавьте позиции в разделе «Каталог / услуги / меню».');
+  const imageIndex = Number(input.dataset.imageIndex);
+  const services = Array.isArray(state.raw.services) ? state.raw.services : [];
+  if (kind === 'service' && !services.length) return toast('Сначала добавьте позиции в разделе «Каталог / услуги / меню».');
+  if (['gallery-mobile', 'service-mobile'].includes(kind) && (!Number.isInteger(imageIndex) || imageIndex < 0)) return toast('Не удалось определить фотографию для мобильной версии.');
   const target = kind === 'service' ? Number($('#f--serviceUpload-target')?.value) : -1;
-  if (kind === 'service' && (!Number.isInteger(target) || target < 0 || target >= state.raw.services.length)) return toast('Выберите позицию товара или услуги.');
+  if (kind === 'service' && (!Number.isInteger(target) || target < 0 || target >= services.length)) return toast('Выберите позицию товара или услуги.');
+  if (kind === 'service-mobile' && imageIndex >= services.length) return toast('Позиция товара или услуги больше не существует.');
+  if (kind === 'gallery-mobile' && imageIndex >= (state.raw.gallery || []).length) return toast('Фотография галереи больше не существует.');
   let added = 0;
   for (const file of files) {
     try {
       const optimized = await optimizeImage(file);
       const data = optimized.data;
-      const current = kind === 'hero' ? state.raw.images?.hero : kind === 'hero-mobile' ? state.raw.images?.heroMobile : kind === 'gallery-mobile' ? state.raw.imageArtDirection?.mobileSources?.gallery?.[Number(input.dataset.imageIndex)] : kind === 'service-mobile' ? state.raw.imageArtDirection?.mobileSources?.services?.[Number(input.dataset.imageIndex)] : kind === 'service' ? (Array.isArray(state.raw.services[target]) ? state.raw.services[target][3] : state.raw.services[target].image) : '';
+      const mobileSources = state.raw.imageArtDirection?.mobileSources || {};
+      const current = kind === 'hero' ? state.raw.images?.hero
+        : kind === 'hero-mobile' ? state.raw.images?.heroMobile
+        : kind === 'gallery-mobile' ? mobileSources.gallery?.[imageIndex]
+        : kind === 'service-mobile' ? mobileSources.services?.[imageIndex]
+        : kind === 'service' ? (Array.isArray(services[target]) ? services[target][3] : services[target].image)
+        : '';
       const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
       if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
       const imageName = file.name.replace(/\.[^.]+$/, '');
-      if (kind === 'hero') state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || '' };
-      else if (kind === 'gallery') state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: '' }];
-      else { const row = state.raw.services[target]; const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '', row.image || '', row.alt || '']; cells[3] = data; cells[4] = cells[4] || cells[0]; state.raw.services[target] = cells; }
+      if (kind === 'hero') {
+        state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || '' };
+      } else if (kind === 'hero-mobile') {
+        state.raw.images = { ...(state.raw.images || {}), heroMobile: data };
+      } else if (kind === 'gallery') {
+        state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: '' }];
+      } else if (kind === 'gallery-mobile' || kind === 'service-mobile') {
+        const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
+        root.mobileSources = root.mobileSources || {};
+        const key = kind === 'gallery-mobile' ? 'gallery' : 'services';
+        root.mobileSources[key] = root.mobileSources[key] || {};
+        root.mobileSources[key][imageIndex] = data;
+      } else if (kind === 'service') {
+        const row = services[target];
+        const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '', row.image || '', row.alt || ''];
+        cells[3] = data;
+        cells[4] = cells[4] || cells[0];
+        state.raw.services[target] = cells;
+      }
       added++;
       if (optimized.optimized) toast('Фото оптимизировано: ' + (optimized.width + '×' + optimized.height) + ', ' + Math.round(optimized.finalBytes / 1024) + ' КБ вместо ' + Math.round(optimized.originalBytes / 1024) + ' КБ');
     } catch (err) { toast(err.message); }
