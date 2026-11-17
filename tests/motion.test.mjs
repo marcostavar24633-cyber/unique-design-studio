@@ -88,7 +88,7 @@ test('Cinematic Motion Design включается из настроек ген�
   for (const id of ['scroll-reveal','cinematic-reveal','parallax','glass-cards']) assert.ok(plan.mechanics.includes(id), id);
   const css = motionCss(plan);
   assert.match(css, /backdrop-filter:blur\(18px\)/);
-  assert.match(css, /backdrop-filter:blur\\(18px\\)/);
+  assert.ok(css.includes('backdrop-filter:blur(18px)'), 'glass cards include backdrop blur');
   assert.match(css, /prefers-reduced-motion:no-preference/);
   assert.match(motionScript(plan), /requestAnimationFrame/);
 });
