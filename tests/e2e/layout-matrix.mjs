@@ -78,6 +78,19 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
       await page.close();
     }
   }
+  // Второй проход — с включённым движением: стеклянные поверхности, наклон, параллакс, эффекты текста
+  // действуют только без reduced-motion, и именно они могут ухудшить контраст или наложить блоки.
+  for (const { name, html } of layoutPages()) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 820 } });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.setContent(html, { waitUntil: 'load' });
+    await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
+    await page.waitForTimeout(1600); // появление первого экрана и блоков завершилось
+    const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
+    for (const f of found) failures.push(`раскладка ${name} @1280 с движением: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
+    runs++;
+    await page.close();
+  }
   return runs;
 }
 
