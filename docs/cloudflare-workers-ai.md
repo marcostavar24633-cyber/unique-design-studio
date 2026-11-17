@@ -17,7 +17,11 @@ npx wrangler deploy --config worker/wrangler.jsonc
 
 `https://unique-design-studio-ai.<ваш-subdomain>.workers.dev`
 
-Проверьте:
+Проверьте корневой адрес Worker — он показывает статус и доступные API-маршруты:
+
+`https://unique-design-studio-ai.<ваш-subdomain>.workers.dev/`
+
+Также проверьте:
 
 ```text
 https://unique-design-studio-ai.<ваш-subdomain>.workers.dev/health
