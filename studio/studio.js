@@ -62,6 +62,9 @@ function recordAiUsage() {
   renderAiUsage();
 }
 renderAiUsage();
+if ($('#ai-usage-range')) {
+  try { $('#ai-usage-range').value = localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
+}
 refreshAiUsage();
 $('#ai-usage-range')?.addEventListener('change', event => {
   try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
