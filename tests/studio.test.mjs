@@ -310,7 +310,7 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
   assert.ok(handler.indexOf('result.exported = exportProject') < handler.indexOf('persist();'));
 });
 
-test('AI generation copy does not claim web research when the Worker has no search tool', () => {
+test('Mobile dashboard navigation wraps into a two-column menu instead of clipping horizontally', () => {\n  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');\n  const mobile = css.slice(css.indexOf('@media(max-width:760px){body.dashboard-mode'), css.indexOf('@media(max-width:420px){.dash-projects'));\n  assert.ok(mobile.includes('.dash-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));\n  assert.ok(mobile.includes('.dash-nav button,.dash-nav-link{min-width:0'));\n  assert.ok(mobile.includes('.dash-nav-sep{grid-column:1/-1'));\n  assert.ok(!mobile.includes('.dash-nav{display:flex;overflow:auto'));\n});\n\ntest('AI generation copy does not claim web research when the Worker has no search tool', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
   const docs = readFileSync(new URL('../docs/cloudflare-workers-ai.md', import.meta.url), 'utf8');
