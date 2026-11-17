@@ -8,6 +8,50 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_KEY = 'uds:ai-success-count';
+const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
+let aiUsageLoading = false;
+function renderAiUsageStats(data, error = '') {
+  const node = $('#ai-usage');
+  if (!node) return;
+  if (error) {
+    node.title = 'Реальная статистика Cloudflare недоступна: ' + error;
+    $('#ai-usage-count').textContent = '—';
+    const details = $('#ai-usage-details');
+    if (details) details.textContent = 'Статистика не подключена';
+    return;
+  }
+  if (!data) return;
+  $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const details = $('#ai-usage-details');
+  if (details) details.textContent = 'Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов · ' +
+    Number(data.totalTokens || 0).toLocaleString('ru-RU') + ' токенов';
+  node.title = 'Cloudflare AI · ' + data.range + '. Вход: ' + Number(data.inputTokens || 0).toLocaleString('ru-RU') +
+    ' токенов; выход: ' + Number(data.outputTokens || 0).toLocaleString('ru-RU') +
+    '. Neurons: ' + Number(data.neurons || 0).toLocaleString('ru-RU') +
+    '. Данные аналитики могут поступать с задержкой.';
+}
+async function refreshAiUsage() {
+  if (aiUsageLoading) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || '').trim();
+  if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
+  let usageUrl;
+  try {
+    const parsed = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(parsed.pathname)) throw new Error('неверный путь');
+    parsed.pathname = parsed.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage');
+    usageUrl = parsed.toString();
+  } catch { return renderAiUsageStats(null, 'неверный адрес AI-сервера'); }
+  aiUsageLoading = true;
+  try {
+    const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
+    const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), { headers: { Accept: 'application/json' } });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
+    renderAiUsageStats(payload);
+  } catch (error) {
+    renderAiUsageStats(null, error.message);
+  } finally { aiUsageLoading = false; }
+}
 function renderAiUsage() {
   const node = $('#ai-usage-count');
   if (!node) return;
@@ -23,6 +67,14 @@ function recordAiUsage() {
   renderAiUsage();
 }
 renderAiUsage();
+if ($('#ai-usage-range')) {
+  try { $('#ai-usage-range').value = localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
+}
+refreshAiUsage();
+$('#ai-usage-range')?.addEventListener('change', event => {
+  try { localStorage.setItem(AI_USAGE_RANGE_KEY, event.target.value); } catch {}
+  refreshAiUsage();
+});
 const MAX_IMAGE_EDGE = 1800;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -473,11 +525,12 @@ $('#auto').addEventListener('submit', async e => {
     localStorage.setItem('uds:custom-prompt', input.customPrompt);
     localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
   } catch { /* нет хранилища */ }
-  const status = $('#auto-status'), go = $('#auto-go');
+  const setAutoStatus = value => { const node = $('#auto-status'); if (node) node.textContent = value; };
+  const go = $('#auto-go');
   go.disabled = true;
   let draft = null, note = '';
   if (endpoint) {
-    status.textContent = 'AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…';
+    setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…');
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
@@ -487,6 +540,7 @@ $('#auto').addEventListener('submit', async e => {
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
       recordAiUsage();
+      refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
@@ -500,7 +554,21 @@ $('#auto').addEventListener('submit', async e => {
   note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
-  status.textContent = note;
+  if (endpoint) {
+    setAutoStatus(note + ' Подготавливаю фотографии для сайта…');
+    try {
+      const images = await generateProjectImages(endpoint, draft.project.id);
+      if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
+      else note += ' Для выбранной композиции отдельные фотографии не требуются.';
+    } catch (error) {
+      note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
+    }
+    setAutoStatus(note);
+    refreshAiUsage();
+  }
+  // Статус обязателен и для локального режима без AI endpoint.
+  // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
+  setAutoStatus(note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -1275,6 +1343,70 @@ async function optimizeImage(file) {
     }
     throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
   } finally { bitmap.close?.(); }
+}
+async function optimizeGeneratedImage(dataUri) {
+  const response = await fetch(dataUri);
+  if (!response.ok) throw new Error('Не удалось прочитать изображение от AI.');
+  const blob = await response.blob();
+  const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
+  return optimizeImage(file);
+}
+async function generateProjectImages(endpoint, expectedProjectId) {
+  const parsedEndpoint = new URL(endpoint, location.href);
+  if (!/\/api\/generate-landing\/?$/i.test(parsedEndpoint.pathname)) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
+  parsedEndpoint.pathname = parsedEndpoint.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
+  const imageEndpoint = parsedEndpoint.toString();
+  const slots = imageSlots(result.project, result.concept).slots;
+  const hero = slots.find(slot => slot.id === 'hero');
+  const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
+  const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 1 : 3);
+  const targets = [...(hero ? [hero] : []), ...products, ...gallery].slice(0, 4);
+  if (!targets.length) return { generated: 0, skipped: true };
+  let generated = 0;
+  for (let index = 0; index < targets.length; index++) {
+    const slot = targets[index];
+    const prompt = [
+      'Photorealistic premium commercial photography, not an illustration, no text, no typography, no logos, no watermark.',
+      'Subject: ' + slot.subject + '.',
+      'Business niche: ' + (result.project.niche || 'local business') + '.',
+      'Composition: ' + slot.composition + '. Camera angle: ' + slot.angle + '.',
+      'Lighting: ' + slot.light + '. Background: ' + slot.background + '.',
+      result.project.tier === 'luxury' ? 'Luxury editorial art direction, refined materials, cinematic controlled light.' : 'High-end authentic commercial photography, natural textures and believable details.',
+      'Create a visually distinctive image suitable for a real business website. Do not invent readable labels, product branding, awards or certifications.'
+    ].join(' ').slice(0, 2000);
+    const response = await fetch(imageEndpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.image) throw new Error(payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').');
+    const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
+    if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
+    const data = optimized.data;
+    if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.');
+    if (slot.id === 'hero') {
+      state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: slot.subject };
+    } else if (slot.role === 'service') {
+      const services = Array.isArray(state.raw.services) ? [...state.raw.services] : [];
+      const sourceIndex = Number.isInteger(slot.sourceIndex) ? slot.sourceIndex : Number(slot.id.split('-')[1]);
+      const current = services[sourceIndex];
+      if (Array.isArray(current)) {
+        const row = [...current]; row[3] = data; row[4] = slot.subject; services[sourceIndex] = row;
+      } else if (current && typeof current === 'object') {
+        services[sourceIndex] = { ...current, image: data, alt: slot.subject };
+      }
+      state.raw.services = services;
+    } else if (slot.role === 'gallery') {
+      const items = Array.isArray(state.raw.gallery) ? [...state.raw.gallery] : [];
+      const galleryIndex = Number(slot.id.split('-')[1]);
+      items[galleryIndex] = { ...(items[galleryIndex] || {}), src: data, alt: slot.subject, caption: slot.label };
+      state.raw.gallery = items;
+    }
+    generated++;
+    $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
+  }
+  buildForm();
+  run();
+  return { generated, skipped: false };
 }
 async function handleImageUpload(input) {
   const kind = input.dataset.upload, files = [...(input.files || [])];

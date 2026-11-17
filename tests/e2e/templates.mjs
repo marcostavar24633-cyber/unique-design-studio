@@ -215,7 +215,18 @@ try {
   check((await page.textContent('#auto-library-h')).includes('Заполненных профилей: 1'), 'автопилот не видит профили библиотеки');
   await page.fill('#auto-niche', 'мебель на заказ'); await page.fill('#auto-email', 'hello@example.com');
   await page.click('#auto-go');
-  await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'));
+  try {
+    await page.waitForFunction(() => document.querySelector('#auto-status')?.textContent.includes('Готово'), null, { timeout: 10000 });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      status: document.querySelector('#auto-status')?.textContent,
+      endpoint: document.querySelector('#auto-endpoint')?.value,
+      buttonDisabled: document.querySelector('#auto-go')?.disabled,
+      formValid: document.querySelector('#auto')?.checkValidity(),
+      niche: document.querySelector('#auto-niche')?.value,
+    }));
+    throw new Error('Автопилот не завершился: ' + JSON.stringify(diagnostic) + '; ошибки страницы: ' + errors.join('; ') + '; ' + error.message);
+  }
   check((await page.textContent('#auto-status')).includes('Учтены профили библиотеки'), 'в статусе автопилота нет учтённых профилей');
   await page.click('#tab-concept');
   const conceptText = await page.textContent('#view-concept');

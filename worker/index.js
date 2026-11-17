@@ -122,6 +122,8 @@ export default {
         const groups = payload.data?.viewer?.accounts?.[0]?.aiInferenceAdaptiveGroups || [];
         const neurons = groups.reduce((total, item) => total + Number(item.sum?.totalNeurons || 0), 0);
         const requests = groups.reduce((total, item) => total + Number(item.count || 0), 0);
+        const inputTokens = groups.reduce((total, item) => total + Number(item.sum?.totalInputTokens || 0), 0);
+        const outputTokens = groups.reduce((total, item) => total + Number(item.sum?.totalOutputTokens || 0), 0);
         const models = {};
         for (const item of groups) {
           const name = item.dimensions?.modelId || 'unknown';
@@ -134,6 +136,9 @@ export default {
           start: start.toISOString(),
           end: end.toISOString(),
           neurons: Number(neurons.toFixed(4)),
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
           requests,
           models,
           source: 'Cloudflare GraphQL Analytics',
@@ -141,6 +146,31 @@ export default {
         }, 200, origin);
       } catch (error) {
         return json({ error: 'Не удалось связаться с Cloudflare Analytics', details: error?.message || 'Network error' }, 502, origin);
+      }
+    }
+    if (url.pathname === '/api/generate-image') {
+      if (request.method !== 'POST') return json({ error: 'Метод не поддерживается' }, 405, origin);
+      if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
+      if (!env.AI) return json({ error: 'Workers AI binding AI не настроен' }, 503, origin);
+      if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
+      let input;
+      try {
+        const raw = await request.text();
+        if (raw.length > 6000) return json({ error: 'Слишком большой запрос' }, 413, origin);
+        input = JSON.parse(raw);
+      } catch {
+        return json({ error: 'Некорректный JSON' }, 400, origin);
+      }
+      const prompt = String(input.prompt || '').trim().slice(0, 2048);
+      if (!prompt) return json({ error: 'Укажите описание изображения' }, 400, origin);
+      try {
+        const generated = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 });
+        if (!generated?.image || typeof generated.image !== 'string') {
+          return json({ error: 'Модель не вернула изображение' }, 502, origin);
+        }
+        return json({ image: generated.image, mimeType: 'image/jpeg', model: '@cf/black-forest-labs/flux-1-schnell' }, 200, origin);
+      } catch (error) {
+        return json({ error: 'Не удалось сгенерировать изображение', details: error?.message || 'Workers AI error' }, 502, origin);
       }
     }
     if (url.pathname !== '/api/generate-landing') {
