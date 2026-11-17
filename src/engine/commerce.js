@@ -110,6 +110,6 @@ cart.querySelector('[data-cart-clear]').addEventListener('click',function(){stor
 cart.querySelector('[data-cart-send]').addEventListener('click',function(){var t=text(),via=cart.getAttribute('data-cart-via');if(!t)return;
 if(via==='form'){var f=document.querySelector('#contact form')||document.querySelector('form.form');if(f){var o=f.querySelector('[name=order]');if(!o){o=document.createElement('input');o.type='hidden';o.name='order';f.appendChild(o)}o.value=t;f.scrollIntoView({behavior:'smooth'});var first=f.querySelector('input,select,textarea');if(first)first.focus()}}
 else if(via==='email'){location.href='mailto:'+cart.getAttribute('data-cart-email')+'?subject='+encodeURIComponent('Заявка с сайта')+'&body='+encodeURIComponent('Хочу заказать:\\n'+t)}
-else if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){cart.querySelector('.cart__note').append(' Список скопирован.')},function(){})}});
+else{var note=cart.querySelector('.cart__note');function downloaded(){var blob=new Blob([t],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='order-request.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);note.append(' Список скачан в TXT.')}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){note.append(' Список скопирован.')},downloaded)}else downloaded()}});
 render()}}`;
 }
