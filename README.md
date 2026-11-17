@@ -124,6 +124,20 @@ const { html, concept, audit, registry } = generate(project, { registry: previou
 
 `buildConcept`, `renderSite`, `auditSite`, `buildPrompt`, `exportProject` доступны по отдельности.
 
+## Публикация в Cloudflare Pages
+
+Команда `uds deploy` собирает HTML из JSON-проекта, запускает аудит и **не отправляет сайт, если аудит нашёл ошибки**. После успешной проверки она вызывает Wrangler для уже созданного Cloudflare Pages project.
+
+1. Один раз войдите в Cloudflare: `npx wrangler login`.
+2. Создайте Pages project в Cloudflare Dashboard — имя проекта команда не угадывает.
+3. Опубликуйте:
+
+```bash
+node bin/uds.js deploy examples/penka.json --project-name penka-site
+```
+
+Для preview укажите ветку: `--branch preview/review`. Папка с готовым файлом — `out/<id>/cloudflare-pages` или `--out <папка>`; путь с символами оболочки (`& | < > ^ " % ! $ ;`) отклоняется. Успешное завершение Wrangler — ещё не подтверждение: откройте адрес deployment из его вывода.
+
 ## Тесты и сборка
 
 ```bash

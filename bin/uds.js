@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // CLI Unique Design Studio.
+import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARCHETYPES, buildConcept, buildPrompt, generate, normalizeProject } from '../src/engine/index.js';
+import { buildCloudflarePagesDeployArgs, shellQuoteArgs } from '../src/engine/cloudflare-pages.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const HELP = `Unique Design Studio — генератор уникальных главных страниц
@@ -17,6 +19,9 @@ const HELP = `Unique Design Studio — генератор уникальных �
   uds prompt <project.json>                         Промт с концепцией для AI-помощника
   uds init [файл]                                   Создать заготовку проекта
   uds archetypes                                    Список архитектур
+  uds deploy <project.json> --project-name <имя> [--branch production] [--out <папка>]
+      Аудит и публикация в существующий Cloudflare Pages project через Wrangler.
+      При ошибках аудита сайт не отправляется. Нужен npx wrangler login.
   uds serve [--port 4173]                           Запустить веб-студию
 
 Реестр (по умолчанию .uds-registry.json) хранит «отпечатки» прошлых проектов:
@@ -127,6 +132,28 @@ switch (cmd) {
   case 'archetypes':
     for (const [id, a] of Object.entries(ARCHETYPES)) console.log(`${id.padEnd(15)} ${a.name} — ${a.summary}`);
     break;
+  case 'deploy': {
+    const projectName = args['project-name'];
+    const branch = typeof args.branch === 'string' ? args.branch : 'production';
+    if (!projectName || typeof projectName !== 'string') fail('Укажите --project-name с именем уже созданного Cloudflare Pages project.');
+    const r = generate(loadProject(args._[0]), { registry: loadRegistry(args).list });
+    printConcept(r.concept);
+    console.log('\nПроверка перед публикацией:');
+    printAudit(r.audit);
+    if (!r.audit.ok) fail('Публикация отменена: исправьте ошибки аудита и повторите команду.');
+    const out = resolve(typeof args.out === 'string' ? args.out : join('out', r.project.id, 'cloudflare-pages'));
+    let deployArgs;
+    try { deployArgs = buildCloudflarePagesDeployArgs(out, projectName, branch); } catch (error) { fail(error.message); }
+    mkdirSync(out, { recursive: true });
+    writeFileSync(join(out, 'index.html'), r.html);
+    console.log('\nОтправляю сайт в Cloudflare Pages…');
+    const windows = process.platform === 'win32';
+    const result = spawnSync(windows ? 'npx.cmd' : 'npx', shellQuoteArgs(['wrangler', ...deployArgs], windows), { stdio: 'inherit', shell: windows });
+    if (result.error) fail(`Не удалось запустить Wrangler: ${result.error.message}. Установите Node.js/npm и выполните npx wrangler login.`);
+    if (result.status !== 0) process.exit(result.status || 1);
+    console.log('\nWrangler завершился без ошибок. Проверьте адрес deployment в его выводе — публикация считается подтверждённой, когда сайт открывается по этому адресу.');
+    break;
+  }
   case 'serve': serve(Number(args.port) || 4173); break;
   case undefined: case 'help': case '--help': case '-h': console.log(HELP); break;
   default: console.error(`Неизвестная команда: ${cmd}\n`); console.log(HELP); process.exit(2);
