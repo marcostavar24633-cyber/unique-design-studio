@@ -84,6 +84,13 @@ $('#dashboard-back')?.addEventListener('click', () => {
   $('#dash-search')?.focus({ preventScroll: true });
 });
 $('#dashboard')?.addEventListener('click', async e => {
+  const menuToggle = e.target.closest('#dash-menu-toggle');
+  if (menuToggle) {
+    const sidebar = menuToggle.closest('.dash-sidebar');
+    const expanded = sidebar.classList.toggle('is-menu-open');
+    menuToggle.setAttribute('aria-expanded', String(expanded));
+    return;
+  }
   const project = e.target.closest('[data-open-project]');
   if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
   const example = e.target.closest('[data-open-example]');

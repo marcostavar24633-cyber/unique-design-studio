@@ -315,15 +315,25 @@ test('Studio stylesheet URL is versioned to refresh mobile navigation styles in 
   assert.ok(html.includes('href="studio.css?v=mobile-nav-20261117"'));
 });
 
-test('Mobile dashboard navigation wraps into a two-column menu instead of clipping horizontally', () => {
+test('Mobile dashboard navigation is compact behind an accessible expandable menu', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
-  const mobile = css.slice(css.indexOf('@media(max-width:760px){body.dashboard-mode'), css.indexOf('@media(max-width:420px){.dash-projects'));
-  assert.ok(mobile.includes('.dash-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
-  assert.ok(mobile.includes('.dash-nav button,.dash-nav-link{min-width:0'));
-  assert.ok(mobile.includes('.dash-nav-sep{grid-column:1/-1'));
-  assert.ok(!mobile.includes('.dash-nav{display:flex;overflow:auto'));
+  assert.ok(html.includes('id="dash-menu-toggle" aria-expanded="false" aria-controls="dash-nav"'));
+  assert.ok(html.includes('class="dash-nav" id="dash-nav"'));
+  assert.ok(js.includes("e.target.closest('#dash-menu-toggle')"));
+  assert.ok(js.includes("menuToggle.setAttribute('aria-expanded', String(expanded))"));
+  assert.ok(css.includes('.dash-sidebar.is-menu-open .dash-nav{display:grid}'));
 });
 
+test('Expanded mobile dashboard navigation uses a two-column grid without horizontal clipping', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  const mobile = css.slice(css.indexOf('@media(max-width:760px){body.dashboard-mode'), css.indexOf('@media(max-width:420px){.dash-projects'));
+  assert.ok(mobile.includes('.dash-nav{display:none;grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(mobile.includes('.dash-sidebar.is-menu-open .dash-nav{display:grid}'));
+  assert.ok(mobile.includes('.dash-nav button,.dash-nav-link{min-width:0'));
+  assert.ok(!mobile.includes('.dash-nav{display:flex;overflow:auto'));
+});
 test('AI generation copy does not claim web research when the Worker has no search tool', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
