@@ -3,14 +3,20 @@
   "version": "1.0.0",
   "description": "Генератор уникальных главных страниц: Design Brief → Design DNA → HTML с антишаблонной проверкой",
   "type": "module",
-  "bin": { "uds": "bin/uds.js" },
-  "exports": { ".": "./src/engine/index.js" },
-  "engines": { "node": ">=20" },
+  "bin": {
+    "uds": "bin/uds.js"
+  },
+  "exports": {
+    ".": "./src/engine/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node bin/uds.js serve",
     "build": "node scripts/build.mjs",
     "sync-core": "node scripts/sync-core.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/e2e/responsive.mjs && node tests/e2e/templates.mjs && node tests/e2e/studio-workflow.mjs"
+    "test:e2e": "node tests/e2e/responsive.mjs && node tests/e2e/templates.mjs && node tests/e2e/studio-workflow.mjs && node tests/e2e/commerce-interactions.mjs"
   }
 }

@@ -79,7 +79,7 @@ export const COMMERCE_CSS = `.catalog-tools{display:flex;flex-wrap:wrap;align-it
 .chip[aria-pressed="true"]{background:var(--ds-accent);border-color:var(--ds-accent);color:var(--ds-accent-contrast,#fff)}
 .sort{display:flex;align-items:center;gap:8px;font-size:.9rem}.sort .ds-field{width:auto;min-height:40px}
 .catalog-count{margin:0;color:var(--ds-text-muted);font-size:.9rem}
-.item__add{margin-top:.8em;min-height:44px}.item__add[aria-pressed="true"]{background:var(--ds-accent);color:var(--ds-accent-contrast,#fff)}
+.item[hidden]{display:none!important}.item__add{margin-top:.8em;min-height:44px}.item__add[aria-pressed="true"]{background:var(--ds-accent);color:var(--ds-accent-contrast,#fff)}
 .cart{position:fixed;right:clamp(12px,3vw,24px);bottom:clamp(12px,3vw,24px);z-index:50;width:min(380px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:var(--ds-surface,var(--u-tint,#fff));color:inherit;border:1px solid var(--ds-border,currentColor);border-radius:var(--ds-radius-card,12px);box-shadow:0 12px 40px rgba(0,0,0,.25)}
 .cart[hidden]{display:none}.cart__toggle{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:48px;padding:10px 16px;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
 .cart__toggle b{min-width:28px;padding:2px 8px;border-radius:999px;background:var(--ds-accent);color:var(--ds-accent-contrast,#fff);text-align:center}
@@ -110,6 +110,6 @@ cart.querySelector('[data-cart-clear]').addEventListener('click',function(){stor
 cart.querySelector('[data-cart-send]').addEventListener('click',function(){var t=text(),via=cart.getAttribute('data-cart-via');if(!t)return;
 if(via==='form'){var f=document.querySelector('#contact form')||document.querySelector('form.form');if(f){var o=f.querySelector('[name=order]');if(!o){o=document.createElement('input');o.type='hidden';o.name='order';f.appendChild(o)}o.value=t;f.scrollIntoView({behavior:'smooth'});var first=f.querySelector('input,select,textarea');if(first)first.focus()}}
 else if(via==='email'){location.href='mailto:'+cart.getAttribute('data-cart-email')+'?subject='+encodeURIComponent('Заявка с сайта')+'&body='+encodeURIComponent('Хочу заказать:\\n'+t)}
-else if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){cart.querySelector('.cart__note').append(' Список скопирован.')},function(){})}});
+else{var note=cart.querySelector('.cart__note');function downloaded(){var blob=new Blob([t],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='order-request.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);note.append(' Список скачан в TXT.')}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){note.append(' Список скопирован.')},downloaded)}else downloaded()}});
 render()}}`;
 }
