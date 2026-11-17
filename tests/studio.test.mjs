@@ -312,7 +312,19 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
 
 test('Studio stylesheet URL is versioned to refresh mobile navigation styles in cached browsers', () => {
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
-  assert.ok(html.includes('href="studio.css?v=mobile-nav-20261117"'));
+  assert.ok(html.includes('href="studio.css?v=mobile-workspace-controls-20261117"'));
+});
+
+test('Mobile workspace tabs and preview controls wrap without horizontal clipping', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  const start = css.indexOf('/* Mobile-first workspace controls */');
+  const end = css.indexOf('/* Visual asset library */', start);
+  const mobile = css.slice(start, end);
+  assert.ok(mobile.includes('.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))'));
+  assert.ok(mobile.includes('.tabs button{min-width:0;max-width:100%'));
+  assert.ok(mobile.includes('.sizes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(mobile.includes('#toggle-settings{grid-column:1/-1}'));
+  assert.ok(!mobile.includes('.sizes{width:100%;flex-wrap:nowrap;overflow-x:auto'));
 });
 
 test('Mobile dashboard navigation is compact behind an accessible expandable menu', () => {

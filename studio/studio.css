@@ -195,9 +195,12 @@ body:not(.dashboard-mode)>.top .top__actions{align-items:center}
 .tabs button{flex:none;white-space:nowrap;min-height:42px}
 @media(max-width:760px){
   .bar{position:sticky;top:0;z-index:15;background:var(--panel);padding:8px 10px}
-  .tabs{width:100%;padding-bottom:2px}
-  .sizes{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
-  .sizes button{flex:none;white-space:nowrap}
+  .bar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+  .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:5px;padding:0;overflow:visible}
+  .tabs button{min-width:0;max-width:100%;padding:8px 5px;font-size:11px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;text-align:center}
+  .sizes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:6px;overflow:visible;padding:0}
+  .sizes button{min-width:0;width:100%;padding:8px 6px;font-size:12px;line-height:1.25;white-space:normal}
+  #toggle-settings{grid-column:1/-1}
   .view{padding:14px 12px 32px}
   .view--preview{height:72vh;min-height:420px}
   .view--preview.sized{height:72vh}
