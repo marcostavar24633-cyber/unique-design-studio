@@ -91,6 +91,12 @@ try {
   await page.waitForFunction(() => document.querySelector('#form .mobile-hero-asset img'));
   check(await page.locator('#form .mobile-hero-asset img').count() > 0, 'мобильное фото галереи не сохранилось');
 
+  // Проверяем кнопку плана фотосъёмки: она должна выполнять копирование, а не быть декоративной.
+  await page.click('#tab-audit');
+  await page.waitForSelector('[data-copy-photo-shotlist]');
+  await page.locator('[data-copy-photo-shotlist]').click();
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('План фотосъёмки скопирован') || document.querySelector('#toast').textContent.includes('план фотосъёмки скачан'));
+
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="create"]');
 
