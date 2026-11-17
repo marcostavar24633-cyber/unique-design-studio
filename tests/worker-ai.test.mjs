@@ -15,6 +15,22 @@ const aiReturning = (...answers) => {
   return { calls, AI: { run: async (model, opts) => { calls.push(opts); const a = answers[Math.min(calls.length - 1, answers.length - 1)]; if (a instanceof Error) throw a; return { response: a }; } } };
 };
 
+test('корневой адрес показывает статус сервиса и доступные API-маршруты', async () => {
+  const res = await worker.fetch(new Request('https://w.dev/'));
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.status, 'online');
+  assert.equal(body.endpoints.health, '/health');
+  assert.equal(body.endpoints.generate, 'POST /api/generate-landing');
+});
+
+test('health endpoint доступен без Origin и возвращает статус AI Worker', async () => {
+  const res = await worker.fetch(new Request('https://w.dev/health'));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { ok: true, service: 'unique-design-studio-ai' });
+});
+
 test('лимит ответа модели — 6000 токенов', async () => {
   const env = aiReturning(JSON.stringify(full));
   const res = await worker.fetch(request({ niche: 'кофейня' }), env);
