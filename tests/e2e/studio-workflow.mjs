@@ -73,6 +73,30 @@ try {
   check(await page.locator('#form .group').first().evaluate(node => node.open), 'пункт «Настройки» не раскрыл поля проекта');
   check(await page.locator('#form .group').nth(1).evaluate(node => !node.open), 'второстепенные настройки должны быть свёрнуты по умолчанию');
   check(await page.locator('#form .group').count() === 6, 'настройки не сгруппированы в шесть понятных разделов');
+  // Загрузка фото: главное изображение, мобильная версия и галерея должны сохраняться в свои поля.
+  const photoGroup = page.locator('#form .group').nth(2);
+  await photoGroup.locator('summary').click();
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=', 'base64');
+  const testImage = { name: 'test-photo.png', mimeType: 'image/png', buffer: tinyPng };
+  await page.locator('[data-upload="hero"]').setInputFiles(testImage);
+  await page.waitForFunction(() => document.querySelector('#form .media-preview img'));
+  check(await page.locator('#form .media-preview img').count() > 0, 'главное фото не появилось в предпросмотре');
+  await page.locator('[data-upload="hero-mobile"]').setInputFiles(testImage);
+  await page.waitForFunction(() => document.querySelector('#form .mobile-hero-asset img'));
+  check(await page.locator('#form .mobile-hero-asset img').count() > 0, 'мобильное фото первого экрана не сохранилось');
+  await page.locator('[data-upload="gallery"]').setInputFiles(testImage);
+  await page.waitForFunction(() => document.querySelectorAll('#form [data-gallery-item]').length > 0);
+  check(await page.locator('#form [data-gallery-item]').count() > 0, 'фото галереи не появилось');
+  await page.locator('[data-upload="gallery-mobile"]').first().setInputFiles(testImage);
+  await page.waitForFunction(() => document.querySelector('#form .mobile-hero-asset img'));
+  check(await page.locator('#form .mobile-hero-asset img').count() > 0, 'мобильное фото галереи не сохранилось');
+
+  // Проверяем кнопку плана фотосъёмки: она должна выполнять копирование, а не быть декоративной.
+  await page.click('#tab-audit');
+  await page.waitForSelector('[data-copy-photo-shotlist]');
+  await page.locator('[data-copy-photo-shotlist]').click();
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('План фотосъёмки скопирован') || document.querySelector('#toast').textContent.includes('план фотосъёмки скачан'));
+
   await page.click('#dashboard-back');
   await page.click('#dashboard [data-dash="create"]');
 
