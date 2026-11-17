@@ -30,7 +30,8 @@
 <section class="dashboard" id="dashboard" aria-label="Главная панель студии">
   <aside class="dash-sidebar">
     <a class="dash-brand" href="#dashboard"><span class="dash-mark">✦</span><span><b>UNIQUE<br>DESIGN STUDIO</b><small>AI Web Design Studio</small></span></a>
-    <nav class="dash-nav" aria-label="Навигация студии">
+    <button type="button" class="dash-menu-toggle" id="dash-menu-toggle" aria-expanded="false" aria-controls="dash-nav">☰ <span>Разделы студии</span><span class="dash-menu-chevron" aria-hidden="true">⌄</span></button>
+    <nav class="dash-nav" id="dash-nav" aria-label="Навигация студии">
       <button class="is-active" data-dash="home">⌂ <span>Главная</span></button>
       <button data-dash="create">＋ <span>Создать сайт</span></button>
       <button data-dash="director">✧ <span>AI Design Director</span></button>
