@@ -63,6 +63,19 @@ export default {
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'unique-design-studio-ai' }, 200, origin);
     }
+    if (url.pathname === '/api/diagnostics') {
+      if (request.method !== 'GET') return json({ error: 'Метод не поддерживается' }, 405, origin);
+      if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
+      return json({
+        ok: true,
+        service: 'unique-design-studio-ai',
+        runtime: {
+          analyticsTokenConfigured: Boolean(env.CF_ANALYTICS_TOKEN),
+          accountIdConfigured: Boolean(env.CF_ACCOUNT_ID),
+          workersAiBindingConfigured: Boolean(env.AI),
+        },
+      }, 200, origin);
+    }
     if (url.pathname === '/api/usage') {
       if (request.method !== 'GET') return json({ error: 'Метод не поддерживается' }, 405, origin);
       if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
