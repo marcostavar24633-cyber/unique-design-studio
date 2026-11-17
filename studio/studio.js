@@ -72,6 +72,18 @@ function openWorkspace(section = 'create') {
   document.body.classList.remove('dashboard-mode');
   document.querySelectorAll('.dash-nav [data-dash]').forEach(button => button.classList.toggle('is-active', button.dataset.dash === section));
   if (section === 'create' || section === 'editor' || section === 'director') { selectTab($('#tab-preview')); if (section === 'create') $('#auto-niche')?.focus(); }
+  if (section === 'settings') {
+    selectTab($('#tab-preview'));
+    // «Настройки» ведут к существующим полям проекта, а не в пустой раздел.
+    if (document.body.classList.contains('workspace-settings-collapsed')) {
+      document.body.classList.remove('workspace-settings-collapsed');
+      const toggle = $('#toggle-settings');
+      if (toggle) { toggle.setAttribute('aria-expanded', 'true'); toggle.textContent = 'Скрыть настройки'; }
+    }
+    const firstGroup = $('#form .group');
+    if (firstGroup) firstGroup.open = true;
+    $('.panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   if (section === 'visual' || section === 'motion') selectTab($('#tab-concept'));
   if (section === 'seo') selectTab($('#tab-spec'));
   if (section === 'qa') selectTab($('#tab-audit'));
@@ -364,7 +376,7 @@ function renderProduction() {
   const arch = ARCHETYPES[result.concept.designDNA.primaryArchetype];
   const stages = [
     ['Бриф', p.niche ? 'done' : 'input', p.niche ? `${esc(p.brand || 'Без названия')} · ${esc(p.niche)}` : 'Укажите нишу проекта'],
-    ['Анализ', a ? 'done' : 'manual', a ? (a.source === 'ai' ? 'AI с поиском в интернете' : 'Локальный автопилот') : 'Проект из редактора: анализ не запускался. Используйте автопилот.'],
+    ['Анализ', a ? 'done' : 'manual', a ? (a.source === 'ai' ? 'AI-генерация по брифу' : 'Локальный автопилот') : 'Проект из редактора: анализ не запускался. Используйте автопилот.'],
     ['Design DNA', 'done', `${esc(arch.name)} — ${esc(result.concept.homepage.heroComposition)}`],
     ['Визуальный бриф', photos ? 'done' : 'input', photos ? `Фотографий: ${photos}` : 'Фото не загружены: на странице абстрактный мотив. Задание для съёмки — во вкладке «Проверка».'],
     ['HTML', 'done', `Самодостаточная страница, ${kb} КБ`],
