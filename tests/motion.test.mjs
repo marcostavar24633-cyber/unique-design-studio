@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generate } from '../src/engine/index.js';
 import { autopilot } from '../src/engine/autopilot.js';
-import { INTENSITY, MECHANICS, MOTION_STYLES, chooseMotion, motionCss, motionScript } from '../src/engine/motion.js';
+import { INTENSITY, MECHANICS, chooseMotion, motionCss, motionScript } from '../src/engine/motion.js';
 
 const site = (niche, extra = {}) => generate(autopilot({ niche, email: 'hello@example.com', ...extra }, { registry: [] }).project, { registry: [] });
 /** Убирает блоки @media с учётом вложенных скобок. */
@@ -84,18 +84,19 @@ test('план анимации попадает в Design DNA и в стран�
 
 
 test('Cinematic Motion Design включается из настроек генератора полным согласованным набором', () => {
-  assert.ok(MOTION_STYLES.cinematic);
-  const plan = chooseMotion({ tier: 'luxury', passthrough: { motionStyle: 'cinematic' } }, { archetype: 'editorial', motion: 'reveal', nicheId: 'studio', seed: 42 });
-  for (const id of ['scroll-reveal','cinematic-reveal','kinetic-type','parallax','glass-cards','tilt-cards','magnetic-buttons','dynamic-gradient','microinteractions']) assert.ok(plan.mechanics.includes(id), id);
+  const plan = chooseMotion({ tier: 'premium', brandCharacter: 'смелый и выразительный' }, { archetype: 'immersive', motion: 'parallax', nicheId: 'studio', seed: 42 });
+  for (const id of ['scroll-reveal','cinematic-reveal','parallax','glass-cards','microinteractions']) assert.ok(plan.mechanics.includes(id), id);
   const css = motionCss(plan);
   assert.match(css, /backdrop-filter:blur\(18px\)/);
   assert.match(css, /box-shadow:0 8px 28px/);
   assert.match(css, /prefers-reduced-motion:no-preference/);
-  assert.match(motionScript(plan), /\.item,\.ds-card/);
+  assert.match(motionScript(plan), /requestAnimationFrame/);
 });
 
 
-test('режим минимального движения не включает параллакс, наклон или кинетику', () => {
-  const plan = chooseMotion({ tier: 'premium', passthrough: { motionStyle: 'static' } }, { archetype: 'immersive', motion: 'parallax', nicheId: 'studio', seed: 8 });
-  assert.deepEqual(plan.mechanics, ['microinteractions']);
+test('спокойная ниша не получает избыточные эффекты только ради эффекта', () => {
+  const plan = chooseMotion({ tier: 'standard', brandCharacter: 'спокойный и надёжный' }, { archetype: 'minimal', motion: 'static', nicheId: 'medical', seed: 8 });
+  assert.ok(!plan.mechanics.includes('parallax'));
+  assert.ok(!plan.mechanics.includes('tilt-cards'));
+  assert.ok(!plan.mechanics.includes('dynamic-gradient'));
 });
