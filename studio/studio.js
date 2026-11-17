@@ -298,7 +298,14 @@ function run() {
 
 // ---------- ТЗ и анализ ----------
 // Анализ хранится вместе с проектом, для которого его сделал автопилот; у проектов из редактора — пусто.
-const currentAnalysis = () => (state.analysis && state.analysis.data ? state.analysis.data : null);
+const currentAnalysis = () => {
+  if (state.analysis && state.analysis.data) return state.analysis.data;
+  // Восстанавливаем анализ из записи реестра, если рабочая сессия была открыта повторно.
+  const projectId = result?.project?.id;
+  if (!projectId) return null;
+  const saved = state.library.find(item => item?.raw && normalizeProject(item.raw).id === projectId && item.analysis);
+  return saved?.analysis || null;
+};
 function renderSpec() {
   const a = currentAnalysis();
   const spec = buildSpec(result.project, result.concept, a || {});
