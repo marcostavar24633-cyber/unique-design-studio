@@ -188,6 +188,19 @@ $('#dash-search')?.addEventListener('input', e => {
 });
 // ---------- Описание формы ----------
 const LIST_HINT = 'Одна позиция на строку: Название | Описание';
+// Название группы с фотографиями: на него ссылаются кнопки «Настроить кадрирование» и «Управлять фотографиями».
+const PHOTO_GROUP = 'Фотографии';
+// Открывает группу фотографий в форме, раскрывая свёрнутую панель настроек.
+function openPhotoGroup() {
+  if (document.body.classList.contains('workspace-settings-collapsed')) {
+    document.body.classList.remove('workspace-settings-collapsed');
+    const toggle = $('#toggle-settings');
+    if (toggle) { toggle.setAttribute('aria-expanded', 'true'); toggle.textContent = 'Скрыть настройки'; }
+  }
+  const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === PHOTO_GROUP);
+  if (group) group.open = true;
+  return group;
+}
 const GROUPS = [
   ['Основа сайта', true, [
     ['brand', 'Бренд'], ['niche', 'Ниша', 'text', 'Например: кофейня, магазин телескопов, салон красоты'],
@@ -206,7 +219,7 @@ const GROUPS = [
     ['customPrompt', 'Свой промт', 'area', 'Ваши указания для нейросети: попадают в «Промт для AI» и во вкладку «ТЗ и анализ»'],
     ['@promptMode', 'Как использовать свой промт', 'promptMode'],
   ]],
-  ['Фотографии', false, [
+  [PHOTO_GROUP, false, [
     ['images.hero', 'Изображение первого экрана (URL)'], ['images.heroAlt', 'Описание изображения (alt)'],
     ['@heroUpload', 'Загрузить фото первого экрана', 'upload-hero', 'JPG/PNG/WebP: до 8 МБ до оптимизации, WebP до 1 МБ после. GIF/AVIF: до 1 МБ.'],
     ['gallery', 'Галерея', 'list', 'Одна картинка на строку: URL | Подпись | ALT-текст (необязательно)'],
@@ -1691,18 +1704,8 @@ $('#view-concept').addEventListener('click', e => {
   if (e.target.closest('[data-open-crop-role]')) {
     const button = e.target.closest('[data-open-crop-role]');
     const role = button.dataset.openCropRole, index = Number(button.dataset.openCropIndex);
-    const panelWasCollapsed = document.body.classList.contains('workspace-settings-collapsed');
-    if (panelWasCollapsed) {
-      document.body.classList.remove('workspace-settings-collapsed');
-      const toggle = $('#toggle-settings');
-      if (toggle) {
-        toggle.setAttribute('aria-expanded', 'true');
-        toggle.textContent = 'Скрыть настройки';
-      }
-    }
-    const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
+    const group = openPhotoGroup();
     if (group) {
-      group.open = true;
       const editor = [...group.querySelectorAll('.crop-editor')].find(item => item.querySelector(`[data-crop="${role}"][data-crop-index="${index}"]`));
       if (editor) { editor.open = true; editor.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       else group.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1710,8 +1713,8 @@ $('#view-concept').addEventListener('click', e => {
     return;
   }
   if (e.target.closest('[data-open-image-settings]')) {
-    const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === 'Изображения');
-    if (group) { group.open = true; group.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    const group = openPhotoGroup();
+    if (group) group.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
   if (e.target.closest('[data-open-image-audit]')) selectTab($('#tab-audit'));

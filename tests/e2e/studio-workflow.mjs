@@ -91,6 +91,30 @@ try {
   await page.waitForFunction(() => document.querySelector('#form .mobile-hero-asset img'));
   check(await page.locator('#form .mobile-hero-asset img').count() > 0, 'мобильное фото галереи не сохранилось');
 
+  // Кнопки библиотеки изображений во вкладке «Концепция» должны открывать группу «Фотографии»,
+  // даже если панель настроек свёрнута. Раньше они искали группу «Изображения», которой нет, и молча не работали.
+  const photoGroupState = () => page.evaluate(() => {
+    const group = [...document.querySelectorAll('#form .group')].find(g => g.querySelector('summary')?.textContent.trim() === 'Фотографии');
+    return { open: Boolean(group?.open), collapsed: document.body.classList.contains('workspace-settings-collapsed') };
+  });
+  const collapsePhotos = () => page.evaluate(() => {
+    const group = [...document.querySelectorAll('#form .group')].find(g => g.querySelector('summary')?.textContent.trim() === 'Фотографии');
+    if (group) group.open = false;
+    document.querySelectorAll('#form .crop-editor').forEach(d => { d.open = false; });
+    if (!document.body.classList.contains('workspace-settings-collapsed')) document.querySelector('#toggle-settings')?.click();
+  });
+  await collapsePhotos();
+  await page.click('#tab-concept');
+  await page.locator('[data-open-image-settings]').click();
+  let photos = await photoGroupState();
+  check(photos.open && !photos.collapsed, `«Управлять фотографиями» не открыла группу фото: ${JSON.stringify(photos)}`);
+  await collapsePhotos();
+  await page.click('#tab-concept');
+  await page.locator('[data-open-crop-role="hero"]').first().click();
+  photos = await photoGroupState();
+  const cropOpen = await page.evaluate(() => [...document.querySelectorAll('#form .crop-editor')].some(d => d.open && d.querySelector('[data-crop="hero"]')));
+  check(photos.open && !photos.collapsed && cropOpen, `«Настроить кадрирование» не открыла редактор кадра: ${JSON.stringify({ ...photos, cropOpen })}`);
+
   // Проверяем кнопку плана фотосъёмки: она должна выполнять копирование, а не быть декоративной.
   await page.click('#tab-audit');
   await page.waitForSelector('[data-copy-photo-shotlist]');
