@@ -443,7 +443,7 @@ $('#auto').addEventListener('submit', async e => {
   go.disabled = true;
   let draft = null, note = '';
   if (endpoint) {
-    status.textContent = 'AI изучает нишу в интернете и пишет тексты — обычно это занимает до минуты…';
+    status.textContent = 'AI формирует тексты и структуру проекта по вашему брифу — обычно это занимает до минуты…';
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
@@ -453,7 +453,7 @@ $('#auto').addEventListener('submit', async e => {
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       draft = fromAiLanding(body.landing, input);
       recordAiUsage();
-      note = `Готово: AI изучил нишу${draft.analysis.sources.length ? ` (источников: ${draft.analysis.sources.length})` : ''} и написал тексты.`;
+      note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
     }
