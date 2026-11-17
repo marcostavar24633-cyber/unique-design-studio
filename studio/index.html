@@ -89,7 +89,7 @@
         <details class="ai">
           <summary>AI-генерация по брифу</summary>
           <div class="field"><label for="auto-endpoint">Адрес AI-сервера</label><input id="auto-endpoint" type="url" placeholder="https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing" aria-describedby="auto-endpoint-h">
-            <small id="auto-endpoint-h">Cloudflare Workers AI генерирует тексты, структуру и до 4 изображений для сайта. Изображения создаются автоматически после сборки проекта. Веб-поиск не выполняется. Вставьте адрес Worker с путём /api/generate-landing. Пусто — локальный автопилот без AI.</small></div>
+            <small id="auto-endpoint-h">Cloudflare Workers AI генерирует тексты, структуру и до 4 изображений для сайта. Изображения создаются автоматически после сборки проекта. Веб-поиск не выполняется. Вставьте адрес Worker с путём /api/generate-landing. Пусто — локальный автопилот без AI.</small><div class="row"><button type="button" id="ai-connection-check">Проверить подключение</button><span id="ai-connection-status" class="note" role="status" aria-live="polite">Подключение ещё не проверено</span></div><ul id="ai-connection-details" class="note" aria-live="polite"></ul></div>
         </details>
         <button type="submit" class="primary wide" id="auto-go">Сгенерировать всё</button>
         <div id="auto-progress" class="auto-progress" hidden data-state="running" aria-live="polite">
