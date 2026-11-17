@@ -79,7 +79,7 @@ test('clipWords режет по границе слова', () => {
 });
 
 test('конвейер: этап качества между аудитом и Design Director, автоисправления фиксируются', async () => {
-  assert.deepEqual(WORKFLOW_STAGES.slice(5, 8), ['audit', 'quality', 'design_review']);
+  assert.deepEqual(WORKFLOW_STAGES.slice(6, 9), ['audit', 'quality', 'design_review']);
   const r = await runWorkflow({ niche: 'кофейня', email: 'hello@example.com' });
   const q = r.stages.findLast(s => s.id === 'quality');
   assert.ok(['completed', 'needs_attention'].includes(q.status));

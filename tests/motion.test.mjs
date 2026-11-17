@@ -54,7 +54,7 @@ test('всё движение — внутри prefers-reduced-motion: no-prefer
   const css = motionCss(all);
   const outside = stripMedia(css);
   assert.doesNotMatch(outside, /animation|transition|transform:/, 'вне медиазапросов только переменные');
-  assert.match(css, /@media\(prefers-reduced-motion:no-preference\) and \(hover:hover\) and \(pointer:fine\)\{[^]*\.item\{/);
+  assert.match(css, /@media\(prefers-reduced-motion:no-preference\) and \(hover:hover\) and \(pointer:fine\)\{[^]*\.item,\.ds-card\{/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)\{\.m-progress\{display:none\}\}/);
   // Анимируются только transform и opacity (и фон градиента, который не вызывает перерасчёт раскладки).
   for (const m of css.matchAll(/@keyframes [\w-]+\{([^]*?\})\}/g)) assert.doesNotMatch(m[1], /\b(width|height|top|left|margin|padding)\s*:/, m[0]);
@@ -80,4 +80,23 @@ test('план анимации попадает в Design DNA и в стран�
   if (plan.mechanics.includes('magnetic-buttons')) assert.match(g.html, /--m-mx/);
   assert.equal((g.html.match(/<script>/g) || []).length, 1, 'один встроенный скрипт страницы');
   assert.ok(g.audit.ok, g.audit.errors.map(e => e.message).join('; '));
+});
+
+
+test('Cinematic Motion Design включается из настроек генератора полным согласованным набором', () => {
+  const plan = chooseMotion({ tier: 'premium', brandCharacter: 'смелый и выразительный' }, { archetype: 'immersive', motion: 'parallax', nicheId: 'studio', seed: 42 });
+  for (const id of ['scroll-reveal','cinematic-reveal','parallax','glass-cards']) assert.ok(plan.mechanics.includes(id), id);
+  const css = motionCss(plan);
+  assert.match(css, /backdrop-filter:blur\(18px\)/);
+  assert.ok(css.includes('backdrop-filter:blur(18px)'), 'glass cards include backdrop blur');
+  assert.match(css, /prefers-reduced-motion:no-preference/);
+  assert.match(motionScript(plan), /requestAnimationFrame/);
+});
+
+
+test('спокойная ниша не получает избыточные эффекты только ради эффекта', () => {
+  const plan = chooseMotion({ tier: 'standard', brandCharacter: 'спокойный и надёжный' }, { archetype: 'minimal', motion: 'static', nicheId: 'medical', seed: 8 });
+  assert.ok(!plan.mechanics.includes('parallax'));
+  assert.ok(!plan.mechanics.includes('tilt-cards'));
+  assert.ok(!plan.mechanics.includes('dynamic-gradient'));
 });

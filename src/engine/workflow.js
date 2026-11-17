@@ -4,6 +4,7 @@ import { draftFromNiche, buildSpec } from './autopilot.js';
 import { generate } from './index.js';
 import { reviewDesign } from './design-director.js';
 import { fixAndRecheck } from './quality.js';
+import { runMarketIntelligence } from './market-intelligence.js';
 
 const isFunction = value => typeof value === 'function';
 
@@ -24,6 +25,9 @@ export async function runWorkflow(input, {
   draft: suppliedDraft,
   imageDirector,
   designDirector,
+  marketSearch,
+  marketFetchPage,
+  marketResearchLimit = 10,
   applyApprovedFixes,
   autoFix = true,
   maxFixPasses = 2,
@@ -43,6 +47,23 @@ export async function runWorkflow(input, {
     : draftFromNiche(input || {});
   report('brief', 'completed', { assumptions: project.assumptions || [] });
 
+  report('market_research', 'running');
+  const marketIntelligence = await runMarketIntelligence({
+    project,
+    search: marketSearch,
+    fetchPage: marketFetchPage,
+    limit: marketResearchLimit,
+  });
+  analysis.marketIntelligence = marketIntelligence;
+  analysis.researchStatus = marketIntelligence.status;
+  analysis.researchSources = marketIntelligence.sources;
+  analysis.marketResearch = marketIntelligence.competitors.map(item =>
+    item.analysis
+      ? `${item.name} (${item.url}): проанализирована публичная страница; структура: ${(item.analysis.structure?.order || []).join(', ') || 'не определена'}.`
+      : `${item.name} (${item.url}): доступен только поисковый результат, полноценный анализ страницы не выполнен.`
+  ).join('\n');
+  report('market_research', marketIntelligence.status === 'performed' ? 'completed' : marketIntelligence.status === 'partial' ? 'needs_attention' : 'needs_input', marketIntelligence);
+
   report('analysis', 'completed', {
     source: analysis.source,
     niche: analysis.niche,
@@ -50,6 +71,8 @@ export async function runWorkflow(input, {
     segments: analysis.segments || [],
     objections: analysis.objections || [],
     keywords: analysis.keywords || [],
+    researchStatus: marketIntelligence.status,
+    researchSources: marketIntelligence.sources,
   });
 
   report('concept', 'running');
@@ -105,6 +128,7 @@ export async function runWorkflow(input, {
     designReview = await runDesignReview({
       project: generated.project,
       analysis,
+      marketIntelligence,
       concept: generated.concept,
       html: generated.html,
       audit: generated.audit,
@@ -137,6 +161,7 @@ export async function runWorkflow(input, {
   return {
     project: generated.project,
     analysis,
+    marketIntelligence,
     concept: generated.concept,
     spec,
     imageBrief,
@@ -154,6 +179,6 @@ export async function runWorkflow(input, {
 }
 
 export const WORKFLOW_STAGES = Object.freeze([
-  'brief', 'analysis', 'concept', 'visual', 'generation',
+  'brief', 'market_research', 'analysis', 'concept', 'visual', 'generation',
   'audit', 'quality', 'design_review', 'approved_fixes', 'export', 'publish',
 ]);

@@ -3,6 +3,7 @@
 // тон под класс проекта, требования к каждой секции, SEO, фото, запреты и строгий формат ответа.
 import { ARCHETYPES } from './data.js';
 import { normalizeProject, TIERS } from './project.js';
+import { buildCopywritingSystemBrief } from './copywriting.js';
 
 // Тон и лексика по классу проекта.
 const TIER_RULES = {
@@ -41,7 +42,7 @@ export function buildPrompt(input, concept, analysis) {
   const lib = concept.libraryUse;
   const libraryBlock = lib ? `\nРешения из библиотеки шаблонов (изучены: ${lib.references.map(r => `«${r.name}»`).join(', ')}):\n${list([...lib.patterns.structure, ...lib.patterns.ux, ...lib.patterns.content])}\nЗапрещено: копировать тексты, изображения, логотипы, палитру и фирменный стиль источников. Используй только обобщённые UX- и структурные принципы, создавая оригинальное решение.\n` : '';
 
-  const full = `Ты — команда из четырёх специалистов: исследователь рынка, бренд-стратег, UX-копирайтер и арт-директор. Подготовь тексты главной страницы на русском языке строго внутри дизайн-концепции ниже. Не задавай вопросов — где данных нет, используй осторожные формулировки и вынеси вопрос в assumptions.
+  const full = `Ты — автономная команда специалистов по исследованию рынка, стратегии бренда, психологии аудитории, UX-копирайтингу, конверсии, SEO и арт-дирекшну. Подготовь полноценную маркетинговую и контентную систему главной страницы на русском языке строго внутри выбранной дизайн-концепции. Не задавай вопросов — где данных нет, используй осторожные гипотезы и вынеси вопрос в assumptions.\n\n${buildCopywritingSystemBrief(p, concept, a)}
 
 # 1. Проект
 Бренд: ${p.brand || '(не указан — предложи 3 варианта названия в assumptions, в текстах используй нейтральное «мы»)'}
@@ -117,7 +118,7 @@ segments [{name, need}], objections [строки], triggers [строки], key
 aboutTitle, aboutText, servicesTitle, servicesIntro, services [[заголовок, текст]],
 advantagesTitle, advantages [[заголовок, текст]], processTitle, process [[заголовок, текст]],
 faqs [[вопрос, ответ]], contactTitle, contactText,
-imagePrompts [строки], researchSources [{title, url}], assumptions [строки].
+imagePrompts [строки], researchSources [{title, url}], assumptions [строки],\nbrandStrategy {positioning, promise, differentiators, proofNeeded, brandVoice},\naudienceProfiles [{segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers}],\ncompetitorAnalysis [{name, offer, strengths, gaps, sourceUrl}],\nconversionMap [{sectionId, decisionStage, visitorQuestion, objection, response, desiredAction}],\nsectionContent [{id, goal, headline, subheadline, body, cta, visualBrief}],\nvisualBrief [{sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio}],\nmotionBrief {intensity, selectedMechanics, rationale, accessibility},\nqualityReport {score, checks, issues, revisions}, researchStatus.
 Этот JSON импортируется в Unique Design Studio и в Landing Studio без изменений.`;
   return withCustomPrompt(full, p.customPrompt, p.customPromptMode);
 }
