@@ -213,6 +213,57 @@ export const WEB_FONTS = {
   'slab-sturdy': [['Roboto Slab', '400;500;600;700'], ['Golos Text', '400;500;600;700']],
 };
 
+// Несколько пар Google Fonts на каждый характер (все с кириллицей). Первая пара — прежняя WEB_FONTS.
+// dw — вес заголовков для шрифтов с одним начертанием (иначе браузер рисует искусственный жирный);
+// accent — каллиграфический шрифт только для коротких акцентных фраз (эффект «сменяющиеся фразы»).
+const f = (family, weights = '400;500;600;700') => [family, weights];
+export const WEB_FONT_PAIRS = {
+  'serif-editorial': [
+    { display: WEB_FONTS['serif-editorial'][0], body: WEB_FONTS['serif-editorial'][1] },
+    { display: f('Lora'), body: f('Manrope', '400;500;600;700;800') },
+    { display: f('Spectral'), body: f('Inter', '400;500;600;700') },
+    { display: f('Merriweather', '400;700;900'), body: f('Fira Sans') },
+  ],
+  'didone-contrast': [
+    { display: WEB_FONTS['didone-contrast'][0], body: WEB_FONTS['didone-contrast'][1] },
+    { display: f('Cormorant Garamond'), body: f('Montserrat'), accent: f('Marck Script', '400') },
+    { display: f('Prata', '400'), body: f('Raleway'), dw: 400 },
+    { display: f('Yeseva One', '400'), body: f('Manrope', '400;500;600;700;800'), dw: 400 },
+  ],
+  'grotesque-tight': [
+    { display: WEB_FONTS['grotesque-tight'][0], body: WEB_FONTS['grotesque-tight'][1] },
+    { display: f('Inter', '400;500;600;700;800'), body: f('Inter', '400;500;600;700;800') },
+    { display: f('Manrope', '400;500;600;700;800'), body: f('Manrope', '400;500;600;700;800') },
+    { display: f('IBM Plex Sans'), body: f('IBM Plex Sans') },
+  ],
+  'condensed-caps': [
+    { display: WEB_FONTS['condensed-caps'][0], body: WEB_FONTS['condensed-caps'][1] },
+    { display: f('Fira Sans Extra Condensed'), body: f('Fira Sans') },
+    { display: f('Russo One', '400'), body: f('Rubik'), dw: 400 },
+  ],
+  'mono-technical': [
+    { display: WEB_FONTS['mono-technical'][0], body: WEB_FONTS['mono-technical'][1] },
+    { display: f('IBM Plex Mono'), body: f('IBM Plex Sans') },
+    { display: f('Fira Code'), body: f('Fira Sans') },
+  ],
+  'rounded-friendly': [
+    { display: WEB_FONTS['rounded-friendly'][0], body: WEB_FONTS['rounded-friendly'][1] },
+    { display: f('Comfortaa'), body: f('Nunito', '400;600;700;800'), accent: f('Caveat') },
+    { display: f('Rubik'), body: f('Rubik') },
+  ],
+  'geometric-clean': [
+    { display: WEB_FONTS['geometric-clean'][0], body: WEB_FONTS['geometric-clean'][1] },
+    { display: f('Montserrat'), body: f('Montserrat') },
+    { display: f('Unbounded'), body: f('Manrope', '400;500;600;700;800') },
+    { display: f('Raleway'), body: f('Raleway'), accent: f('Bad Script', '400') },
+  ],
+  'slab-sturdy': [
+    { display: WEB_FONTS['slab-sturdy'][0], body: WEB_FONTS['slab-sturdy'][1] },
+    { display: f('Bitter'), body: f('PT Sans', '400;700') },
+    { display: f('Podkova'), body: f('Fira Sans') },
+  ],
+};
+
 export const TYPES = {
   'serif-editorial': { label: 'старостильная антиква в заголовках и гуманистический гротеск в тексте', display: OLD, body: HUM, weight: 500, tracking: '-0.01em', transform: 'none', k: 1 },
   'didone-contrast': { label: 'контрастная дидона крупного кегля и спокойная антиква в тексте', display: DIDONE, body: TRANS, weight: 400, tracking: '-0.02em', transform: 'none', k: 1.06 },
