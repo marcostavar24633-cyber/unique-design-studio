@@ -500,7 +500,17 @@ $('#auto').addEventListener('submit', async e => {
   note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
   state.analysis = { projectId: draft.project.id, data: draft.analysis };
   load(draft.project);
-  status.textContent = note;
+  if (endpoint) {
+    status.textContent = note + ' Подготавливаю фотографии для сайта…';
+    try {
+      const images = await generateProjectImages(endpoint);
+      if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
+      else note += ' Для выбранной композиции отдельные фотографии не требуются.';
+    } catch (error) {
+      note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
+    }
+    status.textContent = note;
+  }
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -1275,6 +1285,66 @@ async function optimizeImage(file) {
     }
     throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
   } finally { bitmap.close?.(); }
+}
+async function optimizeGeneratedImage(dataUri) {
+  const response = await fetch(dataUri);
+  if (!response.ok) throw new Error('Не удалось прочитать изображение от AI.');
+  const blob = await response.blob();
+  const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
+  return optimizeImage(file);
+}
+async function generateProjectImages(endpoint) {
+  const imageEndpoint = endpoint.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
+  if (imageEndpoint === endpoint) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
+  const slots = imageSlots(result.project, result.concept).slots;
+  const hero = slots.find(slot => slot.id === 'hero');
+  const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
+  const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 0 : 3);
+  const targets = [...(hero ? [hero] : []), ...products, ...gallery].slice(0, 4);
+  if (!targets.length) return { generated: 0, skipped: true };
+  let generated = 0;
+  for (let index = 0; index < targets.length; index++) {
+    const slot = targets[index];
+    const prompt = [
+      'Photorealistic premium commercial photography, not an illustration, no text, no typography, no logos, no watermark.',
+      'Subject: ' + slot.subject + '.',
+      'Business niche: ' + (result.project.niche || 'local business') + '.',
+      'Composition: ' + slot.composition + '. Camera angle: ' + slot.angle + '.',
+      'Lighting: ' + slot.light + '. Background: ' + slot.background + '.',
+      result.project.tier === 'luxury' ? 'Luxury editorial art direction, refined materials, cinematic controlled light.' : 'High-end authentic commercial photography, natural textures and believable details.',
+      'Create a visually distinctive image suitable for a real business website. Do not invent readable labels, product branding, awards or certifications.'
+    ].join(' ').slice(0, 2000);
+    const response = await fetch(imageEndpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.image) throw new Error(payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').');
+    const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
+    const data = optimized.data;
+    if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.');
+    if (slot.id === 'hero') {
+      state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: slot.subject };
+    } else if (slot.role === 'service') {
+      const services = Array.isArray(state.raw.services) ? [...state.raw.services] : [];
+      const current = services[Number(slot.id.split('-')[1])];
+      if (Array.isArray(current)) {
+        const row = [...current]; row[3] = data; row[4] = slot.subject; services[Number(slot.id.split('-')[1])] = row;
+      } else if (current && typeof current === 'object') {
+        services[Number(slot.id.split('-')[1])] = { ...current, image: data, alt: slot.subject };
+      }
+      state.raw.services = services;
+    } else if (slot.role === 'gallery') {
+      const items = Array.isArray(state.raw.gallery) ? [...state.raw.gallery] : [];
+      const galleryIndex = Number(slot.id.split('-')[1]);
+      items[galleryIndex] = { ...(items[galleryIndex] || {}), src: data, alt: slot.subject, caption: slot.label };
+      state.raw.gallery = items;
+    }
+    generated++;
+    $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
+  }
+  buildForm();
+  run();
+  return { generated, skipped: false };
 }
 async function handleImageUpload(input) {
   const kind = input.dataset.upload, files = [...(input.files || [])];
