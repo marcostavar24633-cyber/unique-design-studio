@@ -1533,6 +1533,13 @@ $('#view-audit').addEventListener('input', e => {
   persist();
 });
 $('#view-audit').addEventListener('click', async e => {
+  const shotList = e.target.closest('[data-copy-photo-shotlist]');
+  if (shotList) {
+    const text = shotList.dataset.copyPhotoShotlist || '';
+    try { await navigator.clipboard.writeText(text); toast('План фотосъёмки скопирован'); }
+    catch { download('photo-shot-list.txt', text, 'text/plain'); toast('Буфер обмена недоступен — план фотосъёмки скачан в TXT'); }
+    return;
+  }
   const tasks = e.target.closest('[data-image-tasks]');
   if (tasks && result) {
     const text = imageTaskPackage(result.project, result.concept);
