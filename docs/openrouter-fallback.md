@@ -4,7 +4,7 @@
 
 Когда Cloudflare Workers AI возвращает явную ошибку квоты (429, daily allocation, neuron limit), Worker может автоматически повторить тот же запрос через OpenRouter Free Models Router. Используется только модель `openrouter/free`; клиент не может передать идентификатор платной модели. NVIDIA NIM остаётся выключенным в бесплатном режиме.
 
-Это резервирование пока покрывает запросы, проходящие через `POST /api/generate-landing` и `POST /api/design-review` внутри этого Worker. В текущем репозитории нет прямых интеграций GPT API или Claude API, поэтому лимиты отдельных аккаунтов ChatGPT/OpenAI/Anthropic не могут быть перехвачены, пока их запросы не будут маршрутизироваться через этот Worker.
+Резервирование покрывает запросы `POST /api/generate-landing` и `POST /api/design-review`. Worker поддерживает Cloudflare Workers AI, OpenAI GPT API и Anthropic Claude API как выбираемый первичный провайдер. При явной ошибке квоты GPT или Claude запрос может перейти на бесплатный OpenRouter router.
 
 ## Подключение
 
@@ -16,7 +16,7 @@
 
 Без секрета или при `OPENROUTER_ENABLED=false` поведение остаётся прежним: Worker возвращает исходную ошибку квоты Cloudflare. Ключ никогда не передаётся браузеру.
 
-## Лимиты и приватность
+### Необязательные прямые API GPT / Claude\n\nПрямые API используют отдельную оплату и лимиты API, не подписку ChatGPT/Claude. По умолчанию они выключены. Чтобы явно разрешить API-вызовы, установите `AI_BILLING_MODE=api`, `AI_DIRECT_PROVIDERS_ENABLED=true`, выберите `AI_PRIMARY_PROVIDER=openai` или `anthropic` и добавьте соответствующий Cloudflare Secret `OPENAI_API_KEY` либо `ANTHROPIC_API_KEY`. Можно задать `OPENAI_MODEL` или `ANTHROPIC_MODEL`; иначе используются безопасные значения по умолчанию в коде. Не включайте эти параметры, если не согласны с возможной оплатой API. Для GPT/Claude quota fallback на OpenRouter всё равно требует отдельного `OPENROUTER_API_KEY` и `OPENROUTER_ENABLED=true`; модель фиксирована на `openrouter/free`. Диагностика показывает только наличие конфигурации, не баланс и не успешность API-запроса.\n\n## Лимиты и приватность
 
 Бесплатные варианты OpenRouter имеют общий платформенный лимит 20 запросов в минуту и 50 запросов в сутки; дополнительно возможны ограничения конкретной модели/провайдера. Неуспешные попытки могут учитываться в суточном лимите. Бесплатный fallback не гарантирует доступность при исчерпании OpenRouter quota.
 
