@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:32:42.300Z
+Время обновления: 2026-11-18T15:34:23.857Z
 Ветка: feat/ai-section-regeneration
-Последний commit: eceafaf02e0d8ca5ccb27409a17318b72c1f204b
-Дата коммита: 2026-11-18T19:32:30+04:00
-Сообщение: Fix Worker endpoint validation regular expression
+Последний commit: 3c23eacb111bf0b96dcdfcf437eea2519d74073b
+Дата коммита: 2026-11-18T19:34:03+04:00
+Сообщение: Align Worker staged-generation fixture with structured trust schema
 
 Последние коммиты:
+- 3c23eac · 2026-11-18 · Align Worker staged-generation fixture with structured trust schema
+- 5058986 · 2026-11-18 · Test strict generated content array and object validation
+- b19a9ac · 2026-11-18 · Align trust-stage fixtures with structured row schema
+- 871835c · 2026-11-18 · Enforce array and object schemas for generated content sections
+- 769a683 · 2026-11-18 · docs: refresh project handoff
 - eceafaf · 2026-11-18 · Fix Worker endpoint validation regular expression
 - dfaa1ef · 2026-11-18 · docs: refresh project handoff
 - 1905f44 · 2026-11-18 · Initialize project analysis safely when regenerating SEO metadata
-- 16da51c · 2026-11-18 · Fix retry prompt newline in section regeneration
-- adae30c · 2026-11-18 · Fix newline separators in single-stage prompt assembly
-- 8484fa8 · 2026-11-18 · docs: refresh project handoff
-- ce95a6e · 2026-11-18 · Keep SEO analysis metadata out of the project content fields
-- 7b21ff0 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
