@@ -152,8 +152,17 @@ export async function verifyAfterMerge(gh, { mergeSha, dispatchDeploy = true, sl
   const dispatch = async () => {
     try { await gh.dispatchWorkflow('pages.yml', BASE); return true; } catch (e) { out.deployError = e.message; return false; }
   };
-  // Слияние токеном GITHUB_TOKEN не запускает workflow по push — публикацию запускаем явно.
-  if (dispatchDeploy) out.deployDispatched = await dispatch();
+  // Слияние токеном GITHUB_TOKEN не запускает workflow по push — публикации запускаем явно.
+  if (dispatchDeploy) {
+    out.deployDispatched = await dispatch();
+    try {
+      await gh.dispatchWorkflow('deploy-worker.yml', BASE);
+      out.workerDeployDispatched = true;
+    } catch (e) {
+      out.workerDeployDispatched = false;
+      out.workerDeployError = e.message;
+    }
+  }
   const failed = new Set();
   for (let i = 0; i < attempts; i++) {
     const runs = await gh.workflowRuns('pages.yml', `&branch=${BASE}`).catch(() => []);
