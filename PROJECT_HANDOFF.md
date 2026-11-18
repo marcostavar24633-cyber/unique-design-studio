@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:51:28.892Z
-Ветка: feat/ai-content-quality-review
-Последний commit: 8804c24296f656f6b94cca4fbe77650fa8c1cc63
-Дата коммита: 2026-11-18T19:51:18+04:00
-Сообщение: Restore existing Smart Crop and asset CSS tests
+Время обновления: 2026-11-18T17:13:35.986Z
+Ветка: feat/accessibility-name-audit
+Последний commit: 34a55c05ccedea2a1db6e008c00f3d06d176b366
+Дата коммита: 2026-11-18T21:13:19+04:00
+Сообщение: Fix whitespace normalization in accessible name helper
 
 Последние коммиты:
+- 34a55c0 · 2026-11-18 · Fix whitespace normalization in accessible name helper
+- 6873dcd · 2026-11-18 · Test accessible name detection in preview QA
+- c6b4a1d · 2026-11-18 · Improve accessible name detection in preview QA
+- f7a6ec7 · 2026-11-18 · docs: refresh project handoff
 - 8804c24 · 2026-11-18 · Restore existing Smart Crop and asset CSS tests
 - 64adc4c · 2026-11-18 · docs: refresh project handoff
 - 0ede889 · 2026-11-18 · Assert quality review styles in stylesheet
 - 3e22f73 · 2026-11-18 · Assert quality review styles in stylesheet
-- dd48c30 · 2026-11-18 · Restore asset crop CSS test assertion
-- 2e8b72a · 2026-11-18 · Correct AI quality review CSS regression test
-- 0d76161 · 2026-11-18 · Fix quality review CSS regression assertion
-- 38d3c52 · 2026-11-18 · Fix multilingual unsupported-claims detection
 <!-- HANDOFF:AUTO:END -->
