@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:57:47.690Z
-Ветка: main
-Последний commit: c6ba6a994086280b579a651d5cf81f5c3458bd26
-Дата коммита: 2026-11-18T23:57:35+04:00
-Сообщение: docs: add unified AI project master guide
+Время обновления: 2026-11-18T20:02:46.644Z
+Ветка: fix/ai-usage-counters-baku-refresh
+Последний commit: ca9d2e9288e3e40d4cc820542c8111c6249a7516
+Дата коммита: 2026-11-19T00:02:25+04:00
+Сообщение: test: cover AI usage period labels
 
 Последние коммиты:
+- ca9d2e9 · 2026-11-19 · test: cover AI usage period labels
+- d676adc · 2026-11-19 · fix: clarify AI usage periods in Baku time
+- 2f18c81 · 2026-11-19 · fix: improve AI usage panel responsive layout
+- ea68aaf · 2026-11-18 · docs: refresh project handoff
 - c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
 - eeb21d0 · 2026-11-18 · docs: refresh project handoff
 - d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
 - bc7aedd · 2026-11-18 · docs: refresh project handoff
-- e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
-- 06b64ec · 2026-11-18 · docs: refresh project handoff
-- fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
-- 9c36903 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
