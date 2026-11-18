@@ -436,3 +436,28 @@ test('customPrompt не дублируется Worker, если он уже вс
   const prompt = env.calls[0].messages[0].content;
   assert.equal(prompt.split('SPECIAL_CUSTOM_INSTRUCTION').length - 1, 1);
 });
+
+
+test('API запускает staged Content Engine и возвращает объединённые секции с метаданными этапов', async () => {
+  const outputs = [
+    { title: 'Кофе рядом', description: 'Свежий кофе', cta: 'Выбрать', targetAudience: 'Жители района', mainOffer: 'Кофе', visualDirection: 'Тёплый', strategySummary: 'Локальная кофейня' },
+    { aboutTitle: 'О нас', aboutText: 'Готовим кофе.' },
+    { servicesTitle: 'Меню', servicesIntro: 'Напитки', services: [['Капучино', 'Кофе с молоком', '']] },
+    { advantagesTitle: 'Преимущества', advantages: ['Свежесть'], processTitle: 'Заказ', process: ['Выберите напиток'], faqs: ['Где мы?'] },
+    { contactTitle: 'Контакты', contactText: 'Приходите', seoTitle: 'Кофейня рядом', seoDescription: 'Кофе каждый день' },
+  ];
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    const value = outputs[calls++];
+    return { response: JSON.stringify(value), usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 } };
+  } } };
+  const res = await worker.fetch(request({ niche: 'кофейня', contentEngine: 'staged' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.generation.mode, 'staged');
+  assert.equal(body.generation.status, 'completed');
+  assert.equal(body.generation.completedStages, 5);
+  assert.equal(body.landing.title, 'Кофе рядом');
+  assert.deepEqual(body.landing.services, outputs[2].services);
+  assert.equal(calls, 5);
+});
