@@ -403,3 +403,20 @@ test('AI free quota panel warns at 70%, 85%, and 100% using the UTC reset', () =
   assert.ok(source.includes('00:00 UTC'));
   assert.ok(!source.includes('после 4:00'));
 });
+
+
+test('AI Content Director перегенерирует только выбранный раздел, сохраняет остальные поля и поддерживает undo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-regenerate-stage="strategy"', 'data-regenerate-stage="about"',
+    'data-regenerate-stage="services"', 'data-regenerate-stage="trust"', 'data-regenerate-stage="seo"',
+    'function regenerateProjectStage(stageId)', 'contentStage: stageId',
+    'existingLanding: projectContentForStage()', 'Object.assign(state.raw, patch)',
+    'const CONTENT_HISTORY_KEY', 'data-content-undo', 'Последняя AI-правка отменена.',
+    'STAGE_PROJECT_FIELDS', 'content-regenerate-status',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /for \(const key of fields\) if \(Object\.prototype\.hasOwnProperty\.call\(payload\.content, key\)\) patch\[key\] = payload\.content\[key\]/);
+  assert.match(css, /\.content-regenerate__actions\{display:flex;flex-wrap:wrap/);
+  assert.match(css, /@media\(max-width:600px\)\{\.content-regenerate__actions\{display:grid/);
+});
