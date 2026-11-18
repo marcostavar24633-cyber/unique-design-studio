@@ -435,3 +435,17 @@ test('AI Content Director exposes Rewrite Expand Shorten for one selected field 
   assert.match(source, /const before = \{ \[field\]: Object\.prototype\.hasOwnProperty\.call\(result\.project,field\) \? result\.project\[field\] : null \}/);
   assert.match(css, /\.content-field-editor select,\.content-field-editor textarea\{display:block;width:100%/);
 });
+
+
+test('AI Content Director запускает безопасную проверку качества и SEO без автоприменения', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-content-quality-review', 'async function runContentQualityReview()',
+    'contentQualityReview:true', 'project:projectContentForStage()',
+    'content-quality-review-result', 'review.score', 'review.findings',
+    'review.recommendations', 'Веб-поиск не выполнялся.',
+    'Проверка качества завершена. Контент не изменён.',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /\.content-quality-review\{margin:16px 0/);
+});
