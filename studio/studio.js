@@ -782,7 +782,7 @@ async function editProjectField(action) {
   let url;
   try {
     url = new URL(endpoint, location.href);
-    if (!/\\/api\\/generate-landing\\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
   } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
   const buttons = [...$('#view-spec').querySelectorAll('[data-content-edit-action]')];
   const status = $('#content-edit-status');
