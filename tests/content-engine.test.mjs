@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTENT_STAGES, validateContentStage, mergeContentStage, generateContentInStages, regenerateContentStage } from '../worker/content-engine.js';
+import { CONTENT_STAGES, validateContentStage, mergeContentStage, generateContentInStages, regenerateContentStage, editContentField, EDITABLE_CONTENT_FIELDS } from '../worker/content-engine.js';
 
 const answers = {
   strategy: { brand: 'Зерно', niche: 'кофейня', title: 'Кофе рядом', description: 'Свежий кофе каждый день', cta: 'Выбрать напиток', targetAudience: 'Жители района', mainOffer: 'Кофе и выпечка', visualDirection: 'Тёплый минимализм', strategySummary: 'Локальная кофейня с акцентом на свежесть' },
@@ -107,4 +107,40 @@ test('неизвестный этап точечной перегенераци�
   const ai = mock();
   await assert.rejects(() => regenerateContentStage({ ...base, stageId: 'not-a-stage', runTextModel: ai.runTextModel }), /Неизвестный этап/);
   assert.equal(ai.calls.length, 0);
+});
+
+
+test('AI-редактор переписывает, расширяет и сокращает только одно разрешённое поле', async () => {
+  for (const action of ['rewrite','expand','shorten']) {
+    const ai = mock([{ value: 'Новый вариант текста.' }]);
+    const result = await editContentField({
+      ...base, field: 'description', action, currentValue: 'Исходный текст.',
+      existingLanding: { title: 'Кофе рядом', description: 'Исходный текст.' },
+      editorialDirection: 'Спокойный тон', runTextModel: ai.runTextModel,
+    });
+    assert.equal(result.field, 'description');
+    assert.equal(result.action, action);
+    assert.equal(result.value, 'Новый вариант текста.');
+    assert.equal(result.attempts, 1);
+    assert.equal(ai.calls[0].options.max_tokens, 700);
+    assert.match(ai.calls[0].options.messages[0].content, /Исходный текст/);
+    assert.match(ai.calls[0].options.messages[0].content, /Спокойный тон/);
+  }
+});
+
+test('AI-редактор ограничивает поля и команды, не вызывает модель при некорректном вводе', async () => {
+  const ai = mock();
+  await assert.rejects(() => editContentField({ ...base, field: 'services', action: 'rewrite', currentValue: 'x', runTextModel: ai.runTextModel }), /нельзя редактировать/);
+  await assert.rejects(() => editContentField({ ...base, field: 'title', action: 'invent', currentValue: 'x', runTextModel: ai.runTextModel }), /Неизвестная команда/);
+  await assert.rejects(() => editContentField({ ...base, field: 'title', action: 'rewrite', currentValue: ' ', runTextModel: ai.runTextModel }), /Сначала введите текст/);
+  assert.equal(EDITABLE_CONTENT_FIELDS.has('seoTitle'), true);
+  assert.equal(ai.calls.length, 0);
+});
+
+test('AI-редактор повторяет невалидный ответ и принимает только непустую строку', async () => {
+  const ai = mock([{ value: '' }, { value: 'Исправленный текст.' }]);
+  const result = await editContentField({ ...base, field: 'title', action: 'rewrite', currentValue: 'Старый текст', runTextModel: ai.runTextModel });
+  assert.equal(result.value, 'Исправленный текст.');
+  assert.equal(result.attempts, 2);
+  assert.equal(ai.calls.length, 2);
 });
