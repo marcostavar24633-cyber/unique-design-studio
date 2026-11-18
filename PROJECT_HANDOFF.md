@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:17:53.342Z
-Ветка: main
-Последний commit: cf0567d09227e7621009fc110bc850b61a469111
-Дата коммита: 2026-11-19T00:17:40+04:00
-Сообщение: feat: connect Content Intelligence QA to studio generation
+Время обновления: 2026-11-18T20:35:34.148Z
+Ветка: fix/content-qa-pass-state
+Последний commit: c06139c7691cd7f9499c6bfdf0255d0c400bb199
+Дата коммита: 2026-11-19T00:35:20+04:00
+Сообщение: fix: restore draft declaration newline for E2E
 
 Последние коммиты:
+- c06139c · 2026-11-19 · fix: restore draft declaration newline for E2E
+- c3e013c · 2026-11-19 · fix: preserve draft declaration when clearing content QA
+- 51c69a1 · 2026-11-18 · docs: refresh project handoff
+- da01970 · 2026-11-19 · fix: show passed content QA and clear stale reports
+- 1dc18ed · 2026-11-18 · docs: refresh project handoff
 - cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
 - fb2c425 · 2026-11-18 · docs: refresh project handoff
 - 61218ff · 2026-11-19 · feat: introduce Content Intelligence Engine
-- c1982df · 2026-11-18 · docs: refresh project handoff
-- 6ad3800 · 2026-11-19 · fix: clarify AI usage counters and Baku reset
-- ea68aaf · 2026-11-18 · docs: refresh project handoff
-- c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
-- eeb21d0 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->

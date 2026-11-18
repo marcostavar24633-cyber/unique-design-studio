@@ -17,12 +17,14 @@ function renderContentQaReview(report) {
   const list = $('#content-qa-findings');
   if (!panel || !summary || !list) return;
   list.replaceChildren();
-  if (!report || !Array.isArray(report.findings) || !report.findings.length) {
+  if (!report || !Array.isArray(report.findings)) {
     panel.hidden = true;
+    summary.textContent = '';
     return;
   }
   panel.hidden = false;
-  summary.textContent = report.summary + ' Оценка: ' + report.score + '/100. Замечаний: ' + report.findings.length + '.';
+  const status = report.status === 'passed' ? 'Проверка пройдена' : report.status === 'needs-work' ? 'Нужно заполнить обязательные поля' : 'Нужна редакторская проверка';
+  summary.textContent = status + '. ' + report.summary + ' Оценка: ' + report.score + '/100. Замечаний: ' + report.findings.length + '.';
   for (const finding of report.findings) {
     const item = document.createElement('li');
     item.textContent = (finding.field ? finding.field + ': ' : '') + finding.message;
@@ -808,6 +810,7 @@ $('#auto').addEventListener('submit', async e => {
   const go = $('#auto-go');
   go.disabled = true;
   setAutoProgress(3, 'Подготовка проекта', 'Проверяем бриф и параметры генерации');
+  renderContentQaReview(null); // Не показываем результаты предыдущей генерации во время новой.
   let draft = null, note = '';
   if (endpoint) {
     setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — ход генерации отображается ниже…');
