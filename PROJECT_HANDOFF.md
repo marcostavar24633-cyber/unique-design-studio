@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:19:35.174Z
+Время обновления: 2026-11-18T10:20:13.809Z
 Ветка: feat/openrouter-free-fallback
-Последний commit: 03bd9662a7315357c11c2c7ff37f7b58a0bf8599
-Дата коммита: 2026-11-18T14:19:23+04:00
-Сообщение: feat(ai): add free OpenRouter quota fallback
+Последний commit: 3d1b9f03e6a1976b7e2cec27afe4ec8d7ceabafb
+Дата коммита: 2026-11-18T14:20:01+04:00
+Сообщение: docs(ai): explain free OpenRouter fallback setup
 
 Последние коммиты:
+- 3d1b9f0 · 2026-11-18 · docs(ai): explain free OpenRouter fallback setup
+- 00ee67b · 2026-11-18 · chore(worker): keep OpenRouter fallback opt-in
+- b81c17b · 2026-11-18 · test(ai): cover free OpenRouter quota fallback
+- af1bcd3 · 2026-11-18 · feat(ai): expose OpenRouter fallback diagnostics
+- 1e2e2f5 · 2026-11-18 · docs: refresh project handoff
 - 03bd966 · 2026-11-18 · feat(ai): add free OpenRouter quota fallback
 - a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
-- 1e424c9 · 2026-11-18 · docs: refresh project handoff
-- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
-- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
-- ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
