@@ -26,7 +26,7 @@ function renderAiUsageStats(data, error = '') {
   $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
   const neurons = Number(data.neurons || 0);
   const share = data.range === '24h' ? ' (' + Math.round(neurons / WORKERS_AI_FREE_NEURONS * 100) + '% от ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' бесплатных в сутки — ориентир по документации Cloudflare)' : '';
-  setDashStatus('neurons', neurons > WORKERS_AI_FREE_NEURONS * 0.8 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
+  setDashStatus('neurons', neurons >= WORKERS_AI_FREE_NEURONS * 0.7 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
   const details = $('#ai-usage-details');
   if (details) details.textContent = 'Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов · ' +
     Number(data.totalTokens || 0).toLocaleString('ru-RU') + ' токенов';
@@ -143,6 +143,25 @@ function untilReset(now = new Date()) {
   const min = Math.max(0, Math.round((next - now.getTime()) / 60000));
   return { hours: Math.floor(min / 60), minutes: min % 60, at: new Date(next) };
 }
+function notifyAiQuotaThreshold(percent) {
+  const thresholds = [
+    { value: 70, message: 'Внимание: использовано около 70% суточного ориентира Workers AI. Осталось примерно 30%.' },
+    { value: 85, message: 'Почти исчерпан бесплатный объём Workers AI: использовано около 85%. Сохраните текущий проект.' },
+    { value: 100, message: 'Достигнут ориентир бесплатного объёма Workers AI. Новые AI-генерации могут остановиться до 00:00 UTC.' },
+  ];
+  const day = new Date().toISOString().slice(0, 10);
+  let notified = [];
+  try { notified = JSON.parse(localStorage.getItem('uds:ai-quota-alerts:' + day) || '[]'); } catch {}
+  if (!Array.isArray(notified)) notified = [];
+  const reached = thresholds.filter(item => percent >= item.value && !notified.includes(item.value));
+  if (!reached.length) return;
+  for (const item of reached) notified.push(item.value);
+  try { localStorage.setItem('uds:ai-quota-alerts:' + day, JSON.stringify(notified)); } catch {}
+  toast(reached[reached.length - 1].message);
+}
+function isAiQuotaMessage(message) {
+  return /(?:\\b(?:3036|3040|429)\\b|daily free allocation|rate[\\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(String(message || ''));
+}
 function renderAiBudget() {
   const box = $('#dash-ai-budget'); if (!box) return;
   const session = aiJournal().filter(e => e.at >= sessionStart);
@@ -152,7 +171,8 @@ function renderAiBudget() {
   let today;
   if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
-    today = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
+    notifyAiQuotaThreshold(pct);
+    today = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 70 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
       '<p class="dash-meter-note"><b>До сброса:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>';
   } else {
     today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
@@ -784,7 +804,9 @@ $('#auto').addEventListener('submit', async e => {
       refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
-      note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
+      note = isAiQuotaMessage(err.message)
+        ? `Бесплатная квота Cloudflare Workers AI исчерпана или ограничена (${err.message}). Собрал сайт локальным автопилотом. Лимит обычно сбрасывается в 00:00 UTC.`
+        : `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
       setAutoProgress(35, 'Переключение на локальный режим', 'AI недоступен — продолжаем без сервера');
     }
   }
