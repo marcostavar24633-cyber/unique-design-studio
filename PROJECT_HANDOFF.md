@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:27:00.770Z
-Ветка: feat/openrouter-free-fallback
-Последний commit: 29ff9bd308f25558409bf644ef6f375782f3f1dc
-Дата коммита: 2026-11-18T14:26:44+04:00
-Сообщение: docs(ai): document GPT and Claude quota fallback
+Время обновления: 2026-11-18T10:46:36.117Z
+Ветка: feat/ai-provider-manual-controls
+Последний commit: 3fcf709818c4e96ff8d5e23d0aead2e0dd29c5a7
+Дата коммита: 2026-11-18T14:46:23+04:00
+Сообщение: feat(ai): support manual OpenRouter routing
 
 Последние коммиты:
+- 3fcf709 · 2026-11-18 · feat(ai): support manual OpenRouter routing
+- 25e2dc2 · 2026-11-18 · feat(worker): accept per-request AI routing preferences
+- 7812863 · 2026-11-18 · feat(ui): persist AI provider routing preferences
+- ecf6bc5 · 2026-11-18 · feat(ui): add independent manual GPT and Claude routing controls
+- f2b41e7 · 2026-11-18 · docs: refresh project handoff
 - 29ff9bd · 2026-11-18 · docs(ai): document GPT and Claude quota fallback
 - 983178d · 2026-11-18 · docs: refresh project handoff
 - fc994fd · 2026-11-18 · test(ai): assert GPT and Claude diagnostics defaults
-- fd5e396 · 2026-11-18 · docs: refresh project handoff
-- 2da77f8 · 2026-11-18 · test(ai): cover GPT and Claude API adapters
-- 653878a · 2026-11-18 · docs: refresh project handoff
-- 1fece67 · 2026-11-18 · chore(ai): keep direct GPT and Claude APIs disabled by default
-- a820245 · 2026-11-18 · feat(ai): expose GPT and Claude provider diagnostics
 <!-- HANDOFF:AUTO:END -->
