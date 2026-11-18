@@ -1,4 +1,4 @@
-import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage } from './ai-utils.js';
+import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -302,6 +302,7 @@ export default {
       facts,
       studioPrompt ? '\nЗадание и требования движка студии:\n' + studioPrompt : '',
       `\nСформируй контент и анализ по указанной JSON-структуре. Все тексты — про бизнес в нише «${brief.niche}».`,
+      FORMAT_NOTE,
     ].join('\n');
     // Одно сообщение: шаблон чата Gemma не поддерживает отдельную системную роль.
     const prompt = system + '\n\n' + user;
