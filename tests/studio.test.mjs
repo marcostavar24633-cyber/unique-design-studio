@@ -111,7 +111,7 @@ test('Mobile crop previews remain readable and horizontally scrollable on narrow
 test('Smart Crop preserves valid zero-percent focal points in previews and controls', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.ok(source.includes('function cropCoordinate(value)'));
-  assert.ok(source.includes("value !== undefined && value !== null && value !== '' && Number.isFinite(n)"));
+  assert.ok(source.includes("value !==   assert.ok(css.includes('.content-quality-review{margin:16px 0')); && value !== null && value !== '' && Number.isFinite(n)"));
   assert.ok(source.includes('const x = cropCoordinate(v.x), y = cropCoordinate(v.y);'));
   assert.ok(source.includes('const n = cropCoordinate(v[axis]);'));
 });
