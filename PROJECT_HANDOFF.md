@@ -65,5 +65,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Автоматизация ещё не запускалась.
+Время обновления: 2026-11-18T03:40:33.676Z
+Ветка: feat/prompt-manager-pro
+Последний commit: 7c0db2e5b2a94b76a839bd68fa11563516952557
+Дата коммита: 2026-11-18T07:40:11+04:00
+Сообщение: ci: keep project handoff current on push
+
+Последние коммиты:
+- 7c0db2e · 2026-11-18 · ci: keep project handoff current on push
+- c006512 · 2026-11-18 · chore: add handoff metadata updater
+- 6a117f2 · 2026-11-18 · docs: add living project handoff
+- fa6d6ce · 2026-11-18 · feat(studio): add prompt manager navigation
+- 803282a · 2026-11-18 · feat(prompts): export prompt manager API
+- 76cfbd1 · 2026-11-18 · feat(prompts): apply managed prompt to image generation
+- 9aedacc · 2026-11-18 · feat(prompts): apply managed prompt to landing copy
+- e0ce715 · 2026-11-18 · feat(prompts): add versioned prompt registry
 <!-- HANDOFF:AUTO:END -->
