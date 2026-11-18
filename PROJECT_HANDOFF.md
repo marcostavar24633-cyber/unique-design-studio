@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:51:28.892Z
-Ветка: feat/ai-content-quality-review
-Последний commit: 8804c24296f656f6b94cca4fbe77650fa8c1cc63
-Дата коммита: 2026-11-18T19:51:18+04:00
-Сообщение: Restore existing Smart Crop and asset CSS tests
+Время обновления: 2026-11-18T21:35:14.010Z
+Ветка: fix/ai-field-editor-click-delegation
+Последний commit: 92190def93d9519c98774985b7e2113b4f154599
+Дата коммита: 2026-11-19T01:34:56+04:00
+Сообщение: test: cover AI field editor click delegation
 
 Последние коммиты:
+- 92190de · 2026-11-19 · test: cover AI field editor click delegation
+- ed1ee85 · 2026-11-19 · fix: delegate clicks for AI field editor actions
+- f7a6ec7 · 2026-11-18 · docs: refresh project handoff
 - 8804c24 · 2026-11-18 · Restore existing Smart Crop and asset CSS tests
 - 64adc4c · 2026-11-18 · docs: refresh project handoff
 - 0ede889 · 2026-11-18 · Assert quality review styles in stylesheet
 - 3e22f73 · 2026-11-18 · Assert quality review styles in stylesheet
 - dd48c30 · 2026-11-18 · Restore asset crop CSS test assertion
-- 2e8b72a · 2026-11-18 · Correct AI quality review CSS regression test
-- 0d76161 · 2026-11-18 · Fix quality review CSS regression assertion
-- 38d3c52 · 2026-11-18 · Fix multilingual unsupported-claims detection
 <!-- HANDOFF:AUTO:END -->
