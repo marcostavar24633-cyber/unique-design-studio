@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T16:35:56.948Z
+Время обновления: 2026-11-18T16:38:53.702Z
 Ветка: feat/use-universal-ai-gateway
-Последний commit: e5746d9b9896a317897808479b05a4071279ed72
-Дата коммита: 2026-11-18T20:35:40+04:00
-Сообщение: Route UDS text AI through Universal AI Gateway
+Последний commit: 16cc8395fc12642ebd65e30a1e5ed79c5d7addbb
+Дата коммита: 2026-11-18T20:38:33+04:00
+Сообщение: Forward generation options to Universal AI Gateway
 
 Последние коммиты:
+- 16cc839 · 2026-11-18 · Forward generation options to Universal AI Gateway
+- 4f50b38 · 2026-11-18 · docs: refresh project handoff
 - e5746d9 · 2026-11-18 · Route UDS text AI through Universal AI Gateway
 - 343be27 · 2026-11-18 · Route UDS text AI through Universal AI Gateway
 - 1f1537d · 2026-11-18 · Route UDS text AI through Universal AI Gateway
 - c852ca0 · 2026-11-18 · docs: refresh project handoff
 - 35040eb · 2026-11-18 · Route UDS text AI through Universal AI Gateway
 - a6793ba · 2026-11-18 · docs: refresh project handoff
-- 9053572 · 2026-11-18 · feat: add free AI quota warnings
-- 1e424c9 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
