@@ -152,7 +152,7 @@ export async function regenerateContentStage({
     landing.strategySummary ? 'Стратегия бренда: ' + landing.strategySummary : '',
     'Текущие данные проекта: ' + JSON.stringify(landing).slice(0, 12000),
     editorialDirection ? 'Редакторское направление: ' + editorialDirection.slice(0, 2000) : '',
-  ].filter(Boolean).join('\\n\\n');
+  ].filter(Boolean).join('\n\n');
   const prompt = [
     'Ты AI Content Director коммерческого сайта. Перегенерируй только один указанный раздел, сохранив согласованность с остальным проектом.',
     'Пиши по-русски, конкретно и естественно. Не меняй другие разделы.',
@@ -162,7 +162,7 @@ export async function regenerateContentStage({
     'Формат полей: ' + stage.schema + '.',
     'Этап: ' + stage.label + '.',
     context,
-  ].join('\\n\\n');
+  ].join('\n\n');
   let usage = null, provider = 'cloudflare', usedModel = model, lastError = '';
   const started = Date.now();
   for (let attempt = 0; attempt < 2; attempt++) {
