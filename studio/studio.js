@@ -588,6 +588,15 @@ const currentAnalysis = () => {
   const saved = state.library.find(item => item?.raw && normalizeProject(item.raw).id === projectId && item.analysis);
   return saved?.analysis || null;
 };
+const CONTENT_FIELD_OPTIONS = [
+  ['title','Заголовок первого экрана'],['description','Описание предложения'],['cta','Текст кнопки'],
+  ['targetAudience','Целевая аудитория'],['mainOffer','Основное предложение'],['strategySummary','Стратегия'],
+  ['aboutTitle','Заголовок «О компании»'],['aboutText','Текст «О компании»'],
+  ['servicesTitle','Заголовок услуг'],['servicesIntro','Вступление к услугам'],
+  ['advantagesTitle','Заголовок преимуществ'],['processTitle','Заголовок процесса'],
+  ['contactTitle','Заголовок контактов'],['contactText','Текст контактов'],
+  ['seoTitle','SEO Title'],['seoDescription','SEO Description'],
+];
 function renderSpec() {
   const a = currentAnalysis();
   const spec = buildSpec(result.project, result.concept, a || {});
@@ -605,6 +614,12 @@ function renderSpec() {
   if (String(result.project.seoTitle || '').length > 60) flags.push('SEO Title длиннее 60 символов');
   if (String(result.project.seoDescription || '').length > 160) flags.push('SEO Description длиннее 160 символов');
   const foundGeneric = [...new Set(textValues.flatMap(value => genericTerms.filter(term => value.toLowerCase().includes(term))))];
+  let selectedEditField = 'title';
+  try {
+    const savedField = localStorage.getItem('uds:content-edit-field');
+    if (CONTENT_FIELD_OPTIONS.some(([key]) => key === savedField)) selectedEditField = savedField;
+  } catch {}
+
   if (foundGeneric.length) flags.push('Проверьте неподтверждённые или шаблонные формулировки: ' + foundGeneric.join(', '));
   contentPrompt = () => {
     const direction = ($('#content-direction')?.value || '').trim();
@@ -642,12 +657,34 @@ function renderSpec() {
     <p id="content-regenerate-status" class="note" role="status" aria-live="polite"></p>
     <div class="spec-actions"><button type="button" data-content-undo ${contentHistoryForProject().length ? '' : 'disabled'}>Отменить последнюю AI-правку</button></div>
   </div>
+  <div class="content-field-editor">
+    <h3>Редактирование отдельного текста</h3>
+    <p class="note">Выберите поле, при необходимости поправьте исходный текст и запустите одну команду. AI вернёт только новый текст этого поля.</p>
+    <label class="content-director__label" for="content-edit-field">Текстовое поле</label>
+    <select id="content-edit-field">${CONTENT_FIELD_OPTIONS.map(([key,label]) => '<option value="' + key + '"' + (key === selectedEditField ? ' selected' : '') + '>' + esc(label) + '</option>').join('')}</select>
+    <label class="content-director__label" for="content-edit-value">Исходный текст</label>
+    <textarea id="content-edit-value" rows="4" maxlength="3000">${esc(result.project[selectedEditField] || '')}</textarea>
+    <div class="content-regenerate__actions">
+      <button type="button" data-content-edit-action="rewrite">Переписать</button>
+      <button type="button" data-content-edit-action="expand">Расширить</button>
+      <button type="button" data-content-edit-action="shorten">Сократить</button>
+    </div>
+    <p id="content-edit-status" class="note" role="status" aria-live="polite"></p>
+  </div>
 </section>
 <pre class="spec">${esc(spec)}</pre>${src}`;
   try { $('#content-direction').value = localStorage.getItem('uds:content-direction') || ''; } catch {}
 }
 $('#view-spec').addEventListener('input', e => {
   if (e.target.id === 'content-direction') { try { localStorage.setItem('uds:content-direction', e.target.value); } catch {} }
+});
+$('#view-spec').addEventListener('change', e => {
+  if (e.target.id === 'content-edit-field') {
+    const field = e.target.value;
+    try { localStorage.setItem('uds:content-edit-field', field); } catch {}
+    const value = $('#content-edit-value');
+    if (value) value.value = String(result?.project?.[field] || '');
+  }
 });
 const CONTENT_HISTORY_KEY = 'uds:content-history:v1';
 function contentHistoryForProject() {
@@ -736,8 +773,55 @@ async function regenerateProjectStage(stageId) {
   }
 }
 const CONTENT_STAGE_LABELS = { strategy:'Первый экран', about:'О компании', services:'Услуги', trust:'Преимущества и FAQ', seo:'Контакты и SEO' };
+async function editProjectField(action) {
+  const field = $('#content-edit-field')?.value;
+  const currentValue = $('#content-edit-value')?.value || '';
+  if (!result || !CONTENT_FIELD_OPTIONS.some(([key]) => key === field)) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\\/api\\/generate-landing\\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-content-edit-action]')];
+  const status = $('#content-edit-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI редактирует выбранный текст…';
+  const before = { [field]: Object.prototype.hasOwnProperty.call(result.project,field) ? result.project[field] : null };
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, brand:result.project.brand, tier:result.project.tier,
+        contentField:field, editAction:action, currentValue,
+        existingLanding:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + field + ' (' + action + ')', status:response.ok && typeof payload.value === 'string' ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.attempts || null });
+    if (!response.ok || typeof payload.value !== 'string' || !payload.value.trim()) throw new Error(payload.error || 'AI не вернул новый текст');
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId:'field', field, action, before, after:{[field]:payload.value}, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    state.raw[field] = payload.value;
+    run(); persist(); refreshAiUsage();
+    toast('Текст обновлён: ' + (CONTENT_FIELD_OPTIONS.find(([key]) => key === field)?.[1] || field) + '. Остальные поля не менялись.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось отредактировать текст: ' + error.message;
+    toast('Ошибка AI-редактора: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
 $('#view-spec').addEventListener('click', async e => {
   const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo]'); if (!b) return;
+  if (b.hasAttribute('data-content-edit-action')) { editProjectField(b.dataset.contentEditAction); return; }
   if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
   if (b.hasAttribute('data-content-undo')) {
     const history = contentHistoryForProject();
