@@ -137,6 +137,7 @@ export async function runTextModel(env, primaryModel, options, { preferNvidia = 
     return await primary();
   } catch (error) {
     if (!isQuotaError(error)) throw error;
+    if (routeMode !== 'auto') throw error;
     if (isOpenRouterFallbackEnabled(env)) {
       try {
         return await runOpenRouter(env, options);
