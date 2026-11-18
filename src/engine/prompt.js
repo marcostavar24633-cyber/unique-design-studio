@@ -121,7 +121,7 @@ advantagesTitle, advantages [[заголовок, текст]], processTitle, pr
 faqs [[вопрос, ответ]], contactTitle, contactText,
 imagePrompts [строки], researchSources [{title, url}], assumptions [строки]${opts.forWorker ? '.' : `,\nbrandStrategy {positioning, promise, differentiators, proofNeeded, brandVoice},\naudienceProfiles [{segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers}],\ncompetitorAnalysis [{name, offer, strengths, gaps, sourceUrl}],\nconversionMap [{sectionId, decisionStage, visitorQuestion, objection, response, desiredAction}],\nsectionContent [{id, goal, headline, subheadline, body, cta, visualBrief}],\nvisualBrief [{sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio}],\nmotionBrief {intensity, selectedMechanics, rationale, accessibility},\nqualityReport {score, checks, issues, revisions}, researchStatus.`}
 Этот JSON импортируется в Unique Design Studio и в Landing Studio без изменений.`;
-  const managed = applyManagedPrompt(applyManagedPrompt(full, 'landing-copy'), 'content-director');
+  const managed = applyManagedPrompt(applyManagedPrompt(applyManagedPrompt(full, 'landing-copy'), 'content-director'), 'market-research');
   return withCustomPrompt(managed, p.customPrompt, p.customPromptMode);
 }
 
