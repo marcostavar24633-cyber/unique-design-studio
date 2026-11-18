@@ -2086,6 +2086,53 @@ document.querySelectorAll('.sizes button').forEach(b => b.addEventListener('clic
   selectTab($('#tab-preview'));
 }));
 
+const previewFullscreenButton = $('#preview-fullscreen');
+const previewView = $('#view-preview');
+function syncPreviewFullscreen() {
+  const active = document.fullscreenElement === previewView || previewView?.classList.contains('is-fullscreen-fallback');
+  if (!previewFullscreenButton) return;
+  previewFullscreenButton.setAttribute('aria-pressed', String(active));
+  previewFullscreenButton.setAttribute('aria-label', active ? 'Выйти из полноэкранного режима' : 'Развернуть предпросмотр на весь экран');
+  previewFullscreenButton.title = active ? 'Выйти из полноэкранного режима (Esc)' : 'На весь экран';
+  previewFullscreenButton.innerHTML = active ? '⤢ <span>Свернуть</span>' : '⛶ <span>На весь экран</span>';
+}
+function exitPreviewFullscreen() {
+  if (previewView?.classList.contains('is-fullscreen-fallback')) {
+    previewView.classList.remove('is-fullscreen-fallback');
+    document.body.classList.remove('preview-fullscreen-active');
+    syncPreviewFullscreen();
+    return;
+  }
+  if (document.fullscreenElement === previewView && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {
+      previewView.classList.remove('is-fullscreen-fallback');
+      document.body.classList.remove('preview-fullscreen-active');
+      syncPreviewFullscreen();
+    });
+  }
+}
+previewFullscreenButton?.addEventListener('click', async () => {
+  if (!previewView) return;
+  const active = document.fullscreenElement === previewView || previewView.classList.contains('is-fullscreen-fallback');
+  if (active) { exitPreviewFullscreen(); return; }
+  selectTab($('#tab-preview'));
+  if (previewView.requestFullscreen) {
+    try { await previewView.requestFullscreen(); }
+    catch {
+      previewView.classList.add('is-fullscreen-fallback');
+      document.body.classList.add('preview-fullscreen-active');
+    }
+  } else {
+    previewView.classList.add('is-fullscreen-fallback');
+    document.body.classList.add('preview-fullscreen-active');
+  }
+  syncPreviewFullscreen();
+});
+document.addEventListener('fullscreenchange', syncPreviewFullscreen);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && previewView?.classList.contains('is-fullscreen-fallback')) exitPreviewFullscreen();
+});
+
 $('#change-preview')?.addEventListener('click', () => {
   updateChangePreviewButton();
   if ($('#change-preview').disabled) return toast('Сначала внесите изменение в проект — тогда появится сравнение.');

@@ -410,3 +410,14 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .auto-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent, #b89554); transition: width .35s ease; }
 .auto-progress[data-state="complete"] .auto-progress-track span { background: #299764; }
 .auto-progress small { display: block; color: var(--muted, #777); line-height: 1.45; }
+
+
+/* Fullscreen live website preview */
+.view--preview{position:relative}
+.preview-fullscreen{position:absolute;top:12px;right:12px;z-index:4;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid rgba(255,255,255,.24);border-radius:10px;background:rgba(16,18,22,.88);color:#fff;font-size:13px;font-weight:650;box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(10px)}
+.preview-fullscreen:hover{border-color:var(--accent);background:#191c21;color:#f6e5bd}
+#view-preview:fullscreen,#view-preview.is-fullscreen-fallback{position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;height:100dvh;min-height:100vh;min-height:100dvh;max-height:100vh;max-height:100dvh;margin:0;padding:0;border:0;background:#fff}
+#view-preview:fullscreen #frame,#view-preview.is-fullscreen-fallback #frame{display:block;width:100%!important;max-width:none!important;height:100%!important;min-height:0;border:0;box-shadow:none}
+#view-preview:fullscreen .preview-fullscreen,#view-preview.is-fullscreen-fallback .preview-fullscreen{top:12px;right:12px}
+body.preview-fullscreen-active{overflow:hidden}
+@media(max-width:600px){.preview-fullscreen{top:8px;right:8px;min-height:38px;padding:7px 10px;font-size:12px}}

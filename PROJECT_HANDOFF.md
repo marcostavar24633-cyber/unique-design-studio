@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:30:59.981Z
-Ветка: main
-Последний commit: 5cd67f9e4b1f1b1b80663eb520ba4691fec85741
-Дата коммита: 2026-11-18T22:30:45+04:00
-Сообщение: Fix oversized AI autopilot requests (#144)
+Время обновления: 2026-11-18T18:45:06.796Z
+Ветка: feat/fullscreen-preview
+Последний commit: 8a43b0a8c0b634f5ab0d0f99258fee332de94c8b
+Дата коммита: 2026-11-18T22:44:56+04:00
+Сообщение: ci: avoid apt dependency install in Playwright setup
 
 Последние коммиты:
+- 8a43b0a · 2026-11-18 · ci: avoid apt dependency install in Playwright setup
+- fb60237 · 2026-11-18 · docs: refresh project handoff
+- 18c8d54 · 2026-11-18 · Add fullscreen mode to live site preview
+- 13c4aaa · 2026-11-18 · Add fullscreen mode to live site preview
+- 6124476 · 2026-11-18 · Add fullscreen mode to live site preview
+- 3386f83 · 2026-11-18 · docs: refresh project handoff
 - 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
 - c2e169f · 2026-11-18 · docs: refresh project handoff
-- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
-- ec02567 · 2026-11-18 · docs: refresh project handoff
-- fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
-- a6793ba · 2026-11-18 · docs: refresh project handoff
-- 9053572 · 2026-11-18 · feat: add free AI quota warnings
-- 1e424c9 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
