@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T14:55:57.771Z
-Ветка: fix/ai-generation-large-briefs
-Последний commit: 18f395e136caebb16cff4157c87bd4eeb6e3fd86
-Дата коммита: 2026-11-18T18:55:44+04:00
-Сообщение: test(ai): cover large UTF-8 briefs and prompt deduplication
+Время обновления: 2026-11-18T15:24:41.629Z
+Ветка: feat/ai-content-engine-staged
+Последний commit: f3c71a5046dbdc0a18dc86ec3ae69dd2d1acf93b
+Дата коммита: 2026-11-18T19:24:31+04:00
+Сообщение: Add staged AI content generation engine
 
 Последние коммиты:
+- f3c71a5 · 2026-11-18 · Add staged AI content generation engine
+- 3d90ec7 · 2026-11-18 · docs: refresh project handoff
 - 18f395e · 2026-11-18 · test(ai): cover large UTF-8 briefs and prompt deduplication
 - 0343c70 · 2026-11-18 · docs: refresh project handoff
 - f57a873 · 2026-11-18 · fix(ai): send compact generation payload without duplicated prompt
 - e1d938e · 2026-11-18 · fix(ai): raise safe request limit and count UTF-8 bytes
 - a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
-- 1e424c9 · 2026-11-18 · docs: refresh project handoff
-- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
 <!-- HANDOFF:AUTO:END -->
