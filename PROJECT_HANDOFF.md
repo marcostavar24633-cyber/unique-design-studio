@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:14:05.620Z
-Ветка: main
-Последний commit: 120f2a74b56019a098f79e2d83914ec489e7717c
-Дата коммита: 2026-11-18T23:13:52+04:00
-Сообщение: Add guarded autonomy operations
+Время обновления: 2026-11-18T19:21:13.207Z
+Ветка: fix/ops-hardening-postdeploy
+Последний commit: 07c2338e303dd9de5d555b8740eeb43891f4fa65
+Дата коммита: 2026-11-18T23:16:25+04:00
+Сообщение: ops: support Worker-only deployment health checks
 
 Последние коммиты:
+- 07c2338 · 2026-11-18 · ops: support Worker-only deployment health checks
+- 9804328 · 2026-11-18 · ops: isolate post-deploy Worker health gate
+- 6dc6433 · 2026-11-18 · security: harden backup exclusions without shell continuations
+- 859286f · 2026-11-18 · docs: clarify post-deploy health gate
+- abfedcd · 2026-11-18 · ops: verify Worker health after deployments
+- 507e7f8 · 2026-11-18 · security: exclude local secrets from source backups
+- 9c36903 · 2026-11-18 · docs: refresh project handoff
 - 120f2a7 · 2026-11-18 · Add guarded autonomy operations
-- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
-- 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
-- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
-- 7addacc · 2026-11-18 · Add fullscreen mode to live preview
-- 3386f83 · 2026-11-18 · docs: refresh project handoff
-- 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
-- c2e169f · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
