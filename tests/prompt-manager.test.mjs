@@ -46,12 +46,12 @@ test('versions can be activated and exported/imported', () => {
 
 test('image instructions must be English and fit the worker budget', () => {
   assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'image-generation', 'Добавить мягкий свет'), /английском/);
-  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'image-generation', 'x'.repeat(1001)), error => error.message.split(String.fromCharCode(160)).join(' ').includes('1 000 символов'));
+  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'image-generation', 'x'.repeat(1001)), error => error.message.replace(/\\s/g, ' ').includes('1 000 символов'));
   assert.doesNotThrow(() => savePromptVersion(emptyPromptRegistry(), 'image-generation', 'Soft cinematic side light.'));
 });
 
 test('each module enforces its own payload budget', () => {
   assert.equal(PROMPT_LIMITS['design-director'], 1800);
-  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'content-director', 'x'.repeat(1501)), error => error.message.split(String.fromCharCode(160)).join(' ').includes('1 500'));
-  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'market-research', 'x'.repeat(1501)), error => error.message.split(String.fromCharCode(160)).join(' ').includes('1 500'));
+  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'content-director', 'x'.repeat(1501)), error => error.message.replace(/\\s/g, ' ').includes('1 500'));
+  assert.throws(() => savePromptVersion(emptyPromptRegistry(), 'market-research', 'x'.repeat(1501)), error => error.message.replace(/\\s/g, ' ').includes('1 500'));
 });
