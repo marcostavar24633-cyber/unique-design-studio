@@ -39,8 +39,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Ввод передаётся через переменные окружения, а не подстановкой в команду (защита от внедрения команд).
-      PR_NUMBER: ${{ inputs.pr }}
-      EXECUTE: ${{ inputs.execute && '--execute' || '' }}
+      PR_NUMBER: ${{ github.event.inputs.pr }}
+      EXECUTE: ${{ github.event.inputs.execute == 'true' && '--execute' || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +50,7 @@ jobs:
         with:
           node-version: 22
       - name: Номер PR
-        if: github.event_name == 'workflow_dispatch' && inputs.command != 'status'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.command != 'status'
         run: '[[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "Укажите номер PR"; exit 1; }'
       - name: Права и настройки
         run: node scripts/merge-engine.mjs doctor
@@ -58,13 +58,13 @@ jobs:
         if: github.event_name == 'schedule'
         run: node scripts/merge-engine/auto.mjs
       - name: Сводка
-        if: github.event_name == 'workflow_dispatch' && inputs.command == 'status'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == 'status'
         run: node scripts/merge-engine.mjs status --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Проверка PR
-        if: github.event_name == 'workflow_dispatch' && inputs.command == 'check'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == 'check'
         run: node scripts/merge-engine.mjs check "$PR_NUMBER" --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Слияние
-        if: github.event_name == 'workflow_dispatch' && inputs.command == 'merge'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.command == 'merge'
         run: node scripts/merge-engine.mjs merge "$PR_NUMBER" $EXECUTE --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Отчёт
         if: always()
