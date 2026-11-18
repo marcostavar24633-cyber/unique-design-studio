@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:51:01.942Z
+Время обновления: 2026-11-18T15:51:28.892Z
 Ветка: feat/ai-content-quality-review
-Последний commit: 0ede889565da69269a95e87e8c2017ee2201d7b5
-Дата коммита: 2026-11-18T19:50:46+04:00
-Сообщение: Assert quality review styles in stylesheet
+Последний commit: 8804c24296f656f6b94cca4fbe77650fa8c1cc63
+Дата коммита: 2026-11-18T19:51:18+04:00
+Сообщение: Restore existing Smart Crop and asset CSS tests
 
 Последние коммиты:
+- 8804c24 · 2026-11-18 · Restore existing Smart Crop and asset CSS tests
+- 64adc4c · 2026-11-18 · docs: refresh project handoff
 - 0ede889 · 2026-11-18 · Assert quality review styles in stylesheet
 - 3e22f73 · 2026-11-18 · Assert quality review styles in stylesheet
 - dd48c30 · 2026-11-18 · Restore asset crop CSS test assertion
 - 2e8b72a · 2026-11-18 · Correct AI quality review CSS regression test
 - 0d76161 · 2026-11-18 · Fix quality review CSS regression assertion
 - 38d3c52 · 2026-11-18 · Fix multilingual unsupported-claims detection
-- a9abe76 · 2026-11-18 · docs: refresh project handoff
-- a151221 · 2026-11-18 · Fix AI review endpoint path validation
 <!-- HANDOFF:AUTO:END -->
