@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T03:50:45.214Z
+Время обновления: 2026-11-18T07:37:13.344Z
 Ветка: feat/prompt-manager-pro
-Последний commit: 0df5fd6b70e14f1d67c50b25075539cc139c3b6b
-Дата коммита: 2026-11-18T07:50:25+04:00
-Сообщение: test(prompts): verify per-module payload budgets
+Последний commit: da94b074b7b4a4dd315d2b590d3a774dcd25e3f0
+Дата коммита: 2026-11-18T11:36:58+04:00
+Сообщение: test(prompts): normalize locale spacing in limit assertions
 
 Последние коммиты:
+- da94b07 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
+- 5e47eb2 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
+- bf22a6c · 2026-11-18 · test(prompts): accept localized grouping spaces
+- fdcd4bb · 2026-11-18 · docs: record Prompt Manager integrations and validation
+- 838c887 · 2026-11-18 · docs: refresh project handoff
 - 0df5fd6 · 2026-11-18 · test(prompts): verify per-module payload budgets
 - f83cc1b · 2026-11-18 · fix(studio): show prompt budget for each module
 - 5c9ee37 · 2026-11-18 · feat(prompts): export per-module prompt limits
-- 681f0eb · 2026-11-18 · fix(prompts): enforce module-specific payload budgets
-- ee713c1 · 2026-11-18 · docs: refresh project handoff
-- e91dd35 · 2026-11-18 · fix(worker): format managed design instructions
-- eeb5b66 · 2026-11-18 · feat(prompts): connect Market Research guidance to supplied evidence
-- 4fb44c3 · 2026-11-18 · feat(prompts): apply managed instructions to AI Design Director
 <!-- HANDOFF:AUTO:END -->
