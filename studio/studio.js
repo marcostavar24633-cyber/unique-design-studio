@@ -139,27 +139,43 @@ const SESSION_KEY = 'uds:session-start';
 const sessionStart = (() => { try { let v = sessionStorage.getItem(SESSION_KEY); if (!v) { v = new Date().toISOString(); sessionStorage.setItem(SESSION_KEY, v); } return v; } catch { return new Date().toISOString(); } })();
 let aiToday = null; // ответ /api/usage?range=today или { error }
 function untilReset(now = new Date()) {
+  // Cloudflare Workers AI daily allowance resets at 00:00 UTC; in Asia/Baku this is 04:00.
   const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
-  const min = Math.max(0, Math.round((next - now.getTime()) / 60000));
+  const min = Math.max(0, Math.ceil((next - now.getTime()) / 60000));
   return { hours: Math.floor(min / 60), minutes: min % 60, at: new Date(next) };
 }
+const bakuTime = date => new Intl.DateTimeFormat('ru-RU', {
+  timeZone: 'Asia/Baku', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+}).format(date);
+const bakuDate = date => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Baku', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(date);
 function renderAiBudget() {
   const box = $('#dash-ai-budget'); if (!box) return;
-  const session = aiJournal().filter(e => e.at >= sessionStart);
+  const journal = aiJournal();
+  const session = journal.filter(e => e.at >= sessionStart);
   const sTokens = session.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
+  const bakuToday = bakuDate(new Date());
+  const daily = journal.filter(e => bakuDate(new Date(e.at)) === bakuToday);
+  const dTokens = daily.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
   const r = untilReset();
-  const local = r.at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  let today;
+  const resetAt = bakuTime(r.at);
+  const sessionAt = bakuTime(new Date(sessionStart));
+  let cloudflare;
   if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
-    today = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
-      '<p class="dash-meter-note"><b>До сброса:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>';
+    cloudflare = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход Neurons Cloudflare с 00:00 UTC"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
+      '<p class="dash-meter-note"><b>Cloudflare с 00:00 UTC:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток относительно ориентира ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>';
   } else {
-    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
+    cloudflare = '<p class="dash-meter-note"><b>Cloudflare:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные…') + '</p>';
   }
-  box.innerHTML = today +
-    '<p class="dash-meter-note">Сброс через ' + r.hours + ' ч ' + r.minutes + ' мин — в ' + esc(local) + ' (00:00 UTC). Объём ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' — ориентир по документации Cloudflare.</p>' +
-    '<p class="dash-meter-note"><b>Эта сессия</b> (с ' + esc(new Date(sessionStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '): ' + session.length + ' запросов' + (sTokens ? ', ' + sTokens.toLocaleString('ru-RU') + ' токенов' : '') + (session.some(e => e.status !== 'ok') ? ', ошибок: ' + session.filter(e => e.status !== 'ok').length : '') + '.</p>';
+  box.innerHTML = cloudflare +
+    '<div class="dash-ai-periods">' +
+      '<p class="dash-meter-note"><b>За сессию</b> (эта вкладка, с ' + esc(sessionAt) + '): ' + session.length + ' операций · ' + sTokens.toLocaleString('ru-RU') + ' токенов.</p>' +
+      '<p class="dash-meter-note"><b>За сегодня</b> (журнал, Asia/Baku): ' + daily.length + ' операций · ' + dTokens.toLocaleString('ru-RU') + ' токенов.</p>' +
+      '<p class="dash-meter-note"><b>До сброса Cloudflare:</b> ' + r.hours + ' ч ' + r.minutes + ' мин — в ' + esc(resetAt) + ' по Asia/Baku (00:00 UTC).</p>' +
+    '</div>' +
+    '<p class="dash-meter-note">Токены считаются по фактическим данным, которые вернула модель, и хранятся в журнале этого браузера. Neurons берутся отдельно из Cloudflare Analytics; ориентир ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' не является гарантированным лимитом аккаунта.</p>';
 }
 async function refreshAiToday() {
   const endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
@@ -176,8 +192,8 @@ function renderAiJournal() {
   renderAiBudget();
   const box = $('#dash-ai-journal'); if (!box) return;
   const list = aiJournal();
-  const today = new Date().toDateString();
-  const todays = list.filter(e => new Date(e.at).toDateString() === today);
+  const today = bakuDate(new Date());
+  const todays = list.filter(e => bakuDate(new Date(e.at)) === today);
   const tokens = todays.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
   const errors = todays.filter(e => e.status !== 'ok').length;
   const time = iso => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
