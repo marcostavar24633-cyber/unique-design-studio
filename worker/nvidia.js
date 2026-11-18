@@ -115,9 +115,11 @@ async function runNvidia(env, options) {
  * development/testing; never use them as an automatic public-production fallback.
  * A separately licensed non-free deployment must explicitly opt in.
  */
-export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
+export async function runTextModel(env, primaryModel, options, { preferNvidia = false, providerOverride, routeMode = 'auto' } = {}) {
   if (preferNvidia) return runNvidia(env, options);
-  const selected = String(env.AI_PRIMARY_PROVIDER || 'cloudflare').trim().toLowerCase();
+  if (routeMode === 'openrouter') return runOpenRouter(env, options);
+  const requested = String(providerOverride || env.AI_PRIMARY_PROVIDER || 'cloudflare').trim().toLowerCase();
+  const selected = ['cloudflare','openai','anthropic'].includes(requested) ? requested : 'cloudflare';
   let primary;
   if (selected === 'openai' || selected === 'anthropic') {
     const { isDirectProviderEnabled, runDirectProvider } = await import('./direct-providers.js');
