@@ -5,11 +5,21 @@ export function isQuotaError(error) {
   const status = Number(error?.status ?? error?.statusCode ?? error?.response?.status ?? error?.cause?.status);
   if (status === 429) return true;
   const detail = [error?.message, error?.code, error?.type, error].filter(Boolean).join(' ').toLowerCase();
-  return /(?:\b(?:3036|3040|429)\b|daily free allocation|rate[\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(detail);
+  return /(?:\\b(?:3036|3040|429)\\b|daily free allocation|rate[\\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(detail);
+}
+
+export function isFreeAiMode(env = {}) {
+  return String(env.AI_BILLING_MODE || 'free').trim().toLowerCase() === 'free';
+}
+
+export function isNvidiaFallbackEnabled(env = {}) {
+  return !isFreeAiMode(env) && env.NVIDIA_NIM_ENABLED === 'true' && Boolean(env.NVIDIA_API_KEY);
 }
 
 async function runNvidia(env, options) {
-  if (!env.NVIDIA_API_KEY) throw new Error('Резервный NVIDIA NIM не настроен: отсутствует секрет NVIDIA_API_KEY');
+  if (!isNvidiaFallbackEnabled(env)) {
+    throw new Error('NVIDIA NIM отключён: бесплатный режим не допускает внешний резервный API');
+  }
   const model = String(env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL).trim().slice(0, 160);
   if (!model) throw new Error('Не задана модель NVIDIA_MODEL');
 
@@ -52,9 +62,9 @@ async function runNvidia(env, options) {
 }
 
 /**
- * Сначала вызывает Workers AI. На явную ошибку квоты/429 один раз переключается
- * на OpenAI-compatible NVIDIA NIM. Последующие попытки текущего запроса остаются
- * на NVIDIA, чтобы не расходовать повторно уже исчерпанную квоту основного провайдера.
+ * Free mode is the safe default. NVIDIA's hosted API catalog endpoints are for
+ * development/testing; never use them as an automatic public-production fallback.
+ * A separately licensed non-free deployment must explicitly opt in.
  */
 export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
   if (preferNvidia) return runNvidia(env, options);
@@ -62,7 +72,7 @@ export async function runTextModel(env, primaryModel, options, { preferNvidia = 
     const result = await env.AI.run(primaryModel, options);
     return { result, provider: 'cloudflare', model: primaryModel };
   } catch (error) {
-    if (!isQuotaError(error) || !env.NVIDIA_API_KEY) throw error;
+    if (!isQuotaError(error) || !isNvidiaFallbackEnabled(env)) throw error;
     try {
       return await runNvidia(env, options);
     } catch (fallbackError) {
