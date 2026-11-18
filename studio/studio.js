@@ -1586,8 +1586,8 @@ function renderHeroReadabilityChecks() {
 
 function previewAccessibleName(el, doc) {
   if (!el) return '';
-  const clean = value => String(value || '').replace(/\\s+/g, ' ').trim();
-  const referenced = (el.getAttribute('aria-labelledby') || '').trim().split(/\\s+/).filter(Boolean)
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const referenced = (el.getAttribute('aria-labelledby') || '').trim().split(/\s+/).filter(Boolean)
     .map(id => doc.getElementById(id)).filter(Boolean)
     .map(node => node.textContent || '').join(' ');
   if (clean(referenced)) return clean(referenced);
@@ -1827,7 +1827,7 @@ $('#form').addEventListener('input', e => {
     const editor = t.closest('.crop-editor');
     const preview = editor?.querySelector('[data-crop-preview-role="' + role + '"][data-crop-preview-index="' + index + '"][data-crop-preview-viewport="' + viewport + '"]');
     if (preview) {
-      const current = preview.style.objectPosition.split(/\\s+/);
+      const current = preview.style.objectPosition.split(/\s+/);
       const x = axis === 'x' ? t.value : (current[0] || '50%').replace('%','');
       const y = axis === 'y' ? t.value : (current[1] || '50%').replace('%','');
       preview.style.objectPosition = x + '% ' + y + '%';
