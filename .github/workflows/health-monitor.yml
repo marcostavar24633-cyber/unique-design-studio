@@ -1,0 +1,39 @@
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      ai_probe:
+        description: 'Выполнить один синтетический запрос Workers AI (расходует квоту)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uds-health-monitor
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Проверка сайта, Worker и AI binding
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ops/health-check.mjs
+      - name: Синтетическая проверка AI inference
+        if: github.event.schedule == '17 6 * * *' || inputs.ai_probe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ops/health-check.mjs --ai

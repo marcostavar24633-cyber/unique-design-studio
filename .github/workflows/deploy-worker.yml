@@ -1,8 +1,22 @@
 name: Deploy AI Worker to Cloudflare
 
 on:
-  # Ручной запуск оставляем для внеплановой публикации.
+  # Ручной запуск: публикация или откат на конкретную версию.
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Операция с AI Worker'
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      version_id:
+        description: 'Cloudflare version ID (только для rollback)'
+        required: false
+        type: string
+      confirmation:
+        description: 'Введите ROLLBACK для подтверждения отката'
+        required: false
+        type: string
   # Автопубликация при изменениях исходников Worker в main.
   push:
     branches:
@@ -20,6 +34,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name == 'push' || inputs.action == 'deploy'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +55,54 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy --config worker/wrangler.jsonc
+
+  rollback:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && inputs.confirmation == 'ROLLBACK'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Проверить version ID
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+        run: |
+          [[ "$VERSION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || {
+            echo "::error::Укажите корректный Cloudflare version UUID."
+            exit 1
+          }
+      - name: Проверить Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Не задан CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Не задан CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Откатить Worker на указанную версию
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION_ID: ${{ inputs.version_id }}
+        run: npx --yes wrangler@4 rollback "$VERSION_ID" --config worker/wrangler.jsonc --message "Guarded rollback via GitHub Actions"
+      - name: Проверить Worker после отката
+        run: |
+          set -euo pipefail
+          for attempt in {1..8}; do
+            if curl --fail --silent --show-error --max-time 10 \\
+              https://unique-design-studio-ai.marcostavar24633.workers.dev/health \\
+              | grep -q '"ok":true'; then
+              echo "Worker health check passed after rollback."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Worker health check failed after rollback."
+          exit 1
+
+  reject-rollback:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && inputs.confirmation != 'ROLLBACK'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK." && exit 1
