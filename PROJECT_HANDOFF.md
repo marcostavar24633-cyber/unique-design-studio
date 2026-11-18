@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:31:42.839Z
+Время обновления: 2026-11-18T15:32:21.838Z
 Ветка: feat/ai-section-regeneration
-Последний commit: ce95a6e869950061438ecedb9f652d54b0f4d5b2
-Дата коммита: 2026-11-18T19:31:31+04:00
-Сообщение: Keep SEO analysis metadata out of the project content fields
+Последний commit: 1905f4437baea4f727560ccea25cd4abafbf186e
+Дата коммита: 2026-11-18T19:31:58+04:00
+Сообщение: Initialize project analysis safely when regenerating SEO metadata
 
 Последние коммиты:
+- 1905f44 · 2026-11-18 · Initialize project analysis safely when regenerating SEO metadata
+- 16da51c · 2026-11-18 · Fix retry prompt newline in section regeneration
+- adae30c · 2026-11-18 · Fix newline separators in single-stage prompt assembly
+- 8484fa8 · 2026-11-18 · docs: refresh project handoff
 - ce95a6e · 2026-11-18 · Keep SEO analysis metadata out of the project content fields
 - 7b21ff0 · 2026-11-18 · docs: refresh project handoff
 - 000a9c7 · 2026-11-18 · Test section regeneration UI and non-destructive undo
 - 027e3ba · 2026-11-18 · Test Worker API for isolated content section regeneration
-- 79bf7d5 · 2026-11-18 · Test isolated AI section regeneration contracts
-- 0b570fc · 2026-11-18 · Style responsive per-section AI regeneration controls
-- 9aa373f · 2026-11-18 · Make AI section undo restore absent fields correctly
-- e03b23f · 2026-11-18 · Normalize prompt newlines and protect owner brand facts
 <!-- HANDOFF:AUTO:END -->
