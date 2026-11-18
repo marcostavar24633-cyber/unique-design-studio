@@ -640,6 +640,11 @@ function renderSpec() {
 <section class="content-director" aria-labelledby="content-director-title">
   <div class="content-director__head"><div><span class="eyebrow">AI CONTENT DIRECTOR</span><h2 id="content-director-title">Редактор коммерческих текстов</h2><p class="note">Анализирует заполненность и готовит точное задание для AI. Тексты автоматически не меняются: результат можно проверить перед импортом.</p></div><span class="content-director__mark" aria-hidden="true">✦</span></div>
   <div class="content-director__stats"><div><b>${textValues.length}</b><small>текстовых значений</small></div><div><b>${flags.length}</b><small>замечаний</small></div><div><b>${a?.sources?.length || 0}</b><small>источников анализа</small></div></div>
+  <div class="content-quality-review">
+    <button type="button" data-content-quality-review>Проверить качество текста и SEO с AI</button>
+    <p class="note">Проверка оценит ясность предложения, повторы, CTA и SEO-поля. Тексты не меняются; веб-поиск и проверка частотности запросов не выполняются.</p>
+    <div id="content-quality-review-result" class="note" role="status" aria-live="polite"></div>
+  </div>
   <ul class="content-director__checks">${flags.length ? flags.map(item => '<li>! ' + esc(item) + '</li>').join('') : '<li class="is-ok">✓ Базовые проверки заполненности пройдены. Это не подтверждает фактическую достоверность текста.</li>'}</ul>
   <label class="content-director__label" for="content-direction">Редакторское направление</label>
   <textarea id="content-direction" rows="3" maxlength="2000" placeholder="Например: спокойный премиальный тон, меньше прилагательных, больше конкретики и пользы для клиента…"></textarea>
@@ -773,6 +778,51 @@ async function regenerateProjectStage(stageId) {
   }
 }
 const CONTENT_STAGE_LABELS = { strategy:'Первый экран', about:'О компании', services:'Услуги', trust:'Преимущества и FAQ', seo:'Контакты и SEO' };
+async function runContentQualityReview() {
+  if (!result) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  const output = $('#content-quality-review-result');
+  const button = $('#view-spec').querySelector('[data-content-quality-review]');
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\\/api\\/generate-landing\\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  if (button) button.disabled = true;
+  if (output) output.textContent = 'AI анализирует текст и SEO-поля…';
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, contentQualityReview:true,
+        project:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: проверка качества контента и SEO', status:response.ok && payload.review ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP '+response.status), ms:payload.durationMs || Date.now()-started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null });
+    if (!response.ok || !payload.review) throw new Error(payload.error || 'Не удалось получить отчёт');
+    const review = payload.review;
+    const items = [
+      ...(review.findings || []).map(item => ({ priority:item.severity, category:item.category, issue:item.message, recommendation:item.action })),
+      ...(review.recommendations || []).map(item => ({ priority:item.priority, category:item.category, issue:item.issue, recommendation:item.recommendation })),
+    ];
+    if (output) output.innerHTML = '<strong>Оценка контента: '+Number(review.score || 0)+'/100</strong><ul>'+(
+      items.length ? items.map(item => '<li><b>'+esc(String(item.priority || ''))+' · '+esc(String(item.category || ''))+'</b>: '+esc(String(item.issue || ''))+'<br><small>'+esc(String(item.recommendation || ''))+'</small></li>').join('')
+      : '<li>Существенных замечаний не найдено. Фактическую достоверность всё равно нужно проверить вручную.</li>'
+    )+'</ul><small>AI-проверка не меняла проект. Веб-поиск не выполнялся.</small>';
+    toast('Проверка качества завершена. Контент не изменён.');
+  } catch (error) {
+    if (output) output.textContent = 'Не удалось выполнить проверку: '+error.message;
+    toast('Ошибка проверки качества: '+error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 async function editProjectField(action) {
   const field = $('#content-edit-field')?.value;
   const currentValue = $('#content-edit-value')?.value || '';
@@ -820,7 +870,8 @@ async function editProjectField(action) {
 }
 
 $('#view-spec').addEventListener('click', async e => {
-  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo]'); if (!b) return;
+  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo], [data-content-quality-review]'); if (!b) return;
+  if (b.hasAttribute('data-content-quality-review')) { runContentQualityReview(); return; }
   if (b.hasAttribute('data-content-edit-action')) { editProjectField(b.dataset.contentEditAction); return; }
   if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
   if (b.hasAttribute('data-content-undo')) {
