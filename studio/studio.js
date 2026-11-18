@@ -870,7 +870,7 @@ async function editProjectField(action) {
 }
 
 $('#view-spec').addEventListener('click', async e => {
-  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo], [data-content-quality-review]'); if (!b) return;
+  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo], [data-content-quality-review], [data-content-edit-action]'); if (!b) return;
   if (b.hasAttribute('data-content-quality-review')) { runContentQualityReview(); return; }
   if (b.hasAttribute('data-content-edit-action')) { editProjectField(b.dataset.contentEditAction); return; }
   if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
