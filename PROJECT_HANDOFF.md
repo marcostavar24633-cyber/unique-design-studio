@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:34:41.811Z
-Ветка: feat/ai-section-regeneration
-Последний commit: ade6ef00d2bf79f318433f676375ef647b15a484
-Дата коммита: 2026-11-18T19:34:30+04:00
-Сообщение: Use the documented string type for market research fixture
+Время обновления: 2026-11-18T15:36:17.328Z
+Ветка: feat/ai-field-editor-actions
+Последний commit: 9744f78b864940bbb28fe982338155333eff0a66
+Дата коммита: 2026-11-18T19:36:01+04:00
+Сообщение: Expose AI rewrite expand and shorten API for one text field
 
 Последние коммиты:
+- 9744f78 · 2026-11-18 · Expose AI rewrite expand and shorten API for one text field
+- 59a1d10 · 2026-11-18 · Add safe AI editing for one selected text field
+- a563ac2 · 2026-11-18 · docs: refresh project handoff
 - ade6ef0 · 2026-11-18 · Use the documented string type for market research fixture
 - ce095f7 · 2026-11-18 · docs: refresh project handoff
 - 3c23eac · 2026-11-18 · Align Worker staged-generation fixture with structured trust schema
 - 5058986 · 2026-11-18 · Test strict generated content array and object validation
 - b19a9ac · 2026-11-18 · Align trust-stage fixtures with structured row schema
-- 871835c · 2026-11-18 · Enforce array and object schemas for generated content sections
-- 769a683 · 2026-11-18 · docs: refresh project handoff
-- eceafaf · 2026-11-18 · Fix Worker endpoint validation regular expression
 <!-- HANDOFF:AUTO:END -->
