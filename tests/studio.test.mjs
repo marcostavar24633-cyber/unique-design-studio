@@ -420,3 +420,18 @@ test('AI Content Director перегенерирует только выбран
   assert.match(css, /\.content-regenerate__actions\{display:flex;flex-wrap:wrap/);
   assert.match(css, /@media\(max-width:600px\)\{\.content-regenerate__actions\{display:grid/);
 });
+
+
+test('AI Content Director exposes Rewrite Expand Shorten for one selected field with undo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'CONTENT_FIELD_OPTIONS', 'id="content-edit-field"', 'id="content-edit-value"',
+    'data-content-edit-action="rewrite"', 'data-content-edit-action="expand"',
+    'data-content-edit-action="shorten"', 'async function editProjectField(action)',
+    'contentField:field', 'editAction:action', 'currentValue', 'state.raw[field] = payload.value',
+    'stageId:\'field\'', 'uds:content-edit-field', 'Отменить последнюю AI-правку',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /const before = \{ \[field\]: Object\.prototype\.hasOwnProperty\.call\(result\.project,field\) \? result\.project\[field\] : null \}/);
+  assert.match(css, /\.content-field-editor select,\.content-field-editor textarea\{display:block;width:100%/);
+});
