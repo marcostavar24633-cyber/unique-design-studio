@@ -85,12 +85,15 @@ export default {
 
       const range = url.searchParams.get('range') || '24h';
       const hoursByRange = { '24h': 24, '7d': 24 * 7, '30d': 24 * 30 };
-      if (!Object.prototype.hasOwnProperty.call(hoursByRange, range)) {
-        return json({ error: 'Допустимые периоды: 24h, 7d, 30d' }, 400, origin);
+      if (range !== 'today' && !Object.prototype.hasOwnProperty.call(hoursByRange, range)) {
+        return json({ error: 'Допустимые периоды: today, 24h, 7d, 30d' }, 400, origin);
       }
 
       const end = new Date();
-      const start = new Date(end.getTime() - hoursByRange[range] * 60 * 60 * 1000);
+      // today — с 00:00 UTC: в это время Cloudflare сбрасывает суточный бесплатный объём Workers AI.
+      const start = range === 'today'
+        ? new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()))
+        : new Date(end.getTime() - hoursByRange[range] * 60 * 60 * 1000);
       const query = `query WorkersAIUsage($accountTag: String!, $start: Time!, $end: Time!) {
         viewer {
           accounts(filter: { accountTag: $accountTag }) {

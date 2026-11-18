@@ -132,7 +132,48 @@ function logAi(entry) {
   } catch { /* хранилище недоступно — журнал не ведётся */ }
   renderAiJournal();
 }
+// ---------- Расход AI: до сброса лимита и за текущую сессию ----------
+// Сессия — с открытия студии в этой вкладке (sessionStorage). Её расход — по журналу: токены, которые вернула модель.
+// «До сброса» — Neurons с 00:00 UTC из аналитики Cloudflare: в это время сбрасывается суточный бесплатный объём.
+const SESSION_KEY = 'uds:session-start';
+const sessionStart = (() => { try { let v = sessionStorage.getItem(SESSION_KEY); if (!v) { v = new Date().toISOString(); sessionStorage.setItem(SESSION_KEY, v); } return v; } catch { return new Date().toISOString(); } })();
+let aiToday = null; // ответ /api/usage?range=today или { error }
+function untilReset(now = new Date()) {
+  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const min = Math.max(0, Math.round((next - now.getTime()) / 60000));
+  return { hours: Math.floor(min / 60), minutes: min % 60, at: new Date(next) };
+}
+function renderAiBudget() {
+  const box = $('#dash-ai-budget'); if (!box) return;
+  const session = aiJournal().filter(e => e.at >= sessionStart);
+  const sTokens = session.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
+  const r = untilReset();
+  const local = r.at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  let today;
+  if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
+    const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
+    today = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
+      '<p class="dash-meter-note"><b>До сброса:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>';
+  } else {
+    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
+  }
+  box.innerHTML = today +
+    '<p class="dash-meter-note">Сброс через ' + r.hours + ' ч ' + r.minutes + ' мин — в ' + esc(local) + ' (00:00 UTC). Объём ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' — ориентир по документации Cloudflare.</p>' +
+    '<p class="dash-meter-note"><b>Эта сессия</b> (с ' + esc(new Date(sessionStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '): ' + session.length + ' запросов' + (sTokens ? ', ' + sTokens.toLocaleString('ru-RU') + ' токенов' : '') + (session.some(e => e.status !== 'ok') ? ', ошибок: ' + session.filter(e => e.status !== 'ok').length : '') + '.</p>';
+}
+async function refreshAiToday() {
+  const endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { aiToday = { error: 'AI-сервер не задан' }; return renderAiBudget(); }
+  try {
+    const u = new URL(endpoint, location.href); u.pathname = u.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage'); u.search = '?range=today';
+    const res = await fetch(u.href, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    aiToday = res.ok ? body : { error: res.status === 400 ? 'Worker не обновлён (нужна публикация)' : body.error || 'HTTP ' + res.status };
+  } catch (error) { aiToday = { error: error.message }; }
+  renderAiBudget();
+}
 function renderAiJournal() {
+  renderAiBudget();
   const box = $('#dash-ai-journal'); if (!box) return;
   const list = aiJournal();
   const today = new Date().toDateString();
@@ -150,6 +191,8 @@ function renderAiJournal() {
 }
 
 renderAiJournal();
+refreshAiToday();
+setInterval(() => { if (!document.hidden) refreshAiToday(); else renderAiBudget(); }, 60_000);
 // ---------- Главная панель ----------
 // Состояние подключений в правой колонке: ok — работает, warn — требует внимания, off — не подключено.
 function setDashStatus(key, level, text) {
@@ -727,7 +770,7 @@ $('#auto').addEventListener('submit', async e => {
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
-      const studioPrompt = autopilot(input, { registry: registry() }).prompt;
+      const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt;
       const aiStarted = Date.now();
       let res, body;
       try {

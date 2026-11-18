@@ -377,3 +377,14 @@ test('журнал AI-операций: тексты и каждое фото, �
   assert.ok(js.indexOf('\nrenderAiJournal();') > js.indexOf('function renderAiJournal()'));
   assert.ok(js.indexOf('\nrenderAiJournal();') > js.indexOf('const esc ='));
 });
+
+test('расход AI: до сброса лимита (00:00 UTC) и за текущую сессию; задание для Worker без расширенного контракта', () => {
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<h3 id="budget-h">Расход AI<\/h3><div id="dash-ai-budget"><\/div>/);
+  assert.match(js, /u\.search = '\?range=today'/);
+  assert.match(js, /Date\.UTC\(now\.getUTCFullYear\(\), now\.getUTCMonth\(\), now\.getUTCDate\(\) \+ 1\)/);
+  assert.match(js, /aiJournal\(\)\.filter\(e => e\.at >= sessionStart\)/);
+  assert.match(js, /Worker не обновлён \(нужна публикация\)/);
+  assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
+});
