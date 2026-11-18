@@ -1,5 +1,6 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
+import { generateContentInStages } from './content-engine.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -315,6 +316,23 @@ export default {
     ].join('\n');
     // Одно сообщение: шаблон чата Gemma не поддерживает отдельную системную роль.
     const prompt = system + '\n\n' + user;
+
+    if (input.contentEngine === 'staged') {
+      try {
+        const staged = await generateContentInStages({
+          env, model: MODEL, brief, facts, studioPrompt, formatNote: FORMAT_NOTE, runTextModel,
+        });
+        if (staged.generation.status === 'completed') {
+          staged.landing.niche = brief.niche;
+          if (brief.brand) staged.landing.brand = brief.brand;
+          return json(staged, 200, origin);
+        }
+        // Partial is explicit: the UI may keep completed sections, but must not label the run as complete.
+        return json(staged, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка поэтапной генерации', generation: { mode: 'staged', status: 'failed' } }, 502, origin);
+      }
+    }
 
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
