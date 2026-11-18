@@ -387,15 +387,19 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /aiJournal\(\)\.filter\(e => e\.at >= sessionStart\)/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
+  assert.match(js, /Сброс через .*после 4:00/);
 });
 
 
 test('AI free quota panel warns at 70%, 85%, and 100% without implying an exact hard limit', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  assert.match(source, /pct >= 100[\s\S]*Лимит исчерпан по данным аналитики/);
+  assert.match(source, /pct >= 100[\s\S]*Бесплатная квота исчерпана, пробуйте после 4:00/);
   assert.match(source, /pct >= 85[\s\S]*не менее 85%/);
   assert.match(source, /pct >= 70[\s\S]*не менее 70%/);
   assert.match(source, /data-ai-budget-alert=/);
+  assert.match(source, /data-ai-quota-recheck/);
+  assert.match(source, /Пробовать позже/);
+  assert.match(source, /data-ai-quota-recheck\]\) refreshAiToday\(\)/);
   assert.match(source, /aria-live="polite"/);
   assert.match(source, /платный резервный провайдер отключён/);
   assert.match(source, /ориентировочного бесплатного объёма/);
