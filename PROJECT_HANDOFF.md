@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:47:02.534Z
-Ветка: main
-Последний commit: 7addacc0cc161d5613551be0f5b527516e0ef918
-Дата коммита: 2026-11-18T22:46:51+04:00
-Сообщение: Add fullscreen mode to live preview
+Время обновления: 2026-11-18T18:49:44.566Z
+Ветка: fix/strict-cloudflare-ai-direct
+Последний commit: d9022131a4a6e5aa0ac84206166284313b081d55
+Дата коммита: 2026-11-18T22:49:33+04:00
+Сообщение: test(ai): enforce direct Workers AI routing without Gateway
 
 Последние коммиты:
+- d902213 · 2026-11-18 · test(ai): enforce direct Workers AI routing without Gateway
+- 200ff5e · 2026-11-18 · fix(ai): require Workers AI binding for text generation
+- 38979f8 · 2026-11-18 · fix(ai): remove Gateway routing from direct Workers AI path
+- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
 - 7addacc · 2026-11-18 · Add fullscreen mode to live preview
 - 3386f83 · 2026-11-18 · docs: refresh project handoff
 - 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
 - c2e169f · 2026-11-18 · docs: refresh project handoff
-- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
-- ec02567 · 2026-11-18 · docs: refresh project handoff
-- fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
-- a6793ba · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
