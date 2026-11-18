@@ -693,7 +693,7 @@ async function regenerateProjectStage(stageId) {
   buttons.forEach(button => { button.disabled = true; });
   if (status) status.textContent = 'AI перегенерирует раздел. Остальные части проекта не меняются…';
   const fields = STAGE_PROJECT_FIELDS[stageId];
-  const before = Object.fromEntries(fields.map(key => [key, result.project[key]]));
+  const before = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(result.project,key) ? result.project[key] : null]));
   const started = Date.now();
   try {
     const response = await fetch(url.href, {
@@ -742,10 +742,10 @@ $('#view-spec').addEventListener('click', async e => {
     const history = contentHistoryForProject();
     const last = history.pop();
     if (!last) return;
-    Object.assign(state.raw, last.before);
+    for (const [key,value] of Object.entries(last.before)) { if (value === null) delete state.raw[key]; else state.raw[key] = value; }
     if (last.stageId === 'seo' && state.analysis?.data) {
       for (const key of ['segments','objections','triggers','keywords','competitors','imagePrompts']) {
-        if (Object.prototype.hasOwnProperty.call(last.before,key)) state.analysis.data[key] = last.before[key];
+        if (Object.prototype.hasOwnProperty.call(last.before,key)) { if (last.before[key] === null) delete state.analysis.data[key]; else state.analysis.data[key] = last.before[key]; }
       }
     }
     writeContentHistory(history);
