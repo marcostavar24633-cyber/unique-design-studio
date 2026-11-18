@@ -28,15 +28,25 @@ export function normalizePromptRegistry(value) {
   out.updatedAt = typeof value.updatedAt === 'string' ? value.updatedAt : null;
   return out;
 }
-export function loadPromptRegistry(storage = globalThis.localStorage) {
-  try { return normalizePromptRegistry(JSON.parse(storage?.getItem(PROMPT_MANAGER_KEY) || 'null')); }
-  catch { return emptyPromptRegistry(); }
+function browserStorage() {
+  try { return globalThis.localStorage || null; }
+  catch { return null; }
 }
-export function savePromptRegistry(registry, storage = globalThis.localStorage) {
+export function loadPromptRegistry(storage) {
+  try {
+    const target = arguments.length ? storage : browserStorage();
+    return normalizePromptRegistry(JSON.parse(target?.getItem(PROMPT_MANAGER_KEY) || 'null'));
+  } catch { return emptyPromptRegistry(); }
+}
+export function savePromptRegistry(registry, storage) {
   const normalized = normalizePromptRegistry(registry);
   normalized.updatedAt = new Date().toISOString();
-  try { storage?.setItem(PROMPT_MANAGER_KEY, JSON.stringify(normalized)); return { ok: true, registry: normalized }; }
-  catch (error) { return { ok: false, error: error?.message || 'storage-unavailable', registry: normalized }; }
+  try {
+    const target = arguments.length > 1 ? storage : browserStorage();
+    if (!target) throw new Error('Хранилище браузера недоступно');
+    target.setItem(PROMPT_MANAGER_KEY, JSON.stringify(normalized));
+    return { ok: true, registry: normalized };
+  } catch (error) { return { ok: false, error: error?.message || 'storage-unavailable', registry: normalized }; }
 }
 export function activePrompt(registry, moduleId) {
   const item = normalizePromptRegistry(registry).modules[moduleId];
@@ -49,6 +59,8 @@ export function savePromptVersion(registry, moduleId, content, note = '') {
   const text = cleanText(content);
   if (text.length > 12000) throw new Error('Промт не должен превышать 12 000 символов');
   if (!text) throw new Error('Промт не может быть пустым');
+  if (moduleId === 'image-generation' && text.length > 1000) throw new Error('Для генерации изображений максимум 1 000 символов: Worker принимает промт целиком в пределах 2 000 символов.');
+  if (moduleId === 'image-generation' && /[а-яё]/i.test(text)) throw new Error('Инструкции для генерации изображений вводите на английском: FLUX не понимает русскую транслитерацию как перевод.');
   const version = Math.max(0, ...item.versions.map(v => v.version)) + 1;
   item.versions.push({ version, content: text, createdAt: new Date().toISOString(), note: cleanText(note).slice(0, 240) });
   item.versions = item.versions.slice(-30);
