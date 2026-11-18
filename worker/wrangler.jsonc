@@ -9,6 +9,7 @@
   },
   "vars": {
     "AI_BILLING_MODE": "free",
-    "NVIDIA_NIM_ENABLED": "false"
+    "NVIDIA_NIM_ENABLED": "false",
+    "GATEWAY_API_URL": "https://universal-ai-gateway.marcostavar24633.workers.dev"
   }
 }

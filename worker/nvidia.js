@@ -66,8 +66,34 @@ async function runNvidia(env, options) {
  * development/testing; never use them as an automatic public-production fallback.
  * A separately licensed non-free deployment must explicitly opt in.
  */
+async function runGateway(env, options) {
+  const base = String(env.GATEWAY_API_URL || '').trim().replace(/\/+$/, '');
+  if (!base || !env.GATEWAY_PROJECT_TOKEN) throw new Error('Universal AI Gateway не настроен: нужны GATEWAY_API_URL и GATEWAY_PROJECT_TOKEN');
+  let response;
+  try {
+    response = await fetch(`${base}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.GATEWAY_PROJECT_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ provider: 'cloudflare', routeMode: 'primary', messages: options.messages, max_tokens: options.max_tokens, temperature: options.temperature }),
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) { throw new Error(`Universal AI Gateway недоступен: ${error?.message || 'network error'}`); }
+  let payload;
+  try { payload = await response.json(); }
+  catch { throw new Error(`Universal AI Gateway вернул некорректный ответ (HTTP ${response.status})`); }
+  if (!response.ok) {
+    const error = new Error(payload?.error || `Universal AI Gateway HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  const content = payload?.choices?.[0]?.message?.content ?? payload?.text;
+  if (typeof content !== 'string' || !content) throw new Error('Universal AI Gateway не вернул текстовый ответ');
+  return { result: payload, provider: payload.provider || 'cloudflare', model: payload.model || 'gateway/cloudflare' };
+}
+
 export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
   if (preferNvidia) return runNvidia(env, options);
+  if (env.GATEWAY_API_URL || env.GATEWAY_PROJECT_TOKEN) return runGateway(env, options);
   try {
     const result = await env.AI.run(primaryModel, options);
     return { result, provider: 'cloudflare', model: primaryModel };
