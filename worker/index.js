@@ -1,6 +1,7 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
 import { generateContentInStages, regenerateContentStage, editContentField } from './content-engine.js';
+import { reviewContentQuality } from './content-quality.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -293,6 +294,21 @@ export default {
       brief.details ? `Подробности от владельца: ${brief.details}` : '',
       // customPrompt уже встроен в studioPrompt на клиенте; не добавляем его второй раз.
     ].filter(Boolean).join('\n');
+
+    if (input.contentQualityReview) {
+      const source = input.project && typeof input.project === 'object' && !Array.isArray(input.project) ? input.project : null;
+      if (!source) return json({ error: 'Передайте объект проекта для проверки качества' }, 400, origin);
+      try {
+        const reviewed = await reviewContentQuality({
+          env, model: MODEL, project: source,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 1000),
+          runTextModel,
+        });
+        return json(reviewed, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка проверки качества контента' }, 502, origin);
+      }
+    }
 
     if (input.contentField) {
       if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
