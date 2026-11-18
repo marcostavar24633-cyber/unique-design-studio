@@ -490,3 +490,16 @@ test('44px touch target guidance is reported as a manual recommendation, not an 
   assert.ok(audit.includes('рекомендуемого ориентира 44 × 44 px'));
   assert.ok(audit.includes('не само по себе доказательство нарушения WCAG 2.2 AA'));
 });
+
+
+test('Responsive accessibility QA verifies the actual iframe viewport before labeling a breakpoint', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes("frame.style.maxWidth = 'none';"));
+  assert.ok(audit.includes('const viewportWidth = doc.defaultView.innerWidth;'));
+  assert.ok(audit.includes('Math.abs(viewportWidth - size.width) > 2'));
+  assert.ok(audit.includes('Проверки для этого размера пропущены'));
+  assert.ok(!audit.includes('doc.defaultView.innerWidth || size.width'));
+});
