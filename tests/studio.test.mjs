@@ -368,8 +368,8 @@ test('AI generation copy does not claim web research when the Worker has no sear
 test('журнал AI-операций: тексты и каждое фото, токены только из ответа, ориентир лимита помечен', () => {
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
-  assert.match(js, /logAi\(\{ kind: 'text', label: 'Тексты сайта: ' \+ input\.niche, status: res\.ok && body\.landing \? 'ok' : 'error'/);
-  assert.match(js, /tokens: body\.usage\?\.totalTokens \|\| null/);
+  assert.match(js, /logAi\(\{ kind: 'text', label: 'Тексты сайта: ' \+ input\.niche, status: res\.ok && body\.landing && body\.generation\?\.status === 'completed' \? 'ok' : 'error'/);
+  assert.match(js, /tokens: body\.usage\?\.totalTokens \|\| null/);\n  assert.match(js, /Частичная генерация:/);
   assert.match(js, /logAi\(\{ kind: 'image', label: 'Фото: ' \+ slot\.label/);
   assert.match(js, /ориентир по документации Cloudflare/);
   assert.match(html, /<h3 id="journal-h">Журнал AI-операций<\/h3><div id="dash-ai-journal"><\/div>/);
