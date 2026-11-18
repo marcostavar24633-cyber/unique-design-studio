@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:15:48.148Z
-Ветка: feat/content-intelligence-studio-integration
-Последний commit: 7de4a69ec398d07616b561bfdb278bee0331dabd
-Дата коммита: 2026-11-19T00:15:34+04:00
-Сообщение: style: add content QA review panel
+Время обновления: 2026-11-18T20:17:53.342Z
+Ветка: main
+Последний commit: cf0567d09227e7621009fc110bc850b61a469111
+Дата коммита: 2026-11-19T00:17:40+04:00
+Сообщение: feat: connect Content Intelligence QA to studio generation
 
 Последние коммиты:
-- 7de4a69 · 2026-11-19 · style: add content QA review panel
-- 1e71bf1 · 2026-11-19 · feat: add AI content QA panel
-- cda0b37 · 2026-11-19 · feat: run content QA after AI generation
+- cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
 - fb2c425 · 2026-11-18 · docs: refresh project handoff
 - 61218ff · 2026-11-19 · feat: introduce Content Intelligence Engine
 - c1982df · 2026-11-18 · docs: refresh project handoff
 - 6ad3800 · 2026-11-19 · fix: clarify AI usage counters and Baku reset
 - ea68aaf · 2026-11-18 · docs: refresh project handoff
+- c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
+- eeb21d0 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
