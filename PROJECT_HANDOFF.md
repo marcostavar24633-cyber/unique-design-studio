@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T09:05:58.229Z
+Время обновления: 2026-11-18T09:12:40.428Z
 Ветка: feat/ai-free-quota-warnings
-Последний commit: 120032d5ef492ad0a8233a5ce3163ea8f8ad0d88
-Дата коммита: 2026-11-18T13:05:46+04:00
-Сообщение: test: keep quota notice hidden until exhaustion
+Последний commit: ab9eb74fe0cf7a969091758fc779b8a76ec67591
+Дата коммита: 2026-11-18T13:12:20+04:00
+Сообщение: test: validate quota thresholds without invalid regex
 
 Последние коммиты:
+- ab9eb74 · 2026-11-18 · test: validate quota thresholds without invalid regex
+- b2acc94 · 2026-11-18 · fix: restore quota thresholds and UTC reset
+- 754a4f4 · 2026-11-18 · docs: refresh project handoff
 - 120032d · 2026-11-18 · test: keep quota notice hidden until exhaustion
 - c7a7a1c · 2026-11-18 · fix: show quota notice only when exhausted
 - 1d06c4d · 2026-11-18 · docs: refresh project handoff
 - a4c6187 · 2026-11-18 · test: cover 4am quota reset message and retry button
 - 3f49ee8 · 2026-11-18 · docs: refresh project handoff
-- 172e6e9 · 2026-11-18 · fix: show AI quota reset after 4:00
-- f33d955 · 2026-11-18 · docs: refresh project handoff
-- 7ef318e · 2026-11-18 · test: cover free AI quota warning thresholds
 <!-- HANDOFF:AUTO:END -->
