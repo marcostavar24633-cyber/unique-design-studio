@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:45:06.796Z
-Ветка: feat/fullscreen-preview
-Последний commit: 8a43b0a8c0b634f5ab0d0f99258fee332de94c8b
-Дата коммита: 2026-11-18T22:44:56+04:00
-Сообщение: ci: avoid apt dependency install in Playwright setup
+Время обновления: 2026-11-18T18:47:02.534Z
+Ветка: main
+Последний commit: 7addacc0cc161d5613551be0f5b527516e0ef918
+Дата коммита: 2026-11-18T22:46:51+04:00
+Сообщение: Add fullscreen mode to live preview
 
 Последние коммиты:
-- 8a43b0a · 2026-11-18 · ci: avoid apt dependency install in Playwright setup
-- fb60237 · 2026-11-18 · docs: refresh project handoff
-- 18c8d54 · 2026-11-18 · Add fullscreen mode to live site preview
-- 13c4aaa · 2026-11-18 · Add fullscreen mode to live site preview
-- 6124476 · 2026-11-18 · Add fullscreen mode to live site preview
+- 7addacc · 2026-11-18 · Add fullscreen mode to live preview
 - 3386f83 · 2026-11-18 · docs: refresh project handoff
 - 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
 - c2e169f · 2026-11-18 · docs: refresh project handoff
+- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
+- ec02567 · 2026-11-18 · docs: refresh project handoff
+- fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
+- a6793ba · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
