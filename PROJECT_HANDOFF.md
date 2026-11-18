@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T17:14:31.256Z
-Ветка: feat/accessibility-name-audit
-Последний commit: 650a5c893346f58ef5b7308bcae98999a48e2593
-Дата коммита: 2026-11-18T21:14:19+04:00
-Сообщение: Restore unrelated crop editor line
+Время обновления: 2026-11-18T17:43:30.230Z
+Ветка: fix/a11y-focus-and-target-guidance
+Последний commit: 450b99d777889e839187a8c4a96ccd1cc3abedeb
+Дата коммита: 2026-11-18T21:43:08+04:00
+Сообщение: test: cover accessibility audit guidance
 
 Последние коммиты:
+- 450b99d · 2026-11-18 · test: cover accessibility audit guidance
+- 73d480d · 2026-11-18 · fix: avoid false keyboard focus warnings
+- 6d5795d · 2026-11-18 · docs: refresh project handoff
 - 650a5c8 · 2026-11-18 · Restore unrelated crop editor line
 - 4651d63 · 2026-11-18 · docs: refresh project handoff
 - a6210b6 · 2026-11-18 · Keep accessibility change isolated from crop editor
 - 5b8ce09 · 2026-11-18 · docs: refresh project handoff
 - 34a55c0 · 2026-11-18 · Fix whitespace normalization in accessible name helper
-- 6873dcd · 2026-11-18 · Test accessible name detection in preview QA
-- c6b4a1d · 2026-11-18 · Improve accessible name detection in preview QA
-- f7a6ec7 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
