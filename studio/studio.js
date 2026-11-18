@@ -148,20 +148,25 @@ function renderAiBudget() {
   const session = aiJournal().filter(e => e.at >= sessionStart);
   const sTokens = session.reduce((sum, e) => sum + (Number(e.tokens) || 0), 0);
   const r = untilReset();
+  const local = r.at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   let today;
   if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
     const alert = pct >= 100
-      ? { level: 'ok', text: 'Бесплатная квота исчерпана, пробуйте после 4:00. Платный резервный провайдер отключён.' }
-      : null
-    today = '<div class="dash-meter" data-level="' + 'ok' + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
+      ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Генерация может быть недоступна до 00:00 UTC; платный резервный провайдер отключён.' }
+      : pct >= 85
+        ? { level: 'err', text: 'Израсходовано не менее 85% ориентировочного бесплатного объёма. Сократите генерации до суточного сброса.' }
+        : pct >= 70
+          ? { level: 'warn', text: 'Израсходовано не менее 70% ориентировочного бесплатного объёма. Следите за расходом.' }
+          : null;
+    today = '<div class="dash-meter" data-level="' + (pct >= 85 ? 'err' : pct >= 70 ? 'warn' : 'ok') + '" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Расход до сброса лимита"><span style="width:' + Math.max(2, pct) + '%"></span></div>' +
       '<p class="dash-meter-note"><b>До сброса:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>' +
-      (alert ? '<p class="dash-meter-note" data-ai-budget-alert="' + alert.level + '" role="status" aria-live="polite">' + alert.text + '</p><button type="button" class="dash-journal-clear" data-ai-quota-recheck>Пробовать позже</button>' : '');
+      (alert ? '<p class="dash-meter-note" data-ai-budget-alert="' + alert.level + '" role="status" aria-live="polite"><b>Предупреждение:</b> ' + alert.text + '</p>' : '');
   } else {
     today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
   }
   box.innerHTML = today +
-    '<p class="dash-meter-note">Сброс через ' + r.hours + ' ч ' + r.minutes + ' мин — после 4:00. Объём ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' — ориентир по документации Cloudflare.</p>' +
+    '<p class="dash-meter-note">Сброс через ' + r.hours + ' ч ' + r.minutes + ' мин — в ' + esc(local) + ' (00:00 UTC). Объём ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' — ориентир по документации Cloudflare.</p>' +
     '<p class="dash-meter-note"><b>Эта сессия</b> (с ' + esc(new Date(sessionStart).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })) + '): ' + session.length + ' запросов' + (sTokens ? ', ' + sTokens.toLocaleString('ru-RU') + ' токенов' : '') + (session.some(e => e.status !== 'ok') ? ', ошибок: ' + session.filter(e => e.status !== 'ok').length : '') + '.</p>';
 }
 async function refreshAiToday() {
