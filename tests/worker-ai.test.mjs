@@ -535,3 +535,31 @@ test('API AI-редактора блокирует массивы, неизве�
   assert.match((await invalidAction.json()).error, /Неизвестная команда/);
   assert.equal(env.calls.length, 0);
 });
+
+
+test('API проверки качества возвращает оценку и ограниченные AI-рекомендации без изменения проекта', async () => {
+  const env = { AI: { run: async (_model, options) => {
+    assert.equal(options.max_tokens, 1300);
+    assert.match(options.messages[0].content, /веб-поиска нет/i);
+    return { response: JSON.stringify({ recommendations: [
+      { category:'seo', priority:'high', issue:'SEO title слишком общий', recommendation:'Добавьте основную услугу.', field:'seoTitle' },
+    ] }), usage:{ prompt_tokens:10, completion_tokens:20, total_tokens:30 } };
+  } } };
+  const project = { niche:'кофейня', title:'Кофе рядом', description:'Свежий кофе', cta:'Открыть меню' };
+  const res = await worker.fetch(request({ niche:'кофейня', contentQualityReview:true, project }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.review.score < 100);
+  assert.equal(body.review.recommendations[0].field, 'seoTitle');
+  assert.equal(body.review.safety.contentChanged, false);
+  assert.equal(body.review.safety.webSearchPerformed, false);
+  assert.equal(project.title, 'Кофе рядом');
+});
+
+test('API проверки качества требует объект проекта и не вызывает модель без него', async () => {
+  const env = aiReturning('{}');
+  const res = await worker.fetch(request({ niche:'кофейня', contentQualityReview:true }), env);
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /объект проекта/);
+  assert.equal(env.calls.length, 0);
+});
