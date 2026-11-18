@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T07:37:35.126Z
-Ветка: feat/prompt-manager-pro
-Последний commit: 30d61a716c000d36655003e0d97de3d21b464336
-Дата коммита: 2026-11-18T11:37:20+04:00
-Сообщение: test(prompts): normalize Unicode grouping spaces
+Время обновления: 2026-11-18T07:42:01.989Z
+Ветка: main
+Последний commit: f072b0b3aa863a0cbb3b1f263c499c2b79ad794b
+Дата коммита: 2026-11-18T11:41:51+04:00
+Сообщение: docs: add living project handoff and automatic updates (#120)
 
 Последние коммиты:
-- 30d61a7 · 2026-11-18 · test(prompts): normalize Unicode grouping spaces
-- 0987d35 · 2026-11-18 · test(prompts): normalize all Unicode whitespace in limit assertions
-- d1cd5e2 · 2026-11-18 · docs: refresh project handoff
-- da94b07 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
-- 5e47eb2 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
-- bf22a6c · 2026-11-18 · test(prompts): accept localized grouping spaces
-- fdcd4bb · 2026-11-18 · docs: record Prompt Manager integrations and validation
-- 838c887 · 2026-11-18 · docs: refresh project handoff
+- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
+- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
+- 99ea251 · 2026-11-18 · ci(worker): automate Cloudflare AI Worker deployment (#121)
+- c0ae259 · 2026-11-18 · Cinematic Hero Engine PRO: Scene Director и динамические сцены (#117)
+- 5a69903 · 2026-11-18 · AI: задание для Worker без противоречия, лимит 8192, расход до сброса и за сессию (#116)
+- 5be4c42 · 2026-11-18 · Content Director: ответ AI без лишних разделов — не упирается в лимит (#115)
+- b24b53a · 2026-11-18 · Design Director: направление графики подключено к движку и к фото (#114)
+- 0f6c072 · 2026-11-18 · AI Usage: журнал AI-операций, фактические токены и ориентир лимита (#113)
 <!-- HANDOFF:AUTO:END -->
