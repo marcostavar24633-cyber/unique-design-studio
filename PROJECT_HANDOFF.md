@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:21:19.613Z
+Время обновления: 2026-11-18T19:22:09.100Z
 Ветка: fix/worker-deploy-path-guard
-Последний commit: e5149df00d503a2dd04a4777ece6be8d1a4679c3
-Дата коммита: 2026-11-18T23:21:01+04:00
-Сообщение: fix: fetch parent commit for deployment path guard
+Последний commit: 752f528d60ccea8a3e0ca80818a2debe7f6b1721
+Дата коммита: 2026-11-18T23:21:50+04:00
+Сообщение: fix: use event-scoped AI probe dispatch input
 
 Последние коммиты:
+- 752f528 · 2026-11-18 · fix: use event-scoped AI probe dispatch input
+- 789f5d5 · 2026-11-18 · fix: use event-scoped dispatch inputs in Worker workflow
+- db19ed0 · 2026-11-18 · docs: refresh project handoff
 - e5149df · 2026-11-18 · fix: fetch parent commit for deployment path guard
 - 465109e · 2026-11-18 · fix: guard Worker deployment on actual source changes
 - 06b64ec · 2026-11-18 · docs: refresh project handoff
 - fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
 - 9c36903 · 2026-11-18 · docs: refresh project handoff
-- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
-- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
-- 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
 <!-- HANDOFF:AUTO:END -->
