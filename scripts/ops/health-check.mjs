@@ -56,13 +56,13 @@ async function reportFailure(failures) {
     'Проверьте GitHub Actions → Health Monitor. Секреты и тела пользовательских запросов в отчёт не включаются.',
   ].join('\n');
 
-  const list = await fetch(`${api}/issues?state=open&per_page=100&labels=autonomy-monitor`, { headers });
+  const list = await fetch(`${api}/issues?state=open&per_page=100`, { headers });
   if (!list.ok) throw new Error(`GitHub issue lookup failed: HTTP ${list.status}`);
   const issues = await list.json();
   const existing = Array.isArray(issues) ? issues.find(item => item.title === title && !item.pull_request) : null;
-  const endpoint = existing ? `${api}/issues/${existing.number}/comments` : `${api}/issues`;
-  const payload = existing ? { body } : { title, body, labels: ['autonomy-monitor'] };
-  const result = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
+  const endpoint = existing ? `${api}/issues/${existing.number}` : `${api}/issues`;
+  const payload = existing ? { body } : { title, body };
+  const result = await fetch(endpoint, { method: existing ? 'PATCH' : 'POST', headers, body: JSON.stringify(payload) });
   if (!result.ok) throw new Error(`GitHub issue report failed: HTTP ${result.status}`);
   const issue = await result.json();
   console.log(`Health failure recorded: ${existing ? existing.html_url : issue.html_url}`);
