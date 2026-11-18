@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:36:17.328Z
+Время обновления: 2026-11-18T15:37:33.552Z
 Ветка: feat/ai-field-editor-actions
-Последний commit: 9744f78b864940bbb28fe982338155333eff0a66
-Дата коммита: 2026-11-18T19:36:01+04:00
-Сообщение: Expose AI rewrite expand and shorten API for one text field
+Последний commit: 8a3626f24abe04fd0e2bd1909f782ab76c0c58a9
+Дата коммита: 2026-11-18T19:37:11+04:00
+Сообщение: Test selected-field AI editing controls and undo history
 
 Последние коммиты:
+- 8a3626f · 2026-11-18 · Test selected-field AI editing controls and undo history
+- 53447fc · 2026-11-18 · Test secure Worker API for single-field AI editing actions
+- 4f36dda · 2026-11-18 · Test AI rewrite expand and shorten field editor
+- 0fc88b2 · 2026-11-18 · Style individual AI text editing controls
+- e23d9b7 · 2026-11-18 · Fix endpoint validation regex in field editor
+- a7d9421 · 2026-11-18 · Add inline rewrite expand and shorten controls for selected text fields
+- 8075c52 · 2026-11-18 · docs: refresh project handoff
 - 9744f78 · 2026-11-18 · Expose AI rewrite expand and shorten API for one text field
-- 59a1d10 · 2026-11-18 · Add safe AI editing for one selected text field
-- a563ac2 · 2026-11-18 · docs: refresh project handoff
-- ade6ef0 · 2026-11-18 · Use the documented string type for market research fixture
-- ce095f7 · 2026-11-18 · docs: refresh project handoff
-- 3c23eac · 2026-11-18 · Align Worker staged-generation fixture with structured trust schema
-- 5058986 · 2026-11-18 · Test strict generated content array and object validation
-- b19a9ac · 2026-11-18 · Align trust-stage fixtures with structured row schema
 <!-- HANDOFF:AUTO:END -->
