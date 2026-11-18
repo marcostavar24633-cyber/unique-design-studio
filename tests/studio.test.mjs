@@ -384,10 +384,15 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(html, /<h3 id="budget-h">Расход AI<\/h3><div id="dash-ai-budget"><\/div>/);
   assert.match(js, /u\.search = '\?range=today'/);
   assert.match(js, /Date\.UTC\(now\.getUTCFullYear\(\), now\.getUTCMonth\(\), now\.getUTCDate\(\) \+ 1\)/);
-  assert.match(js, /aiJournal\(\)\.filter\(e => e\.at >= sessionStart\)/);
+  assert.match(js, /journal\.filter\(e => e\.at >= sessionStart\)/);
+  assert.match(js, /timeZone: 'Asia\/Baku'/);
+  assert.match(js, /bakuDate\(new Date\(e\.at\)\)/);
+  assert.match(js, /эта вкладка/);
+  assert.match(js, /Cloudflare с 00:00 UTC/);
+  assert.match(js, /До сброса Cloudflare/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
-  assert.match(js, /Сброс через .*00:00 UTC/);
+  assert.match(js, /До сброса Cloudflare/);
 });
 
 

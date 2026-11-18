@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:57:47.690Z
-Ветка: main
-Последний commit: c6ba6a994086280b579a651d5cf81f5c3458bd26
-Дата коммита: 2026-11-18T23:57:35+04:00
-Сообщение: docs: add unified AI project master guide
+Время обновления: 2026-11-18T20:04:33.682Z
+Ветка: fix/ai-usage-counters-baku-refresh
+Последний commit: 011649e9151ecfd72a8fc26a748feb215fea2e18
+Дата коммита: 2026-11-19T00:04:22+04:00
+Сообщение: test: align quota assertion with Baku reset panel
 
 Последние коммиты:
-- c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
-- eeb21d0 · 2026-11-18 · docs: refresh project handoff
-- d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
-- bc7aedd · 2026-11-18 · docs: refresh project handoff
-- e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
-- 06b64ec · 2026-11-18 · docs: refresh project handoff
-- fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
-- 9c36903 · 2026-11-18 · docs: refresh project handoff
+- 011649e · 2026-11-19 · test: align quota assertion with Baku reset panel
+- 96b4e18 · 2026-11-18 · docs: refresh project handoff
+- 55fd0d1 · 2026-11-19 · test: fix escaped timezone regex
+- 61f092c · 2026-11-18 · docs: refresh project handoff
+- ca9d2e9 · 2026-11-19 · test: cover AI usage period labels
+- d676adc · 2026-11-19 · fix: clarify AI usage periods in Baku time
+- 2f18c81 · 2026-11-19 · fix: improve AI usage panel responsive layout
+- ea68aaf · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
