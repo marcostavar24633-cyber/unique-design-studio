@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:22:18.410Z
-Ветка: feat/autonomous-safe-merge
-Последний commit: b56dac6c3e410b59af460512c91928a16f9d346a
-Дата коммита: 2026-11-18T23:22:03+04:00
-Сообщение: fix: use event-scoped workflow dispatch inputs
+Время обновления: 2026-11-18T19:19:26.166Z
+Ветка: main
+Последний commit: fefc579b71cbb3e87ce074a84449c874f43e729f
+Дата коммита: 2026-11-18T23:19:14+04:00
+Сообщение: Harden backups and verify Worker deployments
 
 Последние коммиты:
-- b56dac6 · 2026-11-18 · fix: use event-scoped workflow dispatch inputs
-- 25784df · 2026-11-18 · docs: refresh project handoff
-- e352af2 · 2026-11-18 · safety: require explicit auto-merge opt-in label
-- a43914c · 2026-11-18 · docs: refresh project handoff
-- b93cadf · 2026-11-18 · feat: enable guarded scheduled PR auto-merge
-- a882442 · 2026-11-18 · feat: add guarded scheduled PR auto-merge
+- fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
+- 9c36903 · 2026-11-18 · docs: refresh project handoff
+- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
 - 2cad8a3 · 2026-11-18 · docs: refresh project handoff
 - 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
+- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
+- 7addacc · 2026-11-18 · Add fullscreen mode to live preview
+- 3386f83 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
