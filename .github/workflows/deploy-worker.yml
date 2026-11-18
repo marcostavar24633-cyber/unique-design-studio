@@ -1,7 +1,15 @@
 name: Deploy AI Worker to Cloudflare
 
 on:
+  # Ручной запуск оставляем для внеплановой публикации.
   workflow_dispatch:
+  # Автопубликация при изменениях исходников Worker в main.
+  push:
+    branches:
+      - main
+    paths:
+      - "worker/**"
+      - "worker/wrangler.jsonc"
 
 permissions:
   contents: read
