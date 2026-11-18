@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 import { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/ai-utils.js';
-import { isQuotaError, runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from '../worker/nvidia.js';
+import { isQuotaError, runTextModel, DEFAULT_NVIDIA_MODEL, DEFAULT_OPENROUTER_MODEL, isFreeAiMode, isNvidiaFallbackEnabled, isOpenRouterFallbackEnabled } from '../worker/nvidia.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
@@ -402,4 +402,57 @@ test('статистика today — с 00:00 UTC, когда сбрасывае
     assert.match(sent.variables.start, /T00:00:00\.000Z$/, 'начало — полночь UTC');
     assert.equal((await worker.fetch(new Request('https://w.dev/api/usage?range=year', { headers: { Origin: ORIGIN } }), { CF_ANALYTICS_TOKEN: 't', CF_ACCOUNT_ID: 'a' })).status, 400);
   } finally { globalThis.fetch = realFetch; }
+});
+
+
+test('OpenRouter free fallback runs after Workers AI quota and uses only the free router', async () => {
+  const previousFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (url, init) => {
+    sent = { url: String(url), init };
+    return new Response(JSON.stringify({
+      model: 'nvidia/nemotron-3.5-lightning-30b-a3b:free',
+      choices: [{ message: { role: 'assistant', content: JSON.stringify(full) } }],
+      usage: { prompt_tokens: 30, completion_tokens: 70, total_tokens: 100 },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const env = {
+      AI: { run: async () => { throw Object.assign(new Error('Daily free allocation exceeded'), { status: 429 }); } },
+      AI_BILLING_MODE: 'free',
+      OPENROUTER_ENABLED: 'true',
+      OPENROUTER_API_KEY: 'or-test-only',
+    };
+    assert.equal(isOpenRouterFallbackEnabled(env), true);
+    const execution = await runTextModel(env, '@cf/test/model', {
+      messages: [{ role: 'user', content: 'test prompt' }], max_tokens: 256, temperature: 0.2,
+    });
+    assert.equal(execution.provider, 'openrouter');
+    assert.equal(execution.model, 'nvidia/nemotron-3.5-lightning-30b-a3b:free');
+    assert.equal(sent.url, 'https://openrouter.ai/api/v1/chat/completions');
+    assert.equal(sent.init.headers.Authorization, 'Bearer or-test-only');
+    assert.equal(JSON.parse(sent.init.body).model, DEFAULT_OPENROUTER_MODEL);
+    assert.equal(DEFAULT_OPENROUTER_MODEL, 'openrouter/free');
+  } finally { globalThis.fetch = previousFetch; }
+});
+
+test('OpenRouter fallback не включается без явного флага, ключа или в non-free режиме', () => {
+  assert.equal(isOpenRouterFallbackEnabled({ OPENROUTER_ENABLED: 'true', OPENROUTER_API_KEY: 'x' }), false);
+  assert.equal(isOpenRouterFallbackEnabled({ AI_BILLING_MODE: 'free', OPENROUTER_API_KEY: 'x' }), false);
+  assert.equal(isOpenRouterFallbackEnabled({ AI_BILLING_MODE: 'licensed', OPENROUTER_ENABLED: 'true', OPENROUTER_API_KEY: 'x' }), false);
+});
+
+test('ошибка OpenRouter после квоты Cloudflare возвращается явно и не вызывает NVIDIA', async () => {
+  const previousFetch = globalThis.fetch;
+  let nvidiaOrRouterCalls = 0;
+  globalThis.fetch = async () => { nvidiaOrRouterCalls++; return new Response(JSON.stringify({ error: { message: 'free daily quota exceeded' } }), { status: 429 }); };
+  try {
+    const env = {
+      AI: { run: async () => { throw Object.assign(new Error('Daily neuron limit exceeded'), { status: 429 }); } },
+      AI_BILLING_MODE: 'free', OPENROUTER_ENABLED: 'true', OPENROUTER_API_KEY: 'or-test-only',
+      NVIDIA_NIM_ENABLED: 'true', NVIDIA_API_KEY: 'nv-test-only',
+    };
+    await assert.rejects(() => runTextModel(env, '@cf/test/model', { messages: [] }), /OpenRouter вернул HTTP 429/);
+    assert.equal(nvidiaOrRouterCalls, 1);
+  } finally { globalThis.fetch = previousFetch; }
 });
