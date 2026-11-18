@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:12:13.788Z
-Ветка: main
-Последний commit: fd86001c55c95492629b52d7695353617374b272
-Дата коммита: 2026-11-18T22:12:02+04:00
-Сообщение: Route UDS text generation through Universal AI Gateway (#137)
+Время обновления: 2026-11-18T18:21:05.621Z
+Ветка: fix/use-workers-ai-without-gateway
+Последний commit: 01c35c6b6a42925e0293d358ac02795b7b2ccc3a
+Дата коммита: 2026-11-18T22:20:52+04:00
+Сообщение: fix: use Workers AI directly without gateway
 
 Последние коммиты:
+- 01c35c6 · 2026-11-18 · fix: use Workers AI directly without gateway
+- ec02567 · 2026-11-18 · docs: refresh project handoff
 - fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
 - a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
 - 1e424c9 · 2026-11-18 · docs: refresh project handoff
 - ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
 - 5aeaf0f · 2026-11-18 · docs: refresh project handoff
-- ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
