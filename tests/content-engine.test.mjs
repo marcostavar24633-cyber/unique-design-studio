@@ -29,6 +29,13 @@ test('каждый этап проверяет обязательные поля
   assert.deepEqual(validateContentStage(CONTENT_STAGES[0], { title: ' ', description: 'x', cta: 'y' }).missing, ['title']);
 });
 
+test('проверка этапов отклоняет неверную структуру массивов и объектов', () => {
+  const trust = CONTENT_STAGES.find(stage => stage.id === 'trust');
+  assert.equal(validateContentStage(trust, { ...answers.trust, advantages: ['просто строка'] }).ok, false);
+  const seo = CONTENT_STAGES.find(stage => stage.id === 'seo');
+  assert.equal(validateContentStage(seo, { ...answers.seo, segments: [{ name: 'Аудитория' }] }).ok, false);
+});
+
 test('результаты этапа объединяются только по разрешённым полям', () => {
   const target = { title: 'Старый' };
   mergeContentStage(target, CONTENT_STAGES[0], { title: 'Новый', injected: 'не добавлять' });
