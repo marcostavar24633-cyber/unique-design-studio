@@ -1628,10 +1628,14 @@ function auditResponsiveLayoutAndAccessibility() {
   try {
     for (const size of sizes) {
       frame.style.width = size.width + 'px';
-      frame.style.maxWidth = '100%';
+      frame.style.maxWidth = 'none';
+      const viewportWidth = doc.defaultView.innerWidth;
+      if (!Number.isFinite(viewportWidth) || Math.abs(viewportWidth - size.width) > 2) {
+        results.push({level:'manual',title:size.label + ': ширина тестового окна не подтверждена',text:'Не удалось установить фактическую ширину предпросмотра ' + size.width + ' px. Проверки для этого размера пропущены, чтобы не выдавать результаты другого viewport за точные.'});
+        continue;
+      }
       const root = doc.documentElement;
       const body = doc.body;
-      const viewportWidth = doc.defaultView.innerWidth || size.width;
       const pageWidth = Math.max(root.scrollWidth,body.scrollWidth);
       if (pageWidth > viewportWidth + 2) results.push({level:'check',title:size.label + ': горизонтальная прокрутка',text:'Контент шире окна на ' + (pageWidth - viewportWidth) + ' px. Проверьте фиксированные ширины, длинные строки и сетки.'});
       else results.push({level:'good',title:size.label + ': ширина страницы',text:'Горизонтальное переполнение на уровне документа не обнаружено.'});
