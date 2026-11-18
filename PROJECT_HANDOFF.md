@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T07:53:52.630Z
-Ветка: main
-Последний commit: ac2953ae6304b6eb7f10025a63b63024ff008b3e
-Дата коммита: 2026-11-18T11:53:35+04:00
-Сообщение: feat: add NVIDIA NIM quota fallback
+Время обновления: 2026-11-18T08:27:22.319Z
+Ветка: feat/strict-free-ai-mode
+Последний commit: eb1dadfc7653e105e8facdb78745623b9b946940
+Дата коммита: 2026-11-18T12:27:07+04:00
+Сообщение: config(ai): default worker to free billing mode
 
 Последние коммиты:
+- eb1dadf · 2026-11-18 · config(ai): default worker to free billing mode
+- ba54c29 · 2026-11-18 · feat(ai): expose strict free mode diagnostics
+- 477a7ea · 2026-11-18 · feat(ai): default to strict free billing mode
+- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 - ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
 - c126a9d · 2026-11-18 · docs: refresh project handoff
 - f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
 - 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
-- 99ea251 · 2026-11-18 · ci(worker): automate Cloudflare AI Worker deployment (#121)
-- c0ae259 · 2026-11-18 · Cinematic Hero Engine PRO: Scene Director и динамические сцены (#117)
-- 5a69903 · 2026-11-18 · AI: задание для Worker без противоречия, лимит 8192, расход до сброса и за сессию (#116)
-- 5be4c42 · 2026-11-18 · Content Director: ответ AI без лишних разделов — не упирается в лимит (#115)
 <!-- HANDOFF:AUTO:END -->
