@@ -65,19 +65,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T03:47:23.672Z
+Время обновления: 2026-11-18T03:49:37.123Z
 Ветка: feat/prompt-manager-pro
-Последний commit: 1a339b31ad5fea166cec889532aacd65399c670c
-Дата коммита: 2026-11-18T07:47:09+04:00
-Сообщение: test(prompts): cover registry storage versions and image rules
+Последний commit: e91dd359546841170533321089ae38aa0704e7c4
+Дата коммита: 2026-11-18T07:49:23+04:00
+Сообщение: fix(worker): format managed design instructions
 
 Последние коммиты:
+- e91dd35 · 2026-11-18 · fix(worker): format managed design instructions
+- eeb5b66 · 2026-11-18 · feat(prompts): connect Market Research guidance to supplied evidence
+- 4fb44c3 · 2026-11-18 · feat(prompts): apply managed instructions to AI Design Director
+- 67efe37 · 2026-11-18 · feat(prompts): connect Design Director instructions to AI review
+- 4880a54 · 2026-11-18 · feat(prompts): connect Content Director instructions
+- 7cc27b7 · 2026-11-18 · docs: update Prompt Manager handoff status
+- 8b049d7 · 2026-11-18 · docs: refresh project handoff
 - 1a339b3 · 2026-11-18 · test(prompts): cover registry storage versions and image rules
-- 93ea5d7 · 2026-11-18 · feat(studio): add Prompt Manager PRO interface
-- b36a32a · 2026-11-18 · docs: refresh project handoff
-- 7cdf0a4 · 2026-11-18 · fix(studio): keep managed image instructions in worker payload
-- a0b3480 · 2026-11-18 · fix(images): preserve managed instructions within worker limit
-- 31f7d84 · 2026-11-18 · fix(prompts): guard storage access and validate image instructions
-- abc449e · 2026-11-18 · docs: refresh project handoff
-- 7c0db2e · 2026-11-18 · ci: keep project handoff current on push
 <!-- HANDOFF:AUTO:END -->
