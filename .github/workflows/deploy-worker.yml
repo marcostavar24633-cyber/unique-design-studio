@@ -137,4 +137,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && inputs.confirmation != 'ROLLBACK' }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK." && exit 1
+      - run: |
+          echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK."
+          exit 1
