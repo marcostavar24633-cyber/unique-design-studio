@@ -1,0 +1,39 @@
+name: Source Backup
+
+on:
+  schedule:
+    - cron: '41 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uds-source-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Создать архив исходников без Git metadata и секретов окружения
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          git archive --format=tar HEAD             -- . ':!*.env' ':!**/*.env' ':!**/.env*'             | gzip -9 > backup/unique-design-studio-source.tar.gz
+          sha256sum backup/unique-design-studio-source.tar.gz > backup/SHA256SUMS
+          gzip -t backup/unique-design-studio-source.tar.gz
+          tar -tzf backup/unique-design-studio-source.tar.gz > /dev/null
+          sha256sum --check backup/SHA256SUMS
+          echo "Backup verified: $(du -h backup/unique-design-studio-source.tar.gz | cut -f1)"
+      - name: Сохранить проверенный архив
+        uses: actions/upload-artifact@v4
+        with:
+          name: uds-source-backup-${{ github.run_id }}
+          path: backup/
+          if-no-files-found: error
+          retention-days: 90
