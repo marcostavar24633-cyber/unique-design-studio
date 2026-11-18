@@ -1,4 +1,6 @@
 export const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+export const DEFAULT_OPENROUTER_MODEL = 'openrouter/free';
+const OPENROUTER_CHAT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const NVIDIA_CHAT_COMPLETIONS_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 export function isQuotaError(error) {
@@ -14,6 +16,53 @@ export function isFreeAiMode(env = {}) {
 
 export function isNvidiaFallbackEnabled(env = {}) {
   return !isFreeAiMode(env) && env.NVIDIA_NIM_ENABLED === 'true' && Boolean(env.NVIDIA_API_KEY);
+}
+
+/**
+ * OpenRouter is the free-mode fallback. The only accepted model is its free router:
+ * it selects an available $0 model and cannot be switched to a paid model by client input.
+ * Keep the API key in a Cloudflare Worker secret, never in browser storage or source.
+ */
+export function isOpenRouterFallbackEnabled(env = {}) {
+  return isFreeAiMode(env) && env.OPENROUTER_ENABLED === 'true' && Boolean(env.OPENROUTER_API_KEY);
+}
+
+async function runOpenRouter(env, options) {
+  if (!isOpenRouterFallbackEnabled(env)) {
+    throw new Error('OpenRouter fallback не настроен: требуется OPENROUTER_ENABLED=true и секрет OPENROUTER_API_KEY');
+  }
+  let response;
+  try {
+    response = await fetch(OPENROUTER_CHAT_COMPLETIONS_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'HTTP-Referer': 'https://marcostavar24633-cyber.github.io/unique-design-studio/',
+        'X-Title': 'UNIQUE DESIGN STUDIO',
+      },
+      body: JSON.stringify({
+        model: DEFAULT_OPENROUTER_MODEL,
+        messages: options.messages,
+        max_tokens: options.max_tokens,
+        temperature: options.temperature,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) {
+    throw new Error(`OpenRouter недоступен: ${error?.message || 'network error'}`);
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail = String(payload?.error?.message || payload?.message || '').slice(0, 400);
+    throw new Error(`OpenRouter вернул HTTP ${response.status}${detail ? `: ${detail}` : ''}`);
+  }
+  if (!payload?.choices?.[0]?.message?.content) {
+    throw new Error('OpenRouter не вернул текстовый ответ');
+  }
+  return { result: payload, provider: 'openrouter', model: payload.model || DEFAULT_OPENROUTER_MODEL };
 }
 
 async function runNvidia(env, options) {
@@ -72,7 +121,15 @@ export async function runTextModel(env, primaryModel, options, { preferNvidia = 
     const result = await env.AI.run(primaryModel, options);
     return { result, provider: 'cloudflare', model: primaryModel };
   } catch (error) {
-    if (!isQuotaError(error) || !isNvidiaFallbackEnabled(env)) throw error;
+    if (!isQuotaError(error)) throw error;
+    if (isOpenRouterFallbackEnabled(env)) {
+      try {
+        return await runOpenRouter(env, options);
+      } catch (fallbackError) {
+        throw new Error(`Workers AI исчерпал квоту; бесплатный OpenRouter fallback не сработал: ${fallbackError?.message || 'unknown error'}`);
+      }
+    }
+    if (!isNvidiaFallbackEnabled(env)) throw error;
     try {
       return await runNvidia(env, options);
     } catch (fallbackError) {
