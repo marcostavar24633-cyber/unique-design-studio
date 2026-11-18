@@ -5,7 +5,7 @@ export function isQuotaError(error) {
   const status = Number(error?.status ?? error?.statusCode ?? error?.response?.status ?? error?.cause?.status);
   if (status === 429) return true;
   const detail = [error?.message, error?.code, error?.type, error].filter(Boolean).join(' ').toLowerCase();
-  return /(?:\\b(?:3036|3040|429)\\b|daily free allocation|rate[\\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(detail);
+  return /(?:\b(?:3036|3040|429)\b|daily free allocation|rate[\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(detail);
 }
 
 async function runNvidia(env, options) {
