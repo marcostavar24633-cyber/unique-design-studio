@@ -13,7 +13,7 @@ test('content intelligence prepares one prompt and exposes specialist modules', 
 
 test('content review catches missing required copy and cliché language', () => {
   const result = reviewGeneratedContent({
-    title: 'Лучшие услуги для вас',
+    title: 'Гарантируем лучший результат для вас',
     description: 'Индивидуальный подход и высокое качество.',
     cta: 'Заказать',
     seoTitle: 'Услуги',
