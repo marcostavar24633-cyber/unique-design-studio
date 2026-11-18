@@ -467,3 +467,26 @@ test('Preview accessibility QA resolves accessible names without trusting entere
   assert.ok(source.includes('const hasName = el => Boolean(previewAccessibleName(el, doc));'));
   assert.ok(source.includes('const nameOf = el => previewAccessibleName(el, doc);'));
 });
+
+
+test('Responsive accessibility QA does not infer missing keyboard focus from the unfocused style', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.ok(!audit.includes('focusMissing'));
+  assert.ok(!audit.includes('style.outlineStyle === \'none\''));
+  assert.ok(audit.includes(':focus-visible'));
+  assert.ok(audit.includes('Отсутствие outline в обычном состоянии не считается ошибкой.'));
+});
+
+test('44px touch target guidance is reported as a manual recommendation, not an automatic WCAG failure', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes("results.push({level:'manual',title:size.label + ': небольшие интерактивные области'"));
+  assert.ok(audit.includes('рекомендуемого ориентира 44 × 44 px'));
+  assert.ok(audit.includes('не само по себе доказательство нарушения WCAG 2.2 AA'));
+});
