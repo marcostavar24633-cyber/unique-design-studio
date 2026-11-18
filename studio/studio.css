@@ -428,3 +428,11 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .content-field-editor select,.content-field-editor textarea{display:block;width:100%;max-width:100%;margin:7px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-size:13px}
 .content-field-editor textarea{min-height:96px;resize:vertical;line-height:1.5}
 .content-field-editor .content-regenerate__actions button{flex:1 1 120px}
+
+
+.content-quality-review{margin:16px 0;padding:14px 0;border-top:1px solid var(--line)}
+.content-quality-review>button{min-height:42px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.content-quality-review>button:disabled{opacity:.55;cursor:wait}
+#content-quality-review-result ul{padding-left:20px}
+#content-quality-review-result li{margin:8px 0}
+#content-quality-review-result small{display:inline-block;margin-top:3px}
