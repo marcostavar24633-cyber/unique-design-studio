@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:25:58.303Z
+Время обновления: 2026-11-18T15:26:14.705Z
 Ветка: feat/ai-content-engine-staged
-Последний commit: 30bf701180cb585bcd0f57eba0862605ed2524b3
-Дата коммита: 2026-11-18T19:25:44+04:00
-Сообщение: Clarify partial generation status in studio
+Последний commit: 779b7502895171718e5a15bac2aaae3685bf2f46
+Дата коммита: 2026-11-18T19:26:02+04:00
+Сообщение: Specify exact JSON field types for each content stage
 
 Последние коммиты:
+- 779b750 · 2026-11-18 · Specify exact JSON field types for each content stage
+- 7bfdb17 · 2026-11-18 · docs: refresh project handoff
 - 30bf701 · 2026-11-18 · Clarify partial generation status in studio
 - 82509ac · 2026-11-18 · Validate staged strategy against the requested business niche
 - 6d59bed · 2026-11-18 · Cover staged content generation Worker API
 - bbb55ad · 2026-11-18 · Keep stage-specific JSON contracts isolated
 - 23905fd · 2026-11-18 · Test staged AI content generation and partial recovery
 - bb743a1 · 2026-11-18 · Enable staged content generation in studio workflow
-- 1118f5f · 2026-11-18 · Integrate staged content generation into AI Worker
-- 359e1c1 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
