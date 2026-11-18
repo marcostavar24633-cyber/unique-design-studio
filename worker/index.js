@@ -5,7 +5,7 @@ const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
   'https://marcostavar24633-cyber.github.io',
 ]);
-const MAX_BODY_BYTES = 24_000;
+const MAX_BODY_BYTES = 64_000;
 
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'null';
@@ -202,12 +202,12 @@ export default {
     if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
 
     const length = Number(request.headers.get('Content-Length') || 0);
-    if (length > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
+    if (length > MAX_BODY_BYTES) return json({ error: `Слишком большой запрос: лимит ${MAX_BODY_BYTES} байт. Сократите бриф или пользовательские инструкции.` , maxBytes: MAX_BODY_BYTES }, 413, origin);
 
     let input;
     try {
       const raw = await request.text();
-      if (raw.length > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
+      if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json({ error: `Слишком большой запрос: лимит ${MAX_BODY_BYTES} байт. Сократите бриф или пользовательские инструкции.`, maxBytes: MAX_BODY_BYTES }, 413, origin);
       input = JSON.parse(raw);
     } catch {
       return json({ error: 'Некорректный JSON' }, 400, origin);
@@ -290,7 +290,7 @@ export default {
       brief.city ? `Город: ${brief.city}.` : '',
       `Уровень: ${brief.tier}.`,
       brief.details ? `Подробности от владельца: ${brief.details}` : '',
-      brief.customPrompt ? `Пожелания владельца (${brief.customPromptMode === 'replace' ? 'главнее задания студии' : 'дополнительно'}): ${brief.customPrompt}` : '',
+      // customPrompt уже встроен в studioPrompt на клиенте; не добавляем его второй раз.
     ].filter(Boolean).join('\n');
 
     const system = [
