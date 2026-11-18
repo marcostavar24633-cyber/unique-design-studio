@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -11,6 +11,24 @@ const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
 const getDefaultAiEndpoint = () => location.hostname === 'marcostavar24633-cyber.github.io' ? DEFAULT_AI_ENDPOINT : '';
 let aiUsageLoading = false;
+function renderContentQaReview(report) {
+  const panel = $('#content-qa-review');
+  const summary = $('#content-qa-summary');
+  const list = $('#content-qa-findings');
+  if (!panel || !summary || !list) return;
+  list.replaceChildren();
+  if (!report || !Array.isArray(report.findings) || !report.findings.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  summary.textContent = report.summary + ' Оценка: ' + report.score + '/100. Замечаний: ' + report.findings.length + '.';
+  for (const finding of report.findings) {
+    const item = document.createElement('li');
+    item.textContent = (finding.field ? finding.field + ': ' : '') + finding.message;
+    list.append(item);
+  }
+}
 function renderAiUsageStats(data, error = '') {
   const node = $('#ai-usage');
   if (!node) return;
@@ -809,7 +827,9 @@ $('#auto').addEventListener('submit', async e => {
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
       logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
-      setAutoProgress(48, 'AI подготовил ответ', 'Проверяем и собираем данные проекта');
+      setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
+      const contentReview = reviewGeneratedContent(body.landing);
+      renderContentQaReview(contentReview);
       draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
       note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
