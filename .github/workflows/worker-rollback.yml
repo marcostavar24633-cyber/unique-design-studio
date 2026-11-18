@@ -1,0 +1,71 @@
+name: Rollback AI Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_id:
+        description: 'Cloudflare Worker version ID из Deployments'
+        required: true
+        type: string
+      confirmation:
+        description: 'Введите ROLLBACK для подтверждения'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-ai-worker
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: inputs.confirmation == 'ROLLBACK'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Проверить version ID
+        env:
+          VERSION_ID: ${{ inputs.version_id }}
+        run: |
+          [[ "$VERSION_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || {
+            echo "::error::Укажите корректный Cloudflare version UUID."
+            exit 1
+          }
+      - name: Проверить Cloudflare credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Не задан CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Не задан CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - name: Откатить Worker на указанную версию
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION_ID: ${{ inputs.version_id }}
+        run: npx --yes wrangler@4 rollback "$VERSION_ID" --config worker/wrangler.jsonc --message "Guarded rollback via GitHub Actions"
+      - name: Проверить Worker после отката
+        run: |
+          set -euo pipefail
+          for attempt in {1..8}; do
+            if curl --fail --silent --show-error --max-time 10 \
+              https://unique-design-studio-ai.marcostavar24633.workers.dev/health \
+              | grep -q '"ok":true'; then
+              echo "Worker health check passed after rollback."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Worker health check failed after rollback."
+          exit 1
+  reject:
+    if: inputs.confirmation != 'ROLLBACK'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK." && exit 1
