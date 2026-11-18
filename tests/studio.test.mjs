@@ -388,3 +388,15 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
 });
+
+test('AI quota warnings fire once per UTC day at 70%, 85%, and 100%; quota errors explain local fallback', () => {
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.match(js, /value: 70, message:/);
+  assert.match(js, /value: 85, message:/);
+  assert.match(js, /value: 100, message:/);
+  assert.match(js, /uds:ai-quota-alerts:/);
+  assert.match(js, /notifyAiQuotaThreshold\(pct\)/);
+  assert.match(js, /function isAiQuotaMessage\(message\)/);
+  assert.match(js, /Бесплатная квота Cloudflare Workers AI исчерпана или ограничена/);
+  assert.match(js, /neurons >= WORKERS_AI_FREE_NEURONS \* 0\.7/);
+});
