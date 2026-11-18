@@ -20,6 +20,8 @@ test('распознаются только явные ошибки квоты �
   assert.equal(isQuotaError(Object.assign(new Error('Too many requests'), { status: 429 })), true);
   assert.equal(isQuotaError(new Error('Daily neuron limit exceeded')), true);
   assert.equal(isQuotaError(new Error('3036: You have used up your daily free allocation of 10,000 neurons.')), true);
+  assert.equal(isQuotaError(new Error('3036')), true);
+  assert.equal(isQuotaError(new Error('429')), true);
   assert.equal(isQuotaError(new Error('RESOURCE_EXHAUSTED')), true);
   assert.equal(isQuotaError(Object.assign(new Error('Internal error'), { status: 500 })), false);
   assert.equal(isQuotaError(new Error('Invalid JSON response')), false);
