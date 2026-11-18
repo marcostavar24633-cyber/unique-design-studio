@@ -191,5 +191,12 @@ export function photoPrompt(slot, project, graphicDirection) {
   ];
   const prompt = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ');
   const managed = applyManagedPrompt(prompt, 'image-generation');
-  return hasCyrillic(managed) ? translit(managed) : managed;
+  const rendered = hasCyrillic(managed) ? translit(managed) : managed;
+  if (rendered.length <= 2000) return rendered;
+  const marker = translit('# Дополнительные инструкции Prompt Manager');
+  const markerIndex = rendered.indexOf(marker);
+  if (markerIndex < 0) return rendered.slice(0, 2000);
+  const suffix = rendered.slice(markerIndex);
+  if (suffix.length >= 2000) return suffix.slice(-2000);
+  return rendered.slice(0, 2000 - suffix.length).trimEnd() + ' ' + suffix;
 }
