@@ -722,6 +722,7 @@ async function regenerateProjectStage(stageId) {
     history.push({ projectId:state.raw.id, stageId, before, after, analysisBefore, at:new Date().toISOString() });
     writeContentHistory(history.slice(-10));
     Object.assign(state.raw, patch);
+    if (analysisFields.length && !state.analysis?.data) state.analysis = { projectId: state.raw.id, data: { source: 'ai', niche: state.raw.niche, city: '', tier: state.raw.tier, audience: state.raw.targetAudience || '' } };
     if (analysisFields.length && state.analysis?.data) Object.assign(state.analysis.data, analysisPatch);
     run();
     persist();
