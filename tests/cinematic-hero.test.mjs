@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildConcept, generate, directScene, SCENE_PROFILES } from '../src/engine/index.js';
 import { example, full } from './helpers.mjs';
+import { sceneMarkup, sceneCss } from '../src/engine/cinematic/scene-runtime.js';
 
 test('Cinematic Hero Director выбирает валидный профиль по контексту проекта', () => {
   const luxury = buildConcept({ ...full, tier: 'luxury' });
@@ -14,9 +15,7 @@ test('Cinematic Hero Director выбирает валидный профиль �
 
 test('каждая сцена имеет профиль и безопасные CSS/HTML слои', () => {
   for (const type of Object.keys(SCENE_PROFILES)) {
-    const concept = { visualSystem: { archetype: 'editorial', nicheId: 'studio', motionPlan: { intensity: 'balanced' } } };
     const scene = { type, layers: SCENE_PROFILES[type].layers, intensity: 'balanced' };
-    const { sceneMarkup, sceneCss } = await import('../src/engine/cinematic/scene-runtime.js');
     assert.match(sceneMarkup(scene), new RegExp('uds-scene--' + type));
     assert.match(sceneCss(scene), /prefers-reduced-motion/);
   }
