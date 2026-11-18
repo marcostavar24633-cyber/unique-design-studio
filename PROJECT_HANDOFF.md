@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:46:36.117Z
+Время обновления: 2026-11-18T10:46:50.677Z
 Ветка: feat/ai-provider-manual-controls
-Последний commit: 3fcf709818c4e96ff8d5e23d0aead2e0dd29c5a7
-Дата коммита: 2026-11-18T14:46:23+04:00
-Сообщение: feat(ai): support manual OpenRouter routing
+Последний commit: 25ed0fce3f59032191b697a518a156fa816f9d6c
+Дата коммита: 2026-11-18T14:46:38+04:00
+Сообщение: fix(ai): keep automatic fallback separate from manual primary mode
 
 Последние коммиты:
+- 25ed0fc · 2026-11-18 · fix(ai): keep automatic fallback separate from manual primary mode
+- 2da9f81 · 2026-11-18 · docs: refresh project handoff
 - 3fcf709 · 2026-11-18 · feat(ai): support manual OpenRouter routing
 - 25e2dc2 · 2026-11-18 · feat(worker): accept per-request AI routing preferences
 - 7812863 · 2026-11-18 · feat(ui): persist AI provider routing preferences
 - ecf6bc5 · 2026-11-18 · feat(ui): add independent manual GPT and Claude routing controls
 - f2b41e7 · 2026-11-18 · docs: refresh project handoff
 - 29ff9bd · 2026-11-18 · docs(ai): document GPT and Claude quota fallback
-- 983178d · 2026-11-18 · docs: refresh project handoff
-- fc994fd · 2026-11-18 · test(ai): assert GPT and Claude diagnostics defaults
 <!-- HANDOFF:AUTO:END -->
