@@ -403,3 +403,36 @@ test('статистика today — с 00:00 UTC, когда сбрасывае
     assert.equal((await worker.fetch(new Request('https://w.dev/api/usage?range=year', { headers: { Origin: ORIGIN } }), { CF_ANALYTICS_TOKEN: 't', CF_ACCOUNT_ID: 'a' })).status, 400);
   } finally { globalThis.fetch = realFetch; }
 });
+
+test('большой UTF-8 бриф больше прежних 24 КБ принимается в пределах нового лимита', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  const body = { niche: 'кофейня', studioPrompt: 'я'.repeat(15_000) };
+  const encoded = JSON.stringify(body);
+  assert.ok(new TextEncoder().encode(encoded).byteLength > 24_000);
+  assert.ok(new TextEncoder().encode(encoded).byteLength < 64_000);
+  const res = await worker.fetch(request(body), env);
+  assert.equal(res.status, 200);
+  assert.equal(env.calls.length, 1);
+});
+
+test('запрос больше 64 КБ отклоняется по размеру UTF-8 до обращения к AI', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  const body = { niche: 'кофейня', studioPrompt: 'я'.repeat(33_000) };
+  const res = await worker.fetch(request(body), env);
+  const payload = await res.json();
+  assert.equal(res.status, 413);
+  assert.equal(payload.maxBytes, 64_000);
+  assert.match(payload.error, /лимит 64000 байт/);
+  assert.equal(env.calls.length, 0);
+});
+
+test('customPrompt не дублируется Worker, если он уже встроен в studioPrompt', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({
+    niche: 'кофейня',
+    studioPrompt: 'Задание студии. SPECIAL_CUSTOM_INSTRUCTION',
+    customPrompt: 'SPECIAL_CUSTOM_INSTRUCTION',
+  }), env);
+  const prompt = env.calls[0].messages[0].content;
+  assert.equal(prompt.split('SPECIAL_CUSTOM_INSTRUCTION').length - 1, 1);
+});
