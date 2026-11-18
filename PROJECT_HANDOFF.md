@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:27:37.505Z
-Ветка: feat/ai-content-engine-staged
-Последний commit: 7d7ac766ca49df1250ebafb9d5678790f5bf18d9
-Дата коммита: 2026-11-18T19:27:18+04:00
-Сообщение: Correct staged AI journal test syntax
+Время обновления: 2026-11-18T15:31:29.525Z
+Ветка: feat/ai-section-regeneration
+Последний commit: 000a9c702b40eb5e7e7ebd731be31225bad33920
+Дата коммита: 2026-11-18T19:31:14+04:00
+Сообщение: Test section regeneration UI and non-destructive undo
 
 Последние коммиты:
-- 7d7ac76 · 2026-11-18 · Correct staged AI journal test syntax
-- 8420f30 · 2026-11-18 · Fix newline in staged AI journal test
-- 7e6ebb8 · 2026-11-18 · docs: refresh project handoff
-- 819dc04 · 2026-11-18 · Reject unusable partial content without a core hero
-- a3ce7c5 · 2026-11-18 · Update AI journal tests for staged generation statuses
-- 396897e · 2026-11-18 · docs: refresh project handoff
-- 779b750 · 2026-11-18 · Specify exact JSON field types for each content stage
-- 7bfdb17 · 2026-11-18 · docs: refresh project handoff
+- 000a9c7 · 2026-11-18 · Test section regeneration UI and non-destructive undo
+- 027e3ba · 2026-11-18 · Test Worker API for isolated content section regeneration
+- 79bf7d5 · 2026-11-18 · Test isolated AI section regeneration contracts
+- 0b570fc · 2026-11-18 · Style responsive per-section AI regeneration controls
+- 9aa373f · 2026-11-18 · Make AI section undo restore absent fields correctly
+- e03b23f · 2026-11-18 · Normalize prompt newlines and protect owner brand facts
+- c902c61 · 2026-11-18 · Add per-section AI regeneration and undo controls to content director
+- 52b0c4d · 2026-11-18 · Expose a dedicated single-section regeneration API mode
 <!-- HANDOFF:AUTO:END -->
