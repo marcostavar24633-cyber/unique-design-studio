@@ -1653,11 +1653,20 @@ function auditResponsiveLayoutAndAccessibility() {
       });
       if (offscreen.length) results.push({level:'check',title:size.label + ': элементы за пределами экрана',text:offscreen.length + ' интерактивных элементов находятся за видимой областью. Проверьте меню, CTA и горизонтальные списки.'});
       const overlapping = [];
-      const candidates = controls.filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type));
-      for (let i=0;i<candidates.length;i++) for (let j=i+1;j<candidates.length;j++) {
-        const a=candidates[i],b=candidates[j];
-        if (a.contains(b) || b.contains(a)) continue;
-        if (intersects(a.getBoundingClientRect(),b.getBoundingClientRect())) overlapping.push([a,b]);
+      const candidates = controls
+        .filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type))
+        .map(el => ({el,rect:el.getBoundingClientRect()}))
+        .sort((a,b) => a.rect.left - b.rect.left);
+      const active = [];
+      for (const current of candidates) {
+        for (let i=active.length-1;i>=0;i--) {
+          if (active[i].rect.right <= current.rect.left + 2) active.splice(i,1);
+        }
+        for (const previous of active) {
+          if (previous.el.contains(current.el) || current.el.contains(previous.el)) continue;
+          if (intersects(previous.rect,current.rect)) overlapping.push([previous.el,current.el]);
+        }
+        active.push(current);
       }
       if (overlapping.length) results.push({level:'check',title:size.label + ': пересечение интерактивных элементов',text:'Обнаружено ' + overlapping.length + ' пар пересекающихся ссылок и элементов управления. Проверьте, не мешают ли они друг другу нажиматься.'});
       const unlabeledFields = [...doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea')].filter(visible).filter(el => !hasName(el));
