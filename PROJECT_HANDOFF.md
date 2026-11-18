@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:06:38.352Z
-Ветка: main
-Последний commit: 6ad380054a773954e6784c1e53a8a6f05541989b
-Дата коммита: 2026-11-19T00:06:24+04:00
-Сообщение: fix: clarify AI usage counters and Baku reset
+Время обновления: 2026-11-18T20:11:05.095Z
+Ветка: feature/content-intelligence-engine-main
+Последний commit: 6fbd6941de35b0ec92fc061424b16b7af418626d
+Дата коммита: 2026-11-19T00:10:50+04:00
+Сообщение: feat: export Content Intelligence Engine
 
 Последние коммиты:
+- 6fbd694 · 2026-11-19 · feat: export Content Intelligence Engine
+- 74a6ec9 · 2026-11-19 · test: cover Content Intelligence review
+- 8a50b8f · 2026-11-19 · feat: add Content Intelligence Engine
+- c1982df · 2026-11-18 · docs: refresh project handoff
 - 6ad3800 · 2026-11-19 · fix: clarify AI usage counters and Baku reset
 - ea68aaf · 2026-11-18 · docs: refresh project handoff
 - c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
 - eeb21d0 · 2026-11-18 · docs: refresh project handoff
-- d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
-- bc7aedd · 2026-11-18 · docs: refresh project handoff
-- e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
-- 06b64ec · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
