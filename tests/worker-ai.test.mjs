@@ -437,8 +437,8 @@ test('OpenRouter free fallback runs after Workers AI quota and uses only the fre
 });
 
 test('OpenRouter fallback не включается без явного флага, ключа или в non-free режиме', () => {
-  assert.equal(isOpenRouterFallbackEnabled({ OPENROUTER_ENABLED: 'true', OPENROUTER_API_KEY: 'x' }), false);
   assert.equal(isOpenRouterFallbackEnabled({ AI_BILLING_MODE: 'free', OPENROUTER_API_KEY: 'x' }), false);
+  assert.equal(isOpenRouterFallbackEnabled({ AI_BILLING_MODE: 'free', OPENROUTER_ENABLED: 'true' }), false);
   assert.equal(isOpenRouterFallbackEnabled({ AI_BILLING_MODE: 'licensed', OPENROUTER_ENABLED: 'true', OPENROUTER_API_KEY: 'x' }), false);
 });
 
