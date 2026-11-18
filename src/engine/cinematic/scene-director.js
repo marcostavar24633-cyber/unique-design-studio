@@ -26,6 +26,7 @@ export function directScene(concept, project = {}) {
     intensity: reduced ? 'calm' : (vs.motionPlan?.intensity || 'balanced'),
     depth: reduced ? 1 : 2,
     mobileFallback: true,
+    motionEnabled: vs.motion !== 'static',
     hasPhotography: Boolean(project.images?.hero || project.gallery?.length),
     description: profile.description,
   });
