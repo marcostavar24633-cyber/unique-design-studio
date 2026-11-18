@@ -10,6 +10,8 @@
   "vars": {
     "AI_BILLING_MODE": "free",
     "NVIDIA_NIM_ENABLED": "false",
-    "OPENROUTER_ENABLED": "false"
+    "OPENROUTER_ENABLED": "false",
+    "AI_PRIMARY_PROVIDER": "cloudflare",
+    "AI_DIRECT_PROVIDERS_ENABLED": "false"
   }
 }
