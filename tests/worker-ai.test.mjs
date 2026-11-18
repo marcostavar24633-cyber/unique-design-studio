@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 import { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/ai-utils.js';
+import { isQuotaError, runTextModel, DEFAULT_NVIDIA_MODEL } from '../worker/nvidia.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
@@ -14,6 +15,92 @@ const aiReturning = (...answers) => {
   const calls = [];
   return { calls, AI: { run: async (model, opts) => { calls.push(opts); const a = answers[Math.min(calls.length - 1, answers.length - 1)]; if (a instanceof Error) throw a; return { response: a }; } } };
 };
+
+test('распознаются только явные ошибки квоты и HTTP 429', () => {
+  assert.equal(isQuotaError(Object.assign(new Error('Too many requests'), { status: 429 })), true);
+  assert.equal(isQuotaError(new Error('Daily neuron limit exceeded')), true);
+  assert.equal(isQuotaError(new Error('RESOURCE_EXHAUSTED')), true);
+  assert.equal(isQuotaError(Object.assign(new Error('Internal error'), { status: 500 })), false);
+  assert.equal(isQuotaError(new Error('Invalid JSON response')), false);
+  assert.equal(DEFAULT_NVIDIA_MODEL, 'nvidia/nemotron-3.5-lightning-30b-a3b');
+});
+
+test('NVIDIA NIM вызывается только после квотной ошибки Workers AI и получает OpenAI-compatible payload', async () => {
+  const previousFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (url, init) => {
+    sent = { url: String(url), init };
+    return new Response(JSON.stringify({
+      model: 'nvidia/test-model',
+      choices: [{ message: { role: 'assistant', content: '{"ok":true}' } }],
+      usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const env = {
+      AI: { run: async () => { throw Object.assign(new Error('Too Many Requests'), { status: 429 }); } },
+      NVIDIA_API_KEY: 'nvapi-test-only',
+      NVIDIA_MODEL: 'nvidia/test-model',
+    };
+    const execution = await runTextModel(env, '@cf/test/model', {
+      messages: [{ role: 'user', content: 'test prompt' }],
+      max_tokens: 256,
+      temperature: 0.2,
+    });
+    assert.equal(execution.provider, 'nvidia');
+    assert.equal(execution.model, 'nvidia/test-model');
+    assert.equal(execution.result.usage.total_tokens, 18);
+    assert.equal(sent.url, 'https://integrate.api.nvidia.com/v1/chat/completions');
+    assert.equal(sent.init.headers.Authorization, 'Bearer nvapi-test-only');
+    assert.equal(JSON.parse(sent.init.body).model, 'nvidia/test-model');
+    assert.equal(JSON.parse(sent.init.body).stream, false);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('генерация лендинга переключается на NVIDIA после 429, сохраняя фактический usage и модель', async () => {
+  const previousFetch = globalThis.fetch;
+  let nvidiaCalls = 0;
+  globalThis.fetch = async () => {
+    nvidiaCalls++;
+    return new Response(JSON.stringify({
+      model: 'nvidia/test-model',
+      choices: [{ message: { role: 'assistant', content: JSON.stringify(full) } }],
+      usage: { prompt_tokens: 120, completion_tokens: 400, total_tokens: 520 },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  try {
+    const env = {
+      AI: { run: async () => { throw Object.assign(new Error('Daily limit exceeded'), { status: 429 }); } },
+      NVIDIA_API_KEY: 'nvapi-test-only',
+      NVIDIA_MODEL: 'nvidia/test-model',
+    };
+    const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.provider, 'nvidia');
+    assert.equal(body.model, 'nvidia/test-model');
+    assert.deepEqual(body.usage, { inputTokens: 120, outputTokens: 400, totalTokens: 520 });
+    assert.equal(nvidiaCalls, 1);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('ошибки Workers AI, не связанные с квотой, не отправляются в NVIDIA', async () => {
+  const previousFetch = globalThis.fetch;
+  let nvidiaCalls = 0;
+  globalThis.fetch = async () => { nvidiaCalls++; throw new Error('unexpected NVIDIA request'); };
+  try {
+    const env = { AI: { run: async () => { throw Object.assign(new Error('Internal error'), { status: 500 }); } }, NVIDIA_API_KEY: 'nvapi-test-only' };
+    await assert.rejects(() => runTextModel(env, '@cf/test/model', { messages: [] }), /Internal error/);
+    assert.equal(nvidiaCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
 
 test('корневой адрес показывает статус сервиса и доступные API-маршруты', async () => {
   const res = await worker.fetch(new Request('https://w.dev/'));
