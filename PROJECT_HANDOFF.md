@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:37:33.552Z
-Ветка: feat/ai-field-editor-actions
-Последний commit: 8a3626f24abe04fd0e2bd1909f782ab76c0c58a9
-Дата коммита: 2026-11-18T19:37:11+04:00
-Сообщение: Test selected-field AI editing controls and undo history
+Время обновления: 2026-11-18T15:48:36.187Z
+Ветка: feat/ai-content-quality-review
+Последний commit: 370b7b322a8c226722e52b77fafda64b248523fd
+Дата коммита: 2026-11-18T19:48:20+04:00
+Сообщение: Test AI quality review UI controls
 
 Последние коммиты:
-- 8a3626f · 2026-11-18 · Test selected-field AI editing controls and undo history
-- 53447fc · 2026-11-18 · Test secure Worker API for single-field AI editing actions
-- 4f36dda · 2026-11-18 · Test AI rewrite expand and shorten field editor
-- 0fc88b2 · 2026-11-18 · Style individual AI text editing controls
-- e23d9b7 · 2026-11-18 · Fix endpoint validation regex in field editor
-- a7d9421 · 2026-11-18 · Add inline rewrite expand and shorten controls for selected text fields
-- 8075c52 · 2026-11-18 · docs: refresh project handoff
-- 9744f78 · 2026-11-18 · Expose AI rewrite expand and shorten API for one text field
+- 370b7b3 · 2026-11-18 · Test AI quality review UI controls
+- 72d7663 · 2026-11-18 · Style AI content quality review panel
+- 815a3b2 · 2026-11-18 · Add AI quality and SEO review controls
+- 6e80b17 · 2026-11-18 · Test content quality review Worker API
+- ed379e5 · 2026-11-18 · Test content quality and SEO review engine
+- 352a841 · 2026-11-18 · Expose content quality review API
+- b3d77c9 · 2026-11-18 · Add AI content quality and SEO review engine
+- 448b0ff · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
