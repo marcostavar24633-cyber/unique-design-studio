@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T08:28:08.113Z
+Время обновления: 2026-11-18T08:28:33.380Z
 Ветка: feat/strict-free-ai-mode
-Последний commit: 679b025480f05ed124ac6e12917dd72c9feb5c98
-Дата коммита: 2026-11-18T12:27:51+04:00
-Сообщение: docs(ai): explain strict free mode and NVIDIA trial boundaries
+Последний commit: 56deb241fc9279fba58586d0ba0f7e41f69fc978
+Дата коммита: 2026-11-18T12:28:16+04:00
+Сообщение: fix(ai): preserve quota error regex boundaries
 
 Последние коммиты:
+- 56deb24 · 2026-11-18 · fix(ai): preserve quota error regex boundaries
+- 6bb0508 · 2026-11-18 · docs: refresh project handoff
 - 679b025 · 2026-11-18 · docs(ai): explain strict free mode and NVIDIA trial boundaries
 - 6403f5a · 2026-11-18 · test(ai): assert free billing diagnostics
 - 47db114 · 2026-11-18 · test(ai): enforce strict free mode and explicit NVIDIA opt-in
 - 1ec3c5a · 2026-11-18 · docs: refresh project handoff
 - eb1dadf · 2026-11-18 · config(ai): default worker to free billing mode
 - ba54c29 · 2026-11-18 · feat(ai): expose strict free mode diagnostics
-- 477a7ea · 2026-11-18 · feat(ai): default to strict free billing mode
-- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
