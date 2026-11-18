@@ -160,7 +160,7 @@ function notifyAiQuotaThreshold(percent) {
   toast(reached[reached.length - 1].message);
 }
 function isAiQuotaMessage(message) {
-  return /(?:\\b(?:3036|3040|429)\\b|daily free allocation|rate[\\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(String(message || ''));
+  return /(?:\b(?:3036|3040|429)\b|daily free allocation|rate[\s_-]?limit|too many requests|resource[_ -]?exhausted|quota|daily.{0,30}limit|limit.{0,30}exceeded|exceeded.{0,30}(?:limit|quota|neurons?))/i.test(String(message || ''));
 }
 function renderAiBudget() {
   const box = $('#dash-ai-budget'); if (!box) return;
