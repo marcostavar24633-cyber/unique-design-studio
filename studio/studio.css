@@ -410,3 +410,14 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .auto-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent, #b89554); transition: width .35s ease; }
 .auto-progress[data-state="complete"] .auto-progress-track span { background: #299764; }
 .auto-progress small { display: block; color: var(--muted, #777); line-height: 1.45; }
+
+
+/* AI Content Director — isolated section regeneration */
+.content-regenerate{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.content-regenerate h3{margin:0 0 6px;font-size:15px}
+.content-regenerate__actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.content-regenerate__actions button{min-height:38px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.content-regenerate__actions button:hover:not(:disabled){border-color:var(--accent,#c9a45e);color:var(--accent,#c9a45e)}
+.content-regenerate__actions button:disabled{opacity:.55;cursor:wait}
+#content-regenerate-status{min-height:1.4em}
+@media(max-width:600px){.content-regenerate__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.content-regenerate__actions button{width:100%;min-height:42px}}
