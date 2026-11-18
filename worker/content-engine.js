@@ -1,11 +1,11 @@
 import { modelOutput, usageOf, addUsage, aboutNiche } from './ai-utils.js';
 
 export const CONTENT_STAGES = [
-  { id: 'strategy', label: 'Стратегия и первый экран', fields: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'], required: ['title','description','cta'], maxTokens: 1800 },
-  { id: 'about', label: 'О компании', fields: ['aboutTitle','aboutText'], required: ['aboutTitle','aboutText'], maxTokens: 900 },
-  { id: 'services', label: 'Услуги', fields: ['servicesTitle','servicesIntro','services'], required: ['services'], maxTokens: 1500 },
-  { id: 'trust', label: 'Преимущества, процесс и FAQ', fields: ['advantagesTitle','advantages','processTitle','process','faqs'], required: ['advantages','process','faqs'], maxTokens: 1700 },
-  { id: 'seo', label: 'Контакты и SEO', fields: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'], required: ['contactTitle','contactText','seoTitle','seoDescription'], maxTokens: 1400 },
+  { id: 'strategy', label: 'Стратегия и первый экран', schema: 'brand,niche,title,description,cta,targetAudience,mainOffer,visualDirection,strategySummary — строки', fields: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'], required: ['title','description','cta'], maxTokens: 1800 },
+  { id: 'about', label: 'О компании', schema: 'aboutTitle,aboutText — строки', fields: ['aboutTitle','aboutText'], required: ['aboutTitle','aboutText'], maxTokens: 900 },
+  { id: 'services', label: 'Услуги', schema: 'servicesTitle,servicesIntro — строки; services — массив [название, описание, цена]', fields: ['servicesTitle','servicesIntro','services'], required: ['services'], maxTokens: 1500 },
+  { id: 'trust', label: 'Преимущества, процесс и FAQ', schema: 'advantagesTitle,processTitle — строки; advantages,process — массивы [название, описание]; faqs — массив [вопрос, ответ]', fields: ['advantagesTitle','advantages','processTitle','process','faqs'], required: ['advantages','process','faqs'], maxTokens: 1700 },
+  { id: 'seo', label: 'Контакты и SEO', schema: 'contactTitle,contactText,marketResearch,seoTitle,seoDescription — строки; assumptions,objections,triggers,keywords,competitors,imagePrompts — массивы строк; segments — массив объектов {name,need}; researchSources — массив объектов {title,url}, оставь пустым без проверенных источников', fields: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'], required: ['contactTitle','contactText','seoTitle','seoDescription'], maxTokens: 1400 },
 ];
 
 function parseJson(value) {
@@ -67,6 +67,7 @@ export async function generateContentInStages({
       'Для services верни массив элементов [название, описание, цена]; неизвестную цену оставляй пустой строкой.',
       'Для advantages, process, faqs, assumptions, marketResearch, researchSources, segments, objections, triggers, keywords, competitors, imagePrompts используй массивы строк или массивы массивов строк только там, где это очевидно по смыслу.',
       'Этап: ' + stage.label + '.',
+      'Формат полей: ' + stage.schema + '.',
       context,
     ].filter(Boolean).join('\n\n');
 
