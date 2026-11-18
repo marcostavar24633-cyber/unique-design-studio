@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:21:30.644Z
-Ветка: main
-Последний commit: 537b2341ac0da33c553e0d08847806cb95588ae4
-Дата коммита: 2026-11-18T22:21:18+04:00
-Сообщение: Use Cloudflare Workers AI directly without Gateway (#142)
+Время обновления: 2026-11-18T18:28:12.043Z
+Ветка: fix/ai-request-size
+Последний commit: a4b9343acab5ff4a38a6e5f3f81cbc706b7dcb95
+Дата коммита: 2026-11-18T22:27:52+04:00
+Сообщение: Trim redundant library metadata from AI request
 
 Последние коммиты:
+- a4b9343 · 2026-11-18 · Trim redundant library metadata from AI request
+- 1c90538 · 2026-11-18 · Raise Worker request limit and count UTF-8 bytes
+- c2e169f · 2026-11-18 · docs: refresh project handoff
 - 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
 - ec02567 · 2026-11-18 · docs: refresh project handoff
 - fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
 - a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
-- 1e424c9 · 2026-11-18 · docs: refresh project handoff
-- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
-- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
