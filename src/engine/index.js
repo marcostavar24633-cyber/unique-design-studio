@@ -36,3 +36,5 @@ export { MASKS, DIVIDERS, chooseForms } from './forms.js';
 export { TEXT_EFFECTS, chooseTextEffect } from './text-effects.js';
 export { WEB_FONT_PAIRS } from './data.js';
 export { GRAPHIC_DIRECTIONS, chooseGraphicDirection } from './graphic-art-direction.js';
+export { directScene } from './cinematic/scene-director.js';
+export { SCENE_PROFILES } from './cinematic/scene-profiles.js';
