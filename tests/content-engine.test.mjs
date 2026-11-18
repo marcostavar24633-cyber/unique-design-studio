@@ -6,7 +6,7 @@ const answers = {
   strategy: { brand: 'Зерно', niche: 'кофейня', title: 'Кофе рядом', description: 'Свежий кофе каждый день', cta: 'Выбрать напиток', targetAudience: 'Жители района', mainOffer: 'Кофе и выпечка', visualDirection: 'Тёплый минимализм', strategySummary: 'Локальная кофейня с акцентом на свежесть' },
   about: { aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' },
   services: { servicesTitle: 'Меню', servicesIntro: 'Напитки и выпечка.', services: [['Капучино', 'Эспрессо с молоком', '']] },
-  trust: { advantagesTitle: 'Почему мы', advantages: ['Свежая обжарка'], processTitle: 'Как заказать', process: ['Выберите напиток'], faqs: ['Где мы находимся?'] },
+  trust: { advantagesTitle: 'Почему мы', advantages: [['Свежая обжарка', 'Зёрна обжариваются небольшими партиями']], processTitle: 'Как заказать', process: [['Выберите напиток', 'Оформите заказ у бариста']], faqs: [['Где мы находимся?', 'В центре района']] },
   seo: { contactTitle: 'Ждём вас', contactText: 'Загляните за кофе.', assumptions: [], marketResearch: [], researchSources: [], segments: [], objections: [], triggers: [], keywords: ['кофейня'], competitors: [], seoTitle: 'Кофейня Зерно', seoDescription: 'Кофе и выпечка рядом', imagePrompts: [] },
 };
 
