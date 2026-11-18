@@ -128,3 +128,76 @@ export async function generateContentInStages({
     generation: { mode: 'staged', status: 'completed', stages, completedStages: stages.length, failedStage: null },
   };
 }
+
+
+/** Regenerate exactly one content group against the current project, without touching other groups. */
+export async function regenerateContentStage({
+  env, model, brief, stageId, existingLanding = {}, editorialDirection = '', runTextModel, preferNvidia = false,
+}) {
+  const stage = CONTENT_STAGES.find(item => item.id === stageId);
+  if (!stage) throw new Error('Неизвестный этап генерации');
+  const landing = {};
+  for (const key of new Set(['brand','niche', ...CONTENT_STAGES.flatMap(item => item.fields)])) {
+    if (Object.prototype.hasOwnProperty.call(existingLanding, key)) landing[key] = existingLanding[key];
+  }
+  const facts = [
+    'Ниша бизнеса клиента: ' + brief.niche + '.',
+    brief.brand ? 'Название бренда: ' + brief.brand + '.' : 'Название бренда не указано — не придумывай его.',
+    brief.city ? 'Город: ' + brief.city + '.' : '',
+    'Уровень: ' + brief.tier + '.',
+    brief.details ? 'Подробности от владельца: ' + brief.details : '',
+  ].filter(Boolean).join('\\n');
+  const context = [
+    facts,
+    landing.strategySummary ? 'Стратегия бренда: ' + landing.strategySummary : '',
+    'Текущие данные проекта: ' + JSON.stringify(landing).slice(0, 12000),
+    editorialDirection ? 'Редакторское направление: ' + editorialDirection.slice(0, 2000) : '',
+  ].filter(Boolean).join('\\n\\n');
+  const prompt = [
+    'Ты AI Content Director коммерческого сайта. Перегенерируй только один указанный раздел, сохранив согласованность с остальным проектом.',
+    'Пиши по-русски, конкретно и естественно. Не меняй другие разделы.',
+    'Не выдумывай цены, адреса, отзывы, сертификаты, гарантии, статистику и конкурентов.',
+    'Если фактов недостаточно, не заполняй пробелы выдумками.',
+    'Верни только валидный JSON-объект. Разрешённые ключи: ' + stage.fields.join(', ') + '. Не добавляй другие ключи.',
+    'Формат полей: ' + stage.schema + '.',
+    'Этап: ' + stage.label + '.',
+    context,
+  ].join('\\n\\n');
+  let usage = null, provider = 'cloudflare', usedModel = model, lastError = '';
+  const started = Date.now();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const execution = await runTextModel(env, model, {
+        messages: [{ role: 'user', content: attempt ? prompt + '\\n\\nСократи текст и верни полный валидный JSON с обязательными полями.' : prompt }],
+        max_tokens: stage.maxTokens,
+        temperature: 0.45,
+      }, { preferNvidia });
+      provider = execution.provider;
+      usedModel = execution.model;
+      preferNvidia = provider === 'nvidia';
+      usage = addUsage(usage, usageOf(execution.result));
+      const parsed = parseJson(modelOutput(execution.result));
+      const validation = validateContentStage(stage, parsed);
+      if (!validation.ok) {
+        lastError = 'Нет обязательных полей: ' + validation.missing.join(', ');
+        continue;
+      }
+      if (stage.id === 'strategy' && !aboutNiche(parsed, brief.niche)) {
+        lastError = 'Текст не соответствует нише «' + brief.niche + '»';
+        continue;
+      }
+      const result = {};
+      mergeContentStage(result, stage, parsed);
+      return {
+        stage: { id: stage.id, label: stage.label, status: 'completed', attempts: attempt + 1 },
+        content: result, provider, model: usedModel, usage, durationMs: Date.now() - started,
+      };
+    } catch (error) {
+      lastError = error?.message || 'Ошибка этапа генерации';
+    }
+  }
+  return {
+    stage: { id: stage.id, label: stage.label, status: 'failed', attempts: 2, error: lastError },
+    provider, model: usedModel, usage, durationMs: Date.now() - started,
+  };
+}
