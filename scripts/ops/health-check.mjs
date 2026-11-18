@@ -11,10 +11,10 @@ export function isWorkerHealthPayload(value) {
 }
 
 export function isAiProbePayload(value) {
-  return value?.review && typeof value.review === 'object'
+  return Boolean(value?.review && typeof value.review === 'object'
     && Array.isArray(value.review.recommendations)
     && ['review-needed', 'looks-good'].includes(value.review.status)
-    && value.review.safety?.autoApplied === false;
+    && value.review.safety?.autoApplied === false);
 }
 
 async function requestJson(url, options = {}, fetchImpl = fetch) {
