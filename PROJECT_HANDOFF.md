@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:20:13.809Z
+Время обновления: 2026-11-18T10:22:27.525Z
 Ветка: feat/openrouter-free-fallback
-Последний commit: 3d1b9f03e6a1976b7e2cec27afe4ec8d7ceabafb
-Дата коммита: 2026-11-18T14:20:01+04:00
-Сообщение: docs(ai): explain free OpenRouter fallback setup
+Последний commit: 5c5a092cd89302211dd38c393d4e086be317611d
+Дата коммита: 2026-11-18T14:22:12+04:00
+Сообщение: test(ai): correct OpenRouter fallback gating cases
 
 Последние коммиты:
+- 5c5a092 · 2026-11-18 · test(ai): correct OpenRouter fallback gating cases
+- 82ebc8b · 2026-11-18 · test(ai): update diagnostics contract for OpenRouter
+- 71c55ea · 2026-11-18 · docs: refresh project handoff
 - 3d1b9f0 · 2026-11-18 · docs(ai): explain free OpenRouter fallback setup
 - 00ee67b · 2026-11-18 · chore(worker): keep OpenRouter fallback opt-in
 - b81c17b · 2026-11-18 · test(ai): cover free OpenRouter quota fallback
 - af1bcd3 · 2026-11-18 · feat(ai): expose OpenRouter fallback diagnostics
 - 1e2e2f5 · 2026-11-18 · docs: refresh project handoff
-- 03bd966 · 2026-11-18 · feat(ai): add free OpenRouter quota fallback
-- a6793ba · 2026-11-18 · docs: refresh project handoff
-- 9053572 · 2026-11-18 · feat: add free AI quota warnings
 <!-- HANDOFF:AUTO:END -->
