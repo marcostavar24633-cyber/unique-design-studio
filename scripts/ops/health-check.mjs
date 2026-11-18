@@ -68,14 +68,16 @@ async function reportFailure(failures) {
   console.log(`Health failure recorded: ${existing ? existing.html_url : issue.html_url}`);
 }
 
-export async function runHealthChecks({ siteUrl = process.env.SITE_URL || DEFAULT_SITE_URL, workerUrl = process.env.WORKER_URL || DEFAULT_WORKER_URL, aiProbe = false } = {}) {
+export async function runHealthChecks({ siteUrl = process.env.SITE_URL || DEFAULT_SITE_URL, workerUrl = process.env.WORKER_URL || DEFAULT_WORKER_URL, aiProbe = false, workerOnly = false } = {}) {
   const failures = [];
   const results = [];
-  try {
-    const site = await checkUrl('Studio Pages', siteUrl, { headers: { Accept: 'text/html' } });
-    if (!/<!doctype html|<html/i.test(site.text)) throw new Error('ответ не похож на HTML-страницу');
-    results.push('Studio Pages: OK');
-  } catch (error) { failures.push({ label: 'Studio Pages', message: error.message }); }
+  if (!workerOnly) {
+    try {
+      const site = await checkUrl('Studio Pages', siteUrl, { headers: { Accept: 'text/html' } });
+      if (!/<!doctype html|<html/i.test(site.text)) throw new Error('ответ не похож на HTML-страницу');
+      results.push('Studio Pages: OK');
+    } catch (error) { failures.push({ label: 'Studio Pages', message: error.message }); }
+  }
 
   try {
     const health = await checkUrl('AI Worker /health', new URL('/health', workerUrl));
@@ -132,7 +134,7 @@ export async function runHealthChecks({ siteUrl = process.env.SITE_URL || DEFAUL
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runHealthChecks({ aiProbe: process.argv.includes('--ai') }).catch(error => {
+  runHealthChecks({ aiProbe: process.argv.includes('--ai'), workerOnly: process.argv.includes('--worker-only') }).catch(error => {
     console.error(error.message);
     process.exitCode = 1;
   });
