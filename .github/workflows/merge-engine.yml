@@ -1,6 +1,6 @@
 name: Merge Engine
 # Автономная проверка и безопасное слияние Pull Request в main (scripts/merge-engine.mjs).
-# По расписанию — только сводка. Слияние — только вручную: command=merge и execute=true.
+# По расписанию запускается guarded auto-merge; ручные команды status/check/merge сохранены.
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '*/15 * * * *'
 
 # Минимально необходимые права встроенного GITHUB_TOKEN. Отдельный токен не нужен.
 permissions:
@@ -54,8 +54,11 @@ jobs:
         run: '[[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || { echo "Укажите номер PR"; exit 1; }'
       - name: Права и настройки
         run: node scripts/merge-engine.mjs doctor
+      - name: Автоматическое слияние
+        if: github.event_name == 'schedule'
+        run: node scripts/merge-engine/auto.mjs
       - name: Сводка
-        if: github.event_name == 'schedule' || inputs.command == 'status'
+        if: github.event_name == 'workflow_dispatch' && inputs.command == 'status'
         run: node scripts/merge-engine.mjs status --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Проверка PR
         if: github.event_name == 'workflow_dispatch' && inputs.command == 'check'
