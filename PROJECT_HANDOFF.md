@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:24:41.629Z
+Время обновления: 2026-11-18T15:25:58.303Z
 Ветка: feat/ai-content-engine-staged
-Последний commit: f3c71a5046dbdc0a18dc86ec3ae69dd2d1acf93b
-Дата коммита: 2026-11-18T19:24:31+04:00
-Сообщение: Add staged AI content generation engine
+Последний commit: 30bf701180cb585bcd0f57eba0862605ed2524b3
+Дата коммита: 2026-11-18T19:25:44+04:00
+Сообщение: Clarify partial generation status in studio
 
 Последние коммиты:
-- f3c71a5 · 2026-11-18 · Add staged AI content generation engine
-- 3d90ec7 · 2026-11-18 · docs: refresh project handoff
-- 18f395e · 2026-11-18 · test(ai): cover large UTF-8 briefs and prompt deduplication
-- 0343c70 · 2026-11-18 · docs: refresh project handoff
-- f57a873 · 2026-11-18 · fix(ai): send compact generation payload without duplicated prompt
-- e1d938e · 2026-11-18 · fix(ai): raise safe request limit and count UTF-8 bytes
-- a6793ba · 2026-11-18 · docs: refresh project handoff
-- 9053572 · 2026-11-18 · feat: add free AI quota warnings
+- 30bf701 · 2026-11-18 · Clarify partial generation status in studio
+- 82509ac · 2026-11-18 · Validate staged strategy against the requested business niche
+- 6d59bed · 2026-11-18 · Cover staged content generation Worker API
+- bbb55ad · 2026-11-18 · Keep stage-specific JSON contracts isolated
+- 23905fd · 2026-11-18 · Test staged AI content generation and partial recovery
+- bb743a1 · 2026-11-18 · Enable staged content generation in studio workflow
+- 1118f5f · 2026-11-18 · Integrate staged content generation into AI Worker
+- 359e1c1 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
