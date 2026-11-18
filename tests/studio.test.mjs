@@ -486,7 +486,7 @@ test('44px touch target guidance is reported as a manual recommendation, not an 
   const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
   const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
   const audit = source.slice(start, end);
-  assert.ok(audit.includes("results.push({level:'manual',title:size.label + ': небольшие интерактивные области'"));
+  assert.ok(audit.includes("results.push({level:'manual',title:size.label + ': маленькие интерактивные области'"));
   assert.ok(audit.includes('рекомендуемого ориентира 44 × 44 px'));
   assert.ok(audit.includes('не само по себе доказательство нарушения WCAG 2.2 AA'));
 });
