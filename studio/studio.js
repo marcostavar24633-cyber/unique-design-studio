@@ -1584,6 +1584,31 @@ function renderHeroReadabilityChecks() {
 }
 
 
+function previewAccessibleName(el, doc) {
+  if (!el) return '';
+  const clean = value => String(value || '').replace(/\\s+/g, ' ').trim();
+  const referenced = (el.getAttribute('aria-labelledby') || '').trim().split(/\\s+/).filter(Boolean)
+    .map(id => doc.getElementById(id)).filter(Boolean)
+    .map(node => node.textContent || '').join(' ');
+  if (clean(referenced)) return clean(referenced);
+  const ariaLabel = clean(el.getAttribute('aria-label'));
+  if (ariaLabel) return ariaLabel;
+  if (el.labels && el.labels.length) {
+    const labels = [...el.labels].map(label => label.textContent || '').join(' ');
+    if (clean(labels)) return clean(labels);
+  }
+  if (el.tagName === 'IMG') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && el.type === 'image') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && ['button','submit','reset'].includes(el.type)) return clean(el.value);
+  const content = [
+    typeof el.innerText === 'string' ? el.innerText : (el.textContent || ''),
+    ...[...(el.querySelectorAll?.('img[alt]') || [])].map(img => img.getAttribute('alt') || ''),
+    ...[...(el.querySelectorAll?.('svg title') || [])].map(title => title.textContent || ''),
+  ].join(' ');
+  if (clean(content)) return clean(content);
+  return clean(el.getAttribute('title'));
+}
+
 function auditResponsiveLayoutAndAccessibility() {
   const frame = $('#frame');
   const doc = frame?.contentDocument;
@@ -1598,7 +1623,7 @@ function auditResponsiveLayoutAndAccessibility() {
     const rect = el.getBoundingClientRect();
     return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
   };
-  const hasName = el => Boolean((el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.value || '').trim() || (el.labels && [...el.labels].some(label => label.innerText.trim())));
+  const hasName = el => Boolean(previewAccessibleName(el, doc));
   const intersects = (a,b) => a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2;
   try {
     for (const size of sizes) {
@@ -1663,7 +1688,7 @@ function auditSiteContentAndInteractions() {
   const results = [];
   const add = (level,title,text) => results.push({level,title,text});
   const visible = el => { const s=doc.defaultView.getComputedStyle(el),r=el.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0; };
-  const nameOf = el => (el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || '').trim();
+  const nameOf = el => previewAccessibleName(el, doc);
   const ids = new Set([...doc.querySelectorAll('[id]')].map(el=>el.id));
   const images = [...doc.querySelectorAll('img')];
   const broken = images.filter(img=>img.complete&&img.naturalWidth===0);
