@@ -1,0 +1,72 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { CONTENT_STAGES, validateContentStage, mergeContentStage, generateContentInStages } from '../worker/content-engine.js';
+
+const answers = {
+  strategy: { brand: 'Зерно', niche: 'кофейня', title: 'Кофе рядом', description: 'Свежий кофе каждый день', cta: 'Выбрать напиток', targetAudience: 'Жители района', mainOffer: 'Кофе и выпечка', visualDirection: 'Тёплый минимализм', strategySummary: 'Локальная кофейня с акцентом на свежесть' },
+  about: { aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' },
+  services: { servicesTitle: 'Меню', servicesIntro: 'Напитки и выпечка.', services: [['Капучино', 'Эспрессо с молоком', '']] },
+  trust: { advantagesTitle: 'Почему мы', advantages: ['Свежая обжарка'], processTitle: 'Как заказать', process: ['Выберите напиток'], faqs: ['Где мы находимся?'] },
+  seo: { contactTitle: 'Ждём вас', contactText: 'Загляните за кофе.', assumptions: [], marketResearch: [], researchSources: [], segments: [], objections: [], triggers: [], keywords: ['кофейня'], competitors: [], seoTitle: 'Кофейня Зерно', seoDescription: 'Кофе и выпечка рядом', imagePrompts: [] },
+};
+
+const mock = (sequence = Object.values(answers)) => {
+  const calls = [];
+  return {
+    calls,
+    runTextModel: async (_env, model, options) => {
+      calls.push({ model, options });
+      const next = sequence[Math.min(calls.length - 1, sequence.length - 1)];
+      return { result: { response: typeof next === 'string' ? next : JSON.stringify(next), usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 } }, provider: 'cloudflare', model };
+    },
+  };
+};
+
+const base = { env: {}, model: 'test-model', brief: { niche: 'кофейня', brand: 'Зерно' }, facts: 'Ниша: кофейня', studioPrompt: 'Пиши тепло', formatNote: '', preferNvidia: false };
+
+test('каждый этап проверяет обязательные поля и не принимает пустые значения', () => {
+  assert.equal(validateContentStage(CONTENT_STAGES[0], answers.strategy).ok, true);
+  assert.deepEqual(validateContentStage(CONTENT_STAGES[0], { title: ' ', description: 'x', cta: 'y' }).missing, ['title']);
+});
+
+test('результаты этапа объединяются только по разрешённым полям', () => {
+  const target = { title: 'Старый' };
+  mergeContentStage(target, CONTENT_STAGES[0], { title: 'Новый', injected: 'не добавлять' });
+  assert.equal(target.title, 'Новый');
+  assert.equal('injected' in target, false);
+});
+
+test('генератор выполняет пять независимых этапов и объединяет их в единый landing', async () => {
+  const ai = mock();
+  const result = await generateContentInStages({ ...base, runTextModel: ai.runTextModel });
+  assert.equal(result.generation.status, 'completed');
+  assert.equal(result.generation.completedStages, 5);
+  assert.equal(ai.calls.length, 5);
+  assert.equal(result.landing.title, answers.strategy.title);
+  assert.deepEqual(result.landing.services, answers.services.services);
+  assert.equal(result.landing.seoTitle, answers.seo.seoTitle);
+  assert.equal(result.usage.totalTokens, 150);
+  assert.equal(result.generation.stages.every(stage => stage.status === 'completed'), true);
+});
+
+test('повторяется только неуспешный этап, ранее созданные этапы не запускаются повторно', async () => {
+  const sequence = [answers.strategy, { aboutTitle: '' }, answers.about, answers.services, answers.trust, answers.seo];
+  const ai = mock(sequence);
+  const result = await generateContentInStages({ ...base, runTextModel: ai.runTextModel });
+  assert.equal(result.generation.status, 'completed');
+  assert.equal(ai.calls.length, 6);
+  assert.deepEqual(result.generation.stages.map(stage => stage.attempts), [1, 2, 1, 1, 1]);
+  assert.equal(result.landing.aboutTitle, answers.about.aboutTitle);
+});
+
+test('при двух ошибках возвращаются готовые разделы и явный статус partial', async () => {
+  const sequence = [answers.strategy, { aboutTitle: '' }, { aboutTitle: '' }];
+  const ai = mock(sequence);
+  const result = await generateContentInStages({ ...base, runTextModel: ai.runTextModel });
+  assert.equal(result.generation.status, 'partial');
+  assert.equal(result.generation.failedStage, 'about');
+  assert.equal(result.generation.completedStages, 1);
+  assert.equal(result.landing.title, answers.strategy.title);
+  assert.equal(result.landing.aboutTitle, undefined);
+  assert.equal(ai.calls.length, 3);
+});
