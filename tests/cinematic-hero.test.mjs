@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildConcept, generate, directScene, SCENE_PROFILES } from '../src/engine/index.js';
 import { example, full } from './helpers.mjs';
-import { sceneMarkup, sceneCss } from '../src/engine/cinematic/scene-runtime.js';
+import { sceneMarkup, sceneCss, sceneScript } from '../src/engine/cinematic/scene-runtime.js';
 
 test('Cinematic Hero Director выбирает валидный профиль по контексту проекта', () => {
   const luxury = buildConcept({ ...full, tier: 'luxury' });
@@ -27,4 +27,12 @@ test('рендерер добавляет выбранную сцену в Hero,
   assert.match(result.html, /data-cinematic-scene/);
   assert.match(result.html, /prefers-reduced-motion/);
   assert.match(result.html, /id="hero-h"/);
+});
+
+test('статичная архитектура оставляет сцену декоративной и не запускает runtime', () => {
+  const scene = directScene({
+    visualSystem: { archetype: 'catalog', nicheId: 'shop', motion: 'static', motionPlan: { intensity: 'calm' } },
+  }, { tier: 'standard' });
+  assert.equal(scene.motionEnabled, false);
+  assert.equal(sceneScript(scene), '');
 });
