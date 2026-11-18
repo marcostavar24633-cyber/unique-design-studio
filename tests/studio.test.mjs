@@ -387,4 +387,18 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /aiJournal\(\)\.filter\(e => e\.at >= sessionStart\)/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
+  assert.match(js, /Сброс через .*00:00 UTC/);
+});
+
+
+test('AI free quota panel warns at 70%, 85%, and 100% using the UTC reset', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('pct >= 100'));
+  assert.ok(source.includes('pct >= 85'));
+  assert.ok(source.includes('pct >= 70'));
+  assert.ok(source.includes('data-ai-budget-alert='));
+  assert.ok(source.includes('aria-live="polite"'));
+  assert.ok(source.includes('платный резервный провайдер отключён'));
+  assert.ok(source.includes('00:00 UTC'));
+  assert.ok(!source.includes('после 4:00'));
 });

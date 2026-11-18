@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T08:31:18.849Z
-Ветка: main
-Последний commit: ceeb38b37c43d74909b6754ddea338cc4a4ffd18
-Дата коммита: 2026-11-18T12:31:07+04:00
-Сообщение: feat: enforce strict free AI mode by default
+Время обновления: 2026-11-18T09:12:40.428Z
+Ветка: feat/ai-free-quota-warnings
+Последний commit: ab9eb74fe0cf7a969091758fc779b8a76ec67591
+Дата коммита: 2026-11-18T13:12:20+04:00
+Сообщение: test: validate quota thresholds without invalid regex
 
 Последние коммиты:
-- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
-- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
-- ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
-- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
-- 99ea251 · 2026-11-18 · ci(worker): automate Cloudflare AI Worker deployment (#121)
-- c0ae259 · 2026-11-18 · Cinematic Hero Engine PRO: Scene Director и динамические сцены (#117)
+- ab9eb74 · 2026-11-18 · test: validate quota thresholds without invalid regex
+- b2acc94 · 2026-11-18 · fix: restore quota thresholds and UTC reset
+- 754a4f4 · 2026-11-18 · docs: refresh project handoff
+- 120032d · 2026-11-18 · test: keep quota notice hidden until exhaustion
+- c7a7a1c · 2026-11-18 · fix: show quota notice only when exhausted
+- 1d06c4d · 2026-11-18 · docs: refresh project handoff
+- a4c6187 · 2026-11-18 · test: cover 4am quota reset message and retry button
+- 3f49ee8 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
