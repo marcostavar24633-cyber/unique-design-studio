@@ -1642,17 +1642,12 @@ function auditResponsiveLayoutAndAccessibility() {
         const r = el.getBoundingClientRect();
         return r.width < 44 || r.height < 44;
       });
-      if (smallTargets.length) results.push({level:'check',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше ориентира 44 × 44 px. Увеличьте область нажатия или расстояние между соседними элементами.'});
+      if (smallTargets.length) results.push({level:'manual',title:size.label + ': небольшие интерактивные области',text:smallTargets.length + ' элементов меньше рекомендуемого ориентира 44 × 44 px. Это не само по себе доказательство нарушения WCAG 2.2 AA: учитывайте применимые исключения и расстояние между целями.'});
       const offscreen = controls.filter(el => {
         const r = el.getBoundingClientRect();
         return r.right < 0 || r.left > viewportWidth || r.bottom < 0;
       });
       if (offscreen.length) results.push({level:'check',title:size.label + ': элементы за пределами экрана',text:offscreen.length + ' интерактивных элементов находятся за видимой областью. Проверьте меню, CTA и горизонтальные списки.'});
-      const focusMissing = controls.filter(el => {
-        const style = doc.defaultView.getComputedStyle(el);
-        return style.outlineStyle === 'none' && style.boxShadow === 'none';
-      });
-      if (focusMissing.length) results.push({level:'manual',title:size.label + ': проверить клавиатурный фокус',text:focusMissing.length + ' элементов не имеют очевидного outline или box-shadow в обычном состоянии. Проверьте :focus-visible клавиатурой.'});
       const overlapping = [];
       const candidates = controls.filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type));
       for (let i=0;i<candidates.length;i++) for (let j=i+1;j<candidates.length;j++) {
@@ -1664,6 +1659,8 @@ function auditResponsiveLayoutAndAccessibility() {
       const unlabeledFields = [...doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea')].filter(visible).filter(el => !hasName(el));
       if (unlabeledFields.length) results.push({level:'check',title:size.label + ': поля без подписи',text:'Найдено ' + unlabeledFields.length + ' видимых полей без label, aria-label или title.'});
     }
+    const focusableControls = [...doc.querySelectorAll('a[href],button,input,select,textarea,[role="button"],[tabindex]')].filter(visible);
+    if (focusableControls.length) results.push({level:'manual',title:'Проверить клавиатурный фокус',text:'Для ' + focusableControls.length + ' видимых интерактивных элементов требуется ручная проверка навигацией клавишей Tab: убедитесь, что :focus-visible заметен и порядок фокуса логичен. Отсутствие outline в обычном состоянии не считается ошибкой.'});
   } catch {
     results.push({level:'manual',title:'Проверка прервана',text:'Предпросмотр обновился во время диагностики. Запустите проверку ещё раз.'});
   } finally {
