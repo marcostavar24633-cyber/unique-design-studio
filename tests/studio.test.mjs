@@ -385,7 +385,7 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /u\.search = '\?range=today'/);
   assert.match(js, /Date\.UTC\(now\.getUTCFullYear\(\), now\.getUTCMonth\(\), now\.getUTCDate\(\) \+ 1\)/);
   assert.match(js, /journal\.filter\(e => e\.at >= sessionStart\)/);
-  assert.match(js, /timeZone: 'Asia\\/Baku'/);
+  assert.match(js, /timeZone: 'Asia\/Baku'/);
   assert.match(js, /bakuDate\(new Date\(e\.at\)\)/);
   assert.match(js, /эта вкладка/);
   assert.match(js, /Cloudflare с 00:00 UTC/);
