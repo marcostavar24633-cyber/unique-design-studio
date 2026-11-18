@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:55:47.692Z
-Ветка: main
-Последний commit: 579bb4721dedd4de17139b034cc3f18bcff9d283
-Дата коммита: 2026-11-18T22:55:35+04:00
-Сообщение: Enforce direct Cloudflare Workers AI routing
+Время обновления: 2026-11-18T19:14:46.979Z
+Ветка: feat/autonomy-operations
+Последний commit: 8551f69f817058fc95c6e1a78c4f8c410f5a3cdd
+Дата коммита: 2026-11-18T23:11:18+04:00
+Сообщение: docs: clarify guarded rollback workflow entrypoint
 
 Последние коммиты:
-- 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
-- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
-- 7addacc · 2026-11-18 · Add fullscreen mode to live preview
-- 3386f83 · 2026-11-18 · docs: refresh project handoff
-- 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
-- c2e169f · 2026-11-18 · docs: refresh project handoff
-- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
-- ec02567 · 2026-11-18 · docs: refresh project handoff
+- 8551f69 · 2026-11-18 · docs: clarify guarded rollback workflow entrypoint
+- 3347629 · 2026-11-18 · chore: remove redundant rollback-only workflow
+- faa8dbe · 2026-11-18 · ops: add guarded rollback mode to Worker deploy workflow
+- acf4378 · 2026-11-18 · fix: guard rollback workflow against non-dispatch events
+- df89552 · 2026-11-18 · fix: make AI probe contract validator strictly boolean
+- f644a1a · 2026-11-18 · fix: exclude local Wrangler state from backups
+- 5dcd254 · 2026-11-18 · fix: deduplicate health alerts and avoid label dependency
+- 709324b · 2026-11-18 · docs: define guarded autonomy rollout and recovery policy
 <!-- HANDOFF:AUTO:END -->
