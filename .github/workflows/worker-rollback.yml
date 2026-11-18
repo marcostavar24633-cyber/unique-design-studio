@@ -1,6 +1,8 @@
 name: Rollback AI Worker
 
 on:
+  push:
+    branches-ignore: ['**']
   workflow_dispatch:
     inputs:
       version_id:
@@ -21,7 +23,7 @@ concurrency:
 
 jobs:
   rollback:
-    if: inputs.confirmation == 'ROLLBACK'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirmation == 'ROLLBACK'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -65,7 +67,7 @@ jobs:
           echo "::error::Worker health check failed after rollback."
           exit 1
   reject:
-    if: inputs.confirmation != 'ROLLBACK'
+    if: github.event_name == 'workflow_dispatch' && inputs.confirmation != 'ROLLBACK'
     runs-on: ubuntu-latest
     steps:
       - run: echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK." && exit 1
