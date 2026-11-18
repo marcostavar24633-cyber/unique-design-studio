@@ -1,4 +1,4 @@
-import { modelOutput, usageOf, addUsage } from './ai-utils.js';
+import { modelOutput, usageOf, addUsage, aboutNiche } from './ai-utils.js';
 
 export const CONTENT_STAGES = [
   { id: 'strategy', label: 'Стратегия и первый экран', fields: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'], required: ['title','description','cta'], maxTokens: 1800 },
@@ -93,6 +93,10 @@ export async function generateContentInStages({
         const validation = validateContentStage(stage, parsed);
         if (!validation.ok) {
           stageError = 'Нет обязательных полей: ' + validation.missing.join(', ');
+          continue;
+        }
+        if (stage.id === 'strategy' && !aboutNiche(parsed, brief.niche)) {
+          stageError = 'Текст первого экрана не соответствует нише «' + brief.niche + '»';
           continue;
         }
         stageResult = parsed;
