@@ -9,6 +9,8 @@ import { esc } from './util.js';
 import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
 import { dividerHtml, formsCss } from './forms.js';
 import { fadeWordsHtml, textEffectCss } from './text-effects.js';
+import { directScene } from './cinematic/scene-director.js';
+import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -244,7 +246,7 @@ const SECTION = {
 };
 
 // ---------- Скрипт страницы: только нужные фрагменты ----------
-function script(c) {
+function script(c, scene) {
   const parts = [];
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
   if (c.vs.motionPlan?.mechanics.includes('scroll-reveal')) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
@@ -253,6 +255,8 @@ function script(c) {
   if ((c.vs.commerce?.tools || c.vs.commerce?.cart) && c.order.includes('items')) parts.push(commerceScript(c.p));
   const motion = motionScript(c.vs.motionPlan);
   if (motion) parts.push(motion);
+  const cinematic = sceneScript(scene);
+  if (cinematic) parts.push(cinematic);
   return parts.length ? `<script>(function(){${parts.join(';')}})();</script>` : '';
 }
 
@@ -266,7 +270,7 @@ function jsonLd(c) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
 
-export function renderCss(concept) {
+export function renderCss(concept, scene = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
@@ -284,6 +288,7 @@ export function renderCss(concept) {
     used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
     // Motion CSS подключается последним: стеклянные поверхности сохраняются поверх базовых стилей карточек.
     motionCss(vs.motionPlan),
+    sceneCss(scene),
   ].join('\n').replace(/\n\s*/g, '');
 }
 
@@ -292,6 +297,8 @@ export function renderSite(input, concept) {
   const project = normalizeProject(input);
   const c = context(project, concept);
   const vs = c.vs;
+  const scene = directScene(concept, project);
+  const sceneLayer = sceneMarkup(scene);
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
   // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.
@@ -309,19 +316,19 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept)}</style>
+${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept, scene)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
 <a class="skip" href="#main">Перейти к содержимому</a>
 ${nav(c)}
 <main id="main">
-<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" aria-labelledby="hero-h">${heroBackground(c)}${HERO[vs.archetype](c)}</section>
+<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>
 ${sections}
 </main>
 <footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>
 ${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
-${script(c)}
+${script(c, scene)}
 </body>
 </html>
 `;
