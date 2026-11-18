@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:44:44.471Z
-Ветка: main
-Последний commit: d751d41816eda1b42be9b4d12a120caaf710132e
-Дата коммита: 2026-11-18T23:44:32+04:00
-Сообщение: Fix Worker deployment workflow guards
+Время обновления: 2026-11-18T19:55:43.920Z
+Ветка: docs/ai-master-guide-refresh
+Последний commit: 541835a29eec6b2d7b001e7163def719dbeb332a
+Дата коммита: 2026-11-18T23:55:31+04:00
+Сообщение: docs: add unified AI project master guide
 
 Последние коммиты:
+- 541835a · 2026-11-18 · docs: add unified AI project master guide
+- eeb21d0 · 2026-11-18 · docs: refresh project handoff
 - d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
 - bc7aedd · 2026-11-18 · docs: refresh project handoff
 - e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
 - 06b64ec · 2026-11-18 · docs: refresh project handoff
 - fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
 - 9c36903 · 2026-11-18 · docs: refresh project handoff
-- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
-- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
