@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'push' || github.event.inputs.action == 'deploy' }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'deploy') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +91,7 @@ jobs:
           exit 1
 
   rollback:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback' && github.event.inputs.confirmation == 'ROLLBACK' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && inputs.confirmation == 'ROLLBACK' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -134,7 +134,9 @@ jobs:
           exit 1
 
   reject-rollback:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback' && github.event.inputs.confirmation != 'ROLLBACK' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'rollback' && inputs.confirmation != 'ROLLBACK' }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK." && exit 1
+      - run: |
+          echo "::error::Откат отменён: подтверждение должно быть ровно ROLLBACK."
+          exit 1
