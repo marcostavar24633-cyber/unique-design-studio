@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T08:58:16.668Z
+Время обновления: 2026-11-18T09:05:03.978Z
 Ветка: feat/ai-free-quota-warnings
-Последний commit: 7ef318e7dfd20b19a6f4e6965105473f16ee01d1
-Дата коммита: 2026-11-18T12:58:00+04:00
-Сообщение: test: cover free AI quota warning thresholds
+Последний commit: 172e6e9332e55f338159769809fe64b7d75aae07
+Дата коммита: 2026-11-18T13:04:52+04:00
+Сообщение: fix: show AI quota reset after 4:00
 
 Последние коммиты:
+- 172e6e9 · 2026-11-18 · fix: show AI quota reset after 4:00
+- f33d955 · 2026-11-18 · docs: refresh project handoff
 - 7ef318e · 2026-11-18 · test: cover free AI quota warning thresholds
 - 646343d · 2026-11-18 · feat: warn before free AI quota exhaustion
 - 1e424c9 · 2026-11-18 · docs: refresh project handoff
 - ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
 - 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 - ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
 <!-- HANDOFF:AUTO:END -->
