@@ -791,6 +791,7 @@ $('#auto').addEventListener('submit', async e => {
         tier: input.tier,
         details: input.details,
         studioPrompt,
+        contentEngine: 'staged',
       };
       const aiStarted = Date.now();
       let res, body;
@@ -798,12 +799,14 @@ $('#auto').addEventListener('submit', async e => {
         res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
         body = await res.json().catch(() => ({}));
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
-      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
+      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing && body.generation?.status === 'completed' ? 'ok' : 'error', error: body.error || (body.generation?.status === 'partial' ? 'Частичная генерация: ' + (body.generation.failedStage || 'этап не завершён') : res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || body.generation?.stages?.reduce((n, stage) => n + (stage.attempts || 0), 0) || null });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем и собираем данные проекта');
       draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
-      note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
+      note = body.generation?.status === 'partial'
+        ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы сохранены; повторите генерацию недостающего этапа после восстановления AI.`
+        : `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
       setAutoProgress(35, 'Переключение на локальный режим', 'AI недоступен — продолжаем без сервера');
