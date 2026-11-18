@@ -66,14 +66,14 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:55:43.920Z
-Ветка: docs/ai-master-guide-refresh
-Последний commit: 541835a29eec6b2d7b001e7163def719dbeb332a
-Дата коммита: 2026-11-18T23:55:31+04:00
+Время обновления: 2026-11-18T19:57:47.690Z
+Ветка: main
+Последний commit: c6ba6a994086280b579a651d5cf81f5c3458bd26
+Дата коммита: 2026-11-18T23:57:35+04:00
 Сообщение: docs: add unified AI project master guide
 
 Последние коммиты:
-- 541835a · 2026-11-18 · docs: add unified AI project master guide
+- c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
 - eeb21d0 · 2026-11-18 · docs: refresh project handoff
 - d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
 - bc7aedd · 2026-11-18 · docs: refresh project handoff
