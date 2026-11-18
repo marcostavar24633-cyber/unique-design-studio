@@ -33,7 +33,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ops/health-check.mjs
       - name: Синтетическая проверка AI inference
-        if: github.event.schedule == '17 6 * * *' || inputs.ai_probe
+        if: github.event.schedule == '17 6 * * *' || github.event.github.event.inputs.ai_probe == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ops/health-check.mjs --ai
