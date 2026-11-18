@@ -629,6 +629,19 @@ function renderSpec() {
   <label class="content-director__label" for="content-direction">Редакторское направление</label>
   <textarea id="content-direction" rows="3" maxlength="2000" placeholder="Например: спокойный премиальный тон, меньше прилагательных, больше конкретики и пользы для клиента…"></textarea>
   <div class="spec-actions"><button type="button" data-content="copy">Скопировать задание AI</button><button type="button" data-content="download">Скачать задание (.txt)</button></div>
+  <div class="content-regenerate">
+    <h3>Перегенерация разделов</h3>
+    <p class="note">AI изменит только выбранный раздел. Остальные тексты, изображения и настройки проекта останутся нетронутыми. Новый вариант сразу применится; последнее изменение можно отменить.</p>
+    <div class="content-regenerate__actions">
+      <button type="button" data-regenerate-stage="strategy">Первый экран</button>
+      <button type="button" data-regenerate-stage="about">О компании</button>
+      <button type="button" data-regenerate-stage="services">Услуги</button>
+      <button type="button" data-regenerate-stage="trust">Преимущества и FAQ</button>
+      <button type="button" data-regenerate-stage="seo">Контакты и SEO</button>
+    </div>
+    <p id="content-regenerate-status" class="note" role="status" aria-live="polite"></p>
+    <div class="spec-actions"><button type="button" data-content-undo ${contentHistoryForProject().length ? '' : 'disabled'}>Отменить последнюю AI-правку</button></div>
+  </div>
 </section>
 <pre class="spec">${esc(spec)}</pre>${src}`;
   try { $('#content-direction').value = localStorage.getItem('uds:content-direction') || ''; } catch {}
@@ -636,8 +649,110 @@ function renderSpec() {
 $('#view-spec').addEventListener('input', e => {
   if (e.target.id === 'content-direction') { try { localStorage.setItem('uds:content-direction', e.target.value); } catch {} }
 });
+const CONTENT_HISTORY_KEY = 'uds:content-history:v1';
+function contentHistoryForProject() {
+  try { return JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId === state.raw.id).slice(-10); } catch { return []; }
+}
+function writeContentHistory(items) {
+  try {
+    const all = JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId !== state.raw.id);
+    localStorage.setItem(CONTENT_HISTORY_KEY, JSON.stringify([...all, ...items].slice(-50)));
+  } catch { toast('Не удалось сохранить историю AI-правок в браузере.'); }
+}
+const STAGE_PROJECT_FIELDS = {
+  strategy: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'],
+  about: ['aboutTitle','aboutText'],
+  services: ['servicesTitle','servicesIntro','services'],
+  trust: ['advantagesTitle','advantages','processTitle','process','faqs'],
+  seo: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'],
+};
+function projectContentForStage() {
+  const p = result.project;
+  return {
+    brand:p.brand,niche:p.niche,title:p.title,description:p.description,cta:p.cta,targetAudience:p.targetAudience,
+    mainOffer:p.mainOffer,visualDirection:p.visualDirection,strategySummary:p.strategySummary,
+    aboutTitle:p.aboutTitle,aboutText:p.aboutText,servicesTitle:p.servicesTitle,servicesIntro:p.servicesIntro,services:p.services,
+    advantagesTitle:p.advantagesTitle,advantages:p.advantages,processTitle:p.processTitle,process:p.process,faqs:p.faqs,
+    contactTitle:p.contactTitle,contactText:p.contactText,assumptions:p.assumptions,marketResearch:p.marketResearch,
+    researchSources:p.researchSources,segments:currentAnalysis()?.segments || [],objections:currentAnalysis()?.objections || [],
+    triggers:currentAnalysis()?.triggers || [],keywords:currentAnalysis()?.keywords || [],competitors:currentAnalysis()?.competitors || [],
+    seoTitle:p.seoTitle,seoDescription:p.seoDescription,imagePrompts:currentAnalysis()?.imagePrompts || [],
+  };
+}
+async function regenerateProjectStage(stageId) {
+  if (!result || !STAGE_PROJECT_FIELDS[stageId]) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\\/api\\/generate-landing\\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-regenerate-stage]')];
+  const status = $('#content-regenerate-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI перегенерирует раздел. Остальные части проекта не меняются…';
+  const fields = STAGE_PROJECT_FIELDS[stageId];
+  const before = Object.fromEntries(fields.map(key => [key, result.project[key]]));
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche: result.project.niche, brand: result.project.brand, tier: result.project.tier,
+        city: currentAnalysis()?.city || '', details: result.project.mainOffer || '',
+        contentStage: stageId, existingLanding: projectContentForStage(),
+        editorialDirection: ($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + (CONTENT_STAGE_LABELS[stageId] || stageId), status:response.ok && payload.content ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.stage?.attempts || null });
+    if (!response.ok || !payload.content) throw new Error(payload.error || 'HTTP ' + response.status);
+    const patch = {};
+    for (const key of fields) if (Object.prototype.hasOwnProperty.call(payload.content, key)) patch[key] = payload.content[key];
+    if (!Object.keys(patch).length) throw new Error('AI не вернул поля выбранного раздела');
+    const after = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(patch,key) ? patch[key] : before[key]]));
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId, before, after, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    Object.assign(state.raw, patch);
+    if (stageId === 'seo' && state.analysis?.data) {
+      for (const key of ['segments','objections','triggers','keywords','competitors','imagePrompts']) {
+        if (Object.prototype.hasOwnProperty.call(patch,key)) state.analysis.data[key] = patch[key];
+      }
+    }
+    run();
+    persist();
+    refreshAiUsage();
+    toast('Раздел «' + (CONTENT_STAGE_LABELS[stageId] || stageId) + '» обновлён. Остальные разделы сохранены.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось обновить раздел: ' + error.message;
+    toast('Ошибка перегенерации: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+const CONTENT_STAGE_LABELS = { strategy:'Первый экран', about:'О компании', services:'Услуги', trust:'Преимущества и FAQ', seo:'Контакты и SEO' };
 $('#view-spec').addEventListener('click', async e => {
-  const b = e.target.closest('[data-spec], [data-content]'); if (!b) return;
+  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo]'); if (!b) return;
+  if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
+  if (b.hasAttribute('data-content-undo')) {
+    const history = contentHistoryForProject();
+    const last = history.pop();
+    if (!last) return;
+    Object.assign(state.raw, last.before);
+    if (last.stageId === 'seo' && state.analysis?.data) {
+      for (const key of ['segments','objections','triggers','keywords','competitors','imagePrompts']) {
+        if (Object.prototype.hasOwnProperty.call(last.before,key)) state.analysis.data[key] = last.before[key];
+      }
+    }
+    writeContentHistory(history);
+    run(); persist();
+    toast('Последняя AI-правка отменена.');
+    return;
+  }
   const a = currentAnalysis() || {};
   const copy = async (text, ok, file) => { try { await navigator.clipboard.writeText(text); toast(ok); } catch { download(file, text, 'text/plain'); } };
   if (b.dataset.spec === 'copy') copy(buildSpec(result.project, result.concept, a), 'ТЗ скопировано', `${result.project.id}-tz.md`);
