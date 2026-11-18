@@ -503,3 +503,15 @@ test('Responsive accessibility QA verifies the actual iframe viewport before lab
   assert.ok(audit.includes('Проверки для этого размера пропущены'));
   assert.ok(!audit.includes('doc.defaultView.innerWidth || size.width'));
 });
+
+
+test('Responsive overlap audit uses a horizontal sweep to avoid comparing separated controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes('.sort((a,b) => a.rect.left - b.rect.left)'));
+  assert.ok(audit.includes('active[i].rect.right <= current.rect.left + 2'));
+  assert.ok(audit.includes('intersects(previous.rect,current.rect)'));
+  assert.ok(!audit.includes('for (let j=i+1;j<candidates.length;j++)'));
+});
