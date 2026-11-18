@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:20:39.019Z
+Время обновления: 2026-11-18T19:22:18.410Z
 Ветка: feat/autonomous-safe-merge
-Последний commit: e352af2d6a26c6410937fb040a1c42ea151b75d6
-Дата коммита: 2026-11-18T23:20:23+04:00
-Сообщение: safety: require explicit auto-merge opt-in label
+Последний commit: b56dac6c3e410b59af460512c91928a16f9d346a
+Дата коммита: 2026-11-18T23:22:03+04:00
+Сообщение: fix: use event-scoped workflow dispatch inputs
 
 Последние коммиты:
+- b56dac6 · 2026-11-18 · fix: use event-scoped workflow dispatch inputs
+- 25784df · 2026-11-18 · docs: refresh project handoff
 - e352af2 · 2026-11-18 · safety: require explicit auto-merge opt-in label
 - a43914c · 2026-11-18 · docs: refresh project handoff
 - b93cadf · 2026-11-18 · feat: enable guarded scheduled PR auto-merge
 - a882442 · 2026-11-18 · feat: add guarded scheduled PR auto-merge
 - 2cad8a3 · 2026-11-18 · docs: refresh project handoff
 - 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
-- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
-- 7addacc · 2026-11-18 · Add fullscreen mode to live preview
 <!-- HANDOFF:AUTO:END -->
