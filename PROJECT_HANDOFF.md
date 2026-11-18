@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:38:07.827Z
-Ветка: main
-Последний commit: 8545d96034cfab85a8be1d49b6bffe532f945c6e
-Дата коммита: 2026-11-19T00:37:54+04:00
-Сообщение: fix: show passed content QA and clear stale reports (#156)
+Время обновления: 2026-11-18T20:43:28.913Z
+Ветка: fix/worker-workflow-dispatch-guards
+Последний commit: a42240dcf9401bb7960db69f99f68fb7bc49633b
+Дата коммита: 2026-11-19T00:43:11+04:00
+Сообщение: fix: make Worker workflow dispatch guards explicit
 
 Последние коммиты:
+- a42240d · 2026-11-19 · fix: make Worker workflow dispatch guards explicit
+- 4b5c781 · 2026-11-18 · docs: refresh project handoff
 - 8545d96 · 2026-11-19 · fix: show passed content QA and clear stale reports (#156)
 - 1dc18ed · 2026-11-18 · docs: refresh project handoff
 - cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
 - fb2c425 · 2026-11-18 · docs: refresh project handoff
 - 61218ff · 2026-11-19 · feat: introduce Content Intelligence Engine
 - c1982df · 2026-11-18 · docs: refresh project handoff
-- 6ad3800 · 2026-11-19 · fix: clarify AI usage counters and Baku reset
-- ea68aaf · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
