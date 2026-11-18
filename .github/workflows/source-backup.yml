@@ -24,7 +24,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p backup
-          git archive --format=tar HEAD             -- . ':!*.env' ':!**/*.env' ':!**/.env*'             | gzip -9 > backup/unique-design-studio-source.tar.gz
+          git archive --format=tar HEAD -- . \\
+            ':!*.env' ':!**/*.env' ':!**/.env*' \\
+            ':!*.dev.vars' ':!**/.dev.vars' ':!**/.wrangler/**' \\
+            ':!*.pem' ':!**/*.pem' ':!*.key' ':!**/*.key' \\
+            ':!*.p12' ':!**/*.p12' ':!*.pfx' ':!**/*.pfx' \\
+            ':!**/secrets/**' ':!**/.npmrc' \\
+            | gzip -9 > backup/unique-design-studio-source.tar.gz
           sha256sum backup/unique-design-studio-source.tar.gz > backup/SHA256SUMS
           gzip -t backup/unique-design-studio-source.tar.gz
           tar -tzf backup/unique-design-studio-source.tar.gz > /dev/null
