@@ -26,8 +26,9 @@ const NICHE_RULES = [
   [/ювелир|украш|jewel|watch|часы/, ['3d-object', 'macro', 'editorial']],
   [/строит|ремонт|архитект|интерьер|строймат|construction|architect/, ['blueprint', 'cinematic', 'macro']],
   [/магазин|товар|мебел|диван|техник|телескоп|product|shop|store/, ['3d-object', 'floating', 'macro']],
-  [/кофе|ресторан|еда|доставк|food|cafe|restaurant/, ['cinematic', 'macro', 'collage']],
-  [/it|saas|технолог|разработ|нейросет|ai|software|tech/, ['abstract-3d', 'glass', 'hud', 'gradient']],
+  [/кофе|кафе|кухн|ресторан|бистро|бар(?![а-яё])|раков|пекарн|кондитер|пицц|суши|еда|доставк|food|cafe|restaurant|bakery/, ['cinematic', 'macro', 'collage']],
+  // Короткие латинские «it» и «ai» — только целым словом: иначе ловились thai, fitness и т. п.
+  [/\bit\b|\bai\b|saas|технолог|разработ|нейросет|software|tech/, ['abstract-3d', 'glass', 'hud', 'gradient']],
   [/финанс|банк|аналит|finance|bank|analytics/, ['data', 'glass', 'blueprint']],
   [/мода|одежд|fashion|beauty|космет|салон|spa/, ['editorial', 'collage', 'macro', '3d-object']],
   [/образован|курс|школ|education|учеб/, ['typography', 'lineart', 'data']],
