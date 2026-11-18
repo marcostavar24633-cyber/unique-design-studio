@@ -38,10 +38,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Detect Worker source changes
+        id: changes
+        if: github.event_name == 'push'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if git diff --name-only "$BEFORE_SHA" "$HEAD_SHA" | grep -Eq '^worker/'; then
+            echo "worker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "worker=false" >> "$GITHUB_OUTPUT"
+            echo "No Worker source changes; skipping Cloudflare deployment."
+          fi
       - name: Validate Cloudflare credentials
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -51,11 +68,13 @@ jobs:
             exit 1
           fi
       - name: Publish AI Worker
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy --config worker/wrangler.jsonc
       - name: Проверить Worker после публикации
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.changes.outputs.worker == 'true' }}
         env:
           SITE_URL: https://marcostavar24633-cyber.github.io/unique-design-studio/
           WORKER_URL: https://unique-design-studio-ai.marcostavar24633.workers.dev
@@ -82,7 +101,7 @@ jobs:
           node-version: 22
       - name: Проверить version ID
         env:
-          VERSION_ID: ${{ inputs.version_id }}
+          VERSION_ID: ${{ github.event.inputs.version_id }}
         run: |
           [[ "$VERSION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || {
             echo "::error::Укажите корректный Cloudflare version UUID."
@@ -99,7 +118,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          VERSION_ID: ${{ inputs.version_id }}
+          VERSION_ID: ${{ github.event.inputs.version_id }}
         run: npx --yes wrangler@4 rollback "$VERSION_ID" --config worker/wrangler.jsonc --message "Guarded rollback via GitHub Actions"
       - name: Проверить Worker после отката
         run: |
