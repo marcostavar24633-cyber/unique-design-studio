@@ -12,6 +12,8 @@ export const translit = text => String(text || '').replace(/[а-яё]/gi, ch => 
 const hasCyrillic = text => /[а-яё]/i.test(text);
 const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
 
+import { applyManagedPrompt } from './prompt-manager.js';
+
 // ---------- Кухни: обстановка и блюда ----------
 // Порядок важен: более узкие совпадения раньше общих.
 const CUISINES = [
@@ -188,5 +190,6 @@ export function photoPrompt(slot, project, graphicDirection) {
     'No text, no letters, no logos, no watermarks, no invented brand names or labels.',
   ];
   const prompt = parts.filter(Boolean).join(' ').replace(/\s+/g, ' ');
-  return hasCyrillic(prompt) ? translit(prompt) : prompt;
+  const managed = applyManagedPrompt(prompt, 'image-generation');
+  return hasCyrillic(managed) ? translit(managed) : managed;
 }
