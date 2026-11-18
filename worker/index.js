@@ -1,4 +1,5 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
+import { runTextModel, DEFAULT_NVIDIA_MODEL } from './nvidia.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -73,6 +74,8 @@ export default {
           analyticsTokenConfigured: Boolean(env.CF_ANALYTICS_TOKEN),
           accountIdConfigured: Boolean(env.CF_ACCOUNT_ID),
           workersAiBindingConfigured: Boolean(env.AI),
+          nvidiaFallbackConfigured: Boolean(env.NVIDIA_API_KEY),
+          nvidiaModel: env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL,
         },
       }, 200, origin);
     }
@@ -236,7 +239,7 @@ export default {
       ].join('\n');
       const user = JSON.stringify({ project: fields, analysis: input.analysis || {}, concept: input.concept || {}, audit: input.audit || {} });
       try {
-        const result = await env.AI.run(MODEL, {
+        const { result, provider, model } = await runTextModel(env, MODEL, {
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
           max_tokens: 1800,
           temperature: 0.35,
@@ -259,7 +262,7 @@ export default {
             patch: Object.keys(patch).length ? patch : null,
           };
         });
-        return json({ review: { version: 1, mode: 'workers-ai', status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
+        return json({ review: { version: 1, mode: provider === 'nvidia' ? 'nvidia-nim' : 'workers-ai', provider, model, status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
       } catch (error) {
         return json({ error: error?.message || 'Ошибка AI Design Director' }, 502, origin);
       }
@@ -315,14 +318,21 @@ export default {
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
     let usage = null; // фактические токены всех попыток — для журнала AI-операций студии
+    let provider = 'cloudflare';
+    let usedModel = MODEL;
+    let preferNvidia = false;
     const started = Date.now();
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const result = await env.AI.run(MODEL, {
+        const execution = await runTextModel(env, MODEL, {
           messages: [{ role: 'user', content: attempt === 0 ? prompt : prompt + RETRY_NOTE }],
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
-        });
+        }, { preferNvidia });
+        const { result } = execution;
+        provider = execution.provider;
+        usedModel = execution.model;
+        preferNvidia = provider === 'nvidia';
         usage = addUsage(usage, usageOf(result));
         const landing = extractJson(modelOutput(result));
         const missing = missingFields(landing);
@@ -335,7 +345,7 @@ export default {
           landing.niche = brief.niche;
           if (brief.brand) landing.brand = brief.brand;
           else if (/не указ/i.test(String(landing.brand || ''))) landing.brand = '';
-          return json({ landing, attempts: attempt + 1, model: MODEL, usage, durationMs: Date.now() - started }, 200, origin);
+          return json({ landing, attempts: attempt + 1, provider, model: usedModel, usage, durationMs: Date.now() - started }, 200, origin);
         }
         // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
         const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
@@ -344,6 +354,6 @@ export default {
         lastError = error?.message || 'Ошибка генерации Workers AI';
       }
     }
-    return json({ error: lastError, attempts: 2, model: MODEL, usage, durationMs: Date.now() - started }, 502, origin);
+    return json({ error: lastError, attempts: 2, provider, model: usedModel, usage, durationMs: Date.now() - started }, 502, origin);
   },
 };

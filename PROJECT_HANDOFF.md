@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T07:42:01.989Z
-Ветка: main
-Последний commit: f072b0b3aa863a0cbb3b1f263c499c2b79ad794b
-Дата коммита: 2026-11-18T11:41:51+04:00
-Сообщение: docs: add living project handoff and automatic updates (#120)
+Время обновления: 2026-11-18T07:52:00.806Z
+Ветка: feat/nvidia-nim-quota-fallback
+Последний commit: d13c82bf07f48cc294b7ecb666be6a12fc8e801c
+Дата коммита: 2026-11-18T11:51:41+04:00
+Сообщение: test: cover numeric Cloudflare quota error codes
 
 Последние коммиты:
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
-- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
-- 99ea251 · 2026-11-18 · ci(worker): automate Cloudflare AI Worker deployment (#121)
-- c0ae259 · 2026-11-18 · Cinematic Hero Engine PRO: Scene Director и динамические сцены (#117)
-- 5a69903 · 2026-11-18 · AI: задание для Worker без противоречия, лимит 8192, расход до сброса и за сессию (#116)
-- 5be4c42 · 2026-11-18 · Content Director: ответ AI без лишних разделов — не упирается в лимит (#115)
-- b24b53a · 2026-11-18 · Design Director: направление графики подключено к движку и к фото (#114)
-- 0f6c072 · 2026-11-18 · AI Usage: журнал AI-операций, фактические токены и ориентир лимита (#113)
+- d13c82b · 2026-11-18 · test: cover numeric Cloudflare quota error codes
+- a6f8588 · 2026-11-18 · fix: correct quota error pattern matching
+- 4644071 · 2026-11-18 · docs: refresh project handoff
+- f8ed6f3 · 2026-11-18 · docs: clarify Cloudflare Workers AI fallback error codes
+- 5af2fd1 · 2026-11-18 · test: recognize Cloudflare daily free allocation error 3036
+- 9dbd0cc · 2026-11-18 · fix: recognize documented Workers AI quota error 3036
+- 3bfcf50 · 2026-11-18 · docs: refresh project handoff
+- d439856 · 2026-11-18 · test: update AI diagnostics for NVIDIA fallback
 <!-- HANDOFF:AUTO:END -->

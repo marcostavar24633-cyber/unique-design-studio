@@ -20,6 +20,8 @@ test('runtime diagnostics report only presence of Worker bindings and secrets', 
       analyticsTokenConfigured: true,
       accountIdConfigured: true,
       workersAiBindingConfigured: true,
+      nvidiaFallbackConfigured: false,
+      nvidiaModel: 'nvidia/nemotron-3.5-lightning-30b-a3b',
     },
   });
 });
@@ -31,6 +33,8 @@ test('runtime diagnostics identify missing runtime configuration without exposin
     analyticsTokenConfigured: false,
     accountIdConfigured: false,
     workersAiBindingConfigured: false,
+    nvidiaFallbackConfigured: false,
+    nvidiaModel: 'nvidia/nemotron-3.5-lightning-30b-a3b',
   });
 });
 
