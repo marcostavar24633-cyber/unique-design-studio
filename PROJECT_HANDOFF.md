@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:48:06.182Z
+Время обновления: 2026-11-18T10:48:34.433Z
 Ветка: feat/ai-provider-manual-controls
-Последний commit: 5958031ee5482e859740d86bccf2ea232a439223
-Дата коммита: 2026-11-18T14:47:55+04:00
-Сообщение: test(ai): fix primary-only quota fixture
+Последний commit: 01b13aa924a33997e4356d437e7af43da94e3ba6
+Дата коммита: 2026-11-18T14:48:22+04:00
+Сообщение: fix(ui): correct AI endpoint settings markup
 
 Последние коммиты:
+- 01b13aa · 2026-11-18 · fix(ui): correct AI endpoint settings markup
+- 0391217 · 2026-11-18 · docs: refresh project handoff
 - 5958031 · 2026-11-18 · test(ai): fix primary-only quota fixture
 - 2882140 · 2026-11-18 · docs: refresh project handoff
 - 54f66d1 · 2026-11-18 · fix(ui): preserve automatic Cloudflare quota fallback
 - 17aad7a · 2026-11-18 · docs: refresh project handoff
 - 0872254 · 2026-11-18 · test(ai): cover manual and automatic OpenRouter routing
 - 93ec36f · 2026-11-18 · docs: refresh project handoff
-- 25ed0fc · 2026-11-18 · fix(ai): keep automatic fallback separate from manual primary mode
-- 2da9f81 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
