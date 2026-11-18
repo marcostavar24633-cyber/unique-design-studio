@@ -38,7 +38,7 @@ export function scoreContentQuality(project = {}) {
   for (const word of words) counts.set(word, (counts.get(word) || 0) + 1);
   const repeated = [...counts.entries()].filter(([word,count]) => count >= 5 && !['который','которая','которые','этого','также','вашего','вашей','чтобы','можете'].includes(word)).sort((a,b)=>b[1]-a[1]).slice(0,3);
   if (repeated.length) add('repetition','medium','content','В текстах часто повторяются слова: ' + repeated.map(([word,count])=>word+' ('+count+')').join(', '),'Проверьте повторы и замените их только там, где это улучшает естественность.');
-  const risky = /\b(гарантируем|100% результат|номер один|лучший в городе|без риска)\b/iu;
+  const risky = /(?:^|[^\p{L}\p{N}_])(гарантируем|100%\s*результат|номер один|лучший в городе|без риска)(?:$|[^\p{L}\p{N}_])/iu;
   if (TEXT_FIELDS.some(key => risky.test(safeText(project[key],1200)))) add('claims-review','medium','trust','Есть сильные обещания или превосходные заявления','Подтвердите каждое обещание фактами либо смягчите формулировку.');
   const score = Math.max(0, Math.min(100, 100 - findings.reduce((sum,item)=>sum+({high:18,medium:9,low:4}[item.severity]||0),0)));
   return { score, findings, metrics: { textFields: TEXT_FIELDS.filter(key=>safeText(project[key])).length, totalFields: TEXT_FIELDS.length, words: words.length }, limits: LIMITS };
