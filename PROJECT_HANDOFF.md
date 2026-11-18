@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:25:36.596Z
-Ветка: main
-Последний commit: e560f06f2f5086340305499c6425fced734120b7
-Дата коммита: 2026-11-18T23:25:22+04:00
-Сообщение: Enable guarded scheduled PR auto-merge
+Время обновления: 2026-11-18T19:35:21.711Z
+Ветка: fix/worker-deploy-guard-v2
+Последний commit: 63739ea454303a7853420753ca3de7478164d793
+Дата коммита: 2026-11-18T23:34:58+04:00
+Сообщение: fix: correct AI probe dispatch condition
 
 Последние коммиты:
+- 63739ea · 2026-11-18 · fix: correct AI probe dispatch condition
+- 7e55188 · 2026-11-18 · fix: use event-scoped AI probe input
+- a97a898 · 2026-11-18 · fix: make Worker deployment guards explicit
+- 0c47bc4 · 2026-11-18 · docs: refresh project handoff
+- 9aedac0 · 2026-11-18 · fix: use event-scoped AI probe input
+- e56a810 · 2026-11-18 · fix: make Worker deployment guards explicit
+- bc7aedd · 2026-11-18 · docs: refresh project handoff
 - e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
-- 06b64ec · 2026-11-18 · docs: refresh project handoff
-- fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
-- 9c36903 · 2026-11-18 · docs: refresh project handoff
-- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
-- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
-- 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
-- 2e5ef3b · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
