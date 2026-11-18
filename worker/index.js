@@ -1,5 +1,6 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled, isOpenRouterFallbackEnabled } from './nvidia.js';
+import { isDirectProviderEnabled } from './direct-providers.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -77,6 +78,10 @@ export default {
           aiBillingMode: isFreeAiMode(env) ? 'free' : String(env.AI_BILLING_MODE || 'non-free'),
           nvidiaFallbackConfigured: isNvidiaFallbackEnabled(env),
           openRouterFallbackConfigured: isOpenRouterFallbackEnabled(env),
+          directProvidersEnabled: env.AI_DIRECT_PROVIDERS_ENABLED === 'true' && env.AI_BILLING_MODE === 'api',
+          openAiApiConfigured: isDirectProviderEnabled(env, 'openai'),
+          anthropicApiConfigured: isDirectProviderEnabled(env, 'anthropic'),
+          primaryProvider: String(env.AI_PRIMARY_PROVIDER || 'cloudflare'),
           nvidiaModel: env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL,
         },
       }, 200, origin);
