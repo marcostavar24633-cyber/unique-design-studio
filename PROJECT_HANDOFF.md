@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:21:30.644Z
-Ветка: main
-Последний commit: 537b2341ac0da33c553e0d08847806cb95588ae4
-Дата коммита: 2026-11-18T22:21:18+04:00
-Сообщение: Use Cloudflare Workers AI directly without Gateway (#142)
+Время обновления: 2026-11-18T18:23:36.311Z
+Ветка: ci/e2e-timeout
+Последний commit: b63b45b794beae79e86fb54cfb2724fa2edc1e4e
+Дата коммита: 2026-11-18T22:23:26+04:00
+Сообщение: Bound E2E workflow runtime
 
 Последние коммиты:
+- b63b45b · 2026-11-18 · Bound E2E workflow runtime
+- c2e169f · 2026-11-18 · docs: refresh project handoff
 - 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
 - ec02567 · 2026-11-18 · docs: refresh project handoff
 - fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
 - a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
 - 1e424c9 · 2026-11-18 · docs: refresh project handoff
-- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
-- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
