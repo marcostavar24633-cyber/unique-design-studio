@@ -736,11 +736,19 @@ try {
   $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint();
   $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
   $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
+  $('#ai-primary-provider').value = ['cloudflare','openai','anthropic'].includes(localStorage.getItem('uds:ai-primary-provider')) ? localStorage.getItem('uds:ai-primary-provider') : 'cloudflare';
+  $('#ai-openai-route').value = ['primary','openrouter','auto'].includes(localStorage.getItem('uds:ai-openai-route')) ? localStorage.getItem('uds:ai-openai-route') : 'primary';
+  $('#ai-anthropic-route').value = ['primary','openrouter','auto'].includes(localStorage.getItem('uds:ai-anthropic-route')) ? localStorage.getItem('uds:ai-anthropic-route') : 'primary';
   if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
 } catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
+  const selectedProvider = $('#ai-primary-provider')?.value || 'cloudflare';
+  const selectedRoute = selectedProvider === 'openai' ? ($('#ai-openai-route')?.value || 'primary')
+    : selectedProvider === 'anthropic' ? ($('#ai-anthropic-route')?.value || 'primary') : 'primary';
   const input = {
+    aiProvider: selectedProvider,
+    aiRouteMode: selectedRoute,
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
     customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
@@ -754,6 +762,9 @@ $('#auto').addEventListener('submit', async e => {
     localStorage.setItem('uds:ai-endpoint', endpoint);
     localStorage.setItem('uds:custom-prompt', input.customPrompt);
     localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
+    localStorage.setItem('uds:ai-primary-provider', selectedProvider);
+    localStorage.setItem('uds:ai-openai-route', $('#ai-openai-route').value);
+    localStorage.setItem('uds:ai-anthropic-route', $('#ai-anthropic-route').value);
   } catch { /* нет хранилища */ }
   const setAutoStatus = value => { const node = $('#auto-status'); if (node) node.textContent = value; };
   const setAutoProgress = (percent, stage, detail = '') => {
@@ -2011,6 +2022,8 @@ $('#view-audit').addEventListener('click', async e => {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           task: 'design-review',
+          aiProvider: $('#ai-primary-provider')?.value || 'cloudflare',
+          aiRouteMode: ($('#ai-primary-provider')?.value === 'openai' ? $('#ai-openai-route')?.value : $('#ai-primary-provider')?.value === 'anthropic' ? $('#ai-anthropic-route')?.value : 'primary') || 'primary',
           designPrompt: activePrompt(loadPromptRegistry(), 'design-director'),
           project: {
             niche: result.project.niche, brand: result.project.brand, title: result.project.title,
