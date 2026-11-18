@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:26:07.232Z
+Время обновления: 2026-11-18T10:26:28.146Z
 Ветка: feat/openrouter-free-fallback
-Последний commit: 1fece67a48ac9b5a732ebfa96f2e2b29b71e605d
-Дата коммита: 2026-11-18T14:25:54+04:00
-Сообщение: chore(ai): keep direct GPT and Claude APIs disabled by default
+Последний commit: 2da77f8645180775fdfd9bf1df1b7818de880d63
+Дата коммита: 2026-11-18T14:26:16+04:00
+Сообщение: test(ai): cover GPT and Claude API adapters
 
 Последние коммиты:
+- 2da77f8 · 2026-11-18 · test(ai): cover GPT and Claude API adapters
+- 653878a · 2026-11-18 · docs: refresh project handoff
 - 1fece67 · 2026-11-18 · chore(ai): keep direct GPT and Claude APIs disabled by default
 - a820245 · 2026-11-18 · feat(ai): expose GPT and Claude provider diagnostics
 - 24430c6 · 2026-11-18 · feat(ai): add gated OpenAI and Anthropic API adapters
 - 17ad9ec · 2026-11-18 · docs: refresh project handoff
 - 7e52ffb · 2026-11-18 · feat(ai): route OpenAI and Claude quota errors to free fallback
 - 34ca583 · 2026-11-18 · docs: refresh project handoff
-- 5c5a092 · 2026-11-18 · test(ai): correct OpenRouter fallback gating cases
-- 82ebc8b · 2026-11-18 · test(ai): update diagnostics contract for OpenRouter
 <!-- HANDOFF:AUTO:END -->
