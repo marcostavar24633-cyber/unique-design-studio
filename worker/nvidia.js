@@ -24,7 +24,7 @@ export function isNvidiaFallbackEnabled(env = {}) {
  * Keep the API key in a Cloudflare Worker secret, never in browser storage or source.
  */
 export function isOpenRouterFallbackEnabled(env = {}) {
-  return isFreeAiMode(env) && env.OPENROUTER_ENABLED === 'true' && Boolean(env.OPENROUTER_API_KEY);
+  return ['free', 'api'].includes(String(env.AI_BILLING_MODE || 'free').trim().toLowerCase()) && env.OPENROUTER_ENABLED === 'true' && Boolean(env.OPENROUTER_API_KEY);
 }
 
 async function runOpenRouter(env, options) {
@@ -117,23 +117,36 @@ async function runNvidia(env, options) {
  */
 export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
   if (preferNvidia) return runNvidia(env, options);
+  const selected = String(env.AI_PRIMARY_PROVIDER || 'cloudflare').trim().toLowerCase();
+  let primary;
+  if (selected === 'openai' || selected === 'anthropic') {
+    const { isDirectProviderEnabled, runDirectProvider } = await import('./direct-providers.js');
+    if (!isDirectProviderEnabled(env, selected)) {
+      throw new Error(`Прямой провайдер ${selected} отключён: требуется AI_BILLING_MODE=api, AI_DIRECT_PROVIDERS_ENABLED=true и соответствующий API key`);
+    }
+    primary = () => runDirectProvider(env, selected, options);
+  } else {
+    primary = async () => {
+      const result = await env.AI.run(primaryModel, options);
+      return { result, provider: 'cloudflare', model: primaryModel };
+    };
+  }
   try {
-    const result = await env.AI.run(primaryModel, options);
-    return { result, provider: 'cloudflare', model: primaryModel };
+    return await primary();
   } catch (error) {
     if (!isQuotaError(error)) throw error;
     if (isOpenRouterFallbackEnabled(env)) {
       try {
         return await runOpenRouter(env, options);
       } catch (fallbackError) {
-        throw new Error(`Workers AI исчерпал квоту; бесплатный OpenRouter fallback не сработал: ${fallbackError?.message || 'unknown error'}`);
+        throw new Error(`${selected} исчерпал квоту; бесплатный OpenRouter fallback не сработал: ${fallbackError?.message || 'unknown error'}`);
       }
     }
     if (!isNvidiaFallbackEnabled(env)) throw error;
     try {
       return await runNvidia(env, options);
     } catch (fallbackError) {
-      throw new Error(`Workers AI исчерпал квоту; резервный NVIDIA NIM не сработал: ${fallbackError?.message || 'unknown error'}`);
+      throw new Error(`${selected} исчерпал квоту; резервный NVIDIA NIM не сработал: ${fallbackError?.message || 'unknown error'}`);
     }
   }
 }
