@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:40:10.458Z
+Время обновления: 2026-11-18T18:45:06.796Z
 Ветка: feat/fullscreen-preview
-Последний commit: 18c8d54b1335ba07f759fa76dbd28253eed146f9
-Дата коммита: 2026-11-18T22:39:57+04:00
-Сообщение: Add fullscreen mode to live site preview
+Последний commit: 8a43b0a8c0b634f5ab0d0f99258fee332de94c8b
+Дата коммита: 2026-11-18T22:44:56+04:00
+Сообщение: ci: avoid apt dependency install in Playwright setup
 
 Последние коммиты:
+- 8a43b0a · 2026-11-18 · ci: avoid apt dependency install in Playwright setup
+- fb60237 · 2026-11-18 · docs: refresh project handoff
 - 18c8d54 · 2026-11-18 · Add fullscreen mode to live site preview
 - 13c4aaa · 2026-11-18 · Add fullscreen mode to live site preview
 - 6124476 · 2026-11-18 · Add fullscreen mode to live site preview
 - 3386f83 · 2026-11-18 · docs: refresh project handoff
 - 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
 - c2e169f · 2026-11-18 · docs: refresh project handoff
-- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
-- ec02567 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
