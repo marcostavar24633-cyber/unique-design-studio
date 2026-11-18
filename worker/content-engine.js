@@ -3,9 +3,9 @@ import { modelOutput, usageOf, addUsage, aboutNiche } from './ai-utils.js';
 export const CONTENT_STAGES = [
   { id: 'strategy', label: 'Стратегия и первый экран', schema: 'brand,niche,title,description,cta,targetAudience,mainOffer,visualDirection,strategySummary — строки', fields: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'], required: ['title','description','cta'], maxTokens: 1800 },
   { id: 'about', label: 'О компании', schema: 'aboutTitle,aboutText — строки', fields: ['aboutTitle','aboutText'], required: ['aboutTitle','aboutText'], maxTokens: 900 },
-  { id: 'services', label: 'Услуги', schema: 'servicesTitle,servicesIntro — строки; services — массив [название, описание, цена]', fields: ['servicesTitle','servicesIntro','services'], required: ['services'], maxTokens: 1500 },
-  { id: 'trust', label: 'Преимущества, процесс и FAQ', schema: 'advantagesTitle,processTitle — строки; advantages,process — массивы [название, описание]; faqs — массив [вопрос, ответ]', fields: ['advantagesTitle','advantages','processTitle','process','faqs'], required: ['advantages','process','faqs'], maxTokens: 1700 },
-  { id: 'seo', label: 'Контакты и SEO', schema: 'contactTitle,contactText,marketResearch,seoTitle,seoDescription — строки; assumptions,objections,triggers,keywords,competitors,imagePrompts — массивы строк; segments — массив объектов {name,need}; researchSources — массив объектов {title,url}, оставь пустым без проверенных источников', fields: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'], required: ['contactTitle','contactText','seoTitle','seoDescription'], maxTokens: 1400 },
+  { id: 'services', label: 'Услуги', schema: 'servicesTitle,servicesIntro — строки; services — массив [название, описание, цена]', fields: ['servicesTitle','servicesIntro','services'], required: ['services'], arrayFields: ['services'], rowFields: ['services'], maxItems: { services: 6 }, maxTokens: 1500 },
+  { id: 'trust', label: 'Преимущества, процесс и FAQ', schema: 'advantagesTitle,processTitle — строки; advantages,process — массивы [название, описание]; faqs — массив [вопрос, ответ]', fields: ['advantagesTitle','advantages','processTitle','process','faqs'], required: ['advantages','process','faqs'], arrayFields: ['advantages','process','faqs'], rowFields: ['advantages','process','faqs'], maxItems: { advantages: 4, process: 4, faqs: 5 }, maxTokens: 1700 },
+  { id: 'seo', label: 'Контакты и SEO', schema: 'contactTitle,contactText,marketResearch,seoTitle,seoDescription — строки; assumptions,objections,triggers,keywords,competitors,imagePrompts — массивы строк; segments — массив объектов {name,need}; researchSources — массив объектов {title,url}, оставь пустым без проверенных источников', fields: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'], required: ['contactTitle','contactText','seoTitle','seoDescription'], arrayFields: ['assumptions','researchSources','segments','objections','triggers','keywords','competitors','imagePrompts'], objectFields: { researchSources: ['title','url'], segments: ['name','need'] }, maxItems: { assumptions: 5, researchSources: 5, segments: 5, objections: 5, triggers: 5, keywords: 5, competitors: 5, imagePrompts: 5 }, stringFields: ['marketResearch'], maxTokens: 1400 },
 ];
 
 function parseJson(value) {
@@ -25,7 +25,25 @@ export function validateContentStage(stage, value) {
     if (Array.isArray(item)) return item.length === 0;
     return typeof item !== 'string' || !item.trim();
   });
-  return { ok: missing.length === 0, missing };
+  const invalid = [];
+  for (const key of stage.stringFields || []) {
+    if (value[key] !== undefined && typeof value[key] !== 'string') invalid.push(key + ' (ожидается строка)');
+  }
+  for (const key of stage.arrayFields || []) {
+    if (value[key] !== undefined && !Array.isArray(value[key])) invalid.push(key + ' (ожидается массив)');
+    else if (Array.isArray(value[key]) && value[key].length > (stage.maxItems?.[key] || 10)) invalid.push(key + ' (слишком много элементов)');
+  }
+  for (const key of stage.rowFields || []) {
+    if (Array.isArray(value[key]) && value[key].some(row => !Array.isArray(row) || row.length < 2 || row.some(cell => typeof cell !== 'string'))) {
+      invalid.push(key + ' (ожидаются массивы строк)');
+    }
+  }
+  for (const [key, requiredKeys] of Object.entries(stage.objectFields || {})) {
+    if (Array.isArray(value[key]) && value[key].some(item => !item || typeof item !== 'object' || Array.isArray(item) || requiredKeys.some(field => typeof item[field] !== 'string'))) {
+      invalid.push(key + ' (неверная структура объектов)');
+    }
+  }
+  return { ok: missing.length === 0 && invalid.length === 0, missing: [...missing, ...invalid] };
 }
 
 export function mergeContentStage(target, stage, value) {
