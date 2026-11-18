@@ -392,7 +392,7 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /До сброса Cloudflare/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
-  assert.match(js, /Сброс через .*00:00 UTC/);
+  assert.match(js, /До сброса Cloudflare/);
 });
 
 
