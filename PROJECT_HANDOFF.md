@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:31:29.525Z
+Время обновления: 2026-11-18T15:31:42.839Z
 Ветка: feat/ai-section-regeneration
-Последний commit: 000a9c702b40eb5e7e7ebd731be31225bad33920
-Дата коммита: 2026-11-18T19:31:14+04:00
-Сообщение: Test section regeneration UI and non-destructive undo
+Последний commit: ce95a6e869950061438ecedb9f652d54b0f4d5b2
+Дата коммита: 2026-11-18T19:31:31+04:00
+Сообщение: Keep SEO analysis metadata out of the project content fields
 
 Последние коммиты:
+- ce95a6e · 2026-11-18 · Keep SEO analysis metadata out of the project content fields
+- 7b21ff0 · 2026-11-18 · docs: refresh project handoff
 - 000a9c7 · 2026-11-18 · Test section regeneration UI and non-destructive undo
 - 027e3ba · 2026-11-18 · Test Worker API for isolated content section regeneration
 - 79bf7d5 · 2026-11-18 · Test isolated AI section regeneration contracts
 - 0b570fc · 2026-11-18 · Style responsive per-section AI regeneration controls
 - 9aa373f · 2026-11-18 · Make AI section undo restore absent fields correctly
 - e03b23f · 2026-11-18 · Normalize prompt newlines and protect owner brand facts
-- c902c61 · 2026-11-18 · Add per-section AI regeneration and undo controls to content director
-- 52b0c4d · 2026-11-18 · Expose a dedicated single-section regeneration API mode
 <!-- HANDOFF:AUTO:END -->
