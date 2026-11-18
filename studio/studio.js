@@ -1652,7 +1652,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     onProgress(index, targets.length, slot.label);
     const alt = generatedAlt(slot, result.project);
     // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
-    const prompt = photoPrompt(slot, result.project, result.concept.visualSystem.graphicDirection).slice(0, 2000);
+    const prompt = photoPrompt(slot, result.project, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
     const imageStarted = Date.now();
     let response, payload;
     try {
