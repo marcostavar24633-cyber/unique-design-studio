@@ -8,6 +8,7 @@ export const PROMPT_MODULES = [
   { id: 'design-director', name: 'Design Director', category: 'Дизайн', description: 'Критерии анализа и улучшения визуальной концепции.' },
   { id: 'market-research', name: 'Исследование рынка', category: 'Аналитика', description: 'Требования к источникам, конкурентам и проверке рыночных гипотез.' },
 ];
+export const PROMPT_LIMITS = Object.freeze({ 'landing-copy': 1500, 'image-generation': 1000, 'content-director': 1500, 'design-director': 1800, 'market-research': 1500 });
 const clone = value => JSON.parse(JSON.stringify(value));
 const cleanText = value => String(value ?? '').replace(/\r\n/g, '\n').trim();
 export function emptyPromptRegistry() {
@@ -20,7 +21,8 @@ export function normalizePromptRegistry(value) {
     const source = value.modules[meta.id];
     if (!source || !Array.isArray(source.versions)) continue;
     const versions = source.versions.filter(v => v && Number.isInteger(v.version) && v.version > 0 && typeof v.content === 'string')
-      .slice(-30).map(v => ({ version: v.version, content: cleanText(v.content), createdAt: String(v.createdAt || ''), note: String(v.note || '') }));
+      .slice(-30).map(v => ({ version: v.version, content: cleanText(v.content), createdAt: String(v.createdAt || ''), note: String(v.note || '') }))
+      .filter(v => v.content.length <= (PROMPT_LIMITS[meta.id] || 12000) && (meta.id !== 'image-generation' || !/[а-яё]/i.test(v.content)));
     const available = new Set(versions.map(v => v.version));
     const activeVersion = available.has(source.activeVersion) ? source.activeVersion : (versions.at(-1)?.version || 0);
     out.modules[meta.id] = { activeVersion, versions };
@@ -59,7 +61,8 @@ export function savePromptVersion(registry, moduleId, content, note = '') {
   const text = cleanText(content);
   if (text.length > 12000) throw new Error('Промт не должен превышать 12 000 символов');
   if (!text) throw new Error('Промт не может быть пустым');
-  if (moduleId === 'image-generation' && text.length > 1000) throw new Error('Для генерации изображений максимум 1 000 символов: Worker принимает промт целиком в пределах 2 000 символов.');
+  const limit = PROMPT_LIMITS[moduleId] || 12000;
+  if (text.length > limit) throw new Error('Лимит для этого AI-модуля — ' + limit.toLocaleString('ru-RU') + ' символов.');
   if (moduleId === 'image-generation' && /[а-яё]/i.test(text)) throw new Error('Инструкции для генерации изображений вводите на английском: FLUX не понимает русскую транслитерацию как перевод.');
   const version = Math.max(0, ...item.versions.map(v => v.version)) + 1;
   item.versions.push({ version, content: text, createdAt: new Date().toISOString(), note: cleanText(note).slice(0, 240) });
