@@ -33,7 +33,7 @@ test('primary-only manual mode does not silently switch to OpenRouter on quota e
   };
   try {
     await assert.rejects(
-      () => runTextModel(openRouterEnv, 'test-model', options, { routeMode: 'primary' }),
+      () => runTextModel({ ...openRouterEnv, AI: { run: async () => { throw Object.assign(new Error('quota exceeded'), { status: 429 }); } } }, 'test-model', options, { routeMode: 'primary' }),
       /quota|429|limit/i,
     );
     assert.equal(fallbackCalled, false);
