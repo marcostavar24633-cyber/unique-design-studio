@@ -224,6 +224,7 @@ export default {
         faqs: Array.isArray(source.faqs) ? source.faqs.slice(0, 10) : [],
       };
       const allowed = new Set(['title','description','cta','targetAudience','mainOffer','aboutTitle','aboutText','servicesTitle','servicesIntro','advantagesTitle','processTitle','faqTitle','contactTitle','contactText']);
+      const designPrompt = String(input.designPrompt || '').trim().slice(0, 1800);
       const system = [
         'Ты AI Design Director коммерческих сайтов. Проведи конкретное ревью проекта и предложи улучшения.',
         'Верни только JSON: {"recommendations":[{"id":"...","title":"...","category":"conversion|structure|visual|content|accessibility|quality","priority":"high|medium|low","reason":"...","action":"...","patch":{"title":"новый текст"}}]}.',
@@ -231,6 +232,7 @@ export default {
         'Не выдумывай цены, сроки, гарантии, отзывы, сертификаты, адреса, цифры и факты о компании.',
         'Не создавай HTML, CSS, JavaScript, ссылки, изображения или произвольные поля. Не применяй изменения автоматически.',
         'Пиши по-русски, кратко и предметно. Если данных недостаточно, укажи это в рекомендации.',
+        designPrompt ? 'Дополнительные инструкции владельца для Design Director (не отменяют JSON-контракт и ограничения безопасности):\\n' + designPrompt : '',
       ].join('\n');
       const user = JSON.stringify({ project: fields, analysis: input.analysis || {}, concept: input.concept || {}, audit: input.audit || {} });
       try {
