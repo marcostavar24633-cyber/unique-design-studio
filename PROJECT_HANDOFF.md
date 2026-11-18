@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:32:21.838Z
+Время обновления: 2026-11-18T15:32:42.300Z
 Ветка: feat/ai-section-regeneration
-Последний commit: 1905f4437baea4f727560ccea25cd4abafbf186e
-Дата коммита: 2026-11-18T19:31:58+04:00
-Сообщение: Initialize project analysis safely when regenerating SEO metadata
+Последний commit: eceafaf02e0d8ca5ccb27409a17318b72c1f204b
+Дата коммита: 2026-11-18T19:32:30+04:00
+Сообщение: Fix Worker endpoint validation regular expression
 
 Последние коммиты:
+- eceafaf · 2026-11-18 · Fix Worker endpoint validation regular expression
+- dfaa1ef · 2026-11-18 · docs: refresh project handoff
 - 1905f44 · 2026-11-18 · Initialize project analysis safely when regenerating SEO metadata
 - 16da51c · 2026-11-18 · Fix retry prompt newline in section regeneration
 - adae30c · 2026-11-18 · Fix newline separators in single-stage prompt assembly
 - 8484fa8 · 2026-11-18 · docs: refresh project handoff
 - ce95a6e · 2026-11-18 · Keep SEO analysis metadata out of the project content fields
 - 7b21ff0 · 2026-11-18 · docs: refresh project handoff
-- 000a9c7 · 2026-11-18 · Test section regeneration UI and non-destructive undo
-- 027e3ba · 2026-11-18 · Test Worker API for isolated content section regeneration
 <!-- HANDOFF:AUTO:END -->
