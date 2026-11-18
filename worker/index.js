@@ -327,6 +327,10 @@ export default {
           if (brief.brand) staged.landing.brand = brief.brand;
           return json(staged, 200, origin);
         }
+        // Without the core first-screen fields there is no usable partial landing; let the UI enter its honest local fallback.
+        if (!staged.landing.title || !staged.landing.description || !staged.landing.cta) {
+          return json({ error: 'Не удалось создать основной экран сайта', ...staged }, 502, origin);
+        }
         // Partial is explicit: the UI may keep completed sections, but must not label the run as complete.
         return json(staged, 200, origin);
       } catch (error) {
