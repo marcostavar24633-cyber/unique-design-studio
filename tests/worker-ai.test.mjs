@@ -443,7 +443,7 @@ test('API запускает staged Content Engine и возвращает об�
     { title: 'Кофе рядом', description: 'Свежий кофе', cta: 'Выбрать', targetAudience: 'Жители района', mainOffer: 'Кофе', visualDirection: 'Тёплый', strategySummary: 'Локальная кофейня' },
     { aboutTitle: 'О нас', aboutText: 'Готовим кофе.' },
     { servicesTitle: 'Меню', servicesIntro: 'Напитки', services: [['Капучино', 'Кофе с молоком', '']] },
-    { advantagesTitle: 'Преимущества', advantages: ['Свежесть'], processTitle: 'Заказ', process: ['Выберите напиток'], faqs: ['Где мы?'] },
+    { advantagesTitle: 'Преимущества', advantages: [['Свежесть', 'Свежая обжарка']], processTitle: 'Заказ', process: [['Выберите напиток', 'Оформите заказ']], faqs: [['Где мы?', 'В центре района']] },
     { contactTitle: 'Контакты', contactText: 'Приходите', seoTitle: 'Кофейня рядом', seoDescription: 'Кофе каждый день' },
   ];
   let calls = 0;
