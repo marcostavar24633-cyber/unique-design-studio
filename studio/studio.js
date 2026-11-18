@@ -1642,7 +1642,7 @@ function auditResponsiveLayoutAndAccessibility() {
         const r = el.getBoundingClientRect();
         return r.width < 44 || r.height < 44;
       });
-      if (smallTargets.length) results.push({level:'manual',title:size.label + ': небольшие интерактивные области',text:smallTargets.length + ' элементов меньше рекомендуемого ориентира 44 × 44 px. Это не само по себе доказательство нарушения WCAG 2.2 AA: учитывайте применимые исключения и расстояние между целями.'});
+      if (smallTargets.length) results.push({level:'manual',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше рекомендуемого ориентира 44 × 44 px. Это не само по себе доказательство нарушения WCAG 2.2 AA: учитывайте применимые исключения и расстояние между целями.'});
       const offscreen = controls.filter(el => {
         const r = el.getBoundingClientRect();
         return r.right < 0 || r.left > viewportWidth || r.bottom < 0;
