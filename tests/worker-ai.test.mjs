@@ -500,3 +500,38 @@ test('API точечной перегенерации не принимает н
   assert.match((await res.json()).error, /Неизвестный этап/);
   assert.equal(env.calls.length, 0);
 });
+
+
+test('API AI-редактора возвращает новый текст только для выбранного поля', async () => {
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    calls++;
+    assert.equal(options.max_tokens, 700);
+    assert.match(options.messages[0].content, /Сократи текст/);
+    return { response: JSON.stringify({ value: 'Короткий и ясный текст.' }), usage: { prompt_tokens: 8, completion_tokens: 12, total_tokens: 20 } };
+  } } };
+  const res = await worker.fetch(request({
+    niche: 'кофейня', brand: 'Зерно', contentField: 'description', editAction: 'shorten',
+    currentValue: 'Очень длинное исходное описание кофейни.',
+    existingLanding: { title: 'Кофе рядом', description: 'Очень длинное исходное описание кофейни.' },
+  }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.field, 'description');
+  assert.equal(body.action, 'shorten');
+  assert.equal(body.value, 'Короткий и ясный текст.');
+  assert.deepEqual(body.usage, { inputTokens: 8, outputTokens: 12, totalTokens: 20 });
+  assert.equal(calls, 1);
+});
+
+test('API AI-редактора блокирует массивы, неизвестные поля и команды', async () => {
+  const env = aiReturning(JSON.stringify({ value: 'Текст' }));
+  const base = { niche: 'кофейня', currentValue: 'Исходный текст', existingLanding: {} };
+  const arrayField = await worker.fetch(request({ ...base, contentField: 'services', editAction: 'rewrite' }), env);
+  assert.equal(arrayField.status, 502);
+  assert.match((await arrayField.json()).error, /нельзя редактировать/);
+  const invalidAction = await worker.fetch(request({ ...base, contentField: 'title', editAction: 'translate' }), env);
+  assert.equal(invalidAction.status, 502);
+  assert.match((await invalidAction.json()).error, /Неизвестная команда/);
+  assert.equal(env.calls.length, 0);
+});
