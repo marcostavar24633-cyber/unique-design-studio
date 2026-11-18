@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:43:28.913Z
+Время обновления: 2026-11-18T20:44:10.640Z
 Ветка: fix/worker-workflow-dispatch-guards
-Последний commit: a42240dcf9401bb7960db69f99f68fb7bc49633b
-Дата коммита: 2026-11-19T00:43:11+04:00
-Сообщение: fix: make Worker workflow dispatch guards explicit
+Последний commit: 11e8f224f15e0b4d498213473334a5ac1ef7d774
+Дата коммита: 2026-11-19T00:44:01+04:00
+Сообщение: fix: quote rollback rejection command as YAML block
 
 Последние коммиты:
+- 11e8f22 · 2026-11-19 · fix: quote rollback rejection command as YAML block
+- 8b55d95 · 2026-11-18 · docs: refresh project handoff
 - a42240d · 2026-11-19 · fix: make Worker workflow dispatch guards explicit
 - 4b5c781 · 2026-11-18 · docs: refresh project handoff
 - 8545d96 · 2026-11-19 · fix: show passed content QA and clear stale reports (#156)
 - 1dc18ed · 2026-11-18 · docs: refresh project handoff
 - cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
 - fb2c425 · 2026-11-18 · docs: refresh project handoff
-- 61218ff · 2026-11-19 · feat: introduce Content Intelligence Engine
-- c1982df · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
