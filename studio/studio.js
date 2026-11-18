@@ -805,7 +805,7 @@ $('#auto').addEventListener('submit', async e => {
       draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
       note = body.generation?.status === 'partial'
-        ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы сохранены; повторите генерацию недостающего этапа после восстановления AI.`
+        ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы включены в проект; недостающий этап можно будет повторить отдельно.`
         : `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
