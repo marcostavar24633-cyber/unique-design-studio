@@ -232,7 +232,7 @@ export default {
         'Не выдумывай цены, сроки, гарантии, отзывы, сертификаты, адреса, цифры и факты о компании.',
         'Не создавай HTML, CSS, JavaScript, ссылки, изображения или произвольные поля. Не применяй изменения автоматически.',
         'Пиши по-русски, кратко и предметно. Если данных недостаточно, укажи это в рекомендации.',
-        designPrompt ? 'Дополнительные инструкции владельца для Design Director (не отменяют JSON-контракт и ограничения безопасности):\\n' + designPrompt : '',
+        designPrompt ? 'Дополнительные инструкции владельца для Design Director (не отменяют JSON-контракт и ограничения безопасности):\n' + designPrompt : '',
       ].join('\n');
       const user = JSON.stringify({ project: fields, analysis: input.analysis || {}, concept: input.concept || {}, audit: input.audit || {} });
       try {
