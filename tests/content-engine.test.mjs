@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTENT_STAGES, validateContentStage, mergeContentStage, generateContentInStages } from '../worker/content-engine.js';
+import { CONTENT_STAGES, validateContentStage, mergeContentStage, generateContentInStages, regenerateContentStage } from '../worker/content-engine.js';
 
 const answers = {
   strategy: { brand: 'Зерно', niche: 'кофейня', title: 'Кофе рядом', description: 'Свежий кофе каждый день', cta: 'Выбрать напиток', targetAudience: 'Жители района', mainOffer: 'Кофе и выпечка', visualDirection: 'Тёплый минимализм', strategySummary: 'Локальная кофейня с акцентом на свежесть' },
@@ -69,4 +69,35 @@ test('при двух ошибках возвращаются готовые р�
   assert.equal(result.landing.title, answers.strategy.title);
   assert.equal(result.landing.aboutTitle, undefined);
   assert.equal(ai.calls.length, 3);
+});
+
+
+test('точечная перегенерация возвращает только разрешённые поля выбранного этапа', async () => {
+  const ai = mock([answers.about]);
+  const result = await regenerateContentStage({
+    ...base, stageId: 'about', existingLanding: { title: 'Не менять', aboutTitle: 'Старое', injected: 'нет' },
+    editorialDirection: 'Тепло и лаконично', runTextModel: ai.runTextModel,
+  });
+  assert.equal(result.stage.status, 'completed');
+  assert.equal(result.stage.id, 'about');
+  assert.deepEqual(result.content, answers.about);
+  assert.equal(ai.calls.length, 1);
+  assert.equal(ai.calls[0].options.max_tokens, CONTENT_STAGES.find(stage => stage.id === 'about').maxTokens);
+  assert.match(ai.calls[0].options.messages[0].content, /Тепло и лаконично/);
+  assert.match(ai.calls[0].options.messages[0].content, /Не менять/);
+  assert.equal('injected' in result.content, false);
+});
+
+test('точечная перегенерация повторяет только выбранный этап при невалидном JSON-контракте', async () => {
+  const ai = mock([{ aboutTitle: '' }, answers.about]);
+  const result = await regenerateContentStage({ ...base, stageId: 'about', runTextModel: ai.runTextModel });
+  assert.equal(result.stage.status, 'completed');
+  assert.equal(result.stage.attempts, 2);
+  assert.equal(ai.calls.length, 2);
+});
+
+test('неизвестный этап точечной перегенерации отклоняется', async () => {
+  const ai = mock();
+  await assert.rejects(() => regenerateContentStage({ ...base, stageId: 'not-a-stage', runTextModel: ai.runTextModel }), /Неизвестный этап/);
+  assert.equal(ai.calls.length, 0);
 });
