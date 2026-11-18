@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 import { MAX_OUTPUT_TOKENS, FALLBACK_LIMIT, allowRequest, missingFields, modelOutput, aboutNiche } from '../worker/ai-utils.js';
-import { isQuotaError, runTextModel, DEFAULT_NVIDIA_MODEL } from '../worker/nvidia.js';
+import { isQuotaError, runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from '../worker/nvidia.js';
 
 const ORIGIN = 'https://marcostavar24633-cyber.github.io';
 let ip = 0;
@@ -44,6 +44,8 @@ test('NVIDIA NIM вызывается только после квотной о�
       AI: { run: async () => { throw Object.assign(new Error('Too Many Requests'), { status: 429 }); } },
       NVIDIA_API_KEY: 'nvapi-test-only',
       NVIDIA_MODEL: 'nvidia/test-model',
+      AI_BILLING_MODE: 'licensed',
+      NVIDIA_NIM_ENABLED: 'true',
     };
     const execution = await runTextModel(env, '@cf/test/model', {
       messages: [{ role: 'user', content: 'test prompt' }],
@@ -78,6 +80,8 @@ test('генерация лендинга переключается на NVIDIA
       AI: { run: async () => { throw Object.assign(new Error('Daily limit exceeded'), { status: 429 }); } },
       NVIDIA_API_KEY: 'nvapi-test-only',
       NVIDIA_MODEL: 'nvidia/test-model',
+      AI_BILLING_MODE: 'licensed',
+      NVIDIA_NIM_ENABLED: 'true',
     };
     const res = await worker.fetch(request({ niche: 'кофейня' }), env);
     const body = await res.json();
@@ -104,6 +108,33 @@ test('ошибки Workers AI, не связанные с квотой, не о�
   }
 });
 
+
+test('бесплатный режим включён по умолчанию и блокирует NVIDIA даже при наличии ключа', async () => {
+  assert.equal(isFreeAiMode({}), true);
+  assert.equal(isNvidiaFallbackEnabled({ NVIDIA_API_KEY: 'nvapi-test-only', NVIDIA_NIM_ENABLED: 'true' }), false);
+  const previousFetch = globalThis.fetch;
+  let nvidiaCalls = 0;
+  globalThis.fetch = async () => { nvidiaCalls++; throw new Error('NVIDIA must not be called in free mode'); };
+  try {
+    const env = {
+      AI: { run: async () => { throw Object.assign(new Error('Daily free allocation exceeded'), { status: 429 }); } },
+      NVIDIA_API_KEY: 'nvapi-test-only',
+      NVIDIA_NIM_ENABLED: 'true',
+    };
+    await assert.rejects(() => runTextModel(env, '@cf/test/model', { messages: [] }), /Daily free allocation exceeded/);
+    await assert.rejects(() => runTextModel(env, '@cf/test/model', { messages: [] }, { preferNvidia: true }), /бесплатный режим/);
+    assert.equal(nvidiaCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('NVIDIA fallback requires explicit non-free billing mode, enable flag and secret', () => {
+  assert.equal(isNvidiaFallbackEnabled({ AI_BILLING_MODE: 'licensed', NVIDIA_NIM_ENABLED: 'true', NVIDIA_API_KEY: 'test' }), true);
+  assert.equal(isNvidiaFallbackEnabled({ AI_BILLING_MODE: 'free', NVIDIA_NIM_ENABLED: 'true', NVIDIA_API_KEY: 'test' }), false);
+  assert.equal(isNvidiaFallbackEnabled({ AI_BILLING_MODE: 'licensed', NVIDIA_API_KEY: 'test' }), false);
+  assert.equal(isNvidiaFallbackEnabled({ AI_BILLING_MODE: 'licensed', NVIDIA_NIM_ENABLED: 'true' }), false);
+});
 
 test('корневой адрес показывает статус сервиса и доступные API-маршруты', async () => {
   const res = await worker.fetch(new Request('https://w.dev/'));
