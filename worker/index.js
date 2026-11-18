@@ -5,7 +5,7 @@ const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
   'https://marcostavar24633-cyber.github.io',
 ]);
-const MAX_BODY_BYTES = 24_000;
+const MAX_BODY_BYTES = 48_000;
 
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'null';
@@ -207,7 +207,7 @@ export default {
     let input;
     try {
       const raw = await request.text();
-      if (raw.length > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
+      if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
       input = JSON.parse(raw);
     } catch {
       return json({ error: 'Некорректный JSON' }, 400, origin);
