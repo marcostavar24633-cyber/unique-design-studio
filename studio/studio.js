@@ -782,10 +782,20 @@ $('#auto').addEventListener('submit', async e => {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
       const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt;
+      // Передаём только данные, которые Worker действительно использует. Весь input содержал
+      // повторяющиеся поля и крупные локальные объекты; customPrompt уже включён в studioPrompt.
+      const aiPayload = {
+        niche: input.niche,
+        brand: input.brand,
+        city: input.city,
+        tier: input.tier,
+        details: input.details,
+        studioPrompt,
+      };
       const aiStarted = Date.now();
       let res, body;
       try {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
+        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
         body = await res.json().catch(() => ({}));
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
       logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
