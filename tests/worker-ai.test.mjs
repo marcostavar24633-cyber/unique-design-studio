@@ -461,3 +461,42 @@ test('API запускает staged Content Engine и возвращает об�
   assert.deepEqual(body.landing.services, outputs[2].services);
   assert.equal(calls, 5);
 });
+
+
+test('API точечной перегенерации возвращает один раздел и фактический usage', async () => {
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    calls++;
+    assert.equal(options.max_tokens, 900);
+    assert.match(options.messages[0].content, /Текущие данные проекта/);
+    return { response: JSON.stringify({ aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' }), usage: { prompt_tokens: 12, completion_tokens: 18, total_tokens: 30 } };
+  } } };
+  const res = await worker.fetch(request({
+    niche: 'кофейня', brand: 'Зерно', contentStage: 'about',
+    existingLanding: { title: 'Кофе рядом', aboutTitle: 'Старый заголовок', injected: 'ignore' },
+    editorialDirection: 'Тёплый тон',
+  }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.stage.id, 'about');
+  assert.equal(body.stage.status, 'completed');
+  assert.deepEqual(body.content, { aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' });
+  assert.deepEqual(body.usage, { inputTokens: 12, outputTokens: 18, totalTokens: 30 });
+  assert.equal(calls, 1);
+});
+
+test('API точечной перегенерации отклоняет запрос без текущего объекта проекта', async () => {
+  const env = aiReturning(JSON.stringify({ aboutTitle: 'О нас', aboutText: 'Текст' }));
+  const res = await worker.fetch(request({ niche: 'кофейня', contentStage: 'about' }), env);
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /текущий контент проекта/);
+  assert.equal(env.calls.length, 0);
+});
+
+test('API точечной перегенерации не принимает неизвестный этап', async () => {
+  const env = aiReturning(JSON.stringify({ aboutTitle: 'О нас', aboutText: 'Текст' }));
+  const res = await worker.fetch(request({ niche: 'кофейня', contentStage: 'unknown', existingLanding: {} }), env);
+  assert.equal(res.status, 502);
+  assert.match((await res.json()).error, /Неизвестный этап/);
+  assert.equal(env.calls.length, 0);
+});
