@@ -745,7 +745,7 @@ $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
   const selectedProvider = $('#ai-primary-provider')?.value || 'cloudflare';
   const selectedRoute = selectedProvider === 'openai' ? ($('#ai-openai-route')?.value || 'primary')
-    : selectedProvider === 'anthropic' ? ($('#ai-anthropic-route')?.value || 'primary') : 'primary';
+    : selectedProvider === 'anthropic' ? ($('#ai-anthropic-route')?.value || 'primary') : 'auto';
   const input = {
     aiProvider: selectedProvider,
     aiRouteMode: selectedRoute,
@@ -2023,7 +2023,7 @@ $('#view-audit').addEventListener('click', async e => {
         body: JSON.stringify({
           task: 'design-review',
           aiProvider: $('#ai-primary-provider')?.value || 'cloudflare',
-          aiRouteMode: ($('#ai-primary-provider')?.value === 'openai' ? $('#ai-openai-route')?.value : $('#ai-primary-provider')?.value === 'anthropic' ? $('#ai-anthropic-route')?.value : 'primary') || 'primary',
+          aiRouteMode: ($('#ai-primary-provider')?.value === 'openai' ? $('#ai-openai-route')?.value : $('#ai-primary-provider')?.value === 'anthropic' ? $('#ai-anthropic-route')?.value : 'auto') || 'auto',
           designPrompt: activePrompt(loadPromptRegistry(), 'design-director'),
           project: {
             niche: result.project.niche, brand: result.project.brand, title: result.project.title,
