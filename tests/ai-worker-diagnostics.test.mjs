@@ -23,6 +23,10 @@ test('runtime diagnostics report only presence of Worker bindings and secrets', 
       aiBillingMode: 'free',
       nvidiaFallbackConfigured: false,
       openRouterFallbackConfigured: false,
+      directProvidersEnabled: false,
+      openAiApiConfigured: false,
+      anthropicApiConfigured: false,
+      primaryProvider: 'cloudflare',
       nvidiaModel: 'nvidia/nemotron-3.5-lightning-30b-a3b',
     },
   });
@@ -38,6 +42,10 @@ test('runtime diagnostics identify missing runtime configuration without exposin
     aiBillingMode: 'free',
     nvidiaFallbackConfigured: false,
     openRouterFallbackConfigured: false,
+directProvidersEnabled: false,
+      openAiApiConfigured: false,
+      anthropicApiConfigured: false,
+      primaryProvider: 'cloudflare',
     nvidiaModel: 'nvidia/nemotron-3.5-lightning-30b-a3b',
   });
 });
