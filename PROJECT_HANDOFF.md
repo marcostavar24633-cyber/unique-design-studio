@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T07:37:13.344Z
+Время обновления: 2026-11-18T07:37:35.126Z
 Ветка: feat/prompt-manager-pro
-Последний commit: da94b074b7b4a4dd315d2b590d3a774dcd25e3f0
-Дата коммита: 2026-11-18T11:36:58+04:00
-Сообщение: test(prompts): normalize locale spacing in limit assertions
+Последний commit: 30d61a716c000d36655003e0d97de3d21b464336
+Дата коммита: 2026-11-18T11:37:20+04:00
+Сообщение: test(prompts): normalize Unicode grouping spaces
 
 Последние коммиты:
+- 30d61a7 · 2026-11-18 · test(prompts): normalize Unicode grouping spaces
+- 0987d35 · 2026-11-18 · test(prompts): normalize all Unicode whitespace in limit assertions
+- d1cd5e2 · 2026-11-18 · docs: refresh project handoff
 - da94b07 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
 - 5e47eb2 · 2026-11-18 · test(prompts): normalize locale spacing in limit assertions
 - bf22a6c · 2026-11-18 · test(prompts): accept localized grouping spaces
 - fdcd4bb · 2026-11-18 · docs: record Prompt Manager integrations and validation
 - 838c887 · 2026-11-18 · docs: refresh project handoff
-- 0df5fd6 · 2026-11-18 · test(prompts): verify per-module payload budgets
-- f83cc1b · 2026-11-18 · fix(studio): show prompt budget for each module
-- 5c9ee37 · 2026-11-18 · feat(prompts): export per-module prompt limits
 <!-- HANDOFF:AUTO:END -->
