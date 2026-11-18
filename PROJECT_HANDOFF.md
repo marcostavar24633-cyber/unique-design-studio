@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T19:35:21.711Z
-Ветка: fix/worker-deploy-guard-v2
-Последний commit: 63739ea454303a7853420753ca3de7478164d793
-Дата коммита: 2026-11-18T23:34:58+04:00
-Сообщение: fix: correct AI probe dispatch condition
+Время обновления: 2026-11-18T19:44:44.471Z
+Ветка: main
+Последний commit: d751d41816eda1b42be9b4d12a120caaf710132e
+Дата коммита: 2026-11-18T23:44:32+04:00
+Сообщение: Fix Worker deployment workflow guards
 
 Последние коммиты:
-- 63739ea · 2026-11-18 · fix: correct AI probe dispatch condition
-- 7e55188 · 2026-11-18 · fix: use event-scoped AI probe input
-- a97a898 · 2026-11-18 · fix: make Worker deployment guards explicit
-- 0c47bc4 · 2026-11-18 · docs: refresh project handoff
-- 9aedac0 · 2026-11-18 · fix: use event-scoped AI probe input
-- e56a810 · 2026-11-18 · fix: make Worker deployment guards explicit
+- d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
 - bc7aedd · 2026-11-18 · docs: refresh project handoff
 - e560f06 · 2026-11-18 · Enable guarded scheduled PR auto-merge
+- 06b64ec · 2026-11-18 · docs: refresh project handoff
+- fefc579 · 2026-11-18 · Harden backups and verify Worker deployments
+- 9c36903 · 2026-11-18 · docs: refresh project handoff
+- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
+- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
