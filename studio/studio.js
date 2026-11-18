@@ -660,12 +660,13 @@ function writeContentHistory(items) {
   } catch { toast('Не удалось сохранить историю AI-правок в браузере.'); }
 }
 const STAGE_PROJECT_FIELDS = {
-  strategy: ['brand','niche','title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'],
+  strategy: ['title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'],
   about: ['aboutTitle','aboutText'],
   services: ['servicesTitle','servicesIntro','services'],
   trust: ['advantagesTitle','advantages','processTitle','process','faqs'],
-  seo: ['contactTitle','contactText','assumptions','marketResearch','researchSources','segments','objections','triggers','keywords','competitors','seoTitle','seoDescription','imagePrompts'],
+  seo: ['contactTitle','contactText','assumptions','marketResearch','researchSources','seoTitle','seoDescription'],
 };
+const STAGE_ANALYSIS_FIELDS = { seo: ['segments','objections','triggers','keywords','competitors','imagePrompts'] };
 function projectContentForStage() {
   const p = result.project;
   return {
@@ -693,7 +694,9 @@ async function regenerateProjectStage(stageId) {
   buttons.forEach(button => { button.disabled = true; });
   if (status) status.textContent = 'AI перегенерирует раздел. Остальные части проекта не меняются…';
   const fields = STAGE_PROJECT_FIELDS[stageId];
+  const analysisFields = STAGE_ANALYSIS_FIELDS[stageId] || [];
   const before = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(result.project,key) ? result.project[key] : null]));
+  const analysisBefore = Object.fromEntries(analysisFields.map(key => [key, Object.prototype.hasOwnProperty.call(currentAnalysis() || {},key) ? currentAnalysis()[key] : null]));
   const started = Date.now();
   try {
     const response = await fetch(url.href, {
@@ -713,16 +716,13 @@ async function regenerateProjectStage(stageId) {
     const patch = {};
     for (const key of fields) if (Object.prototype.hasOwnProperty.call(payload.content, key)) patch[key] = payload.content[key];
     if (!Object.keys(patch).length) throw new Error('AI не вернул поля выбранного раздела');
+    const analysisPatch = Object.fromEntries(analysisFields.filter(key => Object.prototype.hasOwnProperty.call(payload.content,key)).map(key => [key,payload.content[key]]));
     const after = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(patch,key) ? patch[key] : before[key]]));
     const history = contentHistoryForProject();
-    history.push({ projectId:state.raw.id, stageId, before, after, at:new Date().toISOString() });
+    history.push({ projectId:state.raw.id, stageId, before, after, analysisBefore, at:new Date().toISOString() });
     writeContentHistory(history.slice(-10));
     Object.assign(state.raw, patch);
-    if (stageId === 'seo' && state.analysis?.data) {
-      for (const key of ['segments','objections','triggers','keywords','competitors','imagePrompts']) {
-        if (Object.prototype.hasOwnProperty.call(patch,key)) state.analysis.data[key] = patch[key];
-      }
-    }
+    if (analysisFields.length && state.analysis?.data) Object.assign(state.analysis.data, analysisPatch);
     run();
     persist();
     refreshAiUsage();
@@ -743,10 +743,8 @@ $('#view-spec').addEventListener('click', async e => {
     const last = history.pop();
     if (!last) return;
     for (const [key,value] of Object.entries(last.before)) { if (value === null) delete state.raw[key]; else state.raw[key] = value; }
-    if (last.stageId === 'seo' && state.analysis?.data) {
-      for (const key of ['segments','objections','triggers','keywords','competitors','imagePrompts']) {
-        if (Object.prototype.hasOwnProperty.call(last.before,key)) { if (last.before[key] === null) delete state.analysis.data[key]; else state.analysis.data[key] = last.before[key]; }
-      }
+    if (last.analysisBefore && state.analysis?.data) {
+      for (const [key,value] of Object.entries(last.analysisBefore)) { if (value === null) delete state.analysis.data[key]; else state.analysis.data[key] = value; }
     }
     writeContentHistory(history);
     run(); persist();
