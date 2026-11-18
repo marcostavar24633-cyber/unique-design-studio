@@ -198,7 +198,7 @@ export default {
     }
     if (request.method !== 'POST') return json({ error: 'Метод не поддерживается' }, 405, origin);
     if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
-    if (!env.AI) return json({ error: 'Workers AI binding AI не настроен' }, 503, origin);
+    if (!env.AI && !(env.GATEWAY_API_URL && env.GATEWAY_PROJECT_TOKEN)) return json({ error: 'AI Gateway не настроен' }, 503, origin);
     if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
 
     const length = Number(request.headers.get('Content-Length') || 0);
