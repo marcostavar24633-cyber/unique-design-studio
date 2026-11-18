@@ -74,7 +74,7 @@ async function runGateway(env, options) {
     response = await fetch(`${base}/v1/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.GATEWAY_PROJECT_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ provider: 'cloudflare', routeMode: 'primary', messages: options.messages }),
+      body: JSON.stringify({ provider: 'cloudflare', routeMode: 'primary', messages: options.messages, max_tokens: options.max_tokens, temperature: options.temperature }),
       signal: AbortSignal.timeout(120_000),
     });
   } catch (error) { throw new Error(`Universal AI Gateway недоступен: ${error?.message || 'network error'}`); }
