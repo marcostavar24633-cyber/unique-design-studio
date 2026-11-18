@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:55:47.692Z
+Время обновления: 2026-11-18T19:14:05.620Z
 Ветка: main
-Последний commit: 579bb4721dedd4de17139b034cc3f18bcff9d283
-Дата коммита: 2026-11-18T22:55:35+04:00
-Сообщение: Enforce direct Cloudflare Workers AI routing
+Последний commit: 120f2a74b56019a098f79e2d83914ec489e7717c
+Дата коммита: 2026-11-18T23:13:52+04:00
+Сообщение: Add guarded autonomy operations
 
 Последние коммиты:
+- 120f2a7 · 2026-11-18 · Add guarded autonomy operations
+- 2cad8a3 · 2026-11-18 · docs: refresh project handoff
 - 579bb47 · 2026-11-18 · Enforce direct Cloudflare Workers AI routing
 - 2e5ef3b · 2026-11-18 · docs: refresh project handoff
 - 7addacc · 2026-11-18 · Add fullscreen mode to live preview
 - 3386f83 · 2026-11-18 · docs: refresh project handoff
 - 5cd67f9 · 2026-11-18 · Fix oversized AI autopilot requests (#144)
 - c2e169f · 2026-11-18 · docs: refresh project handoff
-- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
-- ec02567 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
