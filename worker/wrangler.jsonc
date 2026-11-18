@@ -9,6 +9,7 @@
   },
   "vars": {
     "AI_BILLING_MODE": "free",
-    "NVIDIA_NIM_ENABLED": "false"
+    "NVIDIA_NIM_ENABLED": "false",
+    "OPENROUTER_ENABLED": "false"
   }
 }
