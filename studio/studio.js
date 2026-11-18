@@ -781,11 +781,14 @@ $('#auto').addEventListener('submit', async e => {
     try {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
-      const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt;
+      const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt.slice(0, 16000);
+      // Ссылки и метаданные профилей уже учтены в studioPrompt; Worker их отдельно не использует.
+      // Не отправляем лишний designReferences, чтобы не раздувать JSON-тело запроса.
+      const { designReferences: _designReferences, ...workerInput } = input;
       const aiStarted = Date.now();
       let res, body;
       try {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...input, studioPrompt }) });
+        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...workerInput, studioPrompt }) });
         body = await res.json().catch(() => ({}));
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
       logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
