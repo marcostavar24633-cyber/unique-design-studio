@@ -9,6 +9,7 @@ import { createGitHub } from './github.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const owner = REPO.split('/')[0];
+const AUTO_MERGE_LABEL = 'merge-engine:auto-merge';
 const gh = createGitHub({ repo: REPO });
 const journal = createJournal(process.env.MERGE_ENGINE_STATE || `${root}/.merge-engine`);
 const summaryFile = process.env.GITHUB_STEP_SUMMARY;
@@ -26,12 +27,16 @@ async function main() {
   const prs = await gh.listOpenPrs();
   // Не сливаем PR внешних авторов и PR из форков автоматически.
   const candidates = prs
-    .filter(p => p.user?.login === owner && p.base?.ref === 'main' && p.base?.repo?.full_name === REPO && !p.draft)
+    .filter(p => p.user?.login === owner
+      && p.base?.ref === 'main'
+      && p.base?.repo?.full_name === REPO
+      && !p.draft
+      && (p.labels || []).some(label => label.name === AUTO_MERGE_LABEL))
     .sort((a, b) => Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0));
 
-  await writeSummary(`## Автоматический Merge Engine\nОткрытых PR: ${prs.length}; кандидатов владельца: ${candidates.length}. За один запуск будет слит не более одного PR.`);
+  await writeSummary(`## Автоматический Merge Engine\nОткрытых PR: ${prs.length}; PR с явной меткой ${AUTO_MERGE_LABEL}: ${candidates.length}. За один запуск будет слит не более одного PR.`);
   if (!candidates.length) {
-    await writeSummary('Нет PR владельца, подходящих для автоматической проверки. Внешние PR автоматически не сливаются.');
+    await writeSummary('Нет PR с явной меткой merge-engine:auto-merge, подходящих для автоматической проверки. Одной метки merge-engine: reviewed недостаточно; внешние PR автоматически не сливаются.');
     return;
   }
 
