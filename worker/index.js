@@ -1,6 +1,6 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
-import { generateContentInStages, regenerateContentStage } from './content-engine.js';
+import { generateContentInStages, regenerateContentStage, editContentField } from './content-engine.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -293,6 +293,25 @@ export default {
       brief.details ? `Подробности от владельца: ${brief.details}` : '',
       // customPrompt уже встроен в studioPrompt на клиенте; не добавляем его второй раз.
     ].filter(Boolean).join('\n');
+
+    if (input.contentField) {
+      if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
+        return json({ error: 'Передайте контекст проекта для редактирования текста' }, 400, origin);
+      }
+      try {
+        const edited = await editContentField({
+          env, model: MODEL, brief, field: String(input.contentField).slice(0, 64),
+          action: String(input.editAction || '').slice(0, 16),
+          currentValue: String(input.currentValue || '').slice(0, 3000),
+          existingLanding: input.existingLanding,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 2000),
+          runTextModel,
+        });
+        return json(edited, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка AI-редактора' }, 502, origin);
+      }
+    }
 
     if (input.contentStage) {
       if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
