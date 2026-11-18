@@ -16,36 +16,26 @@ const aiReturning = (...answers) => {
   return { calls, AI: { run: async (model, opts) => { calls.push(opts); const a = answers[Math.min(calls.length - 1, answers.length - 1)]; if (a instanceof Error) throw a; return { response: a }; } } };
 };
 
-test('Universal AI Gateway используется для текстовых запросов и получает проектный Bearer token', async () => {
-  const previousFetch = globalThis.fetch;
-  let sent;
-  globalThis.fetch = async (url, init) => {
-    sent = { url: String(url), init };
-    return new Response(JSON.stringify({ model: '@cf/meta/llama-3.1-8b-instruct-fast', provider: 'cloudflare', choices: [{ message: { role: 'assistant', content: JSON.stringify(full) } }], text: JSON.stringify(full) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  };
-  try {
-    const env = { GATEWAY_API_URL: 'https://gateway.example', GATEWAY_PROJECT_TOKEN: 'project-token-test' };
-    const res = await worker.fetch(request({ niche: 'кофейня' }), env);
-    const body = await res.json();
-    assert.equal(res.status, 200);
-    assert.equal(body.landing.title, 'Заголовок');
-    assert.equal(sent.url, 'https://gateway.example/v1/chat/completions');
-    assert.equal(sent.init.headers.Authorization, 'Bearer project-token-test');
-    const payload = JSON.parse(sent.init.body);
-    assert.equal(payload.provider, 'cloudflare');
-    assert.equal(payload.routeMode, 'primary');
-    assert.equal(payload.messages[0].role, 'user');
-  } finally { globalThis.fetch = previousFetch; }
+test('текстовая генерация всегда использует прямой Workers AI binding, игнорируя старые Gateway vars', async () => {
+  const env = { ...aiReturning(JSON.stringify(full)), GATEWAY_API_URL: 'https://gateway.example', GATEWAY_PROJECT_TOKEN: 'legacy-token-must-not-be-used' };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.landing.title, 'Заголовок');
+  assert.equal(body.provider, 'cloudflare');
+  assert.equal(env.calls.length, 1);
 });
 
-test('ошибка Gateway не переключает запрос на платного NVIDIA-провайдера', async () => {
+test('Gateway vars без Workers AI binding не включают обходной маршрут', async () => {
   const previousFetch = globalThis.fetch;
-  let calls = 0;
-  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify({ error: 'quota' }), { status: 429 }); };
+  let networkCalls = 0;
+  globalThis.fetch = async () => { networkCalls++; throw new Error('external route must not be called'); };
   try {
-    const env = { GATEWAY_API_URL: 'https://gateway.example', GATEWAY_PROJECT_TOKEN: 'project-token-test', NVIDIA_API_KEY: 'nvapi-test-only', AI_BILLING_MODE: 'licensed', NVIDIA_NIM_ENABLED: 'true' };
-    await assert.rejects(() => runTextModel(env, '@cf/test/model', { messages: [{ role: 'user', content: 'test' }] }), /quota/);
-    assert.equal(calls, 1);
+    const env = { GATEWAY_API_URL: 'https://gateway.example', GATEWAY_PROJECT_TOKEN: 'legacy-token' };
+    const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+    assert.equal(res.status, 503);
+    assert.match((await res.json()).error, /Workers AI binding AI не настроен/);
+    assert.equal(networkCalls, 0);
   } finally { globalThis.fetch = previousFetch; }
 });
 
