@@ -447,5 +447,5 @@ test('AI Content Director запускает безопасную проверк
     'review.recommendations', 'Веб-поиск не выполнялся.',
     'Проверка качества завершена. Контент не изменён.',
   ]) assert.ok(source.includes(marker), marker);
-  assert.match(source, /\.content-quality-review\{margin:16px 0/);
+  assert.ok(css.includes('.content-quality-review{margin:16px 0'));
 });
