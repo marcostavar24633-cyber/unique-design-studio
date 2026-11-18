@@ -810,7 +810,8 @@ $('#auto').addEventListener('submit', async e => {
   const go = $('#auto-go');
   go.disabled = true;
   setAutoProgress(3, 'Подготовка проекта', 'Проверяем бриф и параметры генерации');
-  renderContentQaReview(null); // Не показываем результаты предыдущей генерации во время новой.\n  let draft = null, note = '';
+  renderContentQaReview(null); // Не показываем результаты предыдущей генерации во время новой.
+  let draft = null, note = '';
   if (endpoint) {
     setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — ход генерации отображается ниже…');
     setAutoProgress(12, 'AI формирует тексты и структуру', 'Отправляем бриф в Cloudflare Workers AI');
