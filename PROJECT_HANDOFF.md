@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T07:50:03.688Z
+Время обновления: 2026-11-18T07:51:10.236Z
 Ветка: feat/nvidia-nim-quota-fallback
-Последний commit: d4398563bd6f7101e478ce71422594d8ba6dd68f
-Дата коммита: 2026-11-18T11:49:50+04:00
-Сообщение: test: update AI diagnostics for NVIDIA fallback
+Последний commit: f8ed6f34f3eb729ad93268207b892917d166b5bd
+Дата коммита: 2026-11-18T11:50:55+04:00
+Сообщение: docs: clarify Cloudflare Workers AI fallback error codes
 
 Последние коммиты:
+- f8ed6f3 · 2026-11-18 · docs: clarify Cloudflare Workers AI fallback error codes
+- 5af2fd1 · 2026-11-18 · test: recognize Cloudflare daily free allocation error 3036
+- 9dbd0cc · 2026-11-18 · fix: recognize documented Workers AI quota error 3036
+- 3bfcf50 · 2026-11-18 · docs: refresh project handoff
 - d439856 · 2026-11-18 · test: update AI diagnostics for NVIDIA fallback
 - db756a9 · 2026-11-18 · docs: refresh project handoff
 - 60abd5e · 2026-11-18 · docs: explain NVIDIA NIM quota fallback setup
 - 2ff7d7f · 2026-11-18 · test: cover NVIDIA NIM quota fallback
-- 0d1cd90 · 2026-11-18 · feat: route text generation to NVIDIA NIM on quota errors
-- 2cfa57c · 2026-11-18 · feat: add NVIDIA NIM quota fallback helper
-- c126a9d · 2026-11-18 · docs: refresh project handoff
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
 <!-- HANDOFF:AUTO:END -->
