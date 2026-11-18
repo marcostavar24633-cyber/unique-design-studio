@@ -248,3 +248,23 @@ test('при ошибке генерации Worker тоже сообщает п
   assert.equal(res.status, 502);
   assert.equal(body.usage.totalTokens, 160);
 });
+
+test('формат ответа в конце запроса: только поля студии, без 8 больших разделов из задания для внешних AI', async () => {
+  const { FORMAT_NOTE, LANDING_FIELDS, EXTRA_SECTIONS } = await import('../worker/ai-utils.js');
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({ niche: 'кофейня', studioPrompt: 'Дополнительно верни: brandStrategy, audienceProfiles, conversionMap.' }), env);
+  const content = env.calls[0].messages[0].content;
+  assert.ok(content.trimEnd().endsWith(FORMAT_NOTE.trim()), 'формат — последним, после задания студии');
+  assert.ok(content.indexOf('ФОРМАТ ОТВЕТА') > content.indexOf('brandStrategy, audienceProfiles'), 'формат главнее и идёт позже');
+  for (const f of ['title', 'services', 'seoDescription']) assert.ok(LANDING_FIELDS.includes(f));
+  for (const f of ['brandStrategy', 'conversionMap', 'qualityReport']) assert.ok(EXTRA_SECTIONS.includes(f) && !LANDING_FIELDS.includes(f));
+});
+
+test('перечень полей Worker совпадает с тем, что читает студия (fromAiLanding)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { LANDING_FIELDS } = await import('../worker/ai-utils.js');
+  const src = readFileSync(new URL('../src/engine/autopilot.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function fromAiLanding'));
+  const used = new Set([...body.slice(0, 6000).matchAll(/\bl\.([a-zA-Z]+)/g)].map(m => m[1]).filter(k => !['designArchitecture', 'tier'].includes(k)));
+  for (const f of used) assert.ok(LANDING_FIELDS.includes(f), `студия читает ${f}, а Worker его не просит`);
+});

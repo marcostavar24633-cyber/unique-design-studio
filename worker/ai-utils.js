@@ -74,3 +74,21 @@ export function addUsage(a, b) {
   if (!a) return { ...b };
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, totalTokens: a.totalTokens + b.totalTokens };
 }
+
+// Поля ответа, которые студия читает (fromAiLanding). Задание студии для внешних AI (#111) просит ещё восемь
+// больших разделов — для генерации внутри студии они лишние и обрывают ответ по лимиту токенов.
+export const LANDING_FIELDS = ['brand', 'niche', 'title', 'description', 'cta', 'targetAudience', 'mainOffer', 'visualDirection', 'strategySummary',
+  'aboutTitle', 'aboutText', 'servicesTitle', 'servicesIntro', 'services', 'advantagesTitle', 'advantages', 'processTitle', 'process', 'faqs',
+  'contactTitle', 'contactText', 'assumptions', 'marketResearch', 'researchSources', 'segments', 'objections', 'triggers', 'keywords', 'competitors',
+  'seoTitle', 'seoDescription', 'imagePrompts'];
+export const EXTRA_SECTIONS = ['brandStrategy', 'audienceProfiles', 'competitorAnalysis', 'conversionMap', 'sectionContent', 'visualBrief', 'motionBrief', 'qualityReport', 'researchStatus'];
+
+/** Последний блок запроса: формат ответа главнее любых указаний выше, объём ограничен — ответ не обрывается. */
+export const FORMAT_NOTE = [
+  '',
+  'ФОРМАТ ОТВЕТА — главнее любых указаний выше о структуре JSON.',
+  `Верни только поля: ${LANDING_FIELDS.join(', ')}.`,
+  `Не добавляй других полей (${EXTRA_SECTIONS.join(', ')}): студия их не использует, а ответ оборвётся по длине.`,
+  'Объём: description, aboutText, contactText, strategySummary — до 3 предложений; services — до 6 позиций; advantages и process — до 4; faqs — до 5;',
+  'segments, objections, triggers, keywords, imagePrompts, assumptions — до 5 коротких пунктов каждый. Верни один полный валидный JSON-объект.',
+].join('\n');
