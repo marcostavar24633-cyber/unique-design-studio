@@ -220,3 +220,60 @@ export async function regenerateContentStage({
     provider, model: usedModel, usage, durationMs: Date.now() - started,
   };
 }
+
+
+export const EDITABLE_CONTENT_FIELDS = new Set([
+  'title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary',
+  'aboutTitle','aboutText','servicesTitle','servicesIntro','advantagesTitle','processTitle',
+  'contactTitle','contactText','seoTitle','seoDescription',
+]);
+
+/** Rewrite one selected string without changing any other project field. */
+export async function editContentField({
+  env, model, brief, field, action, currentValue, existingLanding = {}, editorialDirection = '', runTextModel,
+}) {
+  if (!EDITABLE_CONTENT_FIELDS.has(field)) throw new Error('Это поле нельзя редактировать через AI');
+  if (!['rewrite','expand','shorten'].includes(action)) throw new Error('Неизвестная команда редактора');
+  const value = String(currentValue || '').trim().slice(0, 3000);
+  if (!value) throw new Error('Сначала введите текст для редактирования');
+  const actionInstruction = {
+    rewrite: 'Перепиши текст яснее и выразительнее, сохранив смысл и примерно ту же длину.',
+    expand: 'Расширь текст полезными подробностями и ясностью. Не добавляй неподтверждённые факты.',
+    shorten: 'Сократи текст, сохранив главную мысль и конкретную пользу.',
+  }[action];
+  const prompt = [
+    'Ты редактор коммерческого сайта. Работаешь только с одним текстовым полем.',
+    'Пиши по-русски. Сохраняй исходный язык, смысл, факты, тон бренда и связь с нишей.',
+    'Не выдумывай цены, адреса, отзывы, сертификаты, гарантии, сроки, статистику и обещания.',
+    'Верни только JSON вида {"value":"готовый текст"}. Не добавляй Markdown и пояснения.',
+    'Поле: ' + field + '.',
+    'Ниша: ' + brief.niche + '. Бренд: ' + (brief.brand || 'не указан') + '.',
+    actionInstruction,
+    editorialDirection ? 'Редакторское направление: ' + editorialDirection.slice(0, 2000) : '',
+    'Контекст проекта: ' + JSON.stringify(existingLanding).slice(0, 9000),
+    'Исходный текст: ' + value,
+  ].filter(Boolean).join('\n\n');
+  let usage = null, provider = 'cloudflare', usedModel = model, lastError = '';
+  const started = Date.now();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const execution = await runTextModel(env, model, {
+        messages: [{ role: 'user', content: attempt ? prompt + '\n\nВерни корректный JSON с непустым value. Не добавляй другие поля.' : prompt }],
+        max_tokens: 700,
+        temperature: 0.4,
+      });
+      provider = execution.provider;
+      usedModel = execution.model;
+      usage = addUsage(usage, usageOf(execution.result));
+      const parsed = parseJson(modelOutput(execution.result));
+      if (typeof parsed?.value !== 'string' || !parsed.value.trim() || parsed.value.length > 3000) {
+        lastError = 'AI вернул пустой текст или неверный формат';
+        continue;
+      }
+      return { field, action, value: parsed.value.trim(), provider, model: usedModel, usage, attempts: attempt + 1, durationMs: Date.now() - started };
+    } catch (error) {
+      lastError = error?.message || 'Ошибка AI-редактора';
+    }
+  }
+  throw new Error(lastError || 'AI не смог отредактировать текст');
+}
