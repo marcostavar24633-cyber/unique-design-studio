@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T10:25:17.195Z
+Время обновления: 2026-11-18T10:26:07.232Z
 Ветка: feat/openrouter-free-fallback
-Последний commit: 7e52ffbb4514f8f25f842eda5d8e456cb67806fc
-Дата коммита: 2026-11-18T14:25:05+04:00
-Сообщение: feat(ai): route OpenAI and Claude quota errors to free fallback
+Последний commit: 1fece67a48ac9b5a732ebfa96f2e2b29b71e605d
+Дата коммита: 2026-11-18T14:25:54+04:00
+Сообщение: chore(ai): keep direct GPT and Claude APIs disabled by default
 
 Последние коммиты:
+- 1fece67 · 2026-11-18 · chore(ai): keep direct GPT and Claude APIs disabled by default
+- a820245 · 2026-11-18 · feat(ai): expose GPT and Claude provider diagnostics
+- 24430c6 · 2026-11-18 · feat(ai): add gated OpenAI and Anthropic API adapters
+- 17ad9ec · 2026-11-18 · docs: refresh project handoff
 - 7e52ffb · 2026-11-18 · feat(ai): route OpenAI and Claude quota errors to free fallback
 - 34ca583 · 2026-11-18 · docs: refresh project handoff
 - 5c5a092 · 2026-11-18 · test(ai): correct OpenRouter fallback gating cases
 - 82ebc8b · 2026-11-18 · test(ai): update diagnostics contract for OpenRouter
-- 71c55ea · 2026-11-18 · docs: refresh project handoff
-- 3d1b9f0 · 2026-11-18 · docs(ai): explain free OpenRouter fallback setup
-- 00ee67b · 2026-11-18 · chore(worker): keep OpenRouter fallback opt-in
-- b81c17b · 2026-11-18 · test(ai): cover free OpenRouter quota fallback
 <!-- HANDOFF:AUTO:END -->
