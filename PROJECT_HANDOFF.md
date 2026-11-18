@@ -66,14 +66,14 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:21:05.621Z
-Ветка: fix/use-workers-ai-without-gateway
-Последний commit: 01c35c6b6a42925e0293d358ac02795b7b2ccc3a
-Дата коммита: 2026-11-18T22:20:52+04:00
-Сообщение: fix: use Workers AI directly without gateway
+Время обновления: 2026-11-18T18:21:30.644Z
+Ветка: main
+Последний commit: 537b2341ac0da33c553e0d08847806cb95588ae4
+Дата коммита: 2026-11-18T22:21:18+04:00
+Сообщение: Use Cloudflare Workers AI directly without Gateway (#142)
 
 Последние коммиты:
-- 01c35c6 · 2026-11-18 · fix: use Workers AI directly without gateway
+- 537b234 · 2026-11-18 · Use Cloudflare Workers AI directly without Gateway (#142)
 - ec02567 · 2026-11-18 · docs: refresh project handoff
 - fd86001 · 2026-11-18 · Route UDS text generation through Universal AI Gateway (#137)
 - a6793ba · 2026-11-18 · docs: refresh project handoff
