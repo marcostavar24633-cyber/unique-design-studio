@@ -7,7 +7,7 @@ const answers = {
   about: { aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' },
   services: { servicesTitle: 'Меню', servicesIntro: 'Напитки и выпечка.', services: [['Капучино', 'Эспрессо с молоком', '']] },
   trust: { advantagesTitle: 'Почему мы', advantages: [['Свежая обжарка', 'Зёрна обжариваются небольшими партиями']], processTitle: 'Как заказать', process: [['Выберите напиток', 'Оформите заказ у бариста']], faqs: [['Где мы находимся?', 'В центре района']] },
-  seo: { contactTitle: 'Ждём вас', contactText: 'Загляните за кофе.', assumptions: [], marketResearch: [], researchSources: [], segments: [], objections: [], triggers: [], keywords: ['кофейня'], competitors: [], seoTitle: 'Кофейня Зерно', seoDescription: 'Кофе и выпечка рядом', imagePrompts: [] },
+  seo: { contactTitle: 'Ждём вас', contactText: 'Загляните за кофе.', assumptions: [], marketResearch: '', researchSources: [], segments: [], objections: [], triggers: [], keywords: ['кофейня'], competitors: [], seoTitle: 'Кофейня Зерно', seoDescription: 'Кофе и выпечка рядом', imagePrompts: [] },
 };
 
 const mock = (sequence = Object.values(answers)) => {
