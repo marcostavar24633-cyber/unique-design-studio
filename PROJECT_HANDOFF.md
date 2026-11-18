@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:34:23.857Z
+Время обновления: 2026-11-18T15:34:41.811Z
 Ветка: feat/ai-section-regeneration
-Последний commit: 3c23eacb111bf0b96dcdfcf437eea2519d74073b
-Дата коммита: 2026-11-18T19:34:03+04:00
-Сообщение: Align Worker staged-generation fixture with structured trust schema
+Последний commit: ade6ef00d2bf79f318433f676375ef647b15a484
+Дата коммита: 2026-11-18T19:34:30+04:00
+Сообщение: Use the documented string type for market research fixture
 
 Последние коммиты:
+- ade6ef0 · 2026-11-18 · Use the documented string type for market research fixture
+- ce095f7 · 2026-11-18 · docs: refresh project handoff
 - 3c23eac · 2026-11-18 · Align Worker staged-generation fixture with structured trust schema
 - 5058986 · 2026-11-18 · Test strict generated content array and object validation
 - b19a9ac · 2026-11-18 · Align trust-stage fixtures with structured row schema
 - 871835c · 2026-11-18 · Enforce array and object schemas for generated content sections
 - 769a683 · 2026-11-18 · docs: refresh project handoff
 - eceafaf · 2026-11-18 · Fix Worker endpoint validation regular expression
-- dfaa1ef · 2026-11-18 · docs: refresh project handoff
-- 1905f44 · 2026-11-18 · Initialize project analysis safely when regenerating SEO metadata
 <!-- HANDOFF:AUTO:END -->
