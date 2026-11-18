@@ -4,6 +4,7 @@
 import { ARCHETYPES } from './data.js';
 import { normalizeProject, TIERS } from './project.js';
 import { buildCopywritingSystemBrief } from './copywriting.js';
+import { applyManagedPrompt } from './prompt-manager.js';
 
 // Тон и лексика по классу проекта.
 const TIER_RULES = {
@@ -120,7 +121,8 @@ advantagesTitle, advantages [[заголовок, текст]], processTitle, pr
 faqs [[вопрос, ответ]], contactTitle, contactText,
 imagePrompts [строки], researchSources [{title, url}], assumptions [строки]${opts.forWorker ? '.' : `,\nbrandStrategy {positioning, promise, differentiators, proofNeeded, brandVoice},\naudienceProfiles [{segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers}],\ncompetitorAnalysis [{name, offer, strengths, gaps, sourceUrl}],\nconversionMap [{sectionId, decisionStage, visitorQuestion, objection, response, desiredAction}],\nsectionContent [{id, goal, headline, subheadline, body, cta, visualBrief}],\nvisualBrief [{sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio}],\nmotionBrief {intensity, selectedMechanics, rationale, accessibility},\nqualityReport {score, checks, issues, revisions}, researchStatus.`}
 Этот JSON импортируется в Unique Design Studio и в Landing Studio без изменений.`;
-  return withCustomPrompt(full, p.customPrompt, p.customPromptMode);
+  const managed = applyManagedPrompt(applyManagedPrompt(applyManagedPrompt(full, 'landing-copy'), 'content-director'), 'market-research');
+  return withCustomPrompt(managed, p.customPrompt, p.customPromptMode);
 }
 
 /**
