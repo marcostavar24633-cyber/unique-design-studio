@@ -146,7 +146,7 @@ export async function regenerateContentStage({
     brief.city ? 'Город: ' + brief.city + '.' : '',
     'Уровень: ' + brief.tier + '.',
     brief.details ? 'Подробности от владельца: ' + brief.details : '',
-  ].filter(Boolean).join('\\n');
+  ].filter(Boolean).join('\n');
   const context = [
     facts,
     landing.strategySummary ? 'Стратегия бренда: ' + landing.strategySummary : '',
@@ -188,6 +188,7 @@ export async function regenerateContentStage({
       }
       const result = {};
       mergeContentStage(result, stage, parsed);
+      if (stage.id === 'strategy') { result.brand = brief.brand || ''; result.niche = brief.niche; }
       return {
         stage: { id: stage.id, label: stage.label, status: 'completed', attempts: attempt + 1 },
         content: result, provider, model: usedModel, usage, durationMs: Date.now() - started,
