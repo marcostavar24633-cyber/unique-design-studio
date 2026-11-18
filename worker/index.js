@@ -1,6 +1,6 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
-import { generateContentInStages } from './content-engine.js';
+import { generateContentInStages, regenerateContentStage } from './content-engine.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -293,6 +293,26 @@ export default {
       brief.details ? `Подробности от владельца: ${brief.details}` : '',
       // customPrompt уже встроен в studioPrompt на клиенте; не добавляем его второй раз.
     ].filter(Boolean).join('\n');
+
+    if (input.contentStage) {
+      if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
+        return json({ error: 'Передайте текущий контент проекта для сохранения согласованности' }, 400, origin);
+      }
+      try {
+        const regenerated = await regenerateContentStage({
+          env, model: MODEL, brief, stageId: String(input.contentStage).slice(0, 32),
+          existingLanding: input.existingLanding,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 2000),
+          runTextModel,
+        });
+        if (regenerated.stage.status !== 'completed') {
+          return json({ error: regenerated.stage.error || 'Не удалось перегенерировать раздел', ...regenerated }, 502, origin);
+        }
+        return json(regenerated, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка перегенерации раздела' }, 502, origin);
+      }
+    }
 
     const system = [
       `Ты AI-копирайтер и стратег. Пишешь тексты для сайта бизнеса клиента в нише «${brief.niche}» — не для веб-студии и не про создание сайтов.`,
