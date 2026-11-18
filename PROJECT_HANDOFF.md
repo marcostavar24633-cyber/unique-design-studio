@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T20:02:46.644Z
+Время обновления: 2026-11-18T20:03:54.356Z
 Ветка: fix/ai-usage-counters-baku-refresh
-Последний commit: ca9d2e9288e3e40d4cc820542c8111c6249a7516
-Дата коммита: 2026-11-19T00:02:25+04:00
-Сообщение: test: cover AI usage period labels
+Последний commit: 55fd0d19984468629af1f417a42d28470c7d4d66
+Дата коммита: 2026-11-19T00:03:42+04:00
+Сообщение: test: fix escaped timezone regex
 
 Последние коммиты:
+- 55fd0d1 · 2026-11-19 · test: fix escaped timezone regex
+- 61f092c · 2026-11-18 · docs: refresh project handoff
 - ca9d2e9 · 2026-11-19 · test: cover AI usage period labels
 - d676adc · 2026-11-19 · fix: clarify AI usage periods in Baku time
 - 2f18c81 · 2026-11-19 · fix: improve AI usage panel responsive layout
 - ea68aaf · 2026-11-18 · docs: refresh project handoff
 - c6ba6a9 · 2026-11-18 · docs: add unified AI project master guide
 - eeb21d0 · 2026-11-18 · docs: refresh project handoff
-- d751d41 · 2026-11-18 · Fix Worker deployment workflow guards
-- bc7aedd · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
