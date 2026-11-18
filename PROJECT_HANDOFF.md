@@ -65,19 +65,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T03:49:37.123Z
+Время обновления: 2026-11-18T03:50:45.214Z
 Ветка: feat/prompt-manager-pro
-Последний commit: e91dd359546841170533321089ae38aa0704e7c4
-Дата коммита: 2026-11-18T07:49:23+04:00
-Сообщение: fix(worker): format managed design instructions
+Последний commit: 0df5fd6b70e14f1d67c50b25075539cc139c3b6b
+Дата коммита: 2026-11-18T07:50:25+04:00
+Сообщение: test(prompts): verify per-module payload budgets
 
 Последние коммиты:
+- 0df5fd6 · 2026-11-18 · test(prompts): verify per-module payload budgets
+- f83cc1b · 2026-11-18 · fix(studio): show prompt budget for each module
+- 5c9ee37 · 2026-11-18 · feat(prompts): export per-module prompt limits
+- 681f0eb · 2026-11-18 · fix(prompts): enforce module-specific payload budgets
+- ee713c1 · 2026-11-18 · docs: refresh project handoff
 - e91dd35 · 2026-11-18 · fix(worker): format managed design instructions
 - eeb5b66 · 2026-11-18 · feat(prompts): connect Market Research guidance to supplied evidence
 - 4fb44c3 · 2026-11-18 · feat(prompts): apply managed instructions to AI Design Director
-- 67efe37 · 2026-11-18 · feat(prompts): connect Design Director instructions to AI review
-- 4880a54 · 2026-11-18 · feat(prompts): connect Content Director instructions
-- 7cc27b7 · 2026-11-18 · docs: update Prompt Manager handoff status
-- 8b049d7 · 2026-11-18 · docs: refresh project handoff
-- 1a339b3 · 2026-11-18 · test(prompts): cover registry storage versions and image rules
 <!-- HANDOFF:AUTO:END -->
