@@ -11,6 +11,7 @@ import { commerceEnabled } from './commerce.js';
 import { chooseMechanic } from './mechanics.js';
 import { chooseForms } from './forms.js';
 import { chooseTextEffect } from './text-effects.js';
+import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direction.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -481,6 +482,10 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       motion: arch.motion, motionPlan, motif: design.motif,
       commerce: commerceEnabled(project, profile.id),
       textEffect: chooseTextEffect(project, { archetype: design.primary, intensity: motionPlan.intensity }, seed),
+      // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
+      graphicDirection: GRAPHIC_DIRECTIONS[project.passthrough?.graphicDirection]
+        ? { ...chooseGraphicDirection(project, { archetype: design.primary, seed }), ...(() => { const id = project.passthrough.graphicDirection, d = GRAPHIC_DIRECTIONS[id]; return { id, label: d.label, ru: d.ru, techniques: d.techniques, assetBrief: d.asset, rationale: 'Выбрано владельцем проекта' }; })() }
+        : chooseGraphicDirection(project, { archetype: design.primary, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,

@@ -35,3 +35,4 @@ export { MECHANICS, chooseMechanic } from './mechanics.js';
 export { MASKS, DIVIDERS, chooseForms } from './forms.js';
 export { TEXT_EFFECTS, chooseTextEffect } from './text-effects.js';
 export { WEB_FONT_PAIRS } from './data.js';
+export { GRAPHIC_DIRECTIONS, chooseGraphicDirection } from './graphic-art-direction.js';

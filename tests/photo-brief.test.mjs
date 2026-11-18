@@ -77,7 +77,7 @@ test('транслитерация сохраняет регистр и убир
 
 test('студия отправляет генератору английский бриф, а ALT фото — для посетителей, не текст задания', () => {
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  assert.match(js, /const prompt = photoPrompt\(slot, result\.project\)/);
+  assert.match(js, /const prompt = photoPrompt\(slot, result\.project, result\.concept\.visualSystem\.graphicDirection\)/);
   assert.doesNotMatch(js, /'Business niche: ' \+/);
   assert.doesNotMatch(js, /heroAlt: slot\.subject|alt: slot\.subject|row\[4\] = slot\.subject/);
   assert.match(js, /function generatedAlt\(slot, project\)/);

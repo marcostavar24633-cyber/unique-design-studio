@@ -138,8 +138,28 @@ export function itemSubject(title, visual) {
 const GALLERY_IDEAS = ['a wide shot of the place or the process', 'a close-up of texture and details', 'people at work or a happy customer with the result', 'the finished product or result', 'atmosphere: light, interior and small details', 'the team or the master at work'];
 const ASPECT = { '16:9': 'wide 16:9 frame', '4:3': '4:3 frame', '4:5': 'vertical 4:5 frame', '3:2': '3:2 frame', '1:1': 'square frame' };
 
+// Стиль съёмки по направлению графики (graphic-art-direction.js). Только то, что генератор фото может
+// воспроизвести одним кадром; направления интерфейсной графики (HUD, данные, чертёж) дают нейтральный стиль.
+export const ART_STYLE = {
+  cinematic: 'cinematic color grade, dramatic directional light, shallow depth of field',
+  '3d-object': 'clean studio product shot, seamless backdrop, precise reflections and soft contact shadow',
+  'abstract-3d': 'soft volumetric light, smooth gradients, minimal sculptural forms in the background',
+  collage: 'editorial documentary style, natural candid moments, layered depth',
+  typography: 'calm minimal composition with generous empty space',
+  gradient: 'soft ambient color glow, diffused light, airy mood',
+  glass: 'translucent glass and soft reflections, cool clean light',
+  blueprint: 'precise technical look, clean lines, neutral light',
+  editorial: 'magazine editorial art direction, bold crop, refined color',
+  hud: 'cool modern tech lighting, subtle screen glow',
+  lineart: 'clean minimal composition, light neutral background',
+  macro: 'macro photography, tactile texture, extreme detail, raking light',
+  surreal: 'dreamlike atmosphere, soft haze, unexpected scale, still believable',
+  data: 'clean modern workplace light, neutral tones',
+  floating: 'objects floating in space, soft layered shadows, studio composition',
+};
+
 /** Английский промпт для одного места изображения (слот из imageSlots). Без кириллицы. */
-export function photoPrompt(slot, project) {
+export function photoPrompt(slot, project, graphicDirection) {
   const visual = nicheVisual(project);
   const luxury = project.tier === 'luxury', premium = project.tier === 'premium';
   let subject, angle, background;
@@ -162,6 +182,7 @@ export function photoPrompt(slot, project) {
     `Subject: ${subject}.`,
     `Setting: ${background}.`,
     `Camera: ${angle}, ${ASPECT[slot.aspect] || 'balanced frame'}. Light: ${light}.`,
+    ART_STYLE[graphicDirection?.id || graphicDirection] ? `Art direction: ${ART_STYLE[graphicDirection.id || graphicDirection]}.` : '',
     luxury ? 'Luxury editorial quality.' : premium ? 'Premium professional food and product photography.' : 'Authentic, appetizing and believable.',
     visual.avoid ? `Avoid: ${visual.avoid}.` : '',
     'No text, no letters, no logos, no watermarks, no invented brand names or labels.',
