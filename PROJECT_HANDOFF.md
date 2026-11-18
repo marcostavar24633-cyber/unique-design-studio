@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T17:44:14.697Z
+Время обновления: 2026-11-18T17:44:44.337Z
 Ветка: fix/a11y-focus-and-target-guidance
-Последний commit: b7636a521164ef871907acb17bbbd81dd304c1b0
-Дата коммита: 2026-11-18T21:44:04+04:00
-Сообщение: test: retain responsive QA result label
+Последний commit: 25d59816723fd4d722c3a40881aaf1d151f5c256
+Дата коммита: 2026-11-18T21:44:32+04:00
+Сообщение: test: align touch target assertion with QA label
 
 Последние коммиты:
+- 25d5981 · 2026-11-18 · test: align touch target assertion with QA label
+- f27f2e3 · 2026-11-18 · docs: refresh project handoff
 - b7636a5 · 2026-11-18 · test: retain responsive QA result label
 - 690e014 · 2026-11-18 · docs: refresh project handoff
 - 450b99d · 2026-11-18 · test: cover accessibility audit guidance
 - 73d480d · 2026-11-18 · fix: avoid false keyboard focus warnings
 - 6d5795d · 2026-11-18 · docs: refresh project handoff
 - 650a5c8 · 2026-11-18 · Restore unrelated crop editor line
-- 4651d63 · 2026-11-18 · docs: refresh project handoff
-- a6210b6 · 2026-11-18 · Keep accessibility change isolated from crop editor
 <!-- HANDOFF:AUTO:END -->
