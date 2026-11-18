@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T09:27:29.316Z
-Ветка: main
-Последний commit: 9053572dc92234c3f6784c45eef4a080bcc75edc
-Дата коммита: 2026-11-18T13:27:18+04:00
-Сообщение: feat: add free AI quota warnings
+Время обновления: 2026-11-18T14:55:40.394Z
+Ветка: fix/ai-generation-large-briefs
+Последний commit: f57a87341174c22c07ad491dbe194a003319d0cb
+Дата коммита: 2026-11-18T18:55:25+04:00
+Сообщение: fix(ai): send compact generation payload without duplicated prompt
 
 Последние коммиты:
+- f57a873 · 2026-11-18 · fix(ai): send compact generation payload without duplicated prompt
+- e1d938e · 2026-11-18 · fix(ai): raise safe request limit and count UTF-8 bytes
+- a6793ba · 2026-11-18 · docs: refresh project handoff
 - 9053572 · 2026-11-18 · feat: add free AI quota warnings
 - 1e424c9 · 2026-11-18 · docs: refresh project handoff
 - ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
 - 5aeaf0f · 2026-11-18 · docs: refresh project handoff
 - ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
-- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
 <!-- HANDOFF:AUTO:END -->
