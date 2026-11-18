@@ -250,7 +250,7 @@ export default {
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
           max_tokens: 1800,
           temperature: 0.35,
-        });
+        }, { providerOverride: input.aiProvider, routeMode: input.aiRouteMode });
         const parsed = extractJson(modelOutput(result));
         const recommendations = (Array.isArray(parsed?.recommendations) ? parsed.recommendations : []).slice(0, 6).map((item, index) => {
           const patch = {};
@@ -335,7 +335,7 @@ export default {
           messages: [{ role: 'user', content: attempt === 0 ? prompt : prompt + RETRY_NOTE }],
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
-        }, { preferNvidia });
+        }, { preferNvidia, providerOverride: input.aiProvider, routeMode: input.aiRouteMode });
         const { result } = execution;
         provider = execution.provider;
         usedModel = execution.model;
