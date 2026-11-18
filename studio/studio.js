@@ -787,7 +787,7 @@ async function runContentQualityReview() {
   let url;
   try {
     url = new URL(endpoint, location.href);
-    if (!/\\/api\\/generate-landing\\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
   } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
   if (button) button.disabled = true;
   if (output) output.textContent = 'AI анализирует текст и SEO-поля…';
