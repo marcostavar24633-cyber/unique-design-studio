@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T17:13:35.986Z
+Время обновления: 2026-11-18T17:14:16.953Z
 Ветка: feat/accessibility-name-audit
-Последний commit: 34a55c05ccedea2a1db6e008c00f3d06d176b366
-Дата коммита: 2026-11-18T21:13:19+04:00
-Сообщение: Fix whitespace normalization in accessible name helper
+Последний commit: a6210b68f502cf8366f861ea617d01e617f7955e
+Дата коммита: 2026-11-18T21:14:05+04:00
+Сообщение: Keep accessibility change isolated from crop editor
 
 Последние коммиты:
+- a6210b6 · 2026-11-18 · Keep accessibility change isolated from crop editor
+- 5b8ce09 · 2026-11-18 · docs: refresh project handoff
 - 34a55c0 · 2026-11-18 · Fix whitespace normalization in accessible name helper
 - 6873dcd · 2026-11-18 · Test accessible name detection in preview QA
 - c6b4a1d · 2026-11-18 · Improve accessible name detection in preview QA
 - f7a6ec7 · 2026-11-18 · docs: refresh project handoff
 - 8804c24 · 2026-11-18 · Restore existing Smart Crop and asset CSS tests
 - 64adc4c · 2026-11-18 · docs: refresh project handoff
-- 0ede889 · 2026-11-18 · Assert quality review styles in stylesheet
-- 3e22f73 · 2026-11-18 · Assert quality review styles in stylesheet
 <!-- HANDOFF:AUTO:END -->
