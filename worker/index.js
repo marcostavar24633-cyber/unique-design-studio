@@ -1,5 +1,5 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
-import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
+import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled, isOpenRouterFallbackEnabled } from './nvidia.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -76,6 +76,7 @@ export default {
           workersAiBindingConfigured: Boolean(env.AI),
           aiBillingMode: isFreeAiMode(env) ? 'free' : String(env.AI_BILLING_MODE || 'non-free'),
           nvidiaFallbackConfigured: isNvidiaFallbackEnabled(env),
+          openRouterFallbackConfigured: isOpenRouterFallbackEnabled(env),
           nvidiaModel: env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL,
         },
       }, 200, origin);
