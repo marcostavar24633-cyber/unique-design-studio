@@ -168,7 +168,7 @@ export async function regenerateContentStage({
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const execution = await runTextModel(env, model, {
-        messages: [{ role: 'user', content: attempt ? prompt + '\\n\\nСократи текст и верни полный валидный JSON с обязательными полями.' : prompt }],
+        messages: [{ role: 'user', content: attempt ? prompt + '\n\nСократи текст и верни полный валидный JSON с обязательными полями.' : prompt }],
         max_tokens: stage.maxTokens,
         temperature: 0.45,
       }, { preferNvidia });
