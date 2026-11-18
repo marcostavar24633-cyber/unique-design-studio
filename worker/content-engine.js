@@ -68,7 +68,6 @@ export async function generateContentInStages({
       'Для advantages, process, faqs, assumptions, marketResearch, researchSources, segments, objections, triggers, keywords, competitors, imagePrompts используй массивы строк или массивы массивов строк только там, где это очевидно по смыслу.',
       'Этап: ' + stage.label + '.',
       context,
-      stage.id === 'strategy' ? formatNote : '',
     ].filter(Boolean).join('\n\n');
 
     let stageResult = null;
