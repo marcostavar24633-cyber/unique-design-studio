@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T08:28:33.380Z
-Ветка: feat/strict-free-ai-mode
-Последний commit: 56deb241fc9279fba58586d0ba0f7e41f69fc978
-Дата коммита: 2026-11-18T12:28:16+04:00
-Сообщение: fix(ai): preserve quota error regex boundaries
+Время обновления: 2026-11-18T08:31:18.849Z
+Ветка: main
+Последний commit: ceeb38b37c43d74909b6754ddea338cc4a4ffd18
+Дата коммита: 2026-11-18T12:31:07+04:00
+Сообщение: feat: enforce strict free AI mode by default
 
 Последние коммиты:
-- 56deb24 · 2026-11-18 · fix(ai): preserve quota error regex boundaries
-- 6bb0508 · 2026-11-18 · docs: refresh project handoff
-- 679b025 · 2026-11-18 · docs(ai): explain strict free mode and NVIDIA trial boundaries
-- 6403f5a · 2026-11-18 · test(ai): assert free billing diagnostics
-- 47db114 · 2026-11-18 · test(ai): enforce strict free mode and explicit NVIDIA opt-in
-- 1ec3c5a · 2026-11-18 · docs: refresh project handoff
-- eb1dadf · 2026-11-18 · config(ai): default worker to free billing mode
-- ba54c29 · 2026-11-18 · feat(ai): expose strict free mode diagnostics
+- ceeb38b · 2026-11-18 · feat: enforce strict free AI mode by default
+- 5aeaf0f · 2026-11-18 · docs: refresh project handoff
+- ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
+- c126a9d · 2026-11-18 · docs: refresh project handoff
+- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
+- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
+- 99ea251 · 2026-11-18 · ci(worker): automate Cloudflare AI Worker deployment (#121)
+- c0ae259 · 2026-11-18 · Cinematic Hero Engine PRO: Scene Director и динамические сцены (#117)
 <!-- HANDOFF:AUTO:END -->
