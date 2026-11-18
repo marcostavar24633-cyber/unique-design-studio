@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T15:48:36.187Z
+Время обновления: 2026-11-18T15:49:19.190Z
 Ветка: feat/ai-content-quality-review
-Последний commit: 370b7b322a8c226722e52b77fafda64b248523fd
-Дата коммита: 2026-11-18T19:48:20+04:00
-Сообщение: Test AI quality review UI controls
+Последний commit: a1512216f783bf134fc2d3eb242630baed5c9aab
+Дата коммита: 2026-11-18T19:49:06+04:00
+Сообщение: Fix AI review endpoint path validation
 
 Последние коммиты:
+- a151221 · 2026-11-18 · Fix AI review endpoint path validation
+- 026521c · 2026-11-18 · docs: refresh project handoff
 - 370b7b3 · 2026-11-18 · Test AI quality review UI controls
 - 72d7663 · 2026-11-18 · Style AI content quality review panel
 - 815a3b2 · 2026-11-18 · Add AI quality and SEO review controls
 - 6e80b17 · 2026-11-18 · Test content quality review Worker API
 - ed379e5 · 2026-11-18 · Test content quality and SEO review engine
 - 352a841 · 2026-11-18 · Expose content quality review API
-- b3d77c9 · 2026-11-18 · Add AI content quality and SEO review engine
-- 448b0ff · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
