@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T08:27:22.319Z
+Время обновления: 2026-11-18T08:28:08.113Z
 Ветка: feat/strict-free-ai-mode
-Последний commit: eb1dadfc7653e105e8facdb78745623b9b946940
-Дата коммита: 2026-11-18T12:27:07+04:00
-Сообщение: config(ai): default worker to free billing mode
+Последний commit: 679b025480f05ed124ac6e12917dd72c9feb5c98
+Дата коммита: 2026-11-18T12:27:51+04:00
+Сообщение: docs(ai): explain strict free mode and NVIDIA trial boundaries
 
 Последние коммиты:
+- 679b025 · 2026-11-18 · docs(ai): explain strict free mode and NVIDIA trial boundaries
+- 6403f5a · 2026-11-18 · test(ai): assert free billing diagnostics
+- 47db114 · 2026-11-18 · test(ai): enforce strict free mode and explicit NVIDIA opt-in
+- 1ec3c5a · 2026-11-18 · docs: refresh project handoff
 - eb1dadf · 2026-11-18 · config(ai): default worker to free billing mode
 - ba54c29 · 2026-11-18 · feat(ai): expose strict free mode diagnostics
 - 477a7ea · 2026-11-18 · feat(ai): default to strict free billing mode
 - 5aeaf0f · 2026-11-18 · docs: refresh project handoff
-- ac2953a · 2026-11-18 · feat: add NVIDIA NIM quota fallback
-- c126a9d · 2026-11-18 · docs: refresh project handoff
-- f072b0b · 2026-11-18 · docs: add living project handoff and automatic updates (#120)
-- 7d85dfc · 2026-11-18 · docs: add autonomous AI execution rules (#123)
 <!-- HANDOFF:AUTO:END -->
