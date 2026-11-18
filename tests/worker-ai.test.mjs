@@ -31,12 +31,12 @@ test('health endpoint доступен без Origin и возвращает с�
   assert.deepEqual(await res.json(), { ok: true, service: 'unique-design-studio-ai' });
 });
 
-test('лимит ответа модели — 6000 токенов', async () => {
+test('лимит ответа модели — 8192 токена', async () => {
   const env = aiReturning(JSON.stringify(full));
   const res = await worker.fetch(request({ niche: 'кофейня' }), env);
   assert.equal(res.status, 200);
   assert.equal(env.calls[0].max_tokens, MAX_OUTPUT_TOKENS);
-  assert.equal(MAX_OUTPUT_TOKENS, 6000);
+  assert.equal(MAX_OUTPUT_TOKENS, 8192);
 });
 
 test('оборванный JSON — одна повторная попытка с просьбой ответить короче', async () => {
@@ -267,4 +267,18 @@ test('перечень полей Worker совпадает с тем, что ч
   const body = src.slice(src.indexOf('export function fromAiLanding'));
   const used = new Set([...body.slice(0, 6000).matchAll(/\bl\.([a-zA-Z]+)/g)].map(m => m[1]).filter(k => !['designArchitecture', 'tier'].includes(k)));
   for (const f of used) assert.ok(LANDING_FIELDS.includes(f), `студия читает ${f}, а Worker его не просит`);
+});
+
+test('статистика today — с 00:00 UTC, когда сбрасывается суточный объём Workers AI', async () => {
+  let sent;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { sent = JSON.parse(init.body); return new Response(JSON.stringify({ data: { viewer: { accounts: [{ aiInferenceAdaptiveGroups: [] }] } } }), { status: 200 }); };
+  try {
+    const res = await worker.fetch(new Request('https://w.dev/api/usage?range=today', { headers: { Origin: ORIGIN } }), { CF_ANALYTICS_TOKEN: 't', CF_ACCOUNT_ID: 'a' });
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.range, 'today');
+    assert.match(sent.variables.start, /T00:00:00\.000Z$/, 'начало — полночь UTC');
+    assert.equal((await worker.fetch(new Request('https://w.dev/api/usage?range=year', { headers: { Origin: ORIGIN } }), { CF_ANALYTICS_TOKEN: 't', CF_ACCOUNT_ID: 'a' })).status, 400);
+  } finally { globalThis.fetch = realFetch; }
 });

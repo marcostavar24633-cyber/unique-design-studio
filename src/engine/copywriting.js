@@ -14,7 +14,24 @@ export const COPYWRITING_MODULES = Object.freeze([
 
 const lines = values => (Array.isArray(values) && values.length ? values.map(v => '- ' + v).join('\n') : '- Нет подтверждённых данных — не выдумывать.');
 
-export function buildCopywritingSystemBrief(project, concept, analysis = {}) {
+// Расширенный контракт — только для внешних AI (кнопка «Промт для AI»). Для Worker студии он лишний: студия
+// эти разделы не читает, а вместе с ограничением формата Worker давал противоречие — модель тратила весь
+// лимит токенов на рассуждения и не успевала ответить (живой замер: 2 × 6000 токенов, пустой ответ).
+const EXTENDED_CONTRACT = `## Совместимость результата
+Сохрани все существующие поля JSON-контракта Unique Design Studio. Дополнительно верни:
+- brandStrategy: { positioning, promise, differentiators, proofNeeded, brandVoice }
+- audienceProfiles: [{ segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers }]
+- competitorAnalysis: [{ name, offer, strengths, gaps, sourceUrl }]
+- conversionMap: [{ sectionId, decisionStage, visitorQuestion, objection, response, desiredAction }]
+- sectionContent: [{ id, goal, headline, subheadline, body, cta, visualBrief }]
+- visualBrief: [{ sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio }]
+- motionBrief: { intensity, selectedMechanics, rationale, accessibility }
+- qualityReport: { score, checks, issues, revisions }
+- researchStatus: "performed" | "not_performed" | "partial"
+
+Все дополнительные поля должны быть валидным JSON. Не добавляй Markdown вокруг JSON.`;
+
+export function buildCopywritingSystemBrief(project, concept, analysis = {}, opts = {}) {
   const p = project || {};
   const d = concept?.designDNA || concept?.designBrief || {};
   const homepage = concept?.homepage || {};
@@ -57,18 +74,6 @@ ${modules}
 - Если веб-исследование не проводилось, прямо укажи researchStatus: "not_performed".
 - Тексты должны быть конкретными, естественными и написанными для человека, а не для поискового робота.
 
-## Совместимость результата
-Сохрани все существующие поля JSON-контракта Unique Design Studio. Дополнительно верни:
-- brandStrategy: { positioning, promise, differentiators, proofNeeded, brandVoice }
-- audienceProfiles: [{ segment, situation, motivation, desiredOutcome, fears, objections, decisionCriteria, triggers }]
-- competitorAnalysis: [{ name, offer, strengths, gaps, sourceUrl }]
-- conversionMap: [{ sectionId, decisionStage, visitorQuestion, objection, response, desiredAction }]
-- sectionContent: [{ id, goal, headline, subheadline, body, cta, visualBrief }]
-- visualBrief: [{ sectionId, subject, framing, lighting, palette, mood, composition, aspectRatio }]
-- motionBrief: { intensity, selectedMechanics, rationale, accessibility }
-- qualityReport: { score, checks, issues, revisions }
-- researchStatus: "performed" | "not_performed" | "partial"
-
-Все дополнительные поля должны быть валидным JSON. Не добавляй Markdown вокруг JSON.
+${opts.forWorker ? '' : EXTENDED_CONTRACT}
 `;
 }

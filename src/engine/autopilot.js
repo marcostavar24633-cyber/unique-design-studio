@@ -458,10 +458,10 @@ ${li([...b.assumptions, 'Реальные позиции, цены и сроки
 }
 
 /** Всё за один вызов: проект → концепция → ТЗ и промт. Сборка HTML — обычным generate(). */
-export function autopilot(input, { registry = [] } = {}) {
+export function autopilot(input, { registry = [], forWorker = false } = {}) {
   const { project, analysis } = draftFromNiche(input);
   const concept = buildConcept(project, { registry, references: input.designReferences });
-  return { project, analysis, spec: buildSpec(project, concept, analysis), prompt: buildPrompt(project, concept, analysis) };
+  return { project, analysis, spec: buildSpec(project, concept, analysis), prompt: buildPrompt(project, concept, analysis, { forWorker }) };
 }
 
 /**
