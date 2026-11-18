@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T18:00:00.252Z
-Ветка: fix/a11y-verify-preview-viewport
-Последний commit: 5c6dd19cfc918f2e361a7d8291c2cdc391bb456f
-Дата коммита: 2026-11-18T21:59:45+04:00
-Сообщение: test: guard responsive viewport measurements
+Время обновления: 2026-11-18T18:07:05.545Z
+Ветка: perf/a11y-overlap-sweep
+Последний commit: f6131aa70636775811aea1f8d34b230dbf439da6
+Дата коммита: 2026-11-18T22:06:49+04:00
+Сообщение: test: cover responsive overlap sweep
 
 Последние коммиты:
+- f6131aa · 2026-11-18 · test: cover responsive overlap sweep
+- d3729e8 · 2026-11-18 · perf: sweep responsive control overlap candidates
+- 532aa07 · 2026-11-18 · docs: refresh project handoff
 - 5c6dd19 · 2026-11-18 · test: guard responsive viewport measurements
 - bae52ae · 2026-11-18 · fix: verify actual responsive preview viewport
 - 746c360 · 2026-11-18 · docs: refresh project handoff
 - 25d5981 · 2026-11-18 · test: align touch target assertion with QA label
 - f27f2e3 · 2026-11-18 · docs: refresh project handoff
-- b7636a5 · 2026-11-18 · test: retain responsive QA result label
-- 690e014 · 2026-11-18 · docs: refresh project handoff
-- 450b99d · 2026-11-18 · test: cover accessibility audit guidance
 <!-- HANDOFF:AUTO:END -->
