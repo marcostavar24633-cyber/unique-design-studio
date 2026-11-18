@@ -449,3 +449,21 @@ test('AI Content Director запускает безопасную проверк
   ]) assert.ok(source.includes(marker), marker);
   assert.ok(css.includes('.content-quality-review{margin:16px 0'));
 });
+
+
+test('Preview accessibility QA resolves accessible names without trusting entered field values', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function previewAccessibleName(el, doc)');
+  const end = source.indexOf('function auditResponsiveLayoutAndAccessibility()', start);
+  const helper = source.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'accessible-name helper exists before responsive QA');
+  assert.ok(helper.includes('aria-labelledby'), 'supports ID-referenced accessible names');
+  assert.ok(helper.includes('aria-label'), 'supports explicit accessible names');
+  assert.ok(helper.includes('el.labels'), 'supports native associated labels');
+  assert.ok(helper.includes("querySelectorAll?.('img[alt]')"), 'uses image alt text inside controls');
+  assert.ok(helper.includes("querySelectorAll?.('svg title')"), 'uses SVG title text inside controls');
+  assert.ok(helper.includes("['button','submit','reset'].includes(el.type)"), 'uses value only for button-like inputs');
+  assert.ok(!helper.includes('el.value ||'), 'does not mistake entered text for a field label');
+  assert.ok(source.includes('const hasName = el => Boolean(previewAccessibleName(el, doc));'));
+  assert.ok(source.includes('const nameOf = el => previewAccessibleName(el, doc);'));
+});
