@@ -1,3 +1,5 @@
+import { isGatewayConfigured, runViaGateway } from './gateway.js';
+
 export const DEFAULT_NVIDIA_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
 const NVIDIA_CHAT_COMPLETIONS_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
@@ -69,6 +71,13 @@ async function runNvidia(env, options) {
 export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
   if (preferNvidia) return runNvidia(env, options);
   if (!env.AI || typeof env.AI.run !== 'function') throw new Error('Workers AI binding AI не настроен');
+  if (isGatewayConfigured(env)) {
+    try {
+      return await runViaGateway(env, primaryModel, options);
+    } catch {
+      // Шлюз недоступен или все его маршруты исчерпаны — прямой Workers AI остаётся запасным путём.
+    }
+  }
   try {
     const result = await env.AI.run(primaryModel, options);
     return { result, provider: 'cloudflare', model: primaryModel };

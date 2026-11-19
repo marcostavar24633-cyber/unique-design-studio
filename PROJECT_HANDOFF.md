@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T21:29:34.415Z
-Ветка: main
-Последний commit: 6697f6a8df094457e63882fe7f200a8c39f188e8
-Дата коммита: 2026-11-19T01:29:22+04:00
-Сообщение: fix: make Worker workflow dispatch guards explicit (#157)
+Время обновления: 2026-11-19T19:25:58.733Z
+Ветка: feat/ai-gateway
+Последний commit: 5d626175e8f00bc845120358809f3c78c8d4ce2c
+Дата коммита: 2026-11-19T23:25:50+04:00
+Сообщение: AI: текстовые запросы через Universal AI Gateway, прямой Workers AI — запасной путь
 
 Последние коммиты:
+- 5d62617 · 2026-11-19 · AI: текстовые запросы через Universal AI Gateway, прямой Workers AI — запасной путь
+- 62d580a · 2026-11-18 · docs: refresh project handoff
 - 6697f6a · 2026-11-19 · fix: make Worker workflow dispatch guards explicit (#157)
 - 4b5c781 · 2026-11-18 · docs: refresh project handoff
 - 8545d96 · 2026-11-19 · fix: show passed content QA and clear stale reports (#156)
 - 1dc18ed · 2026-11-18 · docs: refresh project handoff
 - cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
 - fb2c425 · 2026-11-18 · docs: refresh project handoff
-- 61218ff · 2026-11-19 · feat: introduce Content Intelligence Engine
-- c1982df · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
