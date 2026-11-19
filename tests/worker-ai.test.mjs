@@ -440,6 +440,8 @@ test('при настроенном шлюзе генерация идёт че�
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.equal(body.provider, 'groq');
+  assert.equal(body.route, 'gateway');
+  assert.equal(body.gatewayError, undefined);
   assert.equal(body.landing.title, 'Заголовок');
   assert.equal(body.usage.totalTokens, 30);
   assert.equal(env.calls.length, 0, 'прямой Workers AI не вызывается, если шлюз ответил');
@@ -456,6 +458,9 @@ test('если шлюз не ответил, студия вызывает Worke
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.equal(body.provider, 'cloudflare');
+  assert.equal(body.route, 'direct');
+  assert.ok(body.gatewayError.includes('HTTP 503 (PROVIDER_UNAVAILABLE)'));
+  assert.ok(!JSON.stringify(body).includes('project-token'));
   assert.equal(seen.length, 1);
   assert.equal(env.calls.length, 1);
 });

@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-19T19:28:17.914Z
-Ветка: main
-Последний commit: 84ba6d233957ad3eabdd774a34c8b4843ebac5d4
-Дата коммита: 2026-11-19T23:28:04+04:00
-Сообщение: AI: текстовые запросы через Universal AI Gateway (#160)
+Время обновления: 2026-11-19T19:42:09.745Z
+Ветка: feat/ai-route-visibility
+Последний commit: f43e17b115d873a141118587574d5e743c416d44
+Дата коммита: 2026-11-19T23:42:02+04:00
+Сообщение: AI: поле route в ответе — видно, шёл ли запрос через шлюз
 
 Последние коммиты:
+- f43e17b · 2026-11-19 · AI: поле route в ответе — видно, шёл ли запрос через шлюз
+- ec8dd9e · 2026-11-19 · docs: refresh project handoff
 - 84ba6d2 · 2026-11-19 · AI: текстовые запросы через Universal AI Gateway (#160)
 - 62d580a · 2026-11-18 · docs: refresh project handoff
 - 6697f6a · 2026-11-19 · fix: make Worker workflow dispatch guards explicit (#157)
 - 4b5c781 · 2026-11-18 · docs: refresh project handoff
 - 8545d96 · 2026-11-19 · fix: show passed content QA and clear stale reports (#156)
 - 1dc18ed · 2026-11-18 · docs: refresh project handoff
-- cf0567d · 2026-11-19 · feat: connect Content Intelligence QA to studio generation
-- fb2c425 · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
