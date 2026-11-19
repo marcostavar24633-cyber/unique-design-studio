@@ -24,6 +24,7 @@ export async function runViaGateway(env, model, options) {
       messages: options.messages,
       max_tokens: options.max_tokens,
       temperature: options.temperature,
+      ...(options.chat_template_kwargs ? { chat_template_kwargs: options.chat_template_kwargs } : {}),
     }),
   });
   let payload = null;

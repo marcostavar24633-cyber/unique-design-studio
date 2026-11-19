@@ -473,3 +473,14 @@ test('привязка шлюза без токена проекта не исп
   assert.equal(seen.length, 0);
   assert.equal(env.calls.length, 1);
 });
+
+test('генерация выключает рассуждения Gemma и на прямом пути, и через шлюз', async () => {
+  const direct = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({ niche: 'кофейня' }), direct);
+  assert.deepEqual(direct.calls[0].chat_template_kwargs, { enable_thinking: false });
+  const seen = [];
+  const env = { ...aiReturning(JSON.stringify(full)), GATEWAY_TOKEN: 't',
+    GATEWAY: { fetch: async (url, init) => { seen.push(JSON.parse(init.body)); return new Response(JSON.stringify({ provider: 'cloudflare', choices: [{ message: { content: JSON.stringify(full) } }] }), { status: 200 }); } } };
+  await worker.fetch(request({ niche: 'кофейня' }), env);
+  assert.deepEqual(seen[0].chat_template_kwargs, { enable_thinking: false });
+});
