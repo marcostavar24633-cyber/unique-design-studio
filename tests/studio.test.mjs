@@ -434,7 +434,7 @@ test('AI Content Director exposes Rewrite Expand Shorten for one selected field 
   ]) assert.ok(source.includes(marker), marker);
   assert.match(source, /const before = \{ \[field\]: Object\.prototype\.hasOwnProperty\.call\(result\.project,field\) \? result\.project\[field\] : null \}/);
   assert.match(css, /\.content-field-editor select,\.content-field-editor textarea\{display:block;width:100%/);
-  assert.match(source, /const b = e\\.target\\.closest\\(.*data-content-edit-action/);
+  assert.ok(source.includes("[data-content-quality-review], [data-content-edit-action]"), 'click delegation includes field editor actions');
 });
 
 
