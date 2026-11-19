@@ -84,10 +84,16 @@
 </section>
 <div class="layout">
   <aside class="panel" aria-label="Настройки проекта">
+    <div class="panel-tabs" role="tablist" aria-label="Разделы панели">
+      <button type="button" role="tab" id="ptab-ai" aria-controls="pblock-ai" aria-selected="true">AI-генерация</button>
+      <button type="button" role="tab" id="ptab-own" aria-controls="pblock-own" aria-selected="false" tabindex="-1">Свои настройки</button>
+      <button type="button" role="tab" id="ptab-editor" aria-controls="pblock-editor" aria-selected="false" tabindex="-1">Редактор</button>
+    </div>
     <section class="auto" aria-labelledby="auto-h">
-      <h2 id="auto-h">Автопилот</h2>
-      <p class="note">Впишите любую нишу — студия сама составит анализ аудитории, ТЗ, тексты, промт и соберёт сайт.</p>
       <form id="auto" autocomplete="off">
+      <div class="panel-block" id="pblock-ai" role="tabpanel" aria-labelledby="ptab-ai">
+        <h2 id="auto-h">AI-генерация по брифу</h2>
+        <p class="note">Впишите любую нишу — студия сама составит анализ аудитории, ТЗ, тексты, промт и соберёт сайт. Свой промт, контакты и AI-сервер — во вкладке «Свои настройки».</p>
         <div class="field"><label for="auto-niche">Ниша</label><input id="auto-niche" required placeholder="Например: ювелирная мастерская, школа сёрфинга, доставка устриц"></div>
         <div class="field"><label for="auto-tier">Класс</label><select id="auto-tier"><option value="standard">Стандарт</option><option value="premium">Премиум</option><option value="luxury">Люкс</option></select></div>
         <div class="row2">
@@ -96,21 +102,6 @@
         </div>
         <div class="field"><label for="auto-details">Что важно знать</label><textarea id="auto-details" placeholder="Необязательно: чем отличаетесь, для кого, что продаёте"></textarea></div>
         <div class="field"><label for="auto-library">Библиотека шаблонов</label><select id="auto-library" aria-describedby="auto-library-h"><option value="auto">Учитывать подходящие профили</option><option value="off">Не использовать — только ниша</option></select><small id="auto-library-h"></small></div>
-        <details class="ai" id="auto-prompt-box">
-          <summary>Свой промт</summary>
-          <div class="field"><label for="auto-prompt">Ваш промт для нейросети</label><textarea id="auto-prompt" class="prompt-area" maxlength="8000" placeholder="Например: пиши как для премиальной аудитории 35+, упор на ручную работу и редкие материалы, без слов «лучший» и «уникальный»…" aria-describedby="auto-prompt-h"></textarea>
-            <small id="auto-prompt-h">Уходит AI-серверу вместе с нишей и попадает в «Промт для AI». Запоминается в этом браузере. До 8000 знаков.</small></div>
-          <div class="field"><label for="auto-prompt-mode">Как использовать</label><select id="auto-prompt-mode"><option value="append">Дополнить стандартный промт — мои указания важнее</option><option value="replace">Заменить стандартный промт моим (контекст проекта и формат ответа студия добавит сама)</option></select></div>
-        </details>
-        <div class="row2">
-          <div class="field"><label for="auto-email">E-mail для заявок</label><input id="auto-email" type="email" placeholder="необязательно"></div>
-          <div class="field"><label for="auto-phone">Телефон</label><input id="auto-phone" type="tel" placeholder="необязательно"></div>
-        </div>
-        <details class="ai">
-          <summary>AI-генерация по брифу</summary>
-          <div class="field"><label for="auto-endpoint">Адрес AI-сервера</label><input id="auto-endpoint" type="url" placeholder="https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing" aria-describedby="auto-endpoint-h">
-            <small id="auto-endpoint-h">Cloudflare Workers AI генерирует тексты, структуру и до 4 изображений для сайта. Изображения создаются автоматически после сборки проекта. Веб-поиск не выполняется. Вставьте адрес Worker с путём /api/generate-landing. Пусто — локальный автопилот без AI.</small><div class="row"><button type="button" id="ai-connection-check">Проверить подключение</button><span id="ai-connection-status" class="note" role="status" aria-live="polite">Подключение ещё не проверено</span></div><ul id="ai-connection-details" class="note" aria-live="polite"></ul></div>
-        </details>
         <button type="submit" class="primary wide" id="auto-go">Сгенерировать всё</button>
         <div id="auto-progress" class="auto-progress" hidden data-state="running" aria-live="polite">
           <div class="auto-progress-heading"><b id="auto-progress-stage">Подготовка проекта</b><strong id="auto-progress-value">0%</strong></div>
@@ -124,9 +115,36 @@
           <ul id="content-qa-findings"></ul>
           <p class="note">Замечания не меняют текст автоматически. Проверьте факты и отредактируйте содержание перед публикацией.</p>
         </section>
+      </div>
+      <div class="panel-block" id="pblock-own" role="tabpanel" aria-labelledby="ptab-own" hidden>
+        <h2>Свои настройки</h2>
+        <p class="note">Запоминаются в этом браузере и применяются к следующей генерации.</p>
+        <section class="own-block" id="auto-prompt-box" aria-labelledby="own-prompt-h">
+          <h3 id="own-prompt-h">Свой промт</h3>
+          <div class="field"><label for="auto-prompt">Ваш промт для нейросети</label><textarea id="auto-prompt" class="prompt-area" maxlength="8000" placeholder="Например: пиши как для премиальной аудитории 35+, упор на ручную работу и редкие материалы, без слов «лучший» и «уникальный»…" aria-describedby="auto-prompt-h"></textarea>
+            <small id="auto-prompt-h">Уходит AI-серверу вместе с нишей и попадает в «Промт для AI». Запоминается в этом браузере. До 8000 знаков.</small></div>
+          <div class="field"><label for="auto-prompt-mode">Как использовать</label><select id="auto-prompt-mode"><option value="append">Дополнить стандартный промт — мои указания важнее</option><option value="replace">Заменить стандартный промт моим (контекст проекта и формат ответа студия добавит сама)</option></select></div>
+        </section>
+        <section class="own-block" aria-labelledby="own-contacts-h">
+          <h3 id="own-contacts-h">Контакты для заявок</h3>
+          <div class="row2">
+            <div class="field"><label for="auto-email">E-mail для заявок</label><input id="auto-email" type="email" placeholder="необязательно"></div>
+            <div class="field"><label for="auto-phone">Телефон</label><input id="auto-phone" type="tel" placeholder="необязательно"></div>
+          </div>
+        </section>
+        <section class="own-block" aria-labelledby="own-server-h">
+          <h3 id="own-server-h">AI-сервер</h3>
+          <div class="field"><label for="auto-endpoint">Адрес AI-сервера</label><input id="auto-endpoint" type="url" placeholder="https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing" aria-describedby="auto-endpoint-h">
+            <small id="auto-endpoint-h">Cloudflare Workers AI генерирует тексты, структуру и до 4 изображений для сайта. Изображения создаются автоматически после сборки проекта. Веб-поиск не выполняется. Вставьте адрес Worker с путём /api/generate-landing. Пусто — локальный автопилот без AI.</small><div class="row"><button type="button" id="ai-connection-check">Проверить подключение</button><span id="ai-connection-status" class="note" role="status" aria-live="polite">Подключение ещё не проверено</span></div><ul id="ai-connection-details" class="note" aria-live="polite"></ul></div>
+        </section>
+      </div>
       </form>
     </section>
-    <form id="form" autocomplete="off"></form>
+    <div class="panel-block" id="pblock-editor" role="tabpanel" aria-labelledby="ptab-editor" hidden>
+      <h2>Редактор проекта</h2>
+      <p class="note">Все поля текущего сайта: тексты, стиль, фотографии, каталог и контакты. Изменения сразу видны в предпросмотре.</p>
+      <form id="form" autocomplete="off"></form>
+    </div>
   </aside>
   <main class="stage">
     <div class="bar">

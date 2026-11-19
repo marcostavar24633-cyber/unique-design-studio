@@ -31,7 +31,7 @@ https://unique-design-studio-ai.<ваш-subdomain>.workers.dev/health
 
 ## 2. Подключение к студии
 
-Откройте UNIQUE DESIGN STUDIO → Автопилот → «AI-генерация по брифу».
+Откройте UNIQUE DESIGN STUDIO → «Новый сайт» → вкладка «Свои настройки» → блок «AI-сервер» (генерация запускается во вкладке «AI-генерация по брифу»).
 В поле «Адрес AI-сервера» вставьте адрес Worker с окончанием:
 
 `/api/generate-landing`

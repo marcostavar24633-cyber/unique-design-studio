@@ -380,9 +380,40 @@ function renderDashboard(filter = dashboardFilter) {
   renderContinue();
   renderStorage();
 }
+// ---------- Вкладки панели: AI-генерация, свои настройки, редактор ----------
+// Одна вкладка на экране вместо длинной прокрутки. Выбор запоминается в этом браузере.
+const PANEL_BLOCKS = ['ai', 'own', 'editor'];
+const PANEL_BLOCK_KEY = 'uds:panel-block';
+function showPanelBlock(name, { focus = false } = {}) {
+  if (!PANEL_BLOCKS.includes(name)) name = 'ai';
+  for (const block of PANEL_BLOCKS) {
+    const tab = $('#ptab-' + block), panel = $('#pblock-' + block), active = block === name;
+    if (tab) { tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1; }
+    if (panel) panel.hidden = !active;
+  }
+  // Секция автопилота содержит формы первых двух вкладок; в редакторе она не нужна.
+  const auto = $('.panel .auto'); if (auto) auto.hidden = name === 'editor';
+  try { localStorage.setItem(PANEL_BLOCK_KEY, name); } catch { /* хранилище недоступно */ }
+  if (focus) $('#ptab-' + name)?.focus();
+  $('.panel')?.scrollTo?.({ top: 0 });
+}
+$('.panel-tabs')?.addEventListener('click', e => {
+  const tab = e.target.closest('[role="tab"]'); if (tab) showPanelBlock(tab.id.replace('ptab-', ''));
+});
+$('.panel-tabs')?.addEventListener('keydown', e => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  const current = PANEL_BLOCKS.findIndex(block => $('#ptab-' + block)?.getAttribute('aria-selected') === 'true');
+  const next = e.key === 'Home' ? 0 : e.key === 'End' ? PANEL_BLOCKS.length - 1 : (current + (e.key === 'ArrowRight' ? 1 : -1) + PANEL_BLOCKS.length) % PANEL_BLOCKS.length;
+  e.preventDefault();
+  showPanelBlock(PANEL_BLOCKS[next], { focus: true });
+});
+showPanelBlock((() => { try { return localStorage.getItem(PANEL_BLOCK_KEY) || 'ai'; } catch { return 'ai'; } })());
+
 function openWorkspace(section = 'create') {
   document.body.classList.remove('dashboard-mode');
   document.querySelectorAll('.dash-nav [data-dash]').forEach(button => button.classList.toggle('is-active', button.dataset.dash === section));
+  if (section === 'create') showPanelBlock('ai');
+  if (section === 'editor' || section === 'settings') showPanelBlock('editor');
   if (section === 'create' || section === 'editor' || section === 'director') { selectTab($('#tab-preview')); if (section === 'create') $('#auto-niche')?.focus(); }
   if (section === 'settings') {
     selectTab($('#tab-preview'));
@@ -458,6 +489,7 @@ const LIST_HINT = 'Одна позиция на строку: Название |
 const PHOTO_GROUP = 'Фотографии';
 // Открывает группу фотографий в форме, раскрывая свёрнутую панель настроек.
 function openPhotoGroup() {
+  showPanelBlock('editor');
   if (document.body.classList.contains('workspace-settings-collapsed')) {
     document.body.classList.remove('workspace-settings-collapsed');
     const toggle = $('#toggle-settings');
@@ -2133,7 +2165,7 @@ $('#view-audit').addEventListener('click', async e => {
   catch { download('image-prompt.txt', button.dataset.copyAssetPrompt, 'text/plain'); toast('Буфер обмена недоступен — промпт скачан в TXT'); }
 });
 
-const tabs = [...document.querySelectorAll('[role=tab]')];
+const tabs = [...document.querySelectorAll('.tabs [role=tab]')]; // только вкладки результата, не вкладки панели
 function selectTab(tab) {
   for (const t of tabs) { const on = t === tab; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).hidden = !on; }
 }

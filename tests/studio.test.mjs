@@ -407,3 +407,22 @@ test('AI free quota panel warns at 70%, 85%, and 100% using the UTC reset', () =
   assert.ok(source.includes('00:00 UTC'));
   assert.ok(!source.includes('после 4:00'));
 });
+
+test('«Новый сайт» разделён на вкладки: AI-генерация, свои настройки, редактор', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  for (const block of ['ai', 'own', 'editor']) {
+    assert.ok(html.includes('id="ptab-' + block + '"'), 'нет вкладки ' + block);
+    assert.ok(html.includes('id="pblock-' + block + '"'), 'нет блока ' + block);
+  }
+  // Свой промт, контакты и AI-сервер живут во вкладке «Свои настройки», редактор — отдельно.
+  const own = html.slice(html.indexOf('id="pblock-own"'), html.indexOf('id="pblock-editor"'));
+  for (const id of ['auto-prompt', 'auto-email', 'auto-phone', 'auto-endpoint', 'ai-connection-check']) assert.ok(own.includes('id="' + id + '"'), id + ' не во вкладке «Свои настройки»');
+  const ai = html.slice(html.indexOf('id="pblock-ai"'), html.indexOf('id="pblock-own"'));
+  for (const id of ['auto-niche', 'auto-go', 'auto-progress']) assert.ok(ai.includes('id="' + id + '"'), id + ' не во вкладке «AI-генерация»');
+  assert.ok(html.slice(html.indexOf('id="pblock-editor"')).includes('<form id="form"'));
+  // Вкладки результата не должны переключать вкладки панели (и наоборот).
+  assert.ok(js.includes("const tabs = [...document.querySelectorAll('.tabs [role=tab]')]"));
+  assert.ok(js.includes("if (section === 'editor' || section === 'settings') showPanelBlock('editor');"));
+  assert.ok(js.includes("function openPhotoGroup() {\n  showPanelBlock('editor');"));
+});
