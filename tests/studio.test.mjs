@@ -368,8 +368,9 @@ test('AI generation copy does not claim web research when the Worker has no sear
 test('журнал AI-операций: тексты и каждое фото, токены только из ответа, ориентир лимита помечен', () => {
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
-  assert.match(js, /logAi\(\{ kind: 'text', label: 'Тексты сайта: ' \+ input\.niche, status: res\.ok && body\.landing \? 'ok' : 'error'/);
+  assert.match(js, /logAi\(\{ kind: 'text', label: 'Тексты сайта: ' \+ input\.niche, status: res\.ok && body\.landing && body\.generation\?\.status === 'completed' \? 'ok' : 'error'/);
   assert.match(js, /tokens: body\.usage\?\.totalTokens \|\| null/);
+  assert.match(js, /Частичная генерация:/);
   assert.match(js, /logAi\(\{ kind: 'image', label: 'Фото: ' \+ slot\.label/);
   assert.match(js, /ориентир по документации Cloudflare/);
   assert.match(html, /<h3 id="journal-h">Журнал AI-операций<\/h3><div id="dash-ai-journal"><\/div>/);
@@ -425,4 +426,50 @@ test('«Новый сайт» разделён на вкладки: AI-гене�
   assert.ok(js.includes("const tabs = [...document.querySelectorAll('.tabs [role=tab]')]"));
   assert.ok(js.includes("if (section === 'editor' || section === 'settings') showPanelBlock('editor');"));
   assert.ok(js.includes("function openPhotoGroup() {\n  showPanelBlock('editor');"));
+});
+
+test('AI Content Director перегенерирует только выбранный раздел, сохраняет остальные поля и поддерживает undo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-regenerate-stage="strategy"', 'data-regenerate-stage="about"',
+    'data-regenerate-stage="services"', 'data-regenerate-stage="trust"', 'data-regenerate-stage="seo"',
+    'function regenerateProjectStage(stageId)', 'contentStage: stageId',
+    'existingLanding: projectContentForStage()', 'Object.assign(state.raw, patch)',
+    'const CONTENT_HISTORY_KEY', 'data-content-undo', 'Последняя AI-правка отменена.',
+    'STAGE_PROJECT_FIELDS', 'content-regenerate-status',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /for \(const key of fields\) if \(Object\.prototype\.hasOwnProperty\.call\(payload\.content, key\)\) patch\[key\] = payload\.content\[key\]/);
+  assert.match(css, /\.content-regenerate__actions\{display:flex;flex-wrap:wrap/);
+  assert.match(css, /@media\(max-width:600px\)\{\.content-regenerate__actions\{display:grid/);
+});
+
+
+test('AI Content Director exposes Rewrite Expand Shorten for one selected field with undo', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'CONTENT_FIELD_OPTIONS', 'id="content-edit-field"', 'id="content-edit-value"',
+    'data-content-edit-action="rewrite"', 'data-content-edit-action="expand"',
+    'data-content-edit-action="shorten"', 'async function editProjectField(action)',
+    'contentField:field', 'editAction:action', 'currentValue', 'state.raw[field] = payload.value',
+    'stageId:\'field\'', 'uds:content-edit-field', 'Отменить последнюю AI-правку',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.match(source, /const before = \{ \[field\]: Object\.prototype\.hasOwnProperty\.call\(result\.project,field\) \? result\.project\[field\] : null \}/);
+  assert.match(css, /\.content-field-editor select,\.content-field-editor textarea\{display:block;width:100%/);
+  assert.ok(source.includes("[data-content-quality-review], [data-content-edit-action]"), 'click delegation includes field editor actions');
+});
+
+
+test('AI Content Director запускает безопасную проверку качества и SEO без автоприменения', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  for (const marker of [
+    'data-content-quality-review', 'async function runContentQualityReview()',
+    'contentQualityReview:true', 'project:projectContentForStage()',
+    'content-quality-review-result', 'review.score', 'review.findings',
+    'review.recommendations', 'Веб-поиск не выполнялся.',
+    'Проверка качества завершена. Контент не изменён.',
+  ]) assert.ok(source.includes(marker), marker);
+  assert.ok(css.includes('.content-quality-review{margin:16px 0'));
 });

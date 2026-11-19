@@ -508,3 +508,163 @@ test('свой промт без задания студии по-прежнем
   await worker.fetch(request({ niche: 'кофейня', customPrompt: 'ONLY_IN_CUSTOM' }), env);
   assert.match(env.calls[0].messages[0].content, /Пожелания владельца \(дополнительно\): ONLY_IN_CUSTOM/);
 });
+
+test('большой UTF-8 бриф больше прежних 24 КБ принимается в пределах нового лимита', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  const body = { niche: 'кофейня', studioPrompt: 'я'.repeat(15_000) };
+  const encoded = JSON.stringify(body);
+  assert.ok(new TextEncoder().encode(encoded).byteLength > 24_000);
+  assert.ok(new TextEncoder().encode(encoded).byteLength < 64_000);
+  const res = await worker.fetch(request(body), env);
+  assert.equal(res.status, 200);
+  assert.equal(env.calls.length, 1);
+});
+
+test('запрос больше 64 КБ отклоняется по размеру UTF-8 до обращения к AI', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  const body = { niche: 'кофейня', studioPrompt: 'я'.repeat(33_000) };
+  const res = await worker.fetch(request(body), env);
+  const payload = await res.json();
+  assert.equal(res.status, 413);
+  assert.equal(payload.maxBytes, 64_000);
+  assert.match(payload.error, /лимит 64000 байт/);
+  assert.equal(env.calls.length, 0);
+});
+
+test('customPrompt не дублируется Worker, если он уже встроен в studioPrompt', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({
+    niche: 'кофейня',
+    studioPrompt: 'Задание студии. SPECIAL_CUSTOM_INSTRUCTION',
+    customPrompt: 'SPECIAL_CUSTOM_INSTRUCTION',
+  }), env);
+  const prompt = env.calls[0].messages[0].content;
+  assert.equal(prompt.split('SPECIAL_CUSTOM_INSTRUCTION').length - 1, 1);
+});
+
+
+test('API запускает staged Content Engine и возвращает объединённые секции с метаданными этапов', async () => {
+  const outputs = [
+    { title: 'Кофе рядом', description: 'Свежий кофе', cta: 'Выбрать', targetAudience: 'Жители района', mainOffer: 'Кофе', visualDirection: 'Тёплый', strategySummary: 'Локальная кофейня' },
+    { aboutTitle: 'О нас', aboutText: 'Готовим кофе.' },
+    { servicesTitle: 'Меню', servicesIntro: 'Напитки', services: [['Капучино', 'Кофе с молоком', '']] },
+    { advantagesTitle: 'Преимущества', advantages: [['Свежесть', 'Свежая обжарка']], processTitle: 'Заказ', process: [['Выберите напиток', 'Оформите заказ']], faqs: [['Где мы?', 'В центре района']] },
+    { contactTitle: 'Контакты', contactText: 'Приходите', seoTitle: 'Кофейня рядом', seoDescription: 'Кофе каждый день' },
+  ];
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    const value = outputs[calls++];
+    return { response: JSON.stringify(value), usage: { prompt_tokens: 5, completion_tokens: 10, total_tokens: 15 } };
+  } } };
+  const res = await worker.fetch(request({ niche: 'кофейня', contentEngine: 'staged' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.generation.mode, 'staged');
+  assert.equal(body.generation.status, 'completed');
+  assert.equal(body.generation.completedStages, 5);
+  assert.equal(body.landing.title, 'Кофе рядом');
+  assert.deepEqual(body.landing.services, outputs[2].services);
+  assert.equal(calls, 5);
+});
+
+
+test('API точечной перегенерации возвращает один раздел и фактический usage', async () => {
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    calls++;
+    assert.equal(options.max_tokens, 900);
+    assert.match(options.messages[0].content, /Текущие данные проекта/);
+    return { response: JSON.stringify({ aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' }), usage: { prompt_tokens: 12, completion_tokens: 18, total_tokens: 30 } };
+  } } };
+  const res = await worker.fetch(request({
+    niche: 'кофейня', brand: 'Зерно', contentStage: 'about',
+    existingLanding: { title: 'Кофе рядом', aboutTitle: 'Старый заголовок', injected: 'ignore' },
+    editorialDirection: 'Тёплый тон',
+  }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.stage.id, 'about');
+  assert.equal(body.stage.status, 'completed');
+  assert.deepEqual(body.content, { aboutTitle: 'О кофейне', aboutText: 'Готовим кофе каждый день.' });
+  assert.deepEqual(body.usage, { inputTokens: 12, outputTokens: 18, totalTokens: 30 });
+  assert.equal(calls, 1);
+});
+
+test('API точечной перегенерации отклоняет запрос без текущего объекта проекта', async () => {
+  const env = aiReturning(JSON.stringify({ aboutTitle: 'О нас', aboutText: 'Текст' }));
+  const res = await worker.fetch(request({ niche: 'кофейня', contentStage: 'about' }), env);
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /текущий контент проекта/);
+  assert.equal(env.calls.length, 0);
+});
+
+test('API точечной перегенерации не принимает неизвестный этап', async () => {
+  const env = aiReturning(JSON.stringify({ aboutTitle: 'О нас', aboutText: 'Текст' }));
+  const res = await worker.fetch(request({ niche: 'кофейня', contentStage: 'unknown', existingLanding: {} }), env);
+  assert.equal(res.status, 502);
+  assert.match((await res.json()).error, /Неизвестный этап/);
+  assert.equal(env.calls.length, 0);
+});
+
+
+test('API AI-редактора возвращает новый текст только для выбранного поля', async () => {
+  let calls = 0;
+  const env = { AI: { run: async (_model, options) => {
+    calls++;
+    assert.equal(options.max_tokens, 700);
+    assert.match(options.messages[0].content, /Сократи текст/);
+    return { response: JSON.stringify({ value: 'Короткий и ясный текст.' }), usage: { prompt_tokens: 8, completion_tokens: 12, total_tokens: 20 } };
+  } } };
+  const res = await worker.fetch(request({
+    niche: 'кофейня', brand: 'Зерно', contentField: 'description', editAction: 'shorten',
+    currentValue: 'Очень длинное исходное описание кофейни.',
+    existingLanding: { title: 'Кофе рядом', description: 'Очень длинное исходное описание кофейни.' },
+  }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.field, 'description');
+  assert.equal(body.action, 'shorten');
+  assert.equal(body.value, 'Короткий и ясный текст.');
+  assert.deepEqual(body.usage, { inputTokens: 8, outputTokens: 12, totalTokens: 20 });
+  assert.equal(calls, 1);
+});
+
+test('API AI-редактора блокирует массивы, неизвестные поля и команды', async () => {
+  const env = aiReturning(JSON.stringify({ value: 'Текст' }));
+  const base = { niche: 'кофейня', currentValue: 'Исходный текст', existingLanding: {} };
+  const arrayField = await worker.fetch(request({ ...base, contentField: 'services', editAction: 'rewrite' }), env);
+  assert.equal(arrayField.status, 502);
+  assert.match((await arrayField.json()).error, /нельзя редактировать/);
+  const invalidAction = await worker.fetch(request({ ...base, contentField: 'title', editAction: 'translate' }), env);
+  assert.equal(invalidAction.status, 502);
+  assert.match((await invalidAction.json()).error, /Неизвестная команда/);
+  assert.equal(env.calls.length, 0);
+});
+
+
+test('API проверки качества возвращает оценку и ограниченные AI-рекомендации без изменения проекта', async () => {
+  const env = { AI: { run: async (_model, options) => {
+    assert.equal(options.max_tokens, 1300);
+    assert.match(options.messages[0].content, /веб-поиска нет/i);
+    return { response: JSON.stringify({ recommendations: [
+      { category:'seo', priority:'high', issue:'SEO title слишком общий', recommendation:'Добавьте основную услугу.', field:'seoTitle' },
+    ] }), usage:{ prompt_tokens:10, completion_tokens:20, total_tokens:30 } };
+  } } };
+  const project = { niche:'кофейня', title:'Кофе рядом', description:'Свежий кофе', cta:'Открыть меню' };
+  const res = await worker.fetch(request({ niche:'кофейня', contentQualityReview:true, project }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.review.score < 100);
+  assert.equal(body.review.recommendations[0].field, 'seoTitle');
+  assert.equal(body.review.safety.contentChanged, false);
+  assert.equal(body.review.safety.webSearchPerformed, false);
+  assert.equal(project.title, 'Кофе рядом');
+});
+
+test('API проверки качества требует объект проекта и не вызывает модель без него', async () => {
+  const env = aiReturning('{}');
+  const res = await worker.fetch(request({ niche:'кофейня', contentQualityReview:true }), env);
+  assert.equal(res.status, 400);
+  assert.match((await res.json()).error, /объект проекта/);
+  assert.equal(env.calls.length, 0);
+});
