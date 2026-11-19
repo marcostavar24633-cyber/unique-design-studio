@@ -1,5 +1,6 @@
 import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
+import { isGatewayConfigured } from './gateway.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -74,6 +75,7 @@ export default {
           analyticsTokenConfigured: Boolean(env.CF_ANALYTICS_TOKEN),
           accountIdConfigured: Boolean(env.CF_ACCOUNT_ID),
           workersAiBindingConfigured: Boolean(env.AI),
+          aiGatewayConfigured: isGatewayConfigured(env),
           aiBillingMode: isFreeAiMode(env) ? 'free' : String(env.AI_BILLING_MODE || 'non-free'),
           nvidiaFallbackConfigured: isNvidiaFallbackEnabled(env),
           nvidiaModel: env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL,
@@ -263,7 +265,7 @@ export default {
             patch: Object.keys(patch).length ? patch : null,
           };
         });
-        return json({ review: { version: 1, mode: provider === 'nvidia' ? 'nvidia-nim' : 'workers-ai', provider, model, status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
+        return json({ review: { version: 1, mode: provider === 'nvidia' ? 'nvidia-nim' : provider === 'cloudflare' ? 'workers-ai' : 'ai-gateway', provider, model, status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
       } catch (error) {
         return json({ error: error?.message || 'Ошибка AI Design Director' }, 502, origin);
       }

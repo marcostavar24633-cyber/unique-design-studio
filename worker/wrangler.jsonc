@@ -7,6 +7,11 @@
   "ai": {
     "binding": "AI"
   },
+  // Текстовые AI-запросы идут через Universal AI Gateway (Worker → Worker, без выхода в интернет).
+  // Токен проекта — секрет GATEWAY_TOKEN. Без него студия вызывает Workers AI напрямую.
+  "services": [
+    { "binding": "GATEWAY", "service": "universal-ai-gateway" }
+  ],
   "vars": {
     "AI_BILLING_MODE": "free",
     "NVIDIA_NIM_ENABLED": "false"

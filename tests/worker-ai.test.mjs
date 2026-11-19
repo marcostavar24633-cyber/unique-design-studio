@@ -426,3 +426,45 @@ test('статистика today — с 00:00 UTC, когда сбрасывае
     assert.equal((await worker.fetch(new Request('https://w.dev/api/usage?range=year', { headers: { Origin: ORIGIN } }), { CF_ANALYTICS_TOKEN: 't', CF_ACCOUNT_ID: 'a' })).status, 400);
   } finally { globalThis.fetch = realFetch; }
 });
+
+// Universal AI Gateway по Service Binding: текст идёт через шлюз, прямой Workers AI — запасной путь.
+const gatewayReturning = (status, payload, seen) => ({
+  fetch: async (url, init) => { seen.push({ url: String(url), init, body: JSON.parse(init.body) }); return new Response(JSON.stringify(payload), { status }); },
+});
+
+test('при настроенном шлюзе генерация идёт через него с той же моделью и токеном проекта', async () => {
+  const seen = [];
+  const env = { ...aiReturning(JSON.stringify(full)), GATEWAY_TOKEN: 'project-token',
+    GATEWAY: gatewayReturning(200, { provider: 'groq', model: 'openai/gpt-oss-120b', fallback: true, choices: [{ message: { content: JSON.stringify(full) } }], usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 } }, seen) };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.provider, 'groq');
+  assert.equal(body.landing.title, 'Заголовок');
+  assert.equal(body.usage.totalTokens, 30);
+  assert.equal(env.calls.length, 0, 'прямой Workers AI не вызывается, если шлюз ответил');
+  assert.equal(seen[0].init.headers.Authorization, 'Bearer project-token');
+  assert.equal(seen[0].body.model, '@cf/google/gemma-4-26b-a4b-it');
+  assert.equal(seen[0].body.max_tokens, MAX_OUTPUT_TOKENS);
+});
+
+test('если шлюз не ответил, студия вызывает Workers AI напрямую', async () => {
+  const seen = [];
+  const env = { ...aiReturning(JSON.stringify(full)), GATEWAY_TOKEN: 'project-token',
+    GATEWAY: gatewayReturning(503, { error: { code: 'PROVIDER_UNAVAILABLE' } }, seen) };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.provider, 'cloudflare');
+  assert.equal(seen.length, 1);
+  assert.equal(env.calls.length, 1);
+});
+
+test('привязка шлюза без токена проекта не используется', async () => {
+  const seen = [];
+  const env = { ...aiReturning(JSON.stringify(full)), GATEWAY: gatewayReturning(200, {}, seen) };
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  assert.equal(res.status, 200);
+  assert.equal(seen.length, 0);
+  assert.equal(env.calls.length, 1);
+});

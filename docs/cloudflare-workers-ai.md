@@ -60,6 +60,21 @@ Worker запускается с `AI_BILLING_MODE=free` и `NVIDIA_NIM_ENABLED=f
 
 Cloudflare указывает бесплатную квоту Workers AI **10 000 Neurons в сутки на аккаунт**, сброс — в 00:00 UTC. На тарифе Workers Free после исчерпания квоты запросы прекращаются. На Workers Paid использование сверх бесплатной квоты тарифицируется, поэтому для гарантии отсутствия дополнительных расходов аккаунт должен оставаться на Workers Free. Не добавляйте платные модели, prepaid AI Gateway credits или платные API. [Актуальные цены Cloudflare](https://developers.cloudflare.com/workers-ai/platform/pricing/).
 
+### Universal AI Gateway (с 19.11.2026)
+
+Текстовые запросы (генерация лендинга и AI Design Director) идут через [Universal AI Gateway](https://github.com/marcostavar24633-cyber/universal-ai-gateway) по Service Binding `GATEWAY` из `worker/wrangler.jsonc`: Worker → Worker внутри Cloudflare, без выхода в интернет. Шлюз вызывает ту же модель Workers AI (`@cf/google/gemma-4-26b-a4b-it`), а когда суточная квота исчерпана — бесплатный Groq. Поле `provider` в ответе показывает, кто ответил.
+
+Настройка — один раз:
+
+```sh
+# в репозитории шлюза: токен проекта, без вывода на экран (копируется в буфер обмена)
+npm run add-project -- unique-design-studio
+# в этом репозитории: тот же токен как секрет AI Worker
+npx wrangler secret put GATEWAY_TOKEN --config worker/wrangler.jsonc
+```
+
+Без секрета `GATEWAY_TOKEN` или если шлюз не ответил, студия вызывает Workers AI напрямую, как раньше. Изображения всегда генерируются напрямую. `/api/diagnostics` показывает `aiGatewayConfigured`.
+
 ### NVIDIA NIM — только отдельное тестирование
 
 NVIDIA API Catalog предоставляет бесплатные hosted endpoints для прототипирования, разработки и тестирования. По официальным условиям NVIDIA, обслуживание реальных пользователей и иное production-использование требует соответствующей лицензии/подписки. Поэтому бесплатный режим публичного Worker намеренно не использует NVIDIA как резервный production API. [NVIDIA NIM FAQ](https://docs.api.nvidia.com/nim/docs/product) · [NVIDIA API Trial Terms](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
