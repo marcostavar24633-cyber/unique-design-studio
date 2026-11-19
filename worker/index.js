@@ -1,6 +1,6 @@
 import { NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
-import { isGatewayConfigured } from './gateway.js';
+import { gatewayStatus, isGatewayConfigured } from './gateway.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
@@ -80,6 +80,7 @@ export default {
           nvidiaFallbackConfigured: isNvidiaFallbackEnabled(env),
           nvidiaModel: env.NVIDIA_MODEL || DEFAULT_NVIDIA_MODEL,
         },
+        gateway: await gatewayStatus(env),
       }, 200, origin);
     }
     if (url.pathname === '/api/usage') {

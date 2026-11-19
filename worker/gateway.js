@@ -10,6 +10,35 @@ export function isGatewayConfigured(env = {}) {
 }
 
 /**
+ * Состояние шлюза для /api/diagnostics: доступен ли он, кто в резерве и сколько запросов
+ * осталось на сегодня. Квоту не тратит (GET /v1/status). Токен в ответ не попадает.
+ */
+export async function gatewayStatus(env) {
+  if (!isGatewayConfigured(env)) return { configured: false };
+  try {
+    const response = await env.GATEWAY.fetch('https://universal-ai-gateway/v1/status', {
+      headers: { Authorization: `Bearer ${env.GATEWAY_TOKEN}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return { configured: true, ok: false, error: `HTTP ${response.status}` };
+    return {
+      configured: true,
+      ok: true,
+      fallback: Array.isArray(payload.fallback) ? payload.fallback.map(String).slice(0, 8) : [],
+      quota: payload.quota && typeof payload.quota === 'object' ? {
+        limit: Number(payload.quota.limit) || 0,
+        used: Number(payload.quota.used) || 0,
+        remaining: Number(payload.quota.remaining) || 0,
+        resetAt: String(payload.quota.resetAt || ''),
+      } : null,
+    };
+  } catch (error) {
+    return { configured: true, ok: false, error: String(error?.message || 'gateway error').slice(0, 120) };
+  }
+}
+
+/**
  * Возвращает результат в формате Workers AI ({ response, usage }), чтобы остальной код студии
  * (modelOutput, usageOf) работал без изменений.
  */

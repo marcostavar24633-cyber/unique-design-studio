@@ -34,6 +34,8 @@
           ['CF_ACCOUNT_ID', Boolean(payload.runtime?.accountIdConfigured)],
           ['CF_ANALYTICS_TOKEN', Boolean(payload.runtime?.analyticsTokenConfigured)]
         ];
+        const gateway = payload.gateway || {};
+        if (gateway.configured) checks.push(['Universal AI Gateway' + (gateway.ok && gateway.quota ? ' (осталось ' + gateway.quota.remaining + ' из ' + gateway.quota.limit + ' запросов на сегодня)' : ''), Boolean(gateway.ok)]);
         for (const [label, ok] of checks) {
           const item = document.createElement('li');
           item.textContent = (ok ? '✓ ' : '✕ ') + label + (ok ? ' — OK' : ' — не настроено в этом Worker');
