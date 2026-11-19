@@ -496,3 +496,15 @@ test('/api/visual-hints переводит нишу и позиции на ан�
   assert.deepEqual(body.hints.items, { 'Авторский раф': 'raf coffee in a glass' });
   assert.deepEqual(env.calls[0].chat_template_kwargs, { enable_thinking: false });
 });
+
+test('свой промт владельца не дублируется, если он уже встроен в задание студии', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({ niche: 'кофейня', studioPrompt: 'Задание студии. SPECIAL_CUSTOM_INSTRUCTION', customPrompt: 'SPECIAL_CUSTOM_INSTRUCTION' }), env);
+  assert.equal(env.calls[0].messages[0].content.split('SPECIAL_CUSTOM_INSTRUCTION').length - 1, 1);
+});
+
+test('свой промт без задания студии по-прежнему попадает в факты', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  await worker.fetch(request({ niche: 'кофейня', customPrompt: 'ONLY_IN_CUSTOM' }), env);
+  assert.match(env.calls[0].messages[0].content, /Пожелания владельца \(дополнительно\): ONLY_IN_CUSTOM/);
+});
