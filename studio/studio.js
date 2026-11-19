@@ -185,7 +185,7 @@ function renderAiBudget() {
   if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
     const alert = pct >= 100
-      ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Генерация может быть недоступна до 00:00 UTC; платный резервный провайдер отключён.' }
+      ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Если AI-шлюз подключён, тексты пишет бесплатный резерв (Groq), фото недоступны до 00:00 UTC; платный резервный провайдер отключён.' }
       : pct >= 85
         ? { level: 'err', text: 'Израсходовано не менее 85% ориентировочного бесплатного объёма. Сократите генерации до суточного сброса.' }
         : pct >= 70
@@ -219,6 +219,13 @@ async function refreshAiToday() {
 document.addEventListener('click', event => {
   if (event.target.closest('[data-ai-quota-recheck]')) refreshAiToday();
 });
+// Каким путём прошёл AI-запрос: через Universal AI Gateway (и кто ответил) или напрямую в Workers AI.
+const PROVIDER_NAMES = { cloudflare: 'Cloudflare', groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter', cerebras: 'Cerebras', mistral: 'Mistral', nvidia: 'NVIDIA' };
+function routeLabel(entry) {
+  if (entry.route === 'gateway') return entry.provider && entry.provider !== 'cloudflare' ? 'шлюз → резерв ' + (PROVIDER_NAMES[entry.provider] || entry.provider) : 'через шлюз';
+  if (entry.route === 'direct') return 'напрямую';
+  return '';
+}
 function renderAiJournal() {
   renderAiBudget();
   const box = $('#dash-ai-journal'); if (!box) return;
@@ -229,7 +236,7 @@ function renderAiJournal() {
   const errors = todays.filter(e => e.status !== 'ok').length;
   const time = iso => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   const row = e => '<li data-status="' + (e.status === 'ok' ? 'ok' : 'err') + '"><span>' + time(e.at) + '</span><b>' + esc(e.label) + '</b><small>' +
-    esc([e.status === 'ok' ? 'готово' : 'ошибка: ' + (e.error || ''), e.ms ? (e.ms / 1000).toFixed(1) + ' с' : '', e.tokens ? Number(e.tokens).toLocaleString('ru-RU') + ' ток.' : ''].filter(Boolean).join(' · ')) + '</small></li>';
+    esc([e.status === 'ok' ? 'готово' : 'ошибка: ' + (e.error || ''), routeLabel(e), e.ms ? (e.ms / 1000).toFixed(1) + ' с' : '', e.tokens ? Number(e.tokens).toLocaleString('ru-RU') + ' ток.' : ''].filter(Boolean).join(' · ')) + '</small></li>';
   box.innerHTML = list.length
     ? '<p class="dash-meter-note">Сегодня: ' + todays.length + ' запросов' + (tokens ? ', ' + tokens.toLocaleString('ru-RU') + ' токенов' : '') + (errors ? ', ошибок: ' + errors : '') + '</p><ol class="dash-journal">' + list.slice(0, 6).map(row).join('') + '</ol>' +
       (list.length > 6 ? '<details class="dash-journal-more"><summary>Все записи (' + list.length + ')</summary><ol class="dash-journal">' + list.slice(6).map(row).join('') + '</ol></details>' : '') +
@@ -314,6 +321,28 @@ async function pingHealth(endpoint) {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 6000);
   try { const res = await fetch(url.href, { signal: controller.signal, cache: 'no-store' }); return res.ok; } catch { return false; } finally { clearTimeout(timer); }
 }
+// Состояние AI-шлюза — через /api/diagnostics AI Worker (шлюз отдаёт квоту, не тратя её).
+async function refreshGatewayStatus(endpoint) {
+  if (!endpoint) return setDashStatus('gateway', 'off', 'AI-сервер не задан');
+  let url; try { url = new URL(endpoint, location.href); } catch { return setDashStatus('gateway', 'off', 'Некорректный адрес AI-сервера'); }
+  url.pathname = url.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/diagnostics'); url.search = '';
+  try {
+    const res = await fetch(url.href, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    const body = await res.json().catch(() => ({}));
+    const gateway = body.gateway;
+    if (!res.ok || !gateway) return setDashStatus('gateway', 'off', 'Статус недоступен' + (res.ok ? ' — Worker не обновлён' : ''));
+    if (!gateway.configured) return setDashStatus('gateway', 'off', 'Не подключён — запросы идут напрямую в Workers AI');
+    if (!gateway.ok) return setDashStatus('gateway', 'warn', 'Шлюз не ответил — запросы идут напрямую в Workers AI');
+    const parts = ['Подключён'];
+    const quota = gateway.quota;
+    if (quota && quota.limit) parts.push('осталось ' + quota.remaining.toLocaleString('ru-RU') + ' из ' + quota.limit.toLocaleString('ru-RU') + (quota.resetAt ? ' до ' + bakuTime(new Date(quota.resetAt)) : ''));
+    parts.push(gateway.fallback?.length ? 'резерв: ' + gateway.fallback.map(name => PROVIDER_NAMES[name] || name).join(', ') : 'без резерва');
+    const low = quota && quota.limit && quota.remaining < quota.limit * 0.1;
+    setDashStatus('gateway', low ? 'warn' : 'ok', parts.join(' · '));
+  } catch {
+    setDashStatus('gateway', 'off', 'Статус недоступен');
+  }
+}
 function renderConnections() {
   let ai = '', analyzer = '';
   try { ai = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim(); analyzer = localStorage.getItem('uds:analyzer-endpoint') || ''; } catch { /* нет хранилища */ }
@@ -325,6 +354,7 @@ function renderConnections() {
     setDashStatus('ai', ok ? 'ok' : 'warn', ok ? 'Cloudflare Workers AI подключён' : 'Сервер не ответил — будет локальный автопилот');
     if (mode) mode.textContent = ok ? 'Тексты и структуру пишет AI по вашему брифу, затем студия собирает и проверяет сайт.' : 'AI-сервер сейчас не отвечает: сайт соберёт локальный автопилот.';
   });
+  refreshGatewayStatus(ai);
   if (!analyzer) setDashStatus('analyzer', 'off', 'Не подключён — настройка в «Анализ сайтов и шаблоны»');
   else pingHealth(analyzer).then(ok => setDashStatus('analyzer', ok ? 'ok' : 'warn', ok ? 'Анализатор-сервер отвечает' : 'Анализатор-сервер не ответил'));
 }
@@ -828,7 +858,7 @@ $('#auto').addEventListener('submit', async e => {
         res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...workerInput, studioPrompt }) });
         body = await res.json().catch(() => ({}));
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
-      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null });
+      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null, route: body.route || '', provider: body.provider || '' });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
       const contentReview = reviewGeneratedContent(body.landing);
