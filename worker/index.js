@@ -343,7 +343,10 @@ export default {
       brief.city ? `Город: ${brief.city}.` : '',
       `Уровень: ${brief.tier}.`,
       brief.details ? `Подробности от владельца: ${brief.details}` : '',
-      brief.customPrompt ? `Пожелания владельца (${brief.customPromptMode === 'replace' ? 'главнее задания студии' : 'дополнительно'}): ${brief.customPrompt}` : '',
+      // Студия уже встраивает свой промт владельца в studioPrompt (withCustomPrompt). Второй экземпляр
+      // удваивал вес указаний и расход токенов; отдельной строкой он нужен только клиентам без studioPrompt.
+      brief.customPrompt && !studioPrompt.includes(brief.customPrompt.trim())
+        ? `Пожелания владельца (${brief.customPromptMode === 'replace' ? 'главнее задания студии' : 'дополнительно'}): ${brief.customPrompt}` : '',
     ].filter(Boolean).join('\n');
 
     const system = [
