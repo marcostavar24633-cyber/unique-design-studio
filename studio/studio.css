@@ -457,3 +457,28 @@ body.preview-fullscreen-active{overflow:hidden}
 .own-block h3{margin:0;font-size:14px}
 .panel .auto[hidden]{display:none}
 #pblock-editor{padding-top:8px}
+
+/* AI Content Director — isolated section regeneration */
+.content-regenerate{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.content-regenerate h3{margin:0 0 6px;font-size:15px}
+.content-regenerate__actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.content-regenerate__actions button{min-height:38px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.content-regenerate__actions button:hover:not(:disabled){border-color:var(--accent,#c9a45e);color:var(--accent,#c9a45e)}
+.content-regenerate__actions button:disabled{opacity:.55;cursor:wait}
+#content-regenerate-status{min-height:1.4em}
+@media(max-width:600px){.content-regenerate__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.content-regenerate__actions button{width:100%;min-height:42px}}
+
+
+.content-field-editor{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.content-field-editor h3{margin:0 0 6px;font-size:15px}
+.content-field-editor select,.content-field-editor textarea{display:block;width:100%;max-width:100%;margin:7px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-size:13px}
+.content-field-editor textarea{min-height:96px;resize:vertical;line-height:1.5}
+.content-field-editor .content-regenerate__actions button{flex:1 1 120px}
+
+
+.content-quality-review{margin:16px 0;padding:14px 0;border-top:1px solid var(--line)}
+.content-quality-review>button{min-height:42px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.content-quality-review>button:disabled{opacity:.55;cursor:wait}
+#content-quality-review-result ul{padding-left:20px}
+#content-quality-review-result li{margin:8px 0}
+#content-quality-review-result small{display:inline-block;margin-top:3px}

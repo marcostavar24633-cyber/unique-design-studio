@@ -686,6 +686,15 @@ const currentAnalysis = () => {
   const saved = state.library.find(item => item?.raw && normalizeProject(item.raw).id === projectId && item.analysis);
   return saved?.analysis || null;
 };
+const CONTENT_FIELD_OPTIONS = [
+  ['title','Заголовок первого экрана'],['description','Описание предложения'],['cta','Текст кнопки'],
+  ['targetAudience','Целевая аудитория'],['mainOffer','Основное предложение'],['strategySummary','Стратегия'],
+  ['aboutTitle','Заголовок «О компании»'],['aboutText','Текст «О компании»'],
+  ['servicesTitle','Заголовок услуг'],['servicesIntro','Вступление к услугам'],
+  ['advantagesTitle','Заголовок преимуществ'],['processTitle','Заголовок процесса'],
+  ['contactTitle','Заголовок контактов'],['contactText','Текст контактов'],
+  ['seoTitle','SEO Title'],['seoDescription','SEO Description'],
+];
 function renderSpec() {
   const a = currentAnalysis();
   const spec = buildSpec(result.project, result.concept, a || {});
@@ -703,6 +712,12 @@ function renderSpec() {
   if (String(result.project.seoTitle || '').length > 60) flags.push('SEO Title длиннее 60 символов');
   if (String(result.project.seoDescription || '').length > 160) flags.push('SEO Description длиннее 160 символов');
   const foundGeneric = [...new Set(textValues.flatMap(value => genericTerms.filter(term => value.toLowerCase().includes(term))))];
+  let selectedEditField = 'title';
+  try {
+    const savedField = localStorage.getItem('uds:content-edit-field');
+    if (CONTENT_FIELD_OPTIONS.some(([key]) => key === savedField)) selectedEditField = savedField;
+  } catch {}
+
   if (foundGeneric.length) flags.push('Проверьте неподтверждённые или шаблонные формулировки: ' + foundGeneric.join(', '));
   contentPrompt = () => {
     const direction = ($('#content-direction')?.value || '').trim();
@@ -723,10 +738,42 @@ function renderSpec() {
 <section class="content-director" aria-labelledby="content-director-title">
   <div class="content-director__head"><div><span class="eyebrow">AI CONTENT DIRECTOR</span><h2 id="content-director-title">Редактор коммерческих текстов</h2><p class="note">Анализирует заполненность и готовит точное задание для AI. Тексты автоматически не меняются: результат можно проверить перед импортом.</p></div><span class="content-director__mark" aria-hidden="true">✦</span></div>
   <div class="content-director__stats"><div><b>${textValues.length}</b><small>текстовых значений</small></div><div><b>${flags.length}</b><small>замечаний</small></div><div><b>${a?.sources?.length || 0}</b><small>источников анализа</small></div></div>
+  <div class="content-quality-review">
+    <button type="button" data-content-quality-review>Проверить качество текста и SEO с AI</button>
+    <p class="note">Проверка оценит ясность предложения, повторы, CTA и SEO-поля. Тексты не меняются; веб-поиск и проверка частотности запросов не выполняются.</p>
+    <div id="content-quality-review-result" class="note" role="status" aria-live="polite"></div>
+  </div>
   <ul class="content-director__checks">${flags.length ? flags.map(item => '<li>! ' + esc(item) + '</li>').join('') : '<li class="is-ok">✓ Базовые проверки заполненности пройдены. Это не подтверждает фактическую достоверность текста.</li>'}</ul>
   <label class="content-director__label" for="content-direction">Редакторское направление</label>
   <textarea id="content-direction" rows="3" maxlength="2000" placeholder="Например: спокойный премиальный тон, меньше прилагательных, больше конкретики и пользы для клиента…"></textarea>
   <div class="spec-actions"><button type="button" data-content="copy">Скопировать задание AI</button><button type="button" data-content="download">Скачать задание (.txt)</button></div>
+  <div class="content-regenerate">
+    <h3>Перегенерация разделов</h3>
+    <p class="note">AI изменит только выбранный раздел. Остальные тексты, изображения и настройки проекта останутся нетронутыми. Новый вариант сразу применится; последнее изменение можно отменить.</p>
+    <div class="content-regenerate__actions">
+      <button type="button" data-regenerate-stage="strategy">Первый экран</button>
+      <button type="button" data-regenerate-stage="about">О компании</button>
+      <button type="button" data-regenerate-stage="services">Услуги</button>
+      <button type="button" data-regenerate-stage="trust">Преимущества и FAQ</button>
+      <button type="button" data-regenerate-stage="seo">Контакты и SEO</button>
+    </div>
+    <p id="content-regenerate-status" class="note" role="status" aria-live="polite"></p>
+    <div class="spec-actions"><button type="button" data-content-undo ${contentHistoryForProject().length ? '' : 'disabled'}>Отменить последнюю AI-правку</button></div>
+  </div>
+  <div class="content-field-editor">
+    <h3>Редактирование отдельного текста</h3>
+    <p class="note">Выберите поле, при необходимости поправьте исходный текст и запустите одну команду. AI вернёт только новый текст этого поля.</p>
+    <label class="content-director__label" for="content-edit-field">Текстовое поле</label>
+    <select id="content-edit-field">${CONTENT_FIELD_OPTIONS.map(([key,label]) => '<option value="' + key + '"' + (key === selectedEditField ? ' selected' : '') + '>' + esc(label) + '</option>').join('')}</select>
+    <label class="content-director__label" for="content-edit-value">Исходный текст</label>
+    <textarea id="content-edit-value" rows="4" maxlength="3000">${esc(result.project[selectedEditField] || '')}</textarea>
+    <div class="content-regenerate__actions">
+      <button type="button" data-content-edit-action="rewrite">Переписать</button>
+      <button type="button" data-content-edit-action="expand">Расширить</button>
+      <button type="button" data-content-edit-action="shorten">Сократить</button>
+    </div>
+    <p id="content-edit-status" class="note" role="status" aria-live="polite"></p>
+  </div>
 </section>
 <pre class="spec">${esc(spec)}</pre>${src}`;
   try { $('#content-direction').value = localStorage.getItem('uds:content-direction') || ''; } catch {}
@@ -734,8 +781,210 @@ function renderSpec() {
 $('#view-spec').addEventListener('input', e => {
   if (e.target.id === 'content-direction') { try { localStorage.setItem('uds:content-direction', e.target.value); } catch {} }
 });
+$('#view-spec').addEventListener('change', e => {
+  if (e.target.id === 'content-edit-field') {
+    const field = e.target.value;
+    try { localStorage.setItem('uds:content-edit-field', field); } catch {}
+    const value = $('#content-edit-value');
+    if (value) value.value = String(result?.project?.[field] || '');
+  }
+});
+const CONTENT_HISTORY_KEY = 'uds:content-history:v1';
+function contentHistoryForProject() {
+  try { return JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId === state.raw.id).slice(-10); } catch { return []; }
+}
+function writeContentHistory(items) {
+  try {
+    const all = JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId !== state.raw.id);
+    localStorage.setItem(CONTENT_HISTORY_KEY, JSON.stringify([...all, ...items].slice(-50)));
+  } catch { toast('Не удалось сохранить историю AI-правок в браузере.'); }
+}
+const STAGE_PROJECT_FIELDS = {
+  strategy: ['title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'],
+  about: ['aboutTitle','aboutText'],
+  services: ['servicesTitle','servicesIntro','services'],
+  trust: ['advantagesTitle','advantages','processTitle','process','faqs'],
+  seo: ['contactTitle','contactText','assumptions','marketResearch','researchSources','seoTitle','seoDescription'],
+};
+const STAGE_ANALYSIS_FIELDS = { seo: ['segments','objections','triggers','keywords','competitors','imagePrompts'] };
+function projectContentForStage() {
+  const p = result.project;
+  return {
+    brand:p.brand,niche:p.niche,title:p.title,description:p.description,cta:p.cta,targetAudience:p.targetAudience,
+    mainOffer:p.mainOffer,visualDirection:p.visualDirection,strategySummary:p.strategySummary,
+    aboutTitle:p.aboutTitle,aboutText:p.aboutText,servicesTitle:p.servicesTitle,servicesIntro:p.servicesIntro,services:p.services,
+    advantagesTitle:p.advantagesTitle,advantages:p.advantages,processTitle:p.processTitle,process:p.process,faqs:p.faqs,
+    contactTitle:p.contactTitle,contactText:p.contactText,assumptions:p.assumptions,marketResearch:p.marketResearch,
+    researchSources:p.researchSources,segments:currentAnalysis()?.segments || [],objections:currentAnalysis()?.objections || [],
+    triggers:currentAnalysis()?.triggers || [],keywords:currentAnalysis()?.keywords || [],competitors:currentAnalysis()?.competitors || [],
+    seoTitle:p.seoTitle,seoDescription:p.seoDescription,imagePrompts:currentAnalysis()?.imagePrompts || [],
+  };
+}
+async function regenerateProjectStage(stageId) {
+  if (!result || !STAGE_PROJECT_FIELDS[stageId]) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-regenerate-stage]')];
+  const status = $('#content-regenerate-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI перегенерирует раздел. Остальные части проекта не меняются…';
+  const fields = STAGE_PROJECT_FIELDS[stageId];
+  const analysisFields = STAGE_ANALYSIS_FIELDS[stageId] || [];
+  const before = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(result.project,key) ? result.project[key] : null]));
+  const analysisBefore = Object.fromEntries(analysisFields.map(key => [key, Object.prototype.hasOwnProperty.call(currentAnalysis() || {},key) ? currentAnalysis()[key] : null]));
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche: result.project.niche, brand: result.project.brand, tier: result.project.tier,
+        city: currentAnalysis()?.city || '', details: result.project.mainOffer || '',
+        contentStage: stageId, existingLanding: projectContentForStage(),
+        editorialDirection: ($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + (CONTENT_STAGE_LABELS[stageId] || stageId), status:response.ok && payload.content ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.stage?.attempts || null });
+    if (!response.ok || !payload.content) throw new Error(payload.error || 'HTTP ' + response.status);
+    const patch = {};
+    for (const key of fields) if (Object.prototype.hasOwnProperty.call(payload.content, key)) patch[key] = payload.content[key];
+    if (!Object.keys(patch).length) throw new Error('AI не вернул поля выбранного раздела');
+    const analysisPatch = Object.fromEntries(analysisFields.filter(key => Object.prototype.hasOwnProperty.call(payload.content,key)).map(key => [key,payload.content[key]]));
+    const after = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(patch,key) ? patch[key] : before[key]]));
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId, before, after, analysisBefore, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    Object.assign(state.raw, patch);
+    if (analysisFields.length && !state.analysis?.data) state.analysis = { projectId: state.raw.id, data: { source: 'ai', niche: state.raw.niche, city: '', tier: state.raw.tier, audience: state.raw.targetAudience || '' } };
+    if (analysisFields.length && state.analysis?.data) Object.assign(state.analysis.data, analysisPatch);
+    run();
+    persist();
+    refreshAiUsage();
+    toast('Раздел «' + (CONTENT_STAGE_LABELS[stageId] || stageId) + '» обновлён. Остальные разделы сохранены.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось обновить раздел: ' + error.message;
+    toast('Ошибка перегенерации: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+const CONTENT_STAGE_LABELS = { strategy:'Первый экран', about:'О компании', services:'Услуги', trust:'Преимущества и FAQ', seo:'Контакты и SEO' };
+async function runContentQualityReview() {
+  if (!result) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  const output = $('#content-quality-review-result');
+  const button = $('#view-spec').querySelector('[data-content-quality-review]');
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  if (button) button.disabled = true;
+  if (output) output.textContent = 'AI анализирует текст и SEO-поля…';
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, contentQualityReview:true,
+        project:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: проверка качества контента и SEO', status:response.ok && payload.review ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP '+response.status), ms:payload.durationMs || Date.now()-started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null });
+    if (!response.ok || !payload.review) throw new Error(payload.error || 'Не удалось получить отчёт');
+    const review = payload.review;
+    const items = [
+      ...(review.findings || []).map(item => ({ priority:item.severity, category:item.category, issue:item.message, recommendation:item.action })),
+      ...(review.recommendations || []).map(item => ({ priority:item.priority, category:item.category, issue:item.issue, recommendation:item.recommendation })),
+    ];
+    if (output) output.innerHTML = '<strong>Оценка контента: '+Number(review.score || 0)+'/100</strong><ul>'+(
+      items.length ? items.map(item => '<li><b>'+esc(String(item.priority || ''))+' · '+esc(String(item.category || ''))+'</b>: '+esc(String(item.issue || ''))+'<br><small>'+esc(String(item.recommendation || ''))+'</small></li>').join('')
+      : '<li>Существенных замечаний не найдено. Фактическую достоверность всё равно нужно проверить вручную.</li>'
+    )+'</ul><small>AI-проверка не меняла проект. Веб-поиск не выполнялся.</small>';
+    toast('Проверка качества завершена. Контент не изменён.');
+  } catch (error) {
+    if (output) output.textContent = 'Не удалось выполнить проверку: '+error.message;
+    toast('Ошибка проверки качества: '+error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+async function editProjectField(action) {
+  const field = $('#content-edit-field')?.value;
+  const currentValue = $('#content-edit-value')?.value || '';
+  if (!result || !CONTENT_FIELD_OPTIONS.some(([key]) => key === field)) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-content-edit-action]')];
+  const status = $('#content-edit-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI редактирует выбранный текст…';
+  const before = { [field]: Object.prototype.hasOwnProperty.call(result.project,field) ? result.project[field] : null };
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, brand:result.project.brand, tier:result.project.tier,
+        contentField:field, editAction:action, currentValue,
+        existingLanding:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + field + ' (' + action + ')', status:response.ok && typeof payload.value === 'string' ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.attempts || null });
+    if (!response.ok || typeof payload.value !== 'string' || !payload.value.trim()) throw new Error(payload.error || 'AI не вернул новый текст');
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId:'field', field, action, before, after:{[field]:payload.value}, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    state.raw[field] = payload.value;
+    run(); persist(); refreshAiUsage();
+    toast('Текст обновлён: ' + (CONTENT_FIELD_OPTIONS.find(([key]) => key === field)?.[1] || field) + '. Остальные поля не менялись.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось отредактировать текст: ' + error.message;
+    toast('Ошибка AI-редактора: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
 $('#view-spec').addEventListener('click', async e => {
-  const b = e.target.closest('[data-spec], [data-content]'); if (!b) return;
+  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo], [data-content-quality-review], [data-content-edit-action]'); if (!b) return;
+  if (b.hasAttribute('data-content-quality-review')) { runContentQualityReview(); return; }
+  if (b.hasAttribute('data-content-edit-action')) { editProjectField(b.dataset.contentEditAction); return; }
+  if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
+  if (b.hasAttribute('data-content-undo')) {
+    const history = contentHistoryForProject();
+    const last = history.pop();
+    if (!last) return;
+    for (const [key,value] of Object.entries(last.before)) { if (value === null) delete state.raw[key]; else state.raw[key] = value; }
+    if (last.analysisBefore && state.analysis?.data) {
+      for (const [key,value] of Object.entries(last.analysisBefore)) { if (value === null) delete state.analysis.data[key]; else state.analysis.data[key] = value; }
+    }
+    writeContentHistory(history);
+    run(); persist();
+    toast('Последняя AI-правка отменена.');
+    return;
+  }
   const a = currentAnalysis() || {};
   const copy = async (text, ok, file) => { try { await navigator.clipboard.writeText(text); toast(ok); } catch { download(file, text, 'text/plain'); } };
   if (b.dataset.spec === 'copy') copy(buildSpec(result.project, result.concept, a), 'ТЗ скопировано', `${result.project.id}-tz.md`);
@@ -881,23 +1130,35 @@ $('#auto').addEventListener('submit', async e => {
       // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
       // а не только ниша: так AI пишет тексты внутри выбранной композиции.
       const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt.slice(0, 16000);
-      // Ссылки и метаданные профилей уже учтены в studioPrompt; Worker их отдельно не использует.
-      // Не отправляем лишний designReferences, чтобы не раздувать JSON-тело запроса.
-      const { designReferences: _designReferences, ...workerInput } = input;
+      // Передаём только данные, которые Worker действительно использует. Весь input содержал
+      // повторяющиеся поля и крупные локальные объекты; customPrompt уже включён в studioPrompt.
+      const aiPayload = {
+        niche: input.niche,
+        brand: input.brand,
+        city: input.city,
+        tier: input.tier,
+        details: input.details,
+        studioPrompt,
+        customPrompt: input.customPrompt || '',
+        customPromptMode: input.customPromptMode || 'append',
+        contentEngine: 'staged',
+      };
       const aiStarted = Date.now();
       let res, body;
       try {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...workerInput, studioPrompt }) });
+        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
         body = await res.json().catch(() => ({}));
       } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
-      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing ? 'ok' : 'error', error: body.error || (res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || null, route: body.route || '', provider: body.provider || '' });
+      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing && body.generation?.status === 'completed' ? 'ok' : 'error', error: body.error || (body.generation?.status === 'partial' ? 'Частичная генерация: ' + (body.generation.failedStage || 'этап не завершён') : res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || body.generation?.stages?.reduce((n, stage) => n + (stage.attempts || 0), 0) || null, route: body.route || '', provider: body.provider || '' });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
       const contentReview = reviewGeneratedContent(body.landing);
       renderContentQaReview(contentReview);
       draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
-      note = `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
+      note = body.generation?.status === 'partial'
+        ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы включены в проект; недостающий этап можно будет повторить отдельно.`
+        : `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
     } catch (err) {
       note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
       setAutoProgress(35, 'Переключение на локальный режим', 'AI недоступен — продолжаем без сервера');

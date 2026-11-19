@@ -1,12 +1,14 @@
 import { NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
 import { gatewayStatus, isGatewayConfigured } from './gateway.js';
+import { generateContentInStages, regenerateContentStage, editContentField } from './content-engine.js';
+import { reviewContentQuality } from './content-quality.js';
 
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 const ALLOWED_ORIGINS = new Set([
   'https://marcostavar24633-cyber.github.io',
 ]);
-const MAX_BODY_BYTES = 48_000;
+const MAX_BODY_BYTES = 64_000;
 
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'null';
@@ -254,12 +256,12 @@ export default {
     if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
 
     const length = Number(request.headers.get('Content-Length') || 0);
-    if (length > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
+    if (length > MAX_BODY_BYTES) return json({ error: `Слишком большой запрос: лимит ${MAX_BODY_BYTES} байт. Сократите бриф или пользовательские инструкции.` , maxBytes: MAX_BODY_BYTES }, 413, origin);
 
     let input;
     try {
       const raw = await request.text();
-      if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json({ error: 'Слишком большой запрос' }, 413, origin);
+      if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return json({ error: `Слишком большой запрос: лимит ${MAX_BODY_BYTES} байт. Сократите бриф или пользовательские инструкции.`, maxBytes: MAX_BODY_BYTES }, 413, origin);
       input = JSON.parse(raw);
     } catch {
       return json({ error: 'Некорректный JSON' }, 400, origin);
@@ -349,6 +351,60 @@ export default {
         ? `Пожелания владельца (${brief.customPromptMode === 'replace' ? 'главнее задания студии' : 'дополнительно'}): ${brief.customPrompt}` : '',
     ].filter(Boolean).join('\n');
 
+    if (input.contentQualityReview) {
+      const source = input.project && typeof input.project === 'object' && !Array.isArray(input.project) ? input.project : null;
+      if (!source) return json({ error: 'Передайте объект проекта для проверки качества' }, 400, origin);
+      try {
+        const reviewed = await reviewContentQuality({
+          env, model: MODEL, project: source,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 1000),
+          runTextModel,
+        });
+        return json(reviewed, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка проверки качества контента' }, 502, origin);
+      }
+    }
+
+    if (input.contentField) {
+      if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
+        return json({ error: 'Передайте контекст проекта для редактирования текста' }, 400, origin);
+      }
+      try {
+        const edited = await editContentField({
+          env, model: MODEL, brief, field: String(input.contentField).slice(0, 64),
+          action: String(input.editAction || '').slice(0, 16),
+          currentValue: String(input.currentValue || '').slice(0, 3000),
+          existingLanding: input.existingLanding,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 2000),
+          runTextModel,
+        });
+        return json(edited, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка AI-редактора' }, 502, origin);
+      }
+    }
+
+    if (input.contentStage) {
+      if (!input.existingLanding || typeof input.existingLanding !== 'object' || Array.isArray(input.existingLanding)) {
+        return json({ error: 'Передайте текущий контент проекта для сохранения согласованности' }, 400, origin);
+      }
+      try {
+        const regenerated = await regenerateContentStage({
+          env, model: MODEL, brief, stageId: String(input.contentStage).slice(0, 32),
+          existingLanding: input.existingLanding,
+          editorialDirection: String(input.editorialDirection || '').slice(0, 2000),
+          runTextModel,
+        });
+        if (regenerated.stage.status !== 'completed') {
+          return json({ error: regenerated.stage.error || 'Не удалось перегенерировать раздел', ...regenerated }, 502, origin);
+        }
+        return json(regenerated, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка перегенерации раздела' }, 502, origin);
+      }
+    }
+
     const system = [
       `Ты AI-копирайтер и стратег. Пишешь тексты для сайта бизнеса клиента в нише «${brief.niche}» — не для веб-студии и не про создание сайтов.`,
       'Верни только один валидный JSON-объект без Markdown и пояснений.',
@@ -371,6 +427,27 @@ export default {
     ].join('\n');
     // Одно сообщение: шаблон чата Gemma не поддерживает отдельную системную роль.
     const prompt = system + '\n\n' + user;
+
+    if (input.contentEngine === 'staged') {
+      try {
+        const staged = await generateContentInStages({
+          env, model: MODEL, brief, facts, studioPrompt, formatNote: FORMAT_NOTE, runTextModel,
+        });
+        if (staged.generation.status === 'completed') {
+          staged.landing.niche = brief.niche;
+          if (brief.brand) staged.landing.brand = brief.brand;
+          return json(staged, 200, origin);
+        }
+        // Without the core first-screen fields there is no usable partial landing; let the UI enter its honest local fallback.
+        if (!staged.landing.title || !staged.landing.description || !staged.landing.cta) {
+          return json({ error: 'Не удалось создать основной экран сайта', ...staged }, 502, origin);
+        }
+        // Partial is explicit: the UI may keep completed sections, but must not label the run as complete.
+        return json(staged, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка поэтапной генерации', generation: { mode: 'staged', status: 'failed' } }, 502, origin);
+      }
+    }
 
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
