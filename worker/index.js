@@ -171,6 +171,55 @@ export default {
         return json({ error: 'Не удалось связаться с Cloudflare Analytics', details: error?.message || 'Network error' }, 502, origin);
       }
     }
+    if (url.pathname === '/api/visual-hints') {
+      if (request.method !== 'POST') return json({ error: 'Метод не поддерживается' }, 405, origin);
+      if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
+      if (!env.AI || typeof env.AI.run !== 'function') return json({ error: 'Workers AI binding AI не настроен' }, 503, origin);
+      if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
+      let input;
+      try {
+        const raw = await request.text();
+        if (raw.length > 4000) return json({ error: 'Слишком большой запрос' }, 413, origin);
+        input = JSON.parse(raw);
+      } catch {
+        return json({ error: 'Некорректный JSON' }, 400, origin);
+      }
+      const niche = String(input.niche || '').trim().slice(0, 180);
+      if (!niche) return json({ error: 'Укажите нишу проекта' }, 400, origin);
+      const items = (Array.isArray(input.items) ? input.items : []).map(item => String(item || '').trim().slice(0, 120)).filter(Boolean).slice(0, 12);
+      const details = String(input.details || '').slice(0, 600);
+      const prompt = [
+        'You prepare English briefs for a photo generator that understands only English.',
+        'Translate the business niche and each item into short, concrete English descriptions of what should be visible in a photo.',
+        'Return only one JSON object: {"niche":"...","setting":"...","hero":"...","avoid":"...","items":{"<original item>":"<what the photo shows>"}}.',
+        'niche: 2-6 words, e.g. "specialty coffee shop". setting: the real place, materials and props. hero: one main photo for the website.',
+        'avoid: things a generator might wrongly draw for this niche (may be empty). items: keep the original item names as keys, exactly as given.',
+        'Use only English in values. No brand names, no text or signs in the image.',
+        '',
+        'Niche: ' + niche,
+        details ? 'Details: ' + details : '',
+        items.length ? 'Items: ' + JSON.stringify(items) : 'Items: []',
+      ].filter(line => line !== null).join('\n');
+      try {
+        const { result } = await runTextModel(env, MODEL, {
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 900,
+          temperature: 0.2,
+          ...NO_THINKING,
+        });
+        const parsed = extractJson(modelOutput(result));
+        const pick = (value, max) => String(value || '').replace(/[^\x20-\x7E]/g, '').trim().slice(0, max);
+        const translated = {};
+        if (parsed?.items && typeof parsed.items === 'object') {
+          for (const item of items) { const en = pick(parsed.items[item], 200); if (en) translated[item] = en; }
+        }
+        const hints = { niche: pick(parsed?.niche, 80), setting: pick(parsed?.setting, 240), hero: pick(parsed?.hero, 240), avoid: pick(parsed?.avoid, 160), items: translated };
+        if (!hints.niche) return json({ error: 'AI не вернул описание ниши' }, 502, origin);
+        return json({ hints }, 200, origin);
+      } catch (error) {
+        return json({ error: error?.message || 'Ошибка подготовки описаний для фото' }, 502, origin);
+      }
+    }
     if (url.pathname === '/api/generate-image') {
       if (request.method !== 'POST') return json({ error: 'Метод не поддерживается' }, 405, origin);
       if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
