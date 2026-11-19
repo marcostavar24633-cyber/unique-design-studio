@@ -66,14 +66,14 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-19T19:25:58.733Z
-Ветка: feat/ai-gateway
-Последний commit: 5d626175e8f00bc845120358809f3c78c8d4ce2c
-Дата коммита: 2026-11-19T23:25:50+04:00
-Сообщение: AI: текстовые запросы через Universal AI Gateway, прямой Workers AI — запасной путь
+Время обновления: 2026-11-19T19:28:17.914Z
+Ветка: main
+Последний commit: 84ba6d233957ad3eabdd774a34c8b4843ebac5d4
+Дата коммита: 2026-11-19T23:28:04+04:00
+Сообщение: AI: текстовые запросы через Universal AI Gateway (#160)
 
 Последние коммиты:
-- 5d62617 · 2026-11-19 · AI: текстовые запросы через Universal AI Gateway, прямой Workers AI — запасной путь
+- 84ba6d2 · 2026-11-19 · AI: текстовые запросы через Universal AI Gateway (#160)
 - 62d580a · 2026-11-18 · docs: refresh project handoff
 - 6697f6a · 2026-11-19 · fix: make Worker workflow dispatch guards explicit (#157)
 - 4b5c781 · 2026-11-18 · docs: refresh project handoff
