@@ -122,18 +122,51 @@ export function nicheVisual(project) {
   }
   const known = NICHES.find(n => n.match.test(niche));
   if (known) return { en: known.en, setting: known.setting, hero: known.hero, avoid: '', cuisine: null };
+  // Ниши нет в словаре: английское описание от AI (visualHints, см. worker /api/visual-hints).
+  // Транслит («kofeynya») генератор не понимает и рисует случайные кадры — он остаётся только запасным путём.
+  const hints = visualHints(project);
+  if (hints?.niche) {
+    return {
+      en: hints.niche,
+      setting: hints.setting || `the real workplace of a ${hints.niche}`,
+      hero: hints.hero || `the main product or service of a ${hints.niche}, shown clearly`,
+      avoid: hints.avoid || '',
+      cuisine: null,
+    };
+  }
   const name = translit(niche) || 'local business';
   return { en: `local business "${name}"`, setting: 'the real workplace of this business', hero: `the main product or service of a local business called "${name}", shown clearly`, avoid: '', cuisine: null };
 }
 
-// Что изображено в карточке позиции: точное блюдо из словаря или транслит с контекстом ниши.
-export function itemSubject(title, visual) {
+// Английские подсказки для фото: только латиница, короткие строки. Кириллица и мусор отбрасываются.
+const asciiText = (value, max) => {
+  const text = clean(value).replace(/[^\x20-\x7E]/g, '').trim();
+  return text && !hasCyrillic(text) ? text.slice(0, max) : '';
+};
+export function visualHints(project) {
+  const raw = project?.visualHints;
+  if (!raw || typeof raw !== 'object') return null;
+  const items = {};
+  if (raw.items && typeof raw.items === 'object') {
+    for (const [key, value] of Object.entries(raw.items).slice(0, 24)) {
+      const en = asciiText(value, 200);
+      if (en) items[clean(key)] = en;
+    }
+  }
+  return { niche: asciiText(raw.niche, 80), setting: asciiText(raw.setting, 240), hero: asciiText(raw.hero, 240), avoid: asciiText(raw.avoid, 160), items };
+}
+
+// Что изображено в карточке позиции: точное блюдо из словаря, английская подсказка от AI или транслит с контекстом ниши.
+export function itemSubject(title, visual, hints = null) {
   const name = clean(title);
+  const hinted = hints?.items?.[name];
   if (visual.cuisine) {
     const hit = visual.cuisine.dishes.find(([re]) => re.test(name));
     if (hit) return hit[1];
+    if (hinted) return `${hinted}, an authentic ${visual.cuisine.en} dish plated as served, the dish fills the frame`;
     return `an authentic ${visual.cuisine.en} dish called "${translit(name)}", plated as served in ${visual.cuisine.en} cuisine, the dish fills the frame`;
   }
+  if (hinted) return `${hinted}, a product or service of a ${visual.en}, shown clearly as the main subject`;
   return `the product or service "${translit(name)}" of a ${visual.en}, shown clearly as the main subject`;
 }
 
@@ -172,7 +205,7 @@ export function photoPrompt(slot, project, graphicDirection) {
   } else if (slot.role === 'hero') {
     subject = visual.hero; angle = 'wide establishing shot at eye level'; background = visual.setting;
   } else if (slot.role === 'service') {
-    subject = itemSubject(slot.label, visual); angle = visual.cuisine ? 'close-up from 45 degrees, the plate fills most of the frame' : 'front or three-quarter view, the subject fills most of the frame';
+    subject = itemSubject(slot.label, visual, visualHints(project)); angle = visual.cuisine ? 'close-up from 45 degrees, the plate fills most of the frame' : 'front or three-quarter view, the subject fills most of the frame';
     background = visual.cuisine ? `a table in ${visual.setting}, softly blurred` : 'a simple consistent background, the same for every product card';
   } else {
     const n = Number(String(slot.id).split('-')[1]) || 0;

@@ -41,5 +41,5 @@ test('студия показывает направление в Design DNA, д
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.match(js, /\['Графика', vs\.graphicDirection \?/);
   assert.match(js, /\['@graphicDirection', 'Направление графики', 'graphicDirection'/);
-  assert.match(js, /photoPrompt\(slot, result\.project, result\.concept\.visualSystem\.graphicDirection\)/);
+  assert.match(js, /photoPrompt\(slot, photoProject, result\.concept\.visualSystem\.graphicDirection\)/);
 });

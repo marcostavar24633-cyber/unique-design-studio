@@ -77,7 +77,8 @@ test('транслитерация сохраняет регистр и убир
 
 test('студия отправляет генератору английский бриф, а ALT фото — для посетителей, не текст задания', () => {
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
-  assert.match(js, /const prompt = photoPrompt\(slot, result\.project, result\.concept\.visualSystem\.graphicDirection\)/);
+  assert.match(js, /const prompt = photoPrompt\(slot, photoProject, result\.concept\.visualSystem\.graphicDirection\)/);
+  assert.match(js, /const photoProject = visualHints \? \{ \.\.\.result\.project, visualHints \} : result\.project;/);
   assert.doesNotMatch(js, /'Business niche: ' \+/);
   assert.doesNotMatch(js, /heroAlt: slot\.subject|alt: slot\.subject|row\[4\] = slot\.subject/);
   assert.match(js, /function generatedAlt\(slot, project\)/);
@@ -93,4 +94,26 @@ test('фон первого экрана в текстовых архитект�
   const prompt = photoPrompt(hero, g.project);
   assert.match(prompt, /no single dominant object in the center, low contrast/);
   assert.match(prompt, /Vietnamese/);
+});
+
+test('ниша не из словаря: фото строятся по английским подсказкам AI, а не по транслиту', () => {
+  const project = { niche: 'кофейня', tier: 'standard', services: [['Авторский раф', ''], ['Эспрессо', '']],
+    visualHints: { niche: 'specialty coffee shop', setting: 'a cozy coffee shop with a wooden bar and an espresso machine', hero: 'a barista pouring latte art',
+      items: { 'Авторский раф': 'a glass of creamy raf coffee with vanilla foam', 'Эспрессо': 'кириллица отбрасывается' } } };
+  const visual = nicheVisual(project);
+  assert.equal(visual.en, 'specialty coffee shop');
+  assert.match(visual.setting, /espresso machine/);
+  assert.match(itemSubject('Авторский раф', visual, project.visualHints), /creamy raf coffee/);
+  // Подсказка с кириллицей отброшена — остаётся прежний путь.
+  const espresso = photoPrompt({ id: 'service-1', role: 'service', label: 'Эспрессо', aspect: '1:1' }, project);
+  assert.ok(!/[а-яё]/i.test(espresso));
+  const hero = photoPrompt({ id: 'hero', role: 'hero', label: 'Главное фото', aspect: '16:9' }, project);
+  assert.match(hero, /specialty coffee shop/);
+  assert.match(hero, /barista pouring latte art/);
+  assert.ok(!/kofeynya/i.test(hero), 'транслит ниши больше не попадает в промт');
+});
+
+test('без подсказок поведение прежнее: словарь ниш и транслит как запасной путь', () => {
+  assert.match(nicheVisual({ niche: 'гончарная мастерская', services: [] }).en, /Goncharnaya masterskaya/i);
+  assert.match(nicheVisual({ niche: 'автосервис', services: [], visualHints: { niche: 'something else' } }).en, /car service/, 'словарь важнее подсказки');
 });

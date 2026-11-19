@@ -484,3 +484,15 @@ test('генерация выключает рассуждения Gemma и на
   await worker.fetch(request({ niche: 'кофейня' }), env);
   assert.deepEqual(seen[0].chat_template_kwargs, { enable_thinking: false });
 });
+
+test('/api/visual-hints переводит нишу и позиции на английский и отбрасывает кириллицу', async () => {
+  const answer = { niche: 'specialty coffee shop', setting: 'coffee bar', hero: 'barista at work', avoid: '', items: { 'Авторский раф': 'raf coffee in a glass', 'Эспрессо': 'эспрессо' } };
+  const env = aiReturning(JSON.stringify(answer));
+  const res = await worker.fetch(new Request('https://w.dev/api/visual-hints', { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '10.9.9.9' },
+    body: JSON.stringify({ niche: 'кофейня', items: ['Авторский раф', 'Эспрессо'] }) }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.hints.niche, 'specialty coffee shop');
+  assert.deepEqual(body.hints.items, { 'Авторский раф': 'raf coffee in a glass' });
+  assert.deepEqual(env.calls[0].chat_template_kwargs, { enable_thinking: false });
+});

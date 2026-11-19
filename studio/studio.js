@@ -1761,13 +1761,26 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
   const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 1 : 3);
   const targets = [...(hero ? [hero] : []), ...products, ...gallery].slice(0, 4);
   if (!targets.length) return { generated: 0, skipped: true };
+  // Английские описания ниши и позиций для генератора фото. Без них незнакомые нише слова уходили
+  // транслитом («kofeynya»), и FLUX рисовал кадры, не относящиеся к бизнесу. Ошибка не прерывает генерацию.
+  let visualHints = null;
+  try {
+    const hintsEndpoint = new URL(imageEndpoint); hintsEndpoint.pathname = hintsEndpoint.pathname.replace(/\/api\/generate-image\/?$/i, '/api/visual-hints');
+    const hintsResponse = await fetch(hintsEndpoint.toString(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      niche: result.project.niche || '', details: result.project.description || '',
+      items: targets.filter(slot => slot.role === 'service').map(slot => slot.label),
+    }) });
+    const hintsPayload = await hintsResponse.json().catch(() => ({}));
+    if (hintsResponse.ok && hintsPayload.hints) visualHints = hintsPayload.hints;
+  } catch { /* остаются словарь ниш и транслит */ }
+  const photoProject = visualHints ? { ...result.project, visualHints } : result.project;
   let generated = 0;
   for (let index = 0; index < targets.length; index++) {
     const slot = targets[index];
     onProgress(index, targets.length, slot.label);
     const alt = generatedAlt(slot, result.project);
     // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
-    const prompt = photoPrompt(slot, result.project, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
+    const prompt = photoPrompt(slot, photoProject, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
     const imageStarted = Date.now();
     let response, payload;
     try {
