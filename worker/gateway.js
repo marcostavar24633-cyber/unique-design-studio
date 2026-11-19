@@ -40,5 +40,6 @@ export async function runViaGateway(env, model, options) {
     provider: payload.provider || 'cloudflare',
     model: payload.model || model,
     fallback: Boolean(payload.fallback),
+    route: 'gateway',
   };
 }

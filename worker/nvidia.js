@@ -60,7 +60,7 @@ async function runNvidia(env, options) {
   if (!payload?.choices?.[0]?.message?.content) {
     throw new Error('NVIDIA NIM не вернул текстовый ответ');
   }
-  return { result: payload, provider: 'nvidia', model: payload.model || model };
+  return { result: payload, provider: 'nvidia', model: payload.model || model, route: 'nvidia' };
 }
 
 /**
@@ -71,16 +71,19 @@ async function runNvidia(env, options) {
 export async function runTextModel(env, primaryModel, options, { preferNvidia = false } = {}) {
   if (preferNvidia) return runNvidia(env, options);
   if (!env.AI || typeof env.AI.run !== 'function') throw new Error('Workers AI binding AI не настроен');
+  let gatewayError;
   if (isGatewayConfigured(env)) {
     try {
       return await runViaGateway(env, primaryModel, options);
-    } catch {
+    } catch (error) {
       // Шлюз недоступен или все его маршруты исчерпаны — прямой Workers AI остаётся запасным путём.
+      // Причина возвращается в ответе студии (без секретов), чтобы обход шлюза был виден.
+      gatewayError = String(error?.message || 'gateway error').slice(0, 200);
     }
   }
   try {
     const result = await env.AI.run(primaryModel, options);
-    return { result, provider: 'cloudflare', model: primaryModel };
+    return { result, provider: 'cloudflare', model: primaryModel, route: 'direct', ...(gatewayError ? { gatewayError } : {}) };
   } catch (error) {
     if (!isQuotaError(error) || !isNvidiaFallbackEnabled(env)) throw error;
     try {

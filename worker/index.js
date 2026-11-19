@@ -242,7 +242,7 @@ export default {
       ].join('\n');
       const user = JSON.stringify({ project: fields, analysis: input.analysis || {}, concept: input.concept || {}, audit: input.audit || {} });
       try {
-        const { result, provider, model } = await runTextModel(env, MODEL, {
+        const { result, provider, model, route, gatewayError } = await runTextModel(env, MODEL, {
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
           max_tokens: 1800,
           temperature: 0.35,
@@ -265,7 +265,7 @@ export default {
             patch: Object.keys(patch).length ? patch : null,
           };
         });
-        return json({ review: { version: 1, mode: provider === 'nvidia' ? 'nvidia-nim' : provider === 'cloudflare' ? 'workers-ai' : 'ai-gateway', provider, model, status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
+        return json({ review: { version: 1, mode: provider === 'nvidia' ? 'nvidia-nim' : provider === 'cloudflare' ? 'workers-ai' : 'ai-gateway', provider, model, route, ...(gatewayError ? { gatewayError } : {}), status: recommendations.length ? 'review-needed' : 'looks-good', recommendations, safety: { autoApplied: false, requiresApproval: true } } }, 200, origin);
       } catch (error) {
         return json({ error: error?.message || 'Ошибка AI Design Director' }, 502, origin);
       }
@@ -324,6 +324,8 @@ export default {
     let provider = 'cloudflare';
     let usedModel = MODEL;
     let preferNvidia = false;
+    let route;
+    let gatewayError;
     const started = Date.now();
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -335,6 +337,8 @@ export default {
         const { result } = execution;
         provider = execution.provider;
         usedModel = execution.model;
+        route = execution.route;
+        gatewayError = execution.gatewayError;
         preferNvidia = provider === 'nvidia';
         usage = addUsage(usage, usageOf(result));
         const landing = extractJson(modelOutput(result));
@@ -348,7 +352,7 @@ export default {
           landing.niche = brief.niche;
           if (brief.brand) landing.brand = brief.brand;
           else if (/не указ/i.test(String(landing.brand || ''))) landing.brand = '';
-          return json({ landing, attempts: attempt + 1, provider, model: usedModel, usage, durationMs: Date.now() - started }, 200, origin);
+          return json({ landing, attempts: attempt + 1, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started }, 200, origin);
         }
         // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
         const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
@@ -357,6 +361,6 @@ export default {
         lastError = error?.message || 'Ошибка генерации Workers AI';
       }
     }
-    return json({ error: lastError, attempts: 2, provider, model: usedModel, usage, durationMs: Date.now() - started }, 502, origin);
+    return json({ error: lastError, attempts: 2, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started }, 502, origin);
   },
 };
