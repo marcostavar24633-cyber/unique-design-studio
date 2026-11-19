@@ -213,7 +213,9 @@ try {
   const shell = await page.evaluate(() => ({ dash: getComputedStyle(document.querySelector('#dashboard')).display, h: document.querySelector('.layout').getBoundingClientRect().height }));
   check(shell.dash === 'none' && shell.h > 400, `рабочая область генератора не открывается (панель: ${shell.dash}, высота: ${Math.round(shell.h)})`);
   check((await page.textContent('#auto-library-h')).includes('Заполненных профилей: 1'), 'автопилот не видит профили библиотеки');
-  await page.fill('#auto-niche', 'мебель на заказ'); await page.fill('#auto-email', 'hello@example.com');
+  // Контакты для заявок — во вкладке «Свои настройки», ниша и запуск — во вкладке «AI-генерация».
+  await page.click('#ptab-own'); await page.fill('#auto-email', 'hello@example.com');
+  await page.click('#ptab-ai'); await page.fill('#auto-niche', 'мебель на заказ');
   await page.click('#auto-go');
   try {
     await page.waitForFunction(() => document.querySelector('#auto-status')?.textContent.includes('Готово'), null, { timeout: 10000 });

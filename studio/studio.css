@@ -443,3 +443,17 @@ body.preview-fullscreen-active{overflow:hidden}
 .content-qa-review p { margin: 6px 0; }
 .content-qa-review ul { margin: 8px 0; padding-left: 20px; }
 .content-qa-review li { margin: 6px 0; line-height: 1.45; }
+
+/* Вкладки панели: AI-генерация · Свои настройки · Редактор (вместо одной длинной прокрутки) */
+.panel-tabs{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 -16px 4px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.panel-tabs [role="tab"]{min-width:0;padding:8px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.72}
+.panel-tabs [role="tab"]:hover{opacity:1}
+.panel-tabs [role="tab"][aria-selected="true"]{opacity:1;border-color:var(--line);background:var(--bg)}
+.panel-tabs [role="tab"]:focus-visible{outline:2px solid currentColor;outline-offset:1px}
+.panel-block{display:grid;gap:10px}
+.panel-block[hidden]{display:none}
+.panel-block>h2{margin:4px 0 0}
+.own-block{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.own-block h3{margin:0;font-size:14px}
+.panel .auto[hidden]{display:none}
+#pblock-editor{padding-top:8px}
