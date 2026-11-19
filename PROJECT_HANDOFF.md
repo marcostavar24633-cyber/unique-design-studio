@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-18T21:35:14.010Z
+Время обновления: 2026-11-19T02:43:06.861Z
 Ветка: fix/ai-field-editor-click-delegation
-Последний commit: 92190def93d9519c98774985b7e2113b4f154599
-Дата коммита: 2026-11-19T01:34:56+04:00
-Сообщение: test: cover AI field editor click delegation
+Последний commit: 027410750d9fc2c0b4e718d889ee9e95a328b806
+Дата коммита: 2026-11-19T06:42:53+04:00
+Сообщение: test: fix click delegation assertion syntax
 
 Последние коммиты:
+- 0274107 · 2026-11-19 · test: fix click delegation assertion syntax
+- ce77e03 · 2026-11-18 · docs: refresh project handoff
 - 92190de · 2026-11-19 · test: cover AI field editor click delegation
 - ed1ee85 · 2026-11-19 · fix: delegate clicks for AI field editor actions
 - f7a6ec7 · 2026-11-18 · docs: refresh project handoff
 - 8804c24 · 2026-11-18 · Restore existing Smart Crop and asset CSS tests
 - 64adc4c · 2026-11-18 · docs: refresh project handoff
 - 0ede889 · 2026-11-18 · Assert quality review styles in stylesheet
-- 3e22f73 · 2026-11-18 · Assert quality review styles in stylesheet
-- dd48c30 · 2026-11-18 · Restore asset crop CSS test assertion
 <!-- HANDOFF:AUTO:END -->
