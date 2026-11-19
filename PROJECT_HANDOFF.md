@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-19T19:43:05.078Z
-Ветка: main
-Последний commit: 4000cad3d8ede799841f28081c587191746858d2
-Дата коммита: 2026-11-19T23:42:51+04:00
-Сообщение: AI: поле route — видно, шёл ли запрос через шлюз (#161)
+Время обновления: 2026-11-19T20:39:10.843Z
+Ветка: feat/gemma-no-thinking
+Последний commit: ab382278ca47d2625ca8d567378a74352761e597
+Дата коммита: 2026-11-20T00:38:59+04:00
+Сообщение: AI: Gemma отвечает без рассуждений — быстрее и без обрыва JSON
 
 Последние коммиты:
+- ab38227 · 2026-11-20 · AI: Gemma отвечает без рассуждений — быстрее и без обрыва JSON
+- c6d30f1 · 2026-11-19 · docs: refresh project handoff
 - 4000cad · 2026-11-19 · AI: поле route — видно, шёл ли запрос через шлюз (#161)
 - ec8dd9e · 2026-11-19 · docs: refresh project handoff
 - 84ba6d2 · 2026-11-19 · AI: текстовые запросы через Universal AI Gateway (#160)
 - 62d580a · 2026-11-18 · docs: refresh project handoff
 - 6697f6a · 2026-11-19 · fix: make Worker workflow dispatch guards explicit (#157)
 - 4b5c781 · 2026-11-18 · docs: refresh project handoff
-- 8545d96 · 2026-11-19 · fix: show passed content QA and clear stale reports (#156)
-- 1dc18ed · 2026-11-18 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->

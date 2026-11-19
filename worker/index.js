@@ -1,4 +1,4 @@
-import { modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
+import { NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
 import { isGatewayConfigured } from './gateway.js';
 
@@ -246,6 +246,7 @@ export default {
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
           max_tokens: 1800,
           temperature: 0.35,
+          ...NO_THINKING,
         });
         const parsed = extractJson(modelOutput(result));
         const recommendations = (Array.isArray(parsed?.recommendations) ? parsed.recommendations : []).slice(0, 6).map((item, index) => {
@@ -333,6 +334,7 @@ export default {
           messages: [{ role: 'user', content: attempt === 0 ? prompt : prompt + RETRY_NOTE }],
           max_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.55,
+          ...NO_THINKING,
         }, { preferNvidia });
         const { result } = execution;
         provider = execution.provider;
