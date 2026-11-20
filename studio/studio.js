@@ -676,9 +676,136 @@ function run() {
   lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
   $('#frame').srcdoc = result.html;
   renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
+  renderPublishManager();
   updateChangePreviewButton();
   persist();
 }
+
+// ---------- Publish Manager: local deployment history only ---------- 
+const PUBLISH_HISTORY_KEY = 'uds:publish-history:v1';
+const PUBLISH_SETTINGS_KEY = 'uds:publish:v1';
+let publishFilter = 'all';
+function publishEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function readPublishHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PUBLISH_HISTORY_KEY) || '[]');
+    return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && typeof item.url === 'string') : [];
+  } catch { return []; }
+}
+function writePublishHistory(items) {
+  try { localStorage.setItem(PUBLISH_HISTORY_KEY, JSON.stringify(items.slice(0, 50))); return true; }
+  catch { toast('Не удалось сохранить историю публикаций в этом браузере.'); return false; }
+}
+function validPublishUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.hostname === 'localhost' || url.hostname.endsWith('.localhost')) return null;
+    return url.href;
+  } catch { return null; }
+}
+function publishKind(item) {
+  let host = '';
+  try { host = new URL(item.url).hostname.toLowerCase(); } catch {}
+  if (host.endsWith('.pages.dev')) return item.branch === 'production' ? 'production' : 'preview';
+  return 'domain';
+}
+function renderPublishManager() {
+  const host = $('#view-publish');
+  if (!host || !result) return;
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem(PUBLISH_SETTINGS_KEY) || '{}') || {}; } catch {}
+  const projectName = String(settings.projectName || result.project.id || '').toLowerCase();
+  const branch = String(settings.branch || 'production');
+  const safeName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(projectName);
+  const safeBranch = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branch) && !branch.includes('..') && !branch.endsWith('/') && !branch.endsWith('.');
+  const ready = Boolean(result.html && result.audit?.ok && safeName && safeBranch);
+  const history = readPublishHistory();
+  const shown = history.filter(item => publishFilter === 'all' || publishKind(item) === publishFilter);
+  const stats = {all:history.length,production:0,preview:0,domain:0};
+  history.forEach(item => stats[publishKind(item)]++);
+  const rows = shown.map(item => {
+    const kind = publishKind(item);
+    const label = kind === 'production' ? 'Production' : kind === 'preview' ? 'Preview' : 'Собственный домен';
+    const status = item.checkState === 'reachable' ? 'Доступен · HTTP ' + item.httpStatus
+      : item.checkState === 'http-error' ? 'HTTP-ошибка · ' + item.httpStatus
+      : item.checkState === 'blocked' ? 'Ответ не прочитан (CORS / сеть)' : 'Проверка не выполнялась';
+    return '<article class="pm-history-item"><div class="pm-history-meta"><b>' + publishEscape(item.projectName || 'Проект') + ' · ' + label + '</b><small>' + publishEscape(item.branch || '—') + ' · ' + publishEscape(new Date(item.createdAt).toLocaleString('ru-RU')) + '</small><a href="' + publishEscape(item.url) + '" target="_blank" rel="noopener noreferrer">' + publishEscape(item.url) + '</a><small>' + publishEscape(status) + (item.checkedAt ? ' · ' + publishEscape(new Date(item.checkedAt).toLocaleString('ru-RU')) : '') + '</small></div><div class="pm-history-actions"><button type="button" data-pm-check="' + publishEscape(item.id) + '">Проверить</button><button type="button" data-pm-open="' + publishEscape(item.id) + '">Открыть</button><button type="button" data-pm-delete="' + publishEscape(item.id) + '">Удалить</button></div></article>';
+  }).join('');
+  const command = 'node bin/uds.js deploy uds-project.json --project-name ' + (safeName ? projectName : '<имя-pages-проекта>') + ' --branch ' + (safeBranch ? branch : 'production');
+  host.innerHTML = '<section class="publish-manager"><header class="pm-head"><div><span class="pm-eyebrow">PRODUCTION CONTROL</span><h2>Центр публикации</h2><p>Подготовка проекта, проверка аудита и локальная история фактических deployment.</p></div><span class="pm-state ' + (ready ? 'is-ready' : 'is-blocked') + '">' + (ready ? 'Готов к передаче' : 'Требует внимания') + '</span></header>' +
+    '<div class="pm-checks"><div><b>' + (result.html ? '✓' : '!') + ' HTML сформирован</b><small>Текущий проект: ' + publishEscape(result.project.id) + '</small></div><div><b>' + (result.audit?.ok ? '✓' : '!') + ' Аудит ' + (result.audit?.ok ? 'пройден' : 'не пройден') + '</b><small>' + (result.audit?.errors?.length || 0) + ' ошибок · ' + (result.audit?.warnings?.length || 0) + ' предупреждений</small></div></div>' +
+    '<div class="pm-settings"><label>Cloudflare Pages project name<input id="pm-project-name" value="' + publishEscape(projectName) + '" maxlength="63" autocomplete="off"></label><label>Ветка deployment<select id="pm-branch"><option value="production"' + (branch === 'production' ? ' selected' : '') + '>production</option><option value="preview/review"' + (branch === 'preview/review' ? ' selected' : '') + '>preview/review</option><option value="preview/staging"' + (branch === 'preview/staging' ? ' selected' : '') + '>preview/staging</option></select></label></div>' +
+    '<div class="pm-actions"><button type="button" id="pm-save-settings">Сохранить настройки</button><button type="button" id="pm-download-json">Скачать JSON проекта</button><button type="button" id="pm-download-html">Скачать HTML</button><button type="button" id="pm-copy-command" ' + (ready ? '' : 'disabled') + '>Копировать команду</button></div>' +
+    '<div class="pm-command"><b>Команда для локального терминала</b><code>' + publishEscape(command) + '</code><p>Скачайте JSON под именем <code>uds-project.json</code>, поместите его в корень локальной копии репозитория. Нужны Node.js 20+, созданный Pages project и авторизация <code>npx wrangler login</code>. Команда остановится, если аудит проекта не пройден.</p></div>' +
+    '<p class="pm-note">Панель не подключается к Cloudflare и не публикует сайт сама. URL можно добавить в историю только после успешного завершения Wrangler и отдельного подтверждения ниже. История хранится только в localStorage этого браузера.</p>' +
+    '<section class="pm-history"><h3>История публикаций</h3><p>До 50 записей. Проверка URL выполняется из браузера; CORS и сетевые ограничения отображаются как «ответ не прочитан», а не как отказ сайта.</p>' +
+    '<form id="pm-record-form" class="pm-record"><label>Фактический HTTPS URL из вывода Wrangler<input id="pm-deployment-url" type="url" placeholder="https://project.pages.dev/" required></label><label class="pm-confirm"><input id="pm-confirm-success" type="checkbox" required> Я проверил успешное завершение Wrangler и открыл этот deployment.</label><button type="submit">Зафиксировать deployment</button></form>' +
+    '<div class="pm-stats">' + [['all','Все'],['production','Production'],['preview','Preview'],['domain','Домены']].map(([key,label])=>'<button type="button" data-pm-filter="' + key + '" aria-pressed="' + (publishFilter === key) + '">' + label + ' · ' + stats[key] + '</button>').join('') + '</div>' +
+    '<div class="pm-history-list">' + (rows || '<p class="pm-empty">' + (history.length ? 'В этой категории пока нет записей.' : 'История пока пуста.') + '</p>') + '</div></section></section>';
+}
+$('#view-publish')?.addEventListener('click', async event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  if (button.dataset.pmFilter) { publishFilter = button.dataset.pmFilter; renderPublishManager(); return; }
+  if (button.id === 'pm-save-settings') {
+    const projectName = String($('#pm-project-name')?.value || '').trim().toLowerCase();
+    const branch = String($('#pm-branch')?.value || 'production');
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(projectName)) return toast('Укажите корректное имя Pages project: строчные латинские буквы, цифры и дефисы.');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branch) || branch.includes('..') || branch.endsWith('/') || branch.endsWith('.')) return toast('Некорректное имя ветки.');
+    localStorage.setItem(PUBLISH_SETTINGS_KEY, JSON.stringify({projectName,branch}));
+    renderPublishManager(); toast('Настройки публикации сохранены в этом браузере.'); return;
+  }
+  if (button.id === 'pm-download-json') {
+    const exported = {...(result.exported || result.project), __udsAnalysis: currentAnalysis() ? {data:currentAnalysis()} : null};
+    download('uds-project.json', JSON.stringify(exported,null,2)+'\n', 'application/json'); return;
+  }
+  if (button.id === 'pm-download-html') { download((result.project.id || 'site')+'.html',result.html,'text/html'); return; }
+  if (button.id === 'pm-copy-command') {
+    const name = String($('#pm-project-name')?.value || '').trim().toLowerCase();
+    const branch = String($('#pm-branch')?.value || 'production');
+    if (!result.audit?.ok || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(name)) return toast('Сначала исправьте ошибки аудита и имя Pages project.');
+    const command = 'node bin/uds.js deploy uds-project.json --project-name ' + name + ' --branch ' + branch;
+    try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована.'); }
+    catch { download('publish-command.txt',command+'\n','text/plain'); toast('Буфер обмена недоступен — команда скачана.'); }
+    return;
+  }
+  const id = button.dataset.pmDelete || button.dataset.pmOpen || button.dataset.pmCheck;
+  if (id) {
+    const items = readPublishHistory(), item = items.find(entry => entry.id === id);
+    if (!item) return;
+    if (button.dataset.pmDelete) { writePublishHistory(items.filter(entry => entry.id !== id)); renderPublishManager(); return; }
+    if (button.dataset.pmOpen) { window.open(item.url,'_blank','noopener,noreferrer'); return; }
+    if (button.dataset.pmCheck) {
+      button.disabled = true; button.textContent = 'Проверяю…';
+      let state = 'blocked', status = null;
+      const check = async method => {
+        const controller = new AbortController(), timeout = setTimeout(()=>controller.abort(),9000);
+        try { return await fetch(item.url,{method,mode:'cors',cache:'no-store',redirect:'follow',signal:controller.signal}); }
+        finally { clearTimeout(timeout); }
+      };
+      try {
+        let response = await check('HEAD');
+        if (response.status === 405 || response.status === 501) response = await check('GET');
+        status = response.status; state = response.ok ? 'reachable' : 'http-error';
+      } catch { state = 'blocked'; }
+      const latest = readPublishHistory().map(entry => entry.id === id ? {...entry,checkState:state,httpStatus:status,checkedAt:new Date().toISOString()} : entry);
+      writePublishHistory(latest); renderPublishManager(); return;
+    }
+  }
+});
+$('#view-publish')?.addEventListener('submit', event => {
+  if (event.target.id !== 'pm-record-form') return;
+  event.preventDefault();
+  const url = validPublishUrl($('#pm-deployment-url')?.value);
+  if (!url) return toast('Укажите корректный HTTPS URL без логина и пароля.');
+  if (!$('#pm-confirm-success')?.checked) return toast('Подтвердите успешный deployment в Wrangler.');
+  const settings = (()=>{try{return JSON.parse(localStorage.getItem(PUBLISH_SETTINGS_KEY)||'{}')}catch{return {}}})();
+  const items = readPublishHistory();
+  items.unshift({id:crypto.randomUUID(),projectName:settings.projectName || result.project.brand || result.project.id,projectId:result.project.id,branch:settings.branch || 'production',url,createdAt:new Date().toISOString(),checkState:'unchecked',httpStatus:null,checkedAt:null});
+  if (writePublishHistory(items)) { renderPublishManager(); toast('Deployment добавлен в локальную историю.'); }
+});
 
 // ---------- ТЗ и анализ ----------
 // Анализ хранится вместе с проектом, для которого его сделал автопилот; у проектов из редактора — пусто.
