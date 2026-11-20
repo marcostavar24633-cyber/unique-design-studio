@@ -1201,7 +1201,8 @@ $('#auto').addEventListener('submit', async e => {
   // Статус обязателен и для локального режима без AI endpoint.
   // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
   setAutoStatus(note);
-  const hasWarnings = /AI-сервер недоступен|не завершена|Не удалось создать|не удалось/i.test(note);\n  setAutoProgress(100, hasWarnings ? 'Завершено с предупреждениями' : 'Генерация завершена', note);
+  const hasWarnings = /AI-сервер недоступен|не завершена|Не удалось создать|не удалось/i.test(note);
+  setAutoProgress(100, hasWarnings ? 'Завершено с предупреждениями' : 'Генерация завершена', note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -2099,7 +2100,9 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
       if (response?.ok && payload.image) break;
       if (response && response.status < 500 && response.status !== 429) break;
-      if (attempt === 0) {\n        // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.\n        const retryAfter = Number(response?.headers?.get('Retry-After'));\n        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }
+      if (attempt === 0) {
+        // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.
+        const retryAfter = Number(response?.headers?.get('Retry-After'));\n        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }
     }
     const ok = Boolean(response?.ok && payload.image);
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
