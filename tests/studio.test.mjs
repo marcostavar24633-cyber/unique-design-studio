@@ -483,3 +483,10 @@ test('генерация: режим auto, живой прогресс ожид�
   assert.ok(js.includes("if (!response.ok || !payload.image) { failed++;"));
   assert.ok(js.includes("if (!generated && failed) throw new Error(lastImageError"));
 });
+
+test('автопилот создаёт фото для всех карточек услуг (до 6), а не только для первых двух', () => {
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(js.includes('const MAX_SERVICE_PHOTOS = 6;'));
+  assert.ok(js.includes("slots.filter(slot => slot.role === 'service' && !slot.filled).slice(0, MAX_SERVICE_PHOTOS)"));
+  assert.ok(!js.includes("slots.filter(slot => slot.role === 'service').slice(0, 2)"));
+});

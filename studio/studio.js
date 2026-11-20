@@ -6,6 +6,8 @@ const PREVIEW_STORE = 'uds:design-preview:v1';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
+// Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
+const MAX_SERVICE_PHOTOS = 6;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
@@ -2025,8 +2027,9 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
   const imageEndpoint = parsedEndpoint.toString();
   const slots = imageSlots(result.project, result.concept).slots;
   const hero = slots.find(slot => slot.id === 'hero');
-  const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
-  // Все кадры галереи (8) плюс главное фото и 2 карточки — до 11 изображений.
+  // Фото для всех карточек услуг (до 6): раньше только первые 2, и сетка карточек выглядела наполовину пустой.
+  const products = slots.filter(slot => slot.role === 'service' && !slot.filled).slice(0, MAX_SERVICE_PHOTOS);
+  // Все кадры галереи (8) плюс главное фото и 2 карточки — до 15 изображений.
   const gallery = slots.filter(slot => slot.role === 'gallery' && !slot.filled).slice(0, GALLERY_FRAMES);
   const targets = [...(hero ? [hero] : []), ...products, ...gallery];
   if (!targets.length) return { generated: 0, skipped: true };
