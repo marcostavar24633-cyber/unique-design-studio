@@ -44,6 +44,7 @@ try {
 
   await page.click('#ptab-editor');
   await page.locator('#form [data-path="title"]').fill('Новая редакция главного экрана');
+  await page.waitForFunction(() => document.querySelector('#frame').srcdoc.includes('Новая редакция главного экрана'));
   await page.locator('#history-label').fill('Обновлённый заголовок');
   await page.click('[data-history-save]');
   await page.waitForFunction(() => document.querySelectorAll('.project-history__item').length === 2);
