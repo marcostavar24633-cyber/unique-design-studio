@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T05:23:40.512Z
-Ветка: feat/visual-identity-engine-rebase
-Последний commit: b1153a678de79018de1b1135a03a6cc2ff239034
-Дата коммита: 2026-11-20T09:23:27+04:00
-Сообщение: Export visual identity engine from public API
+Время обновления: 2026-11-20T05:50:58.233Z
+Ветка: feat/visual-identity-renderer-integration
+Последний commit: 71a1d006ea58cc39ebf693bed687b17f5da429c2
+Дата коммита: 2026-11-20T09:50:40+04:00
+Сообщение: Add renderer integration regression tests
 
 Последние коммиты:
+- 71a1d00 · 2026-11-20 · Add renderer integration regression tests
+- a052ab4 · 2026-11-20 · Integrate optional Visual Identity into HTML renderer
+- 73aafec · 2026-11-20 · docs: refresh project handoff
 - b1153a6 · 2026-11-20 · Export visual identity engine from public API
 - 5206936 · 2026-11-20 · Document rebased visual identity engine
 - 46d8bd5 · 2026-11-20 · Add visual identity engine regression tests
 - d8eba37 · 2026-11-20 · Add deterministic visual identity engine
 - 4c5523d · 2026-11-20 · docs: refresh project handoff
-- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
-- d23f6fe · 2026-11-20 · docs: refresh project handoff
-- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
 <!-- HANDOFF:AUTO:END -->
