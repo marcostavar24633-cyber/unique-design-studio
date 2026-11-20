@@ -8,8 +8,9 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 // Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
 const MAX_SERVICE_PHOTOS = 6;
-// Ограничиваем параллельность: Workers AI отвечает 429 при пакетной генерации.
-const IMAGE_CONCURRENCY = 1;
+// Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, поэтому по одному 15 кадров шли бы ~3 минуты.
+// 3 параллельных запроса укладываются в лимит Worker на фото (IMAGE_LIMIT), а при 429 очередь ждёт Retry-After.
+const IMAGE_CONCURRENCY = 3;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
@@ -1158,7 +1159,8 @@ $('#auto').addEventListener('submit', async e => {
         // Повторяем только временные сбои сети, 429 и 5xx; не повторяем ошибки валидации 4xx.
         for (let attempt = 0; attempt < 2; attempt++) {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 90_000);
+          // Генерация текста идёт 20–60 с, а с запасным поэтапным режимом — до нескольких минут: не обрываем её раньше.
+          const timeout = setTimeout(() => controller.abort(), 240_000);
           try {
             res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload), signal: controller.signal });
             body = await res.json().catch(() => ({}));
