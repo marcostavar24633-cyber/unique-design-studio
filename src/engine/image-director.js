@@ -6,6 +6,9 @@ import { hexToHsl } from './color.js';
 
 // Архитектуры, в которых первый экран построен на тексте, каталоге или форме: фото здесь — фон под текстом
 // с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
+/** Сколько кадров галереи планирует студия (и генерирует автопилот). */
+export const GALLERY_FRAMES = 8;
+
 export const HERO_AS_BACKGROUND = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
 /** @deprecated Прежнее имя того же набора архитектур: сохранено для совместимости внешнего кода. */
 export const HERO_WITHOUT_PHOTO = HERO_AS_BACKGROUND;
@@ -66,8 +69,9 @@ export function imageSlots(project, concept) {
   }
 
   if (order.includes('gallery') || !project.gallery.length) {
-    const frames = Math.max(4, project.gallery.length);
-    const ideas = ['общий план места или процесса', 'деталь и фактура крупно', 'люди в работе или клиент с результатом', 'результат до и после или готовое изделие', 'атмосфера: свет, интерьер, упаковка', 'команда или мастер'];
+    // 8 кадров: галерея из 4 фото выглядела пустой для портфолио, мастерских и заведений.
+    const frames = Math.max(GALLERY_FRAMES, project.gallery.length);
+    const ideas = ['общий план места или процесса', 'деталь и фактура крупно', 'люди в работе или клиент с результатом', 'результат до и после или готовое изделие', 'атмосфера: свет, интерьер, упаковка', 'команда или мастер', 'инструменты, материалы или ингредиенты', 'место с другого ракурса: вход, стойка, рабочее место'];
     for (let n = 0; n < frames; n++) {
       const g = project.gallery[n];
       slots.push({

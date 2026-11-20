@@ -24,7 +24,7 @@ test('код веб-редактора синтаксически коррект
     "MAX_IMAGE_BYTES = 1024 * 1024",
     "MAX_IMAGE_DATA = 3_800_000",
     "MAX_IMAGE_EDGE = 1800",
-    "async function optimizeImage(file)",
+    "async function optimizeImage(file, maxEdge = MAX_IMAGE_EDGE)",
     "canvasBlob(canvas, 'image/webp', quality)",
     "image/webp",
     "data-remove-image",
