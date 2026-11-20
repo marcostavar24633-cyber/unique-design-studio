@@ -1,4 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
+import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
@@ -116,6 +117,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
 let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
+let projectHistoryRenderVersion = 0;
 let aiDesignReview = null;
 let aiDesignReviewLoading = false;
 let lastRenderedRaw = null;
@@ -2066,7 +2068,34 @@ function renderRegistry() {
     const s = l.entry.id === result.project.id ? null : similarity(fp, l.entry.fingerprint);
     return `<tr><td><b>${esc(l.entry.brand)}</b></td><td>${esc(ARCHETYPES[l.entry.fingerprint.archetype]?.name || '')}</td><td>${s === null ? '<span class="note">это текущий проект</span>' : `<span class="meter"><i style="width:${s * 100}%"></i></span>${Math.round(s * 100)}%`}</td><td><button type="button" data-load="${i}">Открыть</button> <button type="button" data-del="${i}" aria-label="Удалить ${esc(l.entry.brand)} из реестра">Удалить</button></td></tr>`;
   }).join('')}</tbody></table>` : '<p class="note">Реестр пуст. Кнопка «В реестр» сохраняет проект и его визуальный «отпечаток» в этом браузере — следующие проекты будут проверяться на шаблонность относительно него.</p>';
+  $('#view-registry').insertAdjacentHTML('beforeend', `
+    <section class="project-history" aria-labelledby="project-history-title">
+      <div class="project-history__head"><div><h3 id="project-history-title">История версий текущего проекта</h3><p class="note">Снимки сохраняются отдельно в браузере. Можно восстановить или сравнить любую из последних 10 версий.</p></div></div>
+      <div class="project-history__save"><label for="history-label">Название версии <span class="note">(необязательно)</span></label><input id="history-label" maxlength="80" placeholder="Например: До изменения главного экрана"><button type="button" data-history-save>Сохранить версию</button></div>
+      <div id="project-history-list" aria-live="polite"><p class="note">Загружаем историю…</p></div>
+      <div id="project-history-diff" aria-live="polite"></div>
+    </section>`);
+  renderProjectHistory();
 }
+async function renderProjectHistory() {
+  const host = $('#project-history-list');
+  if (!host || !result) return;
+  const requestId = ++projectHistoryRenderVersion;
+  host.innerHTML = '<p class="note">Загружаем историю версий…</p>';
+  try {
+    const versions = await listProjectVersions(result.project.id);
+    if (requestId !== projectHistoryRenderVersion || !host.isConnected) return;
+    host.innerHTML = versions.length ? '<div class="project-history__list">' + versions.map(version => {
+      const date = new Date(version.createdAt);
+      const stamp = Number.isNaN(date.getTime()) ? 'Дата неизвестна' : date.toLocaleString('ru-RU');
+      const label = version.label || 'Сохранённая версия';
+      return '<article class="project-history__item"><div class="project-history__meta"><b>' + esc(label) + '</b><small>' + esc(stamp) + '</small></div><div class="project-history__actions"><button type="button" data-history-compare="' + esc(version.id) + '">Сравнить</button><button type="button" data-history-restore="' + esc(version.id) + '">Восстановить</button><button type="button" data-history-delete="' + esc(version.id) + '" aria-label="Удалить версию ' + esc(label) + '">Удалить</button></div></article>';
+    }).join('') + '</div>' : '<p class="project-history__empty">Сохранённых версий пока нет. Создайте первый снимок перед крупными изменениями.</p>';
+  } catch (error) {
+    if (requestId === projectHistoryRenderVersion) host.innerHTML = '<p class="project-history__error">История версий недоступна: ' + esc(error.message || 'ошибка IndexedDB') + '</p>';
+  }
+}
+
 
 // ---------- События ----------
 function toast(msg) {
@@ -2788,10 +2817,45 @@ $('#save').addEventListener('click', () => {
   if (persistFailed) return toast(PERSIST_ERROR);
   toast(`«${result.entry.brand}» сохранён в реестр`);
 });
-$('#view-registry').addEventListener('click', e => {
+$('#view-registry').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.load) { const item = state.library[b.dataset.load]; state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из реестра'); }
-  if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); }
+  if (b.dataset.load) { const item = state.library[b.dataset.load]; state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из реестра'); return; }
+  if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); return; }
+  try {
+    if (b.hasAttribute('data-history-save')) {
+      const snapshot = await saveProjectVersion({ projectId: result.project.id, raw: result.exported, analysis: currentAnalysis(), label: $('#history-label')?.value || '' });
+      if ($('#history-label')) $('#history-label').value = '';
+      toast('Версия сохранена: ' + new Date(snapshot.createdAt).toLocaleString('ru-RU'));
+      await renderProjectHistory();
+      return;
+    }
+    if (b.dataset.historyCompare) {
+      const host = $('#project-history-diff');
+      host.innerHTML = '<p class="note">Сравниваем сохранённую версию с текущим проектом…</p>';
+      const version = await getProjectVersion(b.dataset.historyCompare);
+      if (!version) { host.replaceChildren(); return toast('Версия уже недоступна'); }
+      const changes = compareProjectSnapshots(version.raw, state.raw);
+      host.innerHTML = '<h4>Сравнение: ' + esc(version.label || 'Сохранённая версия') + ' → текущая</h4>' + (changes.length
+        ? '<table><thead><tr><th>Поле</th><th>В версии</th><th>Сейчас</th></tr></thead><tbody>' + changes.map(item => '<tr><td>' + esc(item.field) + '</td><td>' + esc(item.before) + '</td><td>' + esc(item.after) + '</td></tr>').join('') + '</tbody></table>'
+        : '<p class="note">В основных полях и количестве материалов отличий нет.</p>');
+      return;
+    }
+    if (b.dataset.historyRestore) {
+      const version = await getProjectVersion(b.dataset.historyRestore);
+      if (!version) return toast('Версия уже недоступна');
+      if (!confirm('Восстановить эту версию? Текущая работа сначала будет сохранена отдельным снимком.')) return;
+      await saveProjectVersion({ projectId: result.project.id, raw: result.exported, analysis: currentAnalysis(), label: 'Перед восстановлением' });
+      load({ ...version.raw, __udsAnalysis: version.analysis ? { data: version.analysis } : null }, 'Версия восстановлена. Текущая работа сохранена в истории.');
+      return;
+    }
+    if (b.dataset.historyDelete) {
+      if (!confirm('Удалить сохранённую версию? Это действие нельзя отменить.')) return;
+      await deleteProjectVersion(b.dataset.historyDelete);
+      $('#project-history-diff').replaceChildren();
+      await renderProjectHistory();
+      toast('Версия удалена');
+    }
+  } catch (error) { toast('Ошибка истории версий: ' + (error.message || 'не удалось выполнить действие')); }
 });
 
 fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async list => {

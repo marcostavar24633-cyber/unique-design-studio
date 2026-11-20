@@ -7,13 +7,14 @@
 
 ## Актуальный статус на 20 ноября 2026
 
-- Открытых Pull Request на момент подготовки PR #193: **1** — документационный PR #193; функциональных PR нет.
-- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка) и #192 (Prompt Manager E2E) объединены.
-- PR #192: commit `8be03a5959ec0570e2a280409b6b72fc0b49b74b`; проверки Node 20, Node 22, Workers Build и E2E завершились успешно.
-- GitHub Pages deployment для commit #192 завершился успешно: [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
-- Повторный CI после merge на `main` был ещё в процессе на момент подготовки этой редакции; его итог необходимо проверить по run [44775292162](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44775292162).
-- Область изменений PR #192: только E2E-сценарий Prompt Manager и подключение его к `npm run test:e2e`; AI endpoint, Cloudflare Worker и секреты не менялись.
-- Следующий шаг после завершения PR #193: аудит реальных пользовательских сценариев студии и сверка backlog с кодом `main`, без слияния старых diverged-веток целиком.
+- Открытых Pull Request на момент подготовки этой редакции: **1** — функциональный PR #194 «История версий проекта».
+- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E) и #193 (обновление документации) объединены.
+- PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
+- Основной CI после PR #193 завершился успешно: [run 44776100369](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44776100369) — Node 20, Node 22, Workers Build и E2E.
+- GitHub Pages deployment после PR #193 завершился успешно: [run 44776100287](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44776100287); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
+- PR #194 добавляет историю версий проекта в IndexedDB, сравнение снимков и безопасное восстановление с автосохранением текущей версии. CI выполняется.
+- В ходе аудита подтверждено: реестр проектов хранит последнюю запись проекта по ID; отдельная история версий проекта до PR #194 отсутствовала. Prompt Manager уже имеет собственное версионирование.
+- AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не затрагиваются.
 
 ## Исторический журнал PR (состояние на 17–18 ноября 2026)
 
@@ -77,7 +78,7 @@
 
 5. `feat: enhance AI design director` — развить AI Design Director с проверяемыми результатами.
 6. `feat: improve AI content director` — генерация контента, ЦА, офферов, SEO и структуры с валидацией.
-7. `feat: add editable prompt orchestration` — редактирование, хранение и повторное использование промтов.
+7. `[x] feat: add editable prompt orchestration` — Prompt Manager реализован: 5 модулей, версии, активация/откат, импорт/экспорт и E2E (PR #192).
 8. `feat: improve AI image generation workflow` — генерация изображений и корректное заполнение графических полей и карточек.
 9. `feat: add AI production pipeline` — связать этапы от ниши до готового сайта; сначала проверить, что PR #39 уже не реализовал нужную часть.
 
@@ -94,7 +95,7 @@
 15. `feat: enhance website analyzer` — улучшить анализ структуры, дизайна и механик; учитывать PR #37.
 16. `feat: add editable niche profile library` — библиотека ниш и редактируемые профили; не дублировать PR #37.
 17. `feat: improve asset management` — загрузка, организация, кадрирование и управление изображениями; учитывать PR #30.
-18. `feat: add project version management` — история версий, сравнение и восстановление.
+18. `[~] feat: add project version management` — PR #194: ручные снимки в IndexedDB, сравнение и восстановление; последние 10 версий на проект. Ожидает CI и merge.
 19. `feat: add merge engine` — безопасное объединение модулей и результатов разработки с проверкой конфликтов.
 
 ### Этап E — главный интерфейс
@@ -110,6 +111,8 @@
 25. `test: improve accessibility and performance` — доступность, клавиатурная навигация, reduced motion и производительность.
 26. `feat: add production readiness validation` — итоговая проверка перед публикацией с понятными блокирующими ошибками.
 27. `docs: update studio architecture and workflows` — актуализировать архитектуру, инструкции запуска, интеграции и пользовательские сценарии.
+
+Обозначения статуса: `[x]` — выполнено и подтверждено в `main`; `[~]` — частично реализовано или выполняется в PR; без отметки — задача ещё не завершена.
 
 ## 4. Правила выполнения
 
