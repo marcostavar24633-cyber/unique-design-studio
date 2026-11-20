@@ -700,3 +700,21 @@ test('без режима auto неудачный одиночный запро�
   assert.equal(res.status, 502);
   assert.equal(env.calls.length, 2);
 });
+
+test('фото ограничены отдельным счётчиком: 11 кадров подряд проходят, общий лимит 6 не мешает', async () => {
+  const { allowRequest, IMAGE_LIMIT, FALLBACK_LIMIT } = await import('../worker/ai-utils.js');
+  const req = new Request('https://w.dev/api/generate-image', { headers: { 'CF-Connecting-IP': '10.77.0.1' } });
+  const now = Date.now();
+  for (let i = 0; i < 11; i++) assert.equal(await allowRequest(req, {}, now + i, IMAGE_LIMIT), true, 'кадр ' + (i + 1));
+  for (let i = 0; i < FALLBACK_LIMIT.requests; i++) assert.equal(await allowRequest(req, {}, now + i), true, 'текстовый запрос ' + (i + 1));
+  assert.equal(await allowRequest(req, {}, now + 10), false);
+});
+
+test('/api/visual-hints возвращает до 8 сцен галереи латиницей', async () => {
+  const answer = { niche: 'pottery workshop', setting: 'studio', hero: 'wheel', avoid: '', items: {}, gallery: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'кириллица'] };
+  const env = aiReturning(JSON.stringify(answer));
+  const res = await worker.fetch(new Request('https://w.dev/api/visual-hints', { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '10.9.9.8' },
+    body: JSON.stringify({ niche: 'гончарная мастерская', items: [] }) }), env);
+  const body = await res.json();
+  assert.deepEqual(body.hints.gallery, ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+});

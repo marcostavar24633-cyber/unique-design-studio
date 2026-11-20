@@ -153,7 +153,8 @@ export function visualHints(project) {
       if (en) items[clean(key)] = en;
     }
   }
-  return { niche: asciiText(raw.niche, 80), setting: asciiText(raw.setting, 240), hero: asciiText(raw.hero, 240), avoid: asciiText(raw.avoid, 160), items };
+  const gallery = (Array.isArray(raw.gallery) ? raw.gallery : []).map(scene => asciiText(scene, 200)).filter(Boolean).slice(0, 12);
+  return { niche: asciiText(raw.niche, 80), setting: asciiText(raw.setting, 240), hero: asciiText(raw.hero, 240), avoid: asciiText(raw.avoid, 160), items, gallery };
 }
 
 // Что изображено в карточке позиции: точное блюдо из словаря, английская подсказка от AI или транслит с контекстом ниши.
@@ -170,7 +171,7 @@ export function itemSubject(title, visual, hints = null) {
   return `the product or service "${translit(name)}" of a ${visual.en}, shown clearly as the main subject`;
 }
 
-const GALLERY_IDEAS = ['a wide shot of the place or the process', 'a close-up of texture and details', 'people at work or a happy customer with the result', 'the finished product or result', 'atmosphere: light, interior and small details', 'the team or the master at work'];
+const GALLERY_IDEAS = ['a wide shot of the place or the process', 'a close-up of texture and details', 'people at work or a happy customer with the result', 'the finished product or result', 'atmosphere: light, interior and small details', 'the team or the master at work', 'the tools, materials or ingredients laid out neatly', 'the space from a different angle: entrance, counter or workstation'];
 const ASPECT = { '16:9': 'wide 16:9 frame', '4:3': '4:3 frame', '4:5': 'vertical 4:5 frame', '3:2': '3:2 frame', '1:1': 'square frame' };
 
 // Стиль съёмки по направлению графики (graphic-art-direction.js). Только то, что генератор фото может
@@ -209,7 +210,9 @@ export function photoPrompt(slot, project, graphicDirection) {
     background = visual.cuisine ? `a table in ${visual.setting}, softly blurred` : 'a simple consistent background, the same for every product card';
   } else {
     const n = Number(String(slot.id).split('-')[1]) || 0;
-    subject = `${GALLERY_IDEAS[n % GALLERY_IDEAS.length]} at a ${visual.en}`; angle = n % 2 ? 'close-up' : 'medium shot'; background = visual.setting;
+    // Сцена от AI для этой ниши (visualHints.gallery), иначе — общий сюжет. Каждый кадр — новый сюжет.
+    const scene = visualHints(project)?.gallery?.[n];
+    subject = scene ? `${scene}, at a ${visual.en}` : `${GALLERY_IDEAS[n % GALLERY_IDEAS.length]} at a ${visual.en}`; angle = n % 2 ? 'close-up' : 'medium shot'; background = visual.setting;
   }
   const light = luxury ? 'controlled directional light, deep soft shadows, refined editorial mood' : 'soft natural daylight, natural colors';
   const parts = [

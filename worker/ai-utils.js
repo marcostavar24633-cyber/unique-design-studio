@@ -46,15 +46,18 @@ export function aboutNiche(landing, niche) {
 // Если к Worker привязан Rate Limiting (AI_RATE_LIMITER) — используется он; иначе — запасной счётчик в памяти
 // экземпляра (не общий для всех серверов Cloudflare, поэтому лишь сдерживает, а не гарантирует лимит).
 export const FALLBACK_LIMIT = { requests: 6, windowMs: 60_000 };
+// Фото — отдельный счётчик: автопилот создаёт до 11 кадров подряд (главное, 2 карточки, 8 кадров галереи).
+export const IMAGE_LIMIT = { bucket: 'image', requests: 16, windowMs: 60_000 };
 const recent = new Map();
-export async function allowRequest(request, env, now = Date.now()) {
-  const key = request.headers.get('CF-Connecting-IP') || 'unknown';
+export async function allowRequest(request, env, now = Date.now(), limit = FALLBACK_LIMIT) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const key = limit.bucket ? ip + ':' + limit.bucket : ip;
   if (env.AI_RATE_LIMITER && typeof env.AI_RATE_LIMITER.limit === 'function') {
     const { success } = await env.AI_RATE_LIMITER.limit({ key });
     return success;
   }
-  const hits = (recent.get(key) || []).filter(t => now - t < FALLBACK_LIMIT.windowMs);
-  if (hits.length >= FALLBACK_LIMIT.requests) { recent.set(key, hits); return false; }
+  const hits = (recent.get(key) || []).filter(t => now - t < limit.windowMs);
+  if (hits.length >= limit.requests) { recent.set(key, hits); return false; }
   hits.push(now);
   recent.set(key, hits);
   if (recent.size > 5000) recent.clear(); // не даём карте расти бесконечно

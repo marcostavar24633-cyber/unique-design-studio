@@ -102,3 +102,13 @@ test('студия показывает задания и без загруже�
   assert.match(js, /data-image-tasks="download"/);
   assert.match(js, /esc\(slotBrief\(slot, result\.project\)\)/);
 });
+
+test('галерея планирует 8 кадров с разными сюжетами', async () => {
+  const { GALLERY_FRAMES } = await import('../src/engine/image-director.js');
+  const { generate } = await import('../src/engine/index.js');
+  const g = generate({ niche: 'гончарная мастерская', brand: 'Глина', services: [['Мастер-класс', '']] });
+  const gallery = imageSlots(g.project, g.concept).slots.filter(slot => slot.role === 'gallery');
+  assert.equal(GALLERY_FRAMES, 8);
+  assert.equal(gallery.length, 8);
+  assert.equal(new Set(gallery.map(slot => slot.subject)).size, 8, 'сюжеты кадров повторяются');
+});

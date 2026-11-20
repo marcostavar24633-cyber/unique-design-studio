@@ -117,3 +117,14 @@ test('без подсказок поведение прежнее: словар�
   assert.match(nicheVisual({ niche: 'гончарная мастерская', services: [] }).en, /Goncharnaya masterskaya/i);
   assert.match(nicheVisual({ niche: 'автосервис', services: [], visualHints: { niche: 'something else' } }).en, /car service/, 'словарь важнее подсказки');
 });
+
+test('кадры галереи берут сцены ниши от AI, а без них — 8 разных общих сюжетов', () => {
+  const project = { niche: 'гончарная мастерская', tier: 'standard', services: [],
+    visualHints: { niche: 'pottery workshop', gallery: ['hands shaping clay on a wheel', 'shelves of drying ceramics', 'кириллица отбрасывается'] } };
+  const frame = n => photoPrompt({ id: 'gallery-' + n, role: 'gallery', label: 'Галерея, кадр ' + (n + 1), aspect: '4:5' }, project);
+  assert.match(frame(0), /hands shaping clay on a wheel, at a pottery workshop/);
+  assert.match(frame(1), /shelves of drying ceramics/);
+  const plain = { niche: 'гончарная мастерская', tier: 'standard', services: [], visualHints: { niche: 'pottery workshop' } };
+  const subjects = new Set(Array.from({ length: 8 }, (_, n) => photoPrompt({ id: 'gallery-' + n, role: 'gallery', label: 'x', aspect: '4:5' }, plain).match(/Subject: ([^.]*)\./)[1]));
+  assert.equal(subjects.size, 8);
+});

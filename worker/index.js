@@ -1,4 +1,4 @@
-import { NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
+import { IMAGE_LIMIT, NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
 import { gatewayStatus, isGatewayConfigured } from './gateway.js';
 import { generateContentInStages, regenerateContentStage, editContentField } from './content-engine.js';
@@ -193,7 +193,8 @@ export default {
       const prompt = [
         'You prepare English briefs for a photo generator that understands only English.',
         'Translate the business niche and each item into short, concrete English descriptions of what should be visible in a photo.',
-        'Return only one JSON object: {"niche":"...","setting":"...","hero":"...","avoid":"...","items":{"<original item>":"<what the photo shows>"}}.',
+        'Return only one JSON object: {"niche":"...","setting":"...","hero":"...","avoid":"...","items":{"<original item>":"<what the photo shows>"},"gallery":["...", "..."]}.',
+        'gallery: exactly 8 different photo scenes for the website gallery of this business (place, process, details, people at work, results, tools, atmosphere), each 6-14 words, no two alike.',
         'niche: 2-6 words, e.g. "specialty coffee shop". setting: the real place, materials and props. hero: one main photo for the website.',
         'avoid: things a generator might wrongly draw for this niche (may be empty). items: keep the original item names as keys, exactly as given.',
         'Use only English in values. No brand names, no text or signs in the image.',
@@ -205,7 +206,7 @@ export default {
       try {
         const { result } = await runTextModel(env, MODEL, {
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 900,
+          max_tokens: 1300,
           temperature: 0.2,
           ...NO_THINKING,
         });
@@ -215,7 +216,8 @@ export default {
         if (parsed?.items && typeof parsed.items === 'object') {
           for (const item of items) { const en = pick(parsed.items[item], 200); if (en) translated[item] = en; }
         }
-        const hints = { niche: pick(parsed?.niche, 80), setting: pick(parsed?.setting, 240), hero: pick(parsed?.hero, 240), avoid: pick(parsed?.avoid, 160), items: translated };
+        const gallery = (Array.isArray(parsed?.gallery) ? parsed.gallery : []).map(scene => pick(scene, 200)).filter(Boolean).slice(0, 8);
+        const hints = { niche: pick(parsed?.niche, 80), setting: pick(parsed?.setting, 240), hero: pick(parsed?.hero, 240), avoid: pick(parsed?.avoid, 160), items: translated, gallery };
         if (!hints.niche) return json({ error: 'AI не вернул описание ниши' }, 502, origin);
         return json({ hints }, 200, origin);
       } catch (error) {
@@ -226,7 +228,7 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Метод не поддерживается' }, 405, origin);
       if (!ALLOWED_ORIGINS.has(origin)) return json({ error: 'Источник запроса не разрешён' }, 403, origin);
       if (!env.AI) return json({ error: 'Workers AI binding AI не настроен' }, 503, origin);
-      if (!(await allowRequest(request, env))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
+      if (!(await allowRequest(request, env, Date.now(), IMAGE_LIMIT))) return json({ error: 'Слишком много запросов. Повторите через минуту.' }, 429, origin);
       let input;
       try {
         const raw = await request.text();

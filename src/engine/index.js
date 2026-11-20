@@ -20,7 +20,7 @@ export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIEL
 export { prepareContentIntelligence, reviewGeneratedContent, CONTENT_INTELLIGENCE_MODULES } from './content-intelligence.js';
 export { qualityReport, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
 export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
-export { imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
+export { GALLERY_FRAMES, imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
 export function generate(input, { registry = [], neighbors = 2 } = {}) {

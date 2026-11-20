@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -1961,7 +1961,7 @@ function blobToDataUrl(blob) {
 function canvasBlob(canvas, type, quality) {
   return new Promise(resolve => canvas.toBlob(resolve, type, quality));
 }
-async function optimizeImage(file) {
+async function optimizeImage(file, maxEdge = MAX_IMAGE_EDGE) {
   if (!IMAGE_TYPES.has(file.type)) throw new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.');
   if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Исходный файл больше 8 МБ. Выберите изображение меньшего размера.');
   const preserveOriginal = file.type === 'image/gif' || file.type === 'image/avif';
@@ -1980,7 +1980,7 @@ async function optimizeImage(file) {
     throw new Error('Не удалось открыть изображение для оптимизации. Проверьте файл или сохраните его как JPG/PNG.');
   }
   try {
-    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
     const initialWidth = Math.max(1, Math.round(bitmap.width * scale));
     const initialHeight = Math.max(1, Math.round(bitmap.height * scale));
     const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900, 720, 540, 360, 240].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
@@ -2004,12 +2004,12 @@ async function optimizeImage(file) {
     throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
   } finally { bitmap.close?.(); }
 }
-async function optimizeGeneratedImage(dataUri) {
+async function optimizeGeneratedImage(dataUri, maxEdge = MAX_IMAGE_EDGE) {
   const response = await fetch(dataUri);
   if (!response.ok) throw new Error('Не удалось прочитать изображение от AI.');
   const blob = await response.blob();
   const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
-  return optimizeImage(file);
+  return optimizeImage(file, maxEdge);
 }
 // ALT для созданного фото: что видит посетитель, а не служебный текст задания для фотографа.
 function generatedAlt(slot, project) {
@@ -2026,8 +2026,9 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
   const slots = imageSlots(result.project, result.concept).slots;
   const hero = slots.find(slot => slot.id === 'hero');
   const products = slots.filter(slot => slot.role === 'service').slice(0, 2);
-  const gallery = slots.filter(slot => slot.role === 'gallery').slice(0, products.length ? 1 : 3);
-  const targets = [...(hero ? [hero] : []), ...products, ...gallery].slice(0, 4);
+  // Все кадры галереи (8) плюс главное фото и 2 карточки — до 11 изображений.
+  const gallery = slots.filter(slot => slot.role === 'gallery' && !slot.filled).slice(0, GALLERY_FRAMES);
+  const targets = [...(hero ? [hero] : []), ...products, ...gallery];
   if (!targets.length) return { generated: 0, skipped: true };
   // Английские описания ниши и позиций для генератора фото. Без них незнакомые нише слова уходили
   // транслитом («kofeynya»), и FLUX рисовал кадры, не относящиеся к бизнесу. Ошибка не прерывает генерацию.
@@ -2065,10 +2066,11 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: response.ok && payload.image ? 'ok' : 'error', error: payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms: Date.now() - imageStarted, model: payload.model || '' });
     // Один неудачный кадр не обрывает остальные: его можно перегенерировать или загрузить своё фото.
     if (!response.ok || !payload.image) { failed++; lastImageError = payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').'; continue; }
-    const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
+    // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
+    const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image, slot.role === 'gallery' ? 1100 : MAX_IMAGE_EDGE);
     if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
     const data = optimized.data;
-    if (imageDataSize() + data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.');
+    if (imageDataSize() + data.length > MAX_IMAGE_DATA) { if (generated) { lastImageError = 'Достигнут лимит хранилища изображений проекта (3,8 МБ).'; failed += targets.length - index; break; } throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.'); }
     if (slot.id === 'hero') {
       state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: alt };
     } else if (slot.role === 'service') {
