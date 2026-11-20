@@ -54,6 +54,13 @@ try {
     request.onerror = () => resolve(false);
   }), null, { timeout: 10000 });
   check(await page.locator('#frame').getAttribute('srcdoc').then(html => html.includes('BACKUP E2E')), 'проект не сформирован перед перезагрузкой');
+  await page.waitForTimeout(600);
+  const backupBeforeReload = await page.evaluate(async () => {
+    const module = await import('/studio/project-storage.js');
+    const backup = await module.loadEmergencyBackup();
+    return backup?.state?.raw?.brand || '';
+  });
+  check(backupBeforeReload === 'BACKUP E2E', 'резервная копия была перезаписана до перезагрузки: ' + backupBeforeReload);
 
   await page.reload({ waitUntil: 'networkidle' });
   try {
@@ -67,7 +74,10 @@ try {
         inputBrand: document.querySelector('#form [data-path="brand"]')?.value,
         frameHasBrand: document.querySelector('#frame')?.srcdoc?.includes('BACKUP E2E'),
         backupBrand: backup?.state?.raw?.brand,
-        backupError: backup?.error
+        backupError: backup?.error,
+        localStorageBrand: (() => { try { return JSON.parse(localStorage.getItem('uds:studio:v1') || 'null')?.raw?.brand || ''; } catch { return 'unreadable'; } })(),
+        localStorageTimestamp: (() => { try { return JSON.parse(localStorage.getItem('uds:studio:v1') || 'null')?._udsSavedAt || 0; } catch { return -1; } })(),
+        storageProbe: (() => { try { localStorage.setItem('uds:probe-debug','1'); localStorage.removeItem('uds:probe-debug'); return true; } catch { return false; } })()
       };
     });
     throw new Error('Восстановление после перезагрузки не завершилось: ' + JSON.stringify(debug) + '; ' + error.message);
