@@ -56,7 +56,22 @@ try {
   check(await page.locator('#frame').getAttribute('srcdoc').then(html => html.includes('BACKUP E2E')), 'проект не сформирован перед перезагрузкой');
 
   await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelector('#frame')?.srcdoc?.includes('BACKUP E2E'), null, { timeout: 15000 });
+  try {
+    await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]')?.value === 'BACKUP E2E', null, { timeout: 15000 });
+    await page.waitForFunction(() => document.querySelector('#frame')?.srcdoc?.includes('BACKUP E2E'), null, { timeout: 15000 });
+  } catch (error) {
+    const debug = await page.evaluate(async () => {
+      const module = await import('/studio/project-storage.js');
+      const backup = await module.loadEmergencyBackup().catch(err => ({ error: err.message }));
+      return {
+        inputBrand: document.querySelector('#form [data-path="brand"]')?.value,
+        frameHasBrand: document.querySelector('#frame')?.srcdoc?.includes('BACKUP E2E'),
+        backupBrand: backup?.state?.raw?.brand,
+        backupError: backup?.error
+      };
+    });
+    throw new Error('Восстановление после перезагрузки не завершилось: ' + JSON.stringify(debug) + '; ' + error.message);
+  }
   check(await page.locator('#form [data-path="brand"]').inputValue() === 'BACKUP E2E', 'после перезагрузки не восстановлен бренд из IndexedDB');
   check(errors.length === 0, 'ошибки JavaScript: ' + errors.join('; '));
   await context.close();
