@@ -16,6 +16,7 @@ import { chooseCinematicLayers } from './cinematic/visual-layers.js';
 import { chooseTransition } from './cinematic/transitions.js';
 import { chooseVariety } from './variety.js';
 import { chooseEffects } from './effects.js';
+import { chooseTypography, LAYOUT_ORDER_FAMILY, SECTION_LAYOUTS, SECTION_LAYOUT_IDS } from './typography-layout.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -171,7 +172,8 @@ function compose(project, profile, ranked, seed, avoid) {
       ? ['solid', 'outline', 'underline', 'double', 'slide', 'arrow', 'ghost']
       : ['solid', 'outline', 'pill', 'gradient', 'glow', 'press', 'arrow', 'slide', 'glass', 'neon', 'inset', 'ghost']);
   // Вариант подачи секций — отдельная композиционная ось, а не только оформление hero.
-  const sectionLayout = pick(stream(seed, 'section-layout'), ['editorial', 'offset', 'framed', 'quiet'], avoid.sectionLayouts || []);
+  // 15 раскладок секций; ручной выбор владельца главнее (passthrough.sectionLayout).
+  const sectionLayout = SECTION_LAYOUTS[project.passthrough?.sectionLayout] ? project.passthrough.sectionLayout : pick(stream(seed, 'section-layout'), SECTION_LAYOUT_IDS, avoid.sectionLayouts || []);
   return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button, sectionLayout };
 }
 
@@ -230,7 +232,7 @@ function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', se
       ['about', 'process', 'faq', 'advantages', 'items', 'gallery'],
       ['faq', 'about', 'advantages', 'process', 'gallery', 'items'],
     ],
-  }[sectionLayout] || [['about', 'items', 'advantages', 'process', 'gallery', 'faq']];
+  }[LAYOUT_ORDER_FAMILY[sectionLayout] || sectionLayout] || [['about', 'items', 'advantages', 'process', 'gallery', 'faq']];
   const preference = pick(stream(seed, 'section-order-variant'), preferences);
   const rank = id => { const i = preference.indexOf(id); return i < 0 ? preference.length : i; };
   const rest = base.map((id, index) => ({ id, index }))
@@ -353,7 +355,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       ['nav', 'navs', 'nav', 'навигационный паттерн', v => NAV_LABELS[v]],
       ['direction', 'directions', 'colorDirection', 'цветовое направление', v => DIRECTIONS[v].label],
       ['shape', 'shapes', 'shape', 'форма элементов', v => SHAPES[v].label],
-      ['sectionLayout', 'sectionLayouts', 'sectionLayout', 'композиция секций', v => ({ editorial: 'журнальная сетка', offset: 'смещённая двухколоночная сетка', framed: 'выделенные фоновые секции', quiet: 'минималистичный ритм и разделители' })[v]],
+      ['sectionLayout', 'sectionLayouts', 'sectionLayout', 'композиция секций', v => SECTION_LAYOUTS[v]],
     ];
     for (const [key, avoidKey, fpKey, label, describe] of soft) {
       if (design[key] !== prev.fingerprint[fpKey]) continue;
@@ -501,11 +503,13 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       // Фактура и свет страницы (D03): воплощают направление графики в CSS; ручной выбор владельца главнее.
       cinematicLayers,
       // Переходы между секциями: тип и настраиваемый градиент; ручные настройки владельца главнее.
-      transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, seed }),
+      transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, sectionLayout: design.sectionLayout, seed }),
       // Форма карточек и эффект появления блоков; ручной выбор владельца главнее.
       variety: chooseVariety(project, { shape: design.shape, archetype: design.primary, intensity: motionPlan.intensity, seed }),
       // Эффекты карточек и первого экрана; ручной выбор владельца главнее, фотоэффекты — только при наличии фото.
       effects: chooseEffects(project, { archetype: design.primary, tier: project.tier, intensity: motionPlan.intensity, seed }),
+      // Оформление заголовков, анимации текста и кнопок; ручной выбор владельца главнее.
+      typography2: chooseTypography(project, { archetype: design.primary, typeCharacter: design.typeCharacter, intensity: motionPlan.intensity, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,
