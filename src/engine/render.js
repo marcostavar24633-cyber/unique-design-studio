@@ -334,7 +334,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
+${fontLinks(visualIdentity ? [{ family: visualIdentity.typography.display, weights: '400;500;600;700;800' }, { family: visualIdentity.typography.body, weights: '400;500;600;700' }] : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
