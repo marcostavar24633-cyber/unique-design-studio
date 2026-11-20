@@ -1696,6 +1696,31 @@ function renderHeroReadabilityChecks() {
 }
 
 
+function previewAccessibleName(el, doc) {
+  if (!el) return '';
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const referenced = (el.getAttribute('aria-labelledby') || '').trim().split(/\s+/).filter(Boolean)
+    .map(id => doc.getElementById(id)).filter(Boolean)
+    .map(node => node.textContent || '').join(' ');
+  if (clean(referenced)) return clean(referenced);
+  const ariaLabel = clean(el.getAttribute('aria-label'));
+  if (ariaLabel) return ariaLabel;
+  if (el.labels && el.labels.length) {
+    const labels = [...el.labels].map(label => label.textContent || '').join(' ');
+    if (clean(labels)) return clean(labels);
+  }
+  if (el.tagName === 'IMG') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && el.type === 'image') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && ['button','submit','reset'].includes(el.type)) return clean(el.value);
+  const content = [
+    typeof el.innerText === 'string' ? el.innerText : (el.textContent || ''),
+    ...[...(el.querySelectorAll?.('img[alt]') || [])].map(img => img.getAttribute('alt') || ''),
+    ...[...(el.querySelectorAll?.('svg title') || [])].map(title => title.textContent || ''),
+  ].join(' ');
+  if (clean(content)) return clean(content);
+  return clean(el.getAttribute('title'));
+}
+
 function auditResponsiveLayoutAndAccessibility() {
   const frame = $('#frame');
   const doc = frame?.contentDocument;
@@ -1710,15 +1735,19 @@ function auditResponsiveLayoutAndAccessibility() {
     const rect = el.getBoundingClientRect();
     return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
   };
-  const hasName = el => Boolean((el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || el.value || '').trim() || (el.labels && [...el.labels].some(label => label.innerText.trim())));
+  const hasName = el => Boolean(previewAccessibleName(el, doc));
   const intersects = (a,b) => a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2;
   try {
     for (const size of sizes) {
       frame.style.width = size.width + 'px';
-      frame.style.maxWidth = '100%';
+      frame.style.maxWidth = 'none';
+      const viewportWidth = doc.defaultView.innerWidth;
+      if (!Number.isFinite(viewportWidth) || Math.abs(viewportWidth - size.width) > 2) {
+        results.push({level:'manual',title:size.label + ': ширина тестового окна не подтверждена',text:'Не удалось установить фактическую ширину предпросмотра ' + size.width + ' px. Проверки для этого размера пропущены, чтобы не выдавать результаты другого viewport за точные.'});
+        continue;
+      }
       const root = doc.documentElement;
       const body = doc.body;
-      const viewportWidth = doc.defaultView.innerWidth || size.width;
       const pageWidth = Math.max(root.scrollWidth,body.scrollWidth);
       if (pageWidth > viewportWidth + 2) results.push({level:'check',title:size.label + ': горизонтальная прокрутка',text:'Контент шире окна на ' + (pageWidth - viewportWidth) + ' px. Проверьте фиксированные ширины, длинные строки и сетки.'});
       else results.push({level:'good',title:size.label + ': ширина страницы',text:'Горизонтальное переполнение на уровне документа не обнаружено.'});
@@ -1729,28 +1758,34 @@ function auditResponsiveLayoutAndAccessibility() {
         const r = el.getBoundingClientRect();
         return r.width < 44 || r.height < 44;
       });
-      if (smallTargets.length) results.push({level:'check',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше ориентира 44 × 44 px. Увеличьте область нажатия или расстояние между соседними элементами.'});
+      if (smallTargets.length) results.push({level:'manual',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше рекомендуемого ориентира 44 × 44 px. Это не само по себе доказательство нарушения WCAG 2.2 AA: учитывайте применимые исключения и расстояние между целями.'});
       const offscreen = controls.filter(el => {
         const r = el.getBoundingClientRect();
         return r.right < 0 || r.left > viewportWidth || r.bottom < 0;
       });
       if (offscreen.length) results.push({level:'check',title:size.label + ': элементы за пределами экрана',text:offscreen.length + ' интерактивных элементов находятся за видимой областью. Проверьте меню, CTA и горизонтальные списки.'});
-      const focusMissing = controls.filter(el => {
-        const style = doc.defaultView.getComputedStyle(el);
-        return style.outlineStyle === 'none' && style.boxShadow === 'none';
-      });
-      if (focusMissing.length) results.push({level:'manual',title:size.label + ': проверить клавиатурный фокус',text:focusMissing.length + ' элементов не имеют очевидного outline или box-shadow в обычном состоянии. Проверьте :focus-visible клавиатурой.'});
       const overlapping = [];
-      const candidates = controls.filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type));
-      for (let i=0;i<candidates.length;i++) for (let j=i+1;j<candidates.length;j++) {
-        const a=candidates[i],b=candidates[j];
-        if (a.contains(b) || b.contains(a)) continue;
-        if (intersects(a.getBoundingClientRect(),b.getBoundingClientRect())) overlapping.push([a,b]);
+      const candidates = controls
+        .filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type))
+        .map(el => ({el,rect:el.getBoundingClientRect()}))
+        .sort((a,b) => a.rect.left - b.rect.left);
+      const active = [];
+      for (const current of candidates) {
+        for (let i=active.length-1;i>=0;i--) {
+          if (active[i].rect.right <= current.rect.left + 2) active.splice(i,1);
+        }
+        for (const previous of active) {
+          if (previous.el.contains(current.el) || current.el.contains(previous.el)) continue;
+          if (intersects(previous.rect,current.rect)) overlapping.push([previous.el,current.el]);
+        }
+        active.push(current);
       }
       if (overlapping.length) results.push({level:'check',title:size.label + ': пересечение интерактивных элементов',text:'Обнаружено ' + overlapping.length + ' пар пересекающихся ссылок и элементов управления. Проверьте, не мешают ли они друг другу нажиматься.'});
       const unlabeledFields = [...doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea')].filter(visible).filter(el => !hasName(el));
       if (unlabeledFields.length) results.push({level:'check',title:size.label + ': поля без подписи',text:'Найдено ' + unlabeledFields.length + ' видимых полей без label, aria-label или title.'});
     }
+    const focusableControls = [...doc.querySelectorAll('a[href],button,input,select,textarea,[role="button"],[tabindex]')].filter(visible);
+    if (focusableControls.length) results.push({level:'manual',title:'Проверить клавиатурный фокус',text:'Для ' + focusableControls.length + ' видимых интерактивных элементов требуется ручная проверка навигацией клавишей Tab: убедитесь, что :focus-visible заметен и порядок фокуса логичен. Отсутствие outline в обычном состоянии не считается ошибкой.'});
   } catch {
     results.push({level:'manual',title:'Проверка прервана',text:'Предпросмотр обновился во время диагностики. Запустите проверку ещё раз.'});
   } finally {
@@ -1775,7 +1810,7 @@ function auditSiteContentAndInteractions() {
   const results = [];
   const add = (level,title,text) => results.push({level,title,text});
   const visible = el => { const s=doc.defaultView.getComputedStyle(el),r=el.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0; };
-  const nameOf = el => (el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || '').trim();
+  const nameOf = el => previewAccessibleName(el, doc);
   const ids = new Set([...doc.querySelectorAll('[id]')].map(el=>el.id));
   const images = [...doc.querySelectorAll('img')];
   const broken = images.filter(img=>img.complete&&img.naturalWidth===0);

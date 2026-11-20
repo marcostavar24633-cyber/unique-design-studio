@@ -490,3 +490,68 @@ test('автопилот создаёт фото для всех карточе�
   assert.ok(js.includes("slots.filter(slot => slot.role === 'service' && !slot.filled).slice(0, MAX_SERVICE_PHOTOS)"));
   assert.ok(!js.includes("slots.filter(slot => slot.role === 'service').slice(0, 2)"));
 });
+
+test('Preview accessibility QA resolves accessible names without trusting entered field values', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function previewAccessibleName(el, doc)');
+  const end = source.indexOf('function auditResponsiveLayoutAndAccessibility()', start);
+  const helper = source.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'accessible-name helper exists before responsive QA');
+  assert.ok(helper.includes('aria-labelledby'), 'supports ID-referenced accessible names');
+  assert.ok(helper.includes('aria-label'), 'supports explicit accessible names');
+  assert.ok(helper.includes('el.labels'), 'supports native associated labels');
+  assert.ok(helper.includes("querySelectorAll?.('img[alt]')"), 'uses image alt text inside controls');
+  assert.ok(helper.includes("querySelectorAll?.('svg title')"), 'uses SVG title text inside controls');
+  assert.ok(helper.includes("['button','submit','reset'].includes(el.type)"), 'uses value only for button-like inputs');
+  assert.ok(!helper.includes('el.value ||'), 'does not mistake entered text for a field label');
+  assert.ok(source.includes('const hasName = el => Boolean(previewAccessibleName(el, doc));'));
+  assert.ok(source.includes('const nameOf = el => previewAccessibleName(el, doc);'));
+});
+
+
+test('Responsive accessibility QA does not infer missing keyboard focus from the unfocused style', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(start >= 0 && end > start);
+  assert.ok(!audit.includes('focusMissing'));
+  assert.ok(!audit.includes('style.outlineStyle === \'none\''));
+  assert.ok(audit.includes(':focus-visible'));
+  assert.ok(audit.includes('Отсутствие outline в обычном состоянии не считается ошибкой.'));
+});
+
+test('44px touch target guidance is reported as a manual recommendation, not an automatic WCAG failure', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes("results.push({level:'manual',title:size.label + ': маленькие интерактивные области'"));
+  assert.ok(audit.includes('рекомендуемого ориентира 44 × 44 px'));
+  assert.ok(audit.includes('не само по себе доказательство нарушения WCAG 2.2 AA'));
+});
+
+
+test('Responsive accessibility QA verifies the actual iframe viewport before labeling a breakpoint', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes("frame.style.maxWidth = 'none';"));
+  assert.ok(audit.includes('const viewportWidth = doc.defaultView.innerWidth;'));
+  assert.ok(audit.includes('Math.abs(viewportWidth - size.width) > 2'));
+  assert.ok(audit.includes('Проверки для этого размера пропущены'));
+  assert.ok(!audit.includes('doc.defaultView.innerWidth || size.width'));
+});
+
+
+test('Responsive overlap audit uses a horizontal sweep to avoid comparing separated controls', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditResponsiveLayoutAndAccessibility()');
+  const end = source.indexOf('function renderResponsiveAccessibilityChecks()', start);
+  const audit = source.slice(start, end);
+  assert.ok(audit.includes('.sort((a,b) => a.rect.left - b.rect.left)'));
+  assert.ok(audit.includes('active[i].rect.right <= current.rect.left + 2'));
+  assert.ok(audit.includes('intersects(previous.rect,current.rect)'));
+  assert.ok(!audit.includes('for (let j=i+1;j<candidates.length;j++)'));
+});
