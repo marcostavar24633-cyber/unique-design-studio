@@ -78,19 +78,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T16:53:57.370Z
+Время обновления: 2026-11-20T16:58:54.168Z
 Ветка: main
-Последний commit: bc6101298e337872ba9743812af7e6881d3a5484
-Дата коммита: 2026-11-20T20:53:43+04:00
-Сообщение: feat: add project version history with safe restore (#194)
+Последний commit: 7b6bc2e6a4e76bbcf34be98cc7c3385c2bc10b61
+Дата коммита: 2026-11-20T20:58:42+04:00
+Сообщение: docs: close project version history milestone (#195)
 
 Последние коммиты:
+- 7b6bc2e · 2026-11-20 · docs: close project version history milestone (#195)
+- eb7877f · 2026-11-20 · docs: refresh project handoff
 - bc61012 · 2026-11-20 · feat: add project version history with safe restore (#194)
 - 583206e · 2026-11-20 · docs: refresh project handoff
 - 4def920 · 2026-11-20 · docs: refresh project handoff and roadmap (#193)
 - f5a6ba6 · 2026-11-20 · docs: refresh project handoff
 - 8be03a5 · 2026-11-20 · Добавить E2E-проверки Prompt Manager (#192)
 - 6559b1f · 2026-11-20 · docs: refresh project handoff
-- 4852a81 · 2026-11-20 · Добавить E2E-проверку мобильной компоновки студии (#191)
-- 0c48cc7 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
