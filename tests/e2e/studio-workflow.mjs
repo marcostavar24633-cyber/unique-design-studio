@@ -86,14 +86,18 @@ try {
   }));
   check(ownTab.whiteSpace === 'normal' && ownTab.height >= 44 && ownTab.scrollWidth <= ownTab.clientWidth + 1,
     'вкладка «Свои настройки» обрезана или не переносит текст');
-  const previewControl = await page.locator('#preview-fullscreen').evaluate(node => ({
-    top: getComputedStyle(node).top,
-    bottom: getComputedStyle(node).bottom,
-    rect: node.getBoundingClientRect().toJSON(),
-    headerBottom: document.querySelector('body:not(.dashboard-mode) > .top').getBoundingClientRect().bottom,
-  }));
-  check(previewControl.top === 'auto' && previewControl.bottom === '8px',
-    'кнопка полноэкранного предпросмотра не закреплена внизу на мобильном экране');
+  const previewControl = await page.locator('#preview-fullscreen').evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    const preview = document.querySelector('#view-preview').getBoundingClientRect();
+    return {
+      position: getComputedStyle(node).position,
+      bottomGap: preview.bottom - rect.bottom,
+      rect: rect.toJSON(),
+      headerBottom: document.querySelector('body:not(.dashboard-mode) > .top').getBoundingClientRect().bottom,
+    };
+  });
+  check(previewControl.position === 'absolute' && previewControl.bottomGap >= -1 && previewControl.bottomGap <= 20,
+    `кнопка полноэкранного предпросмотра не закреплена у нижнего края: ${JSON.stringify(previewControl)}`);
   check(previewControl.rect.top > previewControl.headerBottom,
     'кнопка полноэкранного предпросмотра перекрывает верхнюю шапку');
   await page.setViewportSize({ width: 1280, height: 900 });
