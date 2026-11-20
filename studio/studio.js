@@ -1,5 +1,6 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
+import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
@@ -124,21 +125,85 @@ let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'saved';
 let dashboardQuery = '';
+let userStartedProject = false;
 // Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
 // а вызывается из обработчика кнопок этой вкладки.
 let contentPrompt = () => '';
 
+let localSavedAt = 0;
+let localStorageWritable = true;
+try {
+  const probeKey = 'uds:storage-probe';
+  localStorage.setItem(probeKey, '1');
+  localStorage.removeItem(probeKey);
+} catch { localStorageWritable = false; }
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
-} catch { /* хранилище недоступно — работаем без сохранения */ }
-// Последняя запись в хранилище не удалась: сообщения «сохранено» не должны перекрывать предупреждение.
+  if (saved && saved.raw) {
+    state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
+    localSavedAt = localStorageWritable ? (Number(saved._udsSavedAt) || 0) : 0;
+  }
+} catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
+// Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
 let persistFailed = false;
-const PERSIST_ERROR = 'Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.';
+let persistBackupFailed = false;
+let persistRevision = 0;
+let lastPersistAt = 0;
+let backupNoticeShown = false;
+const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
+const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
-  try { localStorage.setItem(STORE, JSON.stringify(state)); persistFailed = false; return true; }
-  catch { persistFailed = true; toast(PERSIST_ERROR); return false; }
+  const savedAt = Math.max(Date.now(), localSavedAt + 1, lastPersistAt + 1);
+  lastPersistAt = savedAt;
+  const revision = ++persistRevision;
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
+    localSavedAt = savedAt;
+    persistFailed = false;
+    persistBackupFailed = false;
+    return true;
+  } catch {
+    persistFailed = true;
+    persistBackupFailed = false;
+    backupNoticeShown = false;
+    scheduleEmergencyBackup(state, savedAt).then(backup => {
+      if (backup.savedAt >= savedAt && backup.savedAt >= localSavedAt) {
+        persistFailed = false;
+        persistBackupFailed = false;
+        if (!backupNoticeShown) {
+          backupNoticeShown = true;
+          toast('Основное хранилище заполнено. Изменения сохранены в резервной базе IndexedDB.');
+        }
+      }
+    }).catch(() => {
+      if (revision !== persistRevision || savedAt < localSavedAt) return;
+      persistFailed = true;
+      persistBackupFailed = true;
+      toast(PERSIST_ERROR);
+    });
+    return false;
+  }
 };
+let emergencyRestorePromise;
+function restoreEmergencyBackupIfNewer() {
+  if (!emergencyRestorePromise) emergencyRestorePromise = (async () => {
+    try {
+      const backup = await loadEmergencyBackup();
+      if (!backup || backup.savedAt <= localSavedAt || !backup.state?.raw) return false;
+      state = {
+        raw: backup.state.raw,
+        library: Array.isArray(backup.state.library) ? backup.state.library : [],
+        analysis: backup.state.analysis || null
+      };
+      localSavedAt = backup.savedAt;
+      toast('Последняя резервная копия проекта восстановлена из IndexedDB.');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return emergencyRestorePromise;
+}
 // Похож ли объект на проект студии: пустой или чужой JSON не должен молча заменять текущую работу.
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
   || (Array.isArray(raw.services) && raw.services.length > 0);
@@ -480,6 +545,7 @@ $('#quick-start')?.addEventListener('submit', e => {
   e.preventDefault();
   const niche = $('#qs-niche').value.trim();
   if (!niche) { $('#qs-niche').focus(); return; }
+  userStartedProject = true;
   $('#auto-niche').value = niche;
   $('#auto-brand').value = $('#qs-brand').value.trim();
   $('#auto-tier').value = $('#qs-tier').value;
@@ -1233,6 +1299,7 @@ try {
 } catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
+  userStartedProject = true;
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
@@ -2100,7 +2167,7 @@ async function renderProjectHistory() {
 // ---------- События ----------
 function toast(msg) {
   // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
-  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${PERSIST_ERROR}`;
+  if (persistFailed && msg !== PERSIST_ERROR && !msg.includes(PERSIST_PENDING) && !msg.includes(PERSIST_ERROR)) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
   const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
   const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
@@ -2814,7 +2881,7 @@ $('#save').addEventListener('click', () => {
   if (!result.project.brand && !result.project.niche) return toast('Укажите бренд или нишу, чтобы сохранить проект');
   state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry, analysis: currentAnalysis() }];
   run();
-  if (persistFailed) return toast(PERSIST_ERROR);
+  if (persistFailed) return toast(persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING);
   toast(`«${result.entry.brand}» сохранён в реестр`);
 });
 $('#view-registry').addEventListener('click', async e => {
@@ -2883,11 +2950,14 @@ fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async lis
       openWorkspace('create');
     } catch (error) { toast(error.message || 'Не удалось открыть пример'); }
   });
-  if (!state.raw.brand && !state.raw.niche && list[0]) {
+  const restoredBackup = await restoreEmergencyBackupIfNewer();
+  if (restoredBackup) { buildForm(); run(); }
+  if (!userStartedProject && !state.raw.brand && !state.raw.niche && list[0]) {
     const first = exampleProjects[0];
     if (first) load(first.raw);
   }
 }).catch(() => { exampleProjects = []; renderDashboard(); });
 
+await restoreEmergencyBackupIfNewer();
 buildForm();
 run();
