@@ -69,19 +69,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T16:38:03.568Z
+Время обновления: 2026-11-20T16:42:55.862Z
 Ветка: main
-Последний commit: 8be03a5959ec0570e2a280409b6b72fc0b49b74b
-Дата коммита: 2026-11-20T20:37:47+04:00
-Сообщение: Добавить E2E-проверки Prompt Manager (#192)
+Последний commit: 4def92001ac6314255b4e0490b34cf29725fa641
+Дата коммита: 2026-11-20T20:42:43+04:00
+Сообщение: docs: refresh project handoff and roadmap (#193)
 
 Последние коммиты:
+- 4def920 · 2026-11-20 · docs: refresh project handoff and roadmap (#193)
+- f5a6ba6 · 2026-11-20 · docs: refresh project handoff
 - 8be03a5 · 2026-11-20 · Добавить E2E-проверки Prompt Manager (#192)
 - 6559b1f · 2026-11-20 · docs: refresh project handoff
 - 4852a81 · 2026-11-20 · Добавить E2E-проверку мобильной компоновки студии (#191)
 - 0c48cc7 · 2026-11-20 · docs: refresh project handoff
 - 109c71c · 2026-11-20 · Обновить GitHub Actions одним изменением вместо пяти PR Dependabot (#189)
 - 29da22a · 2026-11-20 · docs: refresh project handoff
-- 7722922 · 2026-11-20 · Исправить мобильную шапку, вкладки и кнопку предпросмотра (#190)
-- aac42f0 · 2026-11-20 · Подключить Visual Identity к HTML renderer (WCAG AA, корректные шрифты) (#188)
 <!-- HANDOFF:AUTO:END -->
