@@ -11,7 +11,7 @@
 - PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация) и #194 (история версий проекта) объединены.
 - PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
 - PR #194: commit `bc6101298e337872ba9743812af7e6881d3a5484`; полный CI перед слиянием прошёл успешно: [run 44777592604](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777592604).
-- Post-merge CI для `main`: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) (проверить итог); GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
+- Post-merge CI для `main` завершился успешно: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) — Node 20, Node 22, Workers Build и E2E; GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
 - История версий проекта: IndexedDB, ручные снимки, сравнение, восстановление, резервный снимок перед откатом и лимит 10 версий на проект.
 - В ходе аудита подтверждено: до PR #194 реестр хранил только последнюю запись проекта по ID; отдельной истории версий проекта не было. Prompt Manager уже имел собственное версионирование.
 - AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не менялись.
