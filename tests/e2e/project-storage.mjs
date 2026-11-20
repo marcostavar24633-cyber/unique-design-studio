@@ -28,7 +28,7 @@ try {
   await context.addInitScript(() => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function(key, value) {
-      if (key === 'uds:studio:v1') throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
       return original.call(this, key, value);
     };
   });
