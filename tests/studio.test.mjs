@@ -482,8 +482,10 @@ test('генерация: режим auto, живой прогресс ожид�
   assert.ok(js.includes('for (let attempt = 0; attempt < 2; attempt++) {\n      try {\n        response = await fetch(imageEndpoint'));
   assert.ok(js.includes("if (!outcome?.data) { failed++;"));
   assert.ok(js.includes("if (!generated && failed) throw new Error(lastImageError"));
-  // Кадры запрашиваются параллельно (FLUX.2 klein ~10–15 с на кадр), а записываются в проект по порядку.
+  // Очередь фото последовательная: избегаем превышения лимита Workers AI.
   assert.ok(js.includes('const IMAGE_CONCURRENCY = 1;'));
+  assert.ok(js.includes('signal: controller.signal'));
+  assert.ok(js.includes('res.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 2_000'));
   assert.ok(js.includes("response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500"));
   assert.ok(js.includes('await Promise.all(Array.from({ length: Math.min(IMAGE_CONCURRENCY, targets.length) }, worker));'));
 });
