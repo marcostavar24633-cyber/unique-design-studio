@@ -1,0 +1,26 @@
+name: Auto-merge label
+# Готовые (не черновики) PR владельца из этого репозитория получают метку merge-engine:auto-merge —
+# Merge Engine (каждые 15 минут) повторно проверяет такой PR и сливает его при зелёном CI.
+# Чтобы PR не сливался автоматически, поставьте метку merge-engine:hold.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, 'merge-engine:hold')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add merge-engine:auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh pr edit "$PR" --repo "$REPO" --add-label "merge-engine:auto-merge"

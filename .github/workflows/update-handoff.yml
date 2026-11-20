@@ -1,8 +1,10 @@
 name: Update project handoff
 
 on:
+  # Только main: коммит бота в ветке PR становился её последним коммитом — CI на нём
+  # не запускался (action_required), а каждое слияние давало конфликт в PROJECT_HANDOFF.md.
   push:
-    branches: ["**"]
+    branches: [main]
     paths-ignore:
       - "PROJECT_HANDOFF.md"
 

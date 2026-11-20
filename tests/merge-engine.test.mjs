@@ -322,3 +322,17 @@ test('панель Merge Control Center подключена к студии и 
   assert.doesNotMatch(js, /Authorization|token|localStorage\.setItem/i);
   assert.match(js, /esc\(i\.title\)/, 'заголовки PR экранируются');
 });
+
+test('автоматизация: метка автослияния ставится сама, метка-стоп уважается, бот handoff пишет только в main', () => {
+  const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+  const label = read('.github/workflows/auto-merge-label.yml');
+  assert.match(label, /types: \[opened, reopened, ready_for_review\]/);
+  assert.match(label, /github\.event\.pull_request\.draft == false/);
+  assert.match(label, /github\.event\.pull_request\.user\.login == github\.repository_owner/);
+  assert.match(label, /head\.repo\.full_name == github\.repository/);
+  assert.match(label, /--add-label "merge-engine:auto-merge"/);
+  const auto = read('scripts/merge-engine/auto.mjs');
+  assert.match(auto, /export const HOLD_LABEL = 'merge-engine:hold';/);
+  assert.match(auto, /!\(p\.labels \|\| \[\]\)\.some\(label => label\.name === HOLD_LABEL\)/);
+  assert.match(read('.github/workflows/update-handoff.yml'), /push:\n    branches: \[main\]/);
+});
