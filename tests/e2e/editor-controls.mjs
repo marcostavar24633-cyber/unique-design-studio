@@ -48,7 +48,7 @@ try {
   check(await page.evaluate(() => JSON.parse(localStorage.getItem('uds:studio:v1') || '{}').library?.length === 1), 'создание нового проекта удалило существующий реестр');
 
   // Кнопка диагностики должна вызывать только /api/diagnostics и корректно показать конфигурацию.
-  await page.click('#ptab-ai');
+  await page.click('#ptab-own');
   await page.locator('#auto-endpoint').waitFor({ state: 'visible' });
   await page.fill('#auto-endpoint', 'https://example.test/api/generate-landing');
   await page.route('https://example.test/api/diagnostics', route => route.fulfill({
