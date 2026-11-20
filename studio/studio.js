@@ -174,21 +174,25 @@ const persist = () => {
     return false;
   }
 };
-async function restoreEmergencyBackupIfNewer() {
-  try {
-    const backup = await loadEmergencyBackup();
-    if (!backup || backup.savedAt <= localSavedAt || !backup.state?.raw) return false;
-    state = {
-      raw: backup.state.raw,
-      library: Array.isArray(backup.state.library) ? backup.state.library : [],
-      analysis: backup.state.analysis || null
-    };
-    localSavedAt = backup.savedAt;
-    toast('Последняя резервная копия проекта восстановлена из IndexedDB.');
-    return true;
-  } catch {
-    return false;
-  }
+let emergencyRestorePromise;
+function restoreEmergencyBackupIfNewer() {
+  if (!emergencyRestorePromise) emergencyRestorePromise = (async () => {
+    try {
+      const backup = await loadEmergencyBackup();
+      if (!backup || backup.savedAt <= localSavedAt || !backup.state?.raw) return false;
+      state = {
+        raw: backup.state.raw,
+        library: Array.isArray(backup.state.library) ? backup.state.library : [],
+        analysis: backup.state.analysis || null
+      };
+      localSavedAt = backup.savedAt;
+      toast('Последняя резервная копия проекта восстановлена из IndexedDB.');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return emergencyRestorePromise;
 }
 // Похож ли объект на проект студии: пустой или чужой JSON не должен молча заменять текущую работу.
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
