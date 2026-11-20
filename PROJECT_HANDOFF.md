@@ -92,19 +92,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T18:13:09.640Z
+Время обновления: 2026-11-20T18:16:05.586Z
 Ветка: main
-Последний commit: 5380c84b6e34e4e42a0ed26e6ba65b21b2189268
-Дата коммита: 2026-11-20T22:12:54+04:00
-Сообщение: test: cover remaining editor and publish controls (#202)
+Последний commit: 7d8d9cc77880bd6a2bf49094f2dbb3d701fb3052
+Дата коммита: 2026-11-20T22:15:52+04:00
+Сообщение: Fix expanded mobile dashboard navigation visibility (#203)
 
 Последние коммиты:
+- 7d8d9cc · 2026-11-20 · Fix expanded mobile dashboard navigation visibility (#203)
+- 48544d4 · 2026-11-20 · docs: refresh project handoff
 - 5380c84 · 2026-11-20 · test: cover remaining editor and publish controls (#202)
 - f120900 · 2026-11-20 · docs: refresh project handoff
 - b185029 · 2026-11-20 · docs: refresh handoff and roadmap after PRs 197–200 (#201)
 - 9a30a86 · 2026-11-20 · docs: refresh project handoff
 - 0bd3aab · 2026-11-20 · fix: make AI Usage resilient to browser storage failures (#199)
 - 6c7ed21 · 2026-11-20 · docs: refresh project handoff
-- 624128a · 2026-11-20 · fix: align GitHub Pages artifact uploader and deployer (#200)
-- eb2eeb8 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
