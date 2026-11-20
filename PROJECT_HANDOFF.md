@@ -84,19 +84,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T17:33:44.939Z
+Время обновления: 2026-11-20T17:43:40.278Z
 Ветка: main
-Последний commit: 39d68f71478e00c2a4e4848c80f9f91466b25b33
-Дата коммита: 2026-11-20T21:33:32+04:00
-Сообщение: fix: wait for Pages artifact before deployment (#198)
+Последний commit: 624128aceecca7c8f8722abe40feb01ce992e900
+Дата коммита: 2026-11-20T21:43:28+04:00
+Сообщение: fix: align GitHub Pages artifact uploader and deployer (#200)
 
 Последние коммиты:
+- 624128a · 2026-11-20 · fix: align GitHub Pages artifact uploader and deployer (#200)
+- eb2eeb8 · 2026-11-20 · docs: refresh project handoff
 - 39d68f7 · 2026-11-20 · fix: wait for Pages artifact before deployment (#198)
 - b35fb75 · 2026-11-20 · docs: refresh project handoff
 - 94eb768 · 2026-11-20 · fix: make GitHub Pages artifacts unique across retries (#197)
 - a2fb5bd · 2026-11-20 · docs: refresh project handoff
 - c66f22e · 2026-11-20 · feat: protect unsaved studio projects with IndexedDB backup (#196)
 - ee1adb0 · 2026-11-20 · docs: refresh project handoff
-- 7b6bc2e · 2026-11-20 · docs: close project version history milestone (#195)
-- eb7877f · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
