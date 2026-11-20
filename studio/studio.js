@@ -142,11 +142,13 @@ try {
 let persistFailed = false;
 let persistBackupFailed = false;
 let persistRevision = 0;
+let lastPersistAt = 0;
 let backupNoticeShown = false;
 const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
 const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
-  const savedAt = Math.max(Date.now(), localSavedAt + 1);
+  const savedAt = Math.max(Date.now(), localSavedAt + 1, lastPersistAt + 1);
+  lastPersistAt = savedAt;
   const revision = ++persistRevision;
   try {
     localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
