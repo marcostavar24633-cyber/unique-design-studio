@@ -480,8 +480,11 @@ test('генерация: режим auto, живой прогресс ожид�
   assert.ok(js.includes("'Прошло ' + seconds + ' с · обычно 20–40 с'"));
   assert.ok(js.includes('clearInterval(aiTicker);'));
   assert.ok(js.includes('for (let attempt = 0; attempt < 2; attempt++) {\n      try {\n        response = await fetch(imageEndpoint'));
-  assert.ok(js.includes("if (!response.ok || !payload.image) { failed++;"));
+  assert.ok(js.includes("if (!outcome?.data) { failed++;"));
   assert.ok(js.includes("if (!generated && failed) throw new Error(lastImageError"));
+  // Кадры запрашиваются параллельно (FLUX.2 klein ~10–15 с на кадр), а записываются в проект по порядку.
+  assert.ok(js.includes('const IMAGE_CONCURRENCY = 3;'));
+  assert.ok(js.includes('await Promise.all(Array.from({ length: Math.min(IMAGE_CONCURRENCY, targets.length) }, worker));'));
 });
 
 test('автопилот создаёт фото для всех карточек услуг (до 6), а не только для первых двух', () => {

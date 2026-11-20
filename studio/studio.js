@@ -8,6 +8,8 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 // Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
 const MAX_SERVICE_PHOTOS = 6;
+// Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, лимит Worker — 16 фото в минуту.
+const IMAGE_CONCURRENCY = 3;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
@@ -2081,11 +2083,10 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     if (hintsResponse.ok && hintsPayload.hints) visualHints = hintsPayload.hints;
   } catch { /* остаются словарь ниш и транслит */ }
   const photoProject = visualHints ? { ...result.project, visualHints } : result.project;
-  let generated = 0, failed = 0, lastImageError = '';
-  for (let index = 0; index < targets.length; index++) {
-    const slot = targets[index];
-    onProgress(index, targets.length, slot.label);
-    const alt = generatedAlt(slot, result.project);
+  let generated = 0, failed = 0, lastImageError = '', done = 0;
+  // FLUX.2 klein реалистичнее, но тратит 10–15 с на кадр: 15 кадров подряд шли бы ~3 минуты.
+  // Кадры запрашиваются по IMAGE_CONCURRENCY одновременно и сжимаются сразу; в проект записываются по порядку.
+  const fetchSlotImage = async slot => {
     // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
     const prompt = photoPrompt(slot, photoProject, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
     const imageStarted = Date.now();
@@ -2100,14 +2101,26 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       if (response && response.status < 500 && response.status !== 429) break;
       if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
     }
-    if (!response) { logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: 'error', error: payload.error, ms: Date.now() - imageStarted }); failed++; continue; }
-    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: response.ok && payload.image ? 'ok' : 'error', error: payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms: Date.now() - imageStarted, model: payload.model || '' });
-    // Один неудачный кадр не обрывает остальные: его можно перегенерировать или загрузить своё фото.
-    if (!response.ok || !payload.image) { failed++; lastImageError = payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').'; continue; }
+    const ok = Boolean(response?.ok && payload.image);
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
+    onProgress(++done, targets.length, slot.label);
+    if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
     // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
     const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image, slot.role === 'gallery' ? 1100 : MAX_IMAGE_EDGE);
+    return { data: optimized.data };
+  };
+  const fetched = new Array(targets.length);
+  let nextSlot = 0;
+  const worker = async () => { while (nextSlot < targets.length) { const index = nextSlot++; fetched[index] = await fetchSlotImage(targets[index]); } };
+  await Promise.all(Array.from({ length: Math.min(IMAGE_CONCURRENCY, targets.length) }, worker));
+  for (let index = 0; index < targets.length; index++) {
+    const slot = targets[index];
+    const alt = generatedAlt(slot, result.project);
+    const outcome = fetched[index];
+    // Один неудачный кадр не обрывает остальные: его можно перегенерировать или загрузить своё фото.
+    if (!outcome?.data) { failed++; lastImageError = outcome?.error || lastImageError; continue; }
     if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
-    const data = optimized.data;
+    const data = outcome.data;
     if (imageDataSize() + data.length > MAX_IMAGE_DATA) { if (generated) { lastImageError = 'Достигнут лимит хранилища изображений проекта (3,8 МБ).'; failed += targets.length - index; break; } throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.'); }
     if (slot.id === 'hero') {
       state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: alt };
@@ -2128,8 +2141,8 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       state.raw.gallery = items;
     }
     generated++;
-    $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
   }
+  $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
   if (!generated && failed) throw new Error(lastImageError || 'AI не вернул изображения.');
   buildForm();
   run();
