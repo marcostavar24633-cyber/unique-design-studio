@@ -65,6 +65,7 @@ try {
   check(diagnostics.includes('Workers AI binding') && diagnostics.includes('Universal AI Gateway'), 'диагностика не показала состояние Workers AI и шлюза');
 
   // Изменение проекта должно активировать сравнение. Применение версии возвращает её в редактор.
+  await page.click('#ptab-editor');
   const titleField = page.locator('#form [data-path="title"]');
   await titleField.fill('Версия после изменений E2E');
   await page.waitForFunction(() => document.querySelector('#change-preview')?.disabled === false, null, { timeout: 10000 });
