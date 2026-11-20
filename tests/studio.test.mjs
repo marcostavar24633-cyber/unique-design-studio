@@ -483,7 +483,8 @@ test('генерация: режим auto, живой прогресс ожид�
   assert.ok(js.includes("if (!outcome?.data) { failed++;"));
   assert.ok(js.includes("if (!generated && failed) throw new Error(lastImageError"));
   // Кадры запрашиваются параллельно (FLUX.2 klein ~10–15 с на кадр), а записываются в проект по порядку.
-  assert.ok(js.includes('const IMAGE_CONCURRENCY = 1;'));\n  assert.ok(js.includes("response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500"));
+  assert.ok(js.includes('const IMAGE_CONCURRENCY = 1;'));
+  assert.ok(js.includes("response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500"));
   assert.ok(js.includes('await Promise.all(Array.from({ length: Math.min(IMAGE_CONCURRENCY, targets.length) }, worker));'));
 });
 
