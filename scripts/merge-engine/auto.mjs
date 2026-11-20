@@ -10,6 +10,8 @@ import { createGitHub } from './github.mjs';
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const owner = REPO.split('/')[0];
 const AUTO_MERGE_LABEL = 'merge-engine:auto-merge';
+// Метка-стоп: владелец ставит её, чтобы PR не сливался автоматически, даже если есть метка автослияния.
+export const HOLD_LABEL = 'merge-engine:hold';
 const gh = createGitHub({ repo: REPO });
 const journal = createJournal(process.env.MERGE_ENGINE_STATE || `${root}/.merge-engine`);
 const summaryFile = process.env.GITHUB_STEP_SUMMARY;
@@ -31,7 +33,8 @@ async function main() {
       && p.base?.ref === 'main'
       && p.base?.repo?.full_name === REPO
       && !p.draft
-      && (p.labels || []).some(label => label.name === AUTO_MERGE_LABEL))
+      && (p.labels || []).some(label => label.name === AUTO_MERGE_LABEL)
+      && !(p.labels || []).some(label => label.name === HOLD_LABEL))
     .sort((a, b) => Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0));
 
   await writeSummary(`## Автоматический Merge Engine\nОткрытых PR: ${prs.length}; PR с явной меткой ${AUTO_MERGE_LABEL}: ${candidates.length}. За один запуск будет слит не более одного PR.`);
