@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T16:26:04.207Z
+Время обновления: 2026-11-20T16:27:43.310Z
 Ветка: main
-Последний commit: 7722922f65c870d827af488838a95ad5a98fd2f6
-Дата коммита: 2026-11-20T20:25:52+04:00
-Сообщение: Исправить мобильную шапку, вкладки и кнопку предпросмотра (#190)
+Последний commit: 109c71cc7eda865293e25da1d3916a4fd073bc00
+Дата коммита: 2026-11-20T20:27:29+04:00
+Сообщение: Обновить GitHub Actions одним изменением вместо пяти PR Dependabot (#189)
 
 Последние коммиты:
+- 109c71c · 2026-11-20 · Обновить GitHub Actions одним изменением вместо пяти PR Dependabot (#189)
+- 29da22a · 2026-11-20 · docs: refresh project handoff
 - 7722922 · 2026-11-20 · Исправить мобильную шапку, вкладки и кнопку предпросмотра (#190)
 - aac42f0 · 2026-11-20 · Подключить Visual Identity к HTML renderer (WCAG AA, корректные шрифты) (#188)
 - 00da3dc · 2026-11-20 · Добавить локальный Publish Manager и историю deployment (#176)
 - ac4838d · 2026-11-20 · Перенести Visual Identity Engine на актуальный main (#174)
 - 0511ef6 · 2026-11-20 · docs: refresh project handoff
 - 4b44180 · 2026-11-20 · feat(worker): CC0 stock photo fallback from Openverse when Workers AI image models fail (#187)
-- 9315845 · 2026-11-20 · docs: refresh project handoff
-- e10f7b5 · 2026-11-20 · ci: Dependabot for GitHub Actions with minor/patch auto-merge (#181)
 <!-- HANDOFF:AUTO:END -->
