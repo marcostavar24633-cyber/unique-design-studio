@@ -1162,6 +1162,11 @@ $('#auto').addEventListener('submit', async e => {
           try {
             res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload), signal: controller.signal });
             body = await res.json().catch(() => ({}));
+          } catch (error) {
+            if (attempt === 1) throw error;
+            setAutoStatus('Сетевая ошибка AI-сервера. Повторяем запрос…');
+            await new Promise(resolve => setTimeout(resolve, 2_000));
+            continue;
           } finally { clearTimeout(timeout); }
           if (res.ok || (res.status < 500 && res.status !== 429) || attempt === 1) break;
           const retryAfter = Number(res.headers.get('Retry-After'));
