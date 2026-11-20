@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T06:29:18.652Z
+Время обновления: 2026-11-20T06:30:10.194Z
 Ветка: feat/cinematic-motion-system-upgrade
-Последний commit: 585a0bf3661dcda9dbe7d6d103b1dc4203c0b94b
-Дата коммита: 2026-11-20T10:29:06+04:00
-Сообщение: Correct hero scene audit regular expression
+Последний commit: 4d6faa3aa06bbcb6279542a9721db504f96782b9
+Дата коммита: 2026-11-20T10:29:58+04:00
+Сообщение: Correct responsive motion audit detection
 
 Последние коммиты:
+- 4d6faa3 · 2026-11-20 · Correct responsive motion audit detection
+- a98ebe0 · 2026-11-20 · Make responsive motion audit match actual breakpoint and script markup
+- 38feec1 · 2026-11-20 · docs: refresh project handoff
 - 585a0bf · 2026-11-20 · Correct hero scene audit regular expression
 - a05c7df · 2026-11-20 · docs: refresh project handoff
 - 4f97608 · 2026-11-20 · Fix cinematic scene audit selector to match rendered markup
 - 496c432 · 2026-11-20 · docs: refresh project handoff
 - 5fe853f · 2026-11-20 · Test premium interaction layer
-- d438c02 · 2026-11-20 · Audit cinematic and premium interaction output
-- 668390f · 2026-11-20 · docs: refresh project handoff
-- 2b923ec · 2026-11-20 · Add premium interaction layer for generated sites
 <!-- HANDOFF:AUTO:END -->
