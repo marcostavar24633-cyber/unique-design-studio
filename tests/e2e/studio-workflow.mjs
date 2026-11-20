@@ -36,6 +36,28 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   check(await page.locator('body.dashboard-mode > .top').evaluate(node => getComputedStyle(node).display === 'none'),
     'мобильная шапка редактора перекрывает главную панель');
+
+  // Раскрытое мобильное меню — полноценная сетка, без горизонтальной маски и обрезания правой колонки.
+  const menuToggle = page.locator('#dash-menu-toggle');
+  check(await menuToggle.isVisible(), 'кнопка раскрытия мобильной навигации не видна');
+  check(await menuToggle.getAttribute('aria-expanded') === 'false', 'мобильная навигация должна быть свёрнута при открытии панели');
+  check(await page.locator('#dash-nav').evaluate(node => getComputedStyle(node).display === 'none'), 'мобильная навигация не скрыта до раскрытия');
+  await menuToggle.click();
+  check(await menuToggle.getAttribute('aria-expanded') === 'true', 'кнопка не обновила aria-expanded после раскрытия меню');
+  const expandedNav = await page.locator('#dash-nav').evaluate(node => ({
+    display: getComputedStyle(node).display,
+    mask: getComputedStyle(node).maskImage,
+    webkitMask: getComputedStyle(node).webkitMaskImage,
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+    columns: getComputedStyle(node).gridTemplateColumns,
+  }));
+  check(expandedNav.display === 'grid', 'раскрытое меню не использует сетку');
+  check(expandedNav.mask === 'none' && expandedNav.webkitMask === 'none', 'градиентная маска скрывает крайние пункты мобильного меню');
+  check(expandedNav.scrollWidth <= expandedNav.clientWidth + 1, 'раскрытое мобильное меню имеет горизонтальное переполнение');
+  check(expandedNav.columns.split(' ').length === 2, 'мобильное меню не отображается в две колонки');
+  await menuToggle.click();
+  check(await menuToggle.getAttribute('aria-expanded') === 'false', 'мобильная навигация не сворачивается повторным нажатием');
   await page.setViewportSize({ width: 1280, height: 900 });
 
   // Главная: примеры — компактными кнопками, состояние студии и хранилище видны сразу.
