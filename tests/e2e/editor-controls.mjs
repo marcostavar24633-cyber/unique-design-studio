@@ -79,7 +79,7 @@ try {
   check(Boolean(beforeHtml && afterHtml && beforeHtml !== afterHtml), 'сравнение не показало две разные версии HTML');
   check(afterHtml.includes('Версия после изменений E2E'), 'в версии «После» нет внесённого изменения');
   await popup.click('[data-mode="before"]');
-  check(await popup.locator('[data-mode="before"]').getAttribute('aria-pressed') === 'true', 'переключатель «До» не изменил режим сравнения');
+  check(await popup.locator('button[data-mode="before"]').getAttribute('aria-pressed') === 'true', 'переключатель «До» не изменил режим сравнения');
   await popup.click('[data-mode="after"]');
   await popup.click('#apply');
   await page.waitForFunction(() => document.querySelector('#form [data-path="title"]')?.value === 'Версия после изменений E2E');
