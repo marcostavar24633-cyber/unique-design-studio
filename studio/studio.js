@@ -102,7 +102,11 @@ async function refreshAiUsage() {
     if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
     const hasNeurons = payload.neurons !== null && payload.neurons !== undefined && payload.neurons !== '';
     const hasRequests = payload.requests !== null && payload.requests !== undefined && payload.requests !== '';
-    if (!hasNeurons || !hasRequests || !Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
+    if (!hasNeurons) {
+      renderAiUsageStats({ ...payload, range });
+      return;
+    }
+    if (!hasRequests || !Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
       throw new Error('Cloudflare не вернул полную статистику Neurons и запросов');
     }
     renderAiUsageStats(payload);
