@@ -83,7 +83,8 @@ try {
   await popup.click('button[data-mode="after"]');
   await popup.click('#apply');
   await page.waitForFunction(() => document.querySelector('#form [data-path="title"]')?.value === 'Версия после изменений E2E');
-  check((await page.locator('#toast').innerText()).includes('Предложенная версия применена'), 'применение сравнения не подтвердилось в редакторе');
+  await page.waitForFunction(() => document.querySelector('#toast')?.textContent.includes('Предложенная версия применена'), null, { timeout: 5000 });
+  check(await page.locator('#toast').evaluate(el => el.classList.contains('show')), 'подтверждение применения сравнения не отображается в редакторе');
   await popup.close();
 
   // Publish Manager только подготавливает команду и ведёт локальную историю: реальный deploy не запускается.
