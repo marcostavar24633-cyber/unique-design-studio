@@ -23,6 +23,12 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
+const captureStudioErrors = (page, errors) => page.on('pageerror', error => {
+  const stack = String(error.stack || error.message);
+  // Preview documents run in a deliberately sandboxed iframe; their isolated runtime errors
+  // are outside this AI Usage test. Capture uncaught errors from the studio application itself.
+  if (/\\/studio\\/(?:studio|ai-diagnostics)\\.js|\\/studio\\/index\\.html/.test(stack)) errors.push(stack);
+});
 try {
   // Browser privacy/security settings can make even getItem throw. This must not break studio startup.
   const blockedContext = await browser.newContext();
@@ -35,7 +41,7 @@ try {
   });
   const blockedPage = await blockedContext.newPage();
   const blockedErrors = [];
-  blockedPage.on('pageerror', error => blockedErrors.push(error.message));
+  captureStudioErrors(blockedPage, blockedErrors);
   await blockedPage.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
   await blockedPage.waitForFunction(() => document.querySelector('#dash-ai-budget')?.textContent.includes('хранилище настроек недоступно'));
   check(blockedErrors.length === 0, 'недоступное localStorage вызвало ошибку страницы: ' + blockedErrors.join('; '));
@@ -51,7 +57,7 @@ try {
     body: JSON.stringify({ neurons: null, requests: 0 })
   }));
   const metricErrors = [];
-  metricPage.on('pageerror', error => metricErrors.push(error.message));
+  captureStudioErrors(metricPage, metricErrors);
   await metricPage.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
   await metricPage.waitForFunction(() => document.querySelector('#dash-ai-budget')?.textContent.includes('нет данных'));
   const budgetText = await metricPage.locator('#dash-ai-budget').innerText();
