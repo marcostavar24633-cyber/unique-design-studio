@@ -156,6 +156,7 @@ const persist = () => {
   } catch {
     persistFailed = true;
     persistBackupFailed = false;
+    backupNoticeShown = false;
     scheduleEmergencyBackup(state, savedAt).then(backup => {
       if (backup.savedAt >= savedAt && backup.savedAt >= localSavedAt) {
         persistFailed = false;
@@ -2155,7 +2156,7 @@ async function renderProjectHistory() {
 // ---------- События ----------
 function toast(msg) {
   // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
-  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
+  if (persistFailed && msg !== PERSIST_ERROR && !msg.includes(PERSIST_PENDING) && !msg.includes(PERSIST_ERROR)) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
   const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
   const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
