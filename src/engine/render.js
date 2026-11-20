@@ -12,6 +12,7 @@ import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
 import { createVisualIdentity } from '../visual-identity.js';
+import { contrast, ensureContrast, readableOn } from './color.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -271,10 +272,32 @@ function jsonLd(c) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
 
+// Палитры Visual Identity заданы вручную. Перед выводом доводим пары до WCAG AA теми же функциями,
+// что и основную палитру движка: вторичный текст и акцентный текст — не ниже 4.6:1 к фону и поверхности,
+// текст на акцентной кнопке — не ниже 4.5:1. Цвет самой кнопки (акцент) не меняется.
+export function visualIdentityTokens(identity) {
+  const p = identity.palette;
+  let muted = ensureContrast(p.muted, p.background, 4.6);
+  muted = ensureContrast(muted, p.surface, 4.6);
+  let accentInk = ensureContrast(p.accent, p.background, 4.6);
+  accentInk = ensureContrast(accentInk, p.surface, 4.6);
+  let accentText = readableOn(p.accent, '#171615', '#ffffff');
+  if (contrast(accentText, p.accent) < 4.5) accentText = readableOn(p.accent, '#000000', '#ffffff');
+  return { ...p, muted, accentInk, accentText };
+}
+
+/** Начертания Google Fonts для гарнитур Visual Identity: у части семейств есть только 400,
+ *  а запрос несуществующего начертания отклоняет весь URL шрифтов. */
+const VI_SINGLE_WEIGHT = new Set(['Archivo Black', 'DM Serif Display']);
+export function visualIdentityFonts(identity) {
+  const t = identity.typography;
+  return [...new Set([t.display, t.body])].map(family => ({ family, weights: VI_SINGLE_WEIGHT.has(family) ? '400' : '400;500;600;700' }));
+}
+
 function visualIdentityCss(identity) {
   if (!identity) return '';
-  const p = identity.palette, t = identity.typography, g = identity.geometry, space = identity.spacing;
-  return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--u-tint:${p.accentSoft};--u-accent-ink:${p.accent};--ds-accent-contrast:${p.mode === 'dark' ? '#171615' : '#ffffff'};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
+  const p = visualIdentityTokens(identity), t = identity.typography, g = identity.geometry, space = identity.spacing;
+  return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--u-tint:${p.accentSoft};--u-accent-ink:${p.accentInk};--ds-accent-contrast:${p.accentText};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
 }
 
 export function renderCss(concept, scene = null, identity = null) {
@@ -334,7 +357,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-${fontLinks(visualIdentity ? [{ family: visualIdentity.typography.display, weights: '400;500;600;700;800' }, { family: visualIdentity.typography.body, weights: '400;500;600;700' }] : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
+${fontLinks(visualIdentity ? visualIdentityFonts(visualIdentity) : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
