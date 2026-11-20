@@ -10,6 +10,44 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 const MAX_BODY_BYTES = 64_000;
 
+// ---------- Генерация фото ----------
+// FLUX.2 [klein] 4B (январь 2026): заметно реалистичнее FLUX.1 [schnell], задаёт пропорции кадра,
+// ~26 нейронов за плитку 512×512 без доплаты за шаги — около 104 нейронов за кадр до 1024 px.
+// FLUX.1 [schnell] остаётся запасной моделью (только квадрат 1024×1024, ~58 нейронов при 4 шагах).
+// Размеры кратны 16 и не больше 1024 по стороне: 4 плитки 512×512 на кадр.
+const IMAGE_SIZES = {
+  '16:9': { width: 1024, height: 576 },
+  '3:2': { width: 1008, height: 672 },
+  '4:3': { width: 1024, height: 768 },
+  '1:1': { width: 1024, height: 1024 },
+  '4:5': { width: 768, height: 960 },
+};
+const DEFAULT_IMAGE_MODEL = 'flux-2-klein-4b';
+const IMAGE_MODELS = {
+  'flux-2-klein-4b': {
+    id: '@cf/black-forest-labs/flux-2-klein-4b',
+    sized: true,
+    async run(env, prompt, size) {
+      // Модель принимает только multipart/form-data (документация Workers AI, 15.01.2026).
+      const form = new FormData();
+      form.append('prompt', prompt);
+      form.append('width', String(size.width));
+      form.append('height', String(size.height));
+      const body = new Response(form);
+      const result = await env.AI.run('@cf/black-forest-labs/flux-2-klein-4b', { multipart: { body: body.body, contentType: body.headers.get('content-type') } });
+      return typeof result?.image === 'string' ? result.image : '';
+    },
+  },
+  'flux-1-schnell': {
+    id: '@cf/black-forest-labs/flux-1-schnell',
+    sized: false,
+    async run(env, prompt) {
+      const result = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 });
+      return typeof result?.image === 'string' ? result.image : '';
+    },
+  },
+};
+
 function corsHeaders(origin) {
   const allowed = ALLOWED_ORIGINS.has(origin) ? origin : 'null';
   return {
@@ -239,15 +277,21 @@ export default {
       }
       const prompt = String(input.prompt || '').trim().slice(0, 2048);
       if (!prompt) return json({ error: 'Укажите описание изображения' }, 400, origin);
-      try {
-        const generated = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 });
-        if (!generated?.image || typeof generated.image !== 'string') {
-          return json({ error: 'Модель не вернула изображение' }, 502, origin);
+      const size = IMAGE_SIZES[input.aspect] || IMAGE_SIZES['4:3'];
+      const requested = IMAGE_MODELS[input.model] ? input.model : (IMAGE_MODELS[env.IMAGE_MODEL] ? env.IMAGE_MODEL : DEFAULT_IMAGE_MODEL);
+      // Основная модель, затем запасная: временный сбой одной модели не оставляет сайт без фото.
+      const order = [requested, ...Object.keys(IMAGE_MODELS).filter(name => name !== requested)];
+      let lastError = '';
+      for (const name of order) {
+        try {
+          const image = await IMAGE_MODELS[name].run(env, prompt, size);
+          if (image) return json({ image, mimeType: 'image/jpeg', model: IMAGE_MODELS[name].id, width: IMAGE_MODELS[name].sized ? size.width : 1024, height: IMAGE_MODELS[name].sized ? size.height : 1024 }, 200, origin);
+          lastError = 'Модель не вернула изображение';
+        } catch (error) {
+          lastError = error?.message || 'Workers AI error';
         }
-        return json({ image: generated.image, mimeType: 'image/jpeg', model: '@cf/black-forest-labs/flux-1-schnell' }, 200, origin);
-      } catch (error) {
-        return json({ error: 'Не удалось сгенерировать изображение', details: error?.message || 'Workers AI error' }, 502, origin);
       }
+      return json({ error: 'Не удалось сгенерировать изображение', details: lastError }, 502, origin);
     }
     if (url.pathname !== '/api/generate-landing') {
       return json({ error: 'Маршрут не найден' }, 404, origin);

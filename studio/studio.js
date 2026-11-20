@@ -2093,7 +2093,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     // Вторая попытка: Workers AI иногда отвечает временной ошибкой за секунду (живой прогон 20.11.2026).
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+        response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, aspect: slot.aspect }) });
         payload = await response.json().catch(() => ({}));
       } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
       if (response?.ok && payload.image) break;

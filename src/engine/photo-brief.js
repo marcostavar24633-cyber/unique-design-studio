@@ -177,9 +177,9 @@ const ASPECT = { '16:9': 'wide 16:9 frame', '4:3': '4:3 frame', '4:5': 'vertical
 // Стиль съёмки по направлению графики (graphic-art-direction.js). Только то, что генератор фото может
 // воспроизвести одним кадром; направления интерфейсной графики (HUD, данные, чертёж) дают нейтральный стиль.
 export const ART_STYLE = {
-  cinematic: 'cinematic color grade, dramatic directional light, shallow depth of field',
+  cinematic: 'subtle film-like color, soft directional light, shallow depth of field',
   '3d-object': 'clean studio product shot, seamless backdrop, precise reflections and soft contact shadow',
-  'abstract-3d': 'soft volumetric light, smooth gradients, minimal sculptural forms in the background',
+  'abstract-3d': 'soft volumetric light and smooth gradients in the background, the subject itself is a real photograph',
   collage: 'editorial documentary style, natural candid moments, layered depth',
   typography: 'calm minimal composition with generous empty space',
   gradient: 'soft ambient color glow, diffused light, airy mood',
@@ -189,9 +189,9 @@ export const ART_STYLE = {
   hud: 'cool modern tech lighting, subtle screen glow',
   lineart: 'clean minimal composition, light neutral background',
   macro: 'macro photography, tactile texture, extreme detail, raking light',
-  surreal: 'dreamlike atmosphere, soft haze, unexpected scale, still believable',
+  surreal: 'dreamlike soft haze and unexpected scale, still a believable real photograph',
   data: 'clean modern workplace light, neutral tones',
-  floating: 'objects floating in space, soft layered shadows, studio composition',
+  floating: 'real objects arranged with soft layered shadows, clean studio composition',
 };
 
 /** Английский промпт для одного места изображения (слот из imageSlots). Без кириллицы. */
@@ -214,14 +214,17 @@ export function photoPrompt(slot, project, graphicDirection) {
     const scene = visualHints(project)?.gallery?.[n];
     subject = scene ? `${scene}, at a ${visual.en}` : `${GALLERY_IDEAS[n % GALLERY_IDEAS.length]} at a ${visual.en}`; angle = n % 2 ? 'close-up' : 'medium shot'; background = visual.setting;
   }
-  const light = luxury ? 'controlled directional light, deep soft shadows, refined editorial mood' : 'soft natural daylight, natural colors';
+  // Реализм: документальная съёмка на 35 мм и естественный свет. «Коммерческая фотография» с кинематографичным
+  // светом давала глянцевый сток с пластиковой кожей и перенасыщенными цветами (замечание владельца 20.11.2026).
+  const light = luxury ? 'controlled directional light, deep soft shadows, refined but natural mood' : 'natural available light, true-to-life colors, gentle contrast';
   const parts = [
-    `Photorealistic commercial photograph for the website of a ${visual.en}.`,
+    `Realistic documentary-style photograph for the website of a ${visual.en}, taken on a full-frame camera with a 35mm lens.`,
     `Subject: ${subject}.`,
     `Setting: ${background}.`,
     `Camera: ${angle}, ${ASPECT[slot.aspect] || 'balanced frame'}. Light: ${light}.`,
     ART_STYLE[graphicDirection?.id || graphicDirection] ? `Art direction: ${ART_STYLE[graphicDirection.id || graphicDirection]}.` : '',
-    luxury ? 'Luxury editorial quality.' : premium ? 'Premium professional food and product photography.' : 'Authentic, appetizing and believable.',
+    luxury ? 'Luxury editorial quality, still a real unretouched photograph.' : premium ? 'Premium magazine-quality photo of a real place and real people.' : 'Looks like a real unedited photo: natural skin and material textures, small real-world imperfections, believable proportions.',
+    'Not CGI, not a 3D render, not an illustration; no plastic or airbrushed skin, no oversaturated colors, no HDR glow, no lens flare.',
     visual.avoid ? `Avoid: ${visual.avoid}.` : '',
     'No text, no letters, no logos, no watermarks, no invented brand names or labels.',
   ];
