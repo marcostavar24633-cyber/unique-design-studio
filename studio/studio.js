@@ -1,5 +1,5 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -514,6 +514,7 @@ const GROUPS = [
   ]],
   ['Дизайн и фирменный стиль', false, [
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
+    ['@visualIdentity', 'Новая визуальная система', 'visualIdentity', 'Новая система: палитры по нише, геометрия, типографика и интервалы. Можно включить отдельно, не меняя старые проекты.'],
     ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
     ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@mechanic', 'Поведение карточек', 'mechanic', 'Авто — движок выбирает по архитектуре и данным: раскрытие, переворот, колода, лента или мозаика. Всё работает с клавиатуры и без анимации'],
@@ -626,6 +627,16 @@ function buildForm() {
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    else if (type === 'visualIdentity') {
+      const options = listVisualIdentityOptions();
+      const enabled = state.raw.visualIdentityEnabled === true;
+      const palette = state.raw.visualIdentityPaletteId || '';
+      const shape = state.raw.visualIdentityShapeId || '';
+      control = `<label class="row"><input type="checkbox" data-special="visualIdentityEnabled"${enabled ? ' checked' : ''}> Включить новую систему</label>
+        <label for="${id}-palette">Палитра</label><select id="${id}-palette" data-special="visualIdentityPalette"><option value="">Автоматически по нише</option>${options.palettes.map(item => `<option value="${item.id}"${palette === item.id ? ' selected' : ''}>${esc(item.name)} — ${item.mode === 'dark' ? 'тёмная' : 'светлая'}</option>`).join('')}</select>
+        <label for="${id}-shape">Геометрия</label><select id="${id}-shape" data-special="visualIdentityShape"><option value="">Автоматически</option>${options.shapes.map(item => `<option value="${item.id}"${shape === item.id ? ' selected' : ''}>${esc(item.id)} — ${esc(item.card)}</option>`).join('')}</select>
+        <small>Предпросмотр обновится автоматически. Выбор сохраняется вместе с проектом.</small>`;
+    }
     else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'promptMode') control = `<select id="${id}" data-special="promptMode">${[['append', 'Дополнить стандартный — мои указания важнее'], ['replace', 'Заменить стандартный моим']].map(([k, v]) => `<option value="${k}"${p.customPromptMode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
@@ -2118,6 +2129,9 @@ $('#form').addEventListener('input', e => {
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
   else if (t.dataset.special === 'imageMask' || t.dataset.special === 'sectionDivider') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
   else if (t.dataset.special === 'mechanic') { if (t.value) state.raw.itemsMechanic = t.value; else delete state.raw.itemsMechanic; }
+  else if (t.dataset.special === 'visualIdentityEnabled') state.raw.visualIdentityEnabled = t.checked;
+  else if (t.dataset.special === 'visualIdentityPalette') { if (t.value) state.raw.visualIdentityPaletteId = t.value; else delete state.raw.visualIdentityPaletteId; }
+  else if (t.dataset.special === 'visualIdentityShape') { if (t.value) state.raw.visualIdentityShapeId = t.value; else delete state.raw.visualIdentityShapeId; }
   else if (t.dataset.special === 'tier') state.raw.tier = t.value;
   else if (t.dataset.special === 'promptMode') state.raw.customPromptMode = t.value;
   else if (t.dataset.special === 'brand') {
