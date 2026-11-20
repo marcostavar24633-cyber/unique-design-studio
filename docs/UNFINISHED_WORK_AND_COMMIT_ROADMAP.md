@@ -7,14 +7,14 @@
 
 ## Актуальный статус на 20 ноября 2026
 
-- Открытых Pull Request на момент подготовки этой редакции: **1** — функциональный PR #194 «История версий проекта».
-- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E) и #193 (обновление документации) объединены.
+- Открытых Pull Request на момент подготовки этой редакции: **0**.
+- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация) и #194 (история версий проекта) объединены.
 - PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
-- Основной CI после PR #193 завершился успешно: [run 44776100369](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44776100369) — Node 20, Node 22, Workers Build и E2E.
-- GitHub Pages deployment после PR #193 завершился успешно: [run 44776100287](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44776100287); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
-- PR #194 добавляет историю версий проекта в IndexedDB, сравнение снимков и безопасное восстановление с автосохранением текущей версии. CI выполняется.
-- В ходе аудита подтверждено: реестр проектов хранит последнюю запись проекта по ID; отдельная история версий проекта до PR #194 отсутствовала. Prompt Manager уже имеет собственное версионирование.
-- AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не затрагиваются.
+- PR #194: commit `bc6101298e337872ba9743812af7e6881d3a5484`; полный CI перед слиянием прошёл успешно: [run 44777592604](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777592604).
+- Post-merge CI для `main`: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) (проверить итог); GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
+- История версий проекта: IndexedDB, ручные снимки, сравнение, восстановление, резервный снимок перед откатом и лимит 10 версий на проект.
+- В ходе аудита подтверждено: до PR #194 реестр хранил только последнюю запись проекта по ID; отдельной истории версий проекта не было. Prompt Manager уже имел собственное версионирование.
+- AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не менялись.
 
 ## Исторический журнал PR (состояние на 17–18 ноября 2026)
 
@@ -95,7 +95,7 @@
 15. `feat: enhance website analyzer` — улучшить анализ структуры, дизайна и механик; учитывать PR #37.
 16. `feat: add editable niche profile library` — библиотека ниш и редактируемые профили; не дублировать PR #37.
 17. `feat: improve asset management` — загрузка, организация, кадрирование и управление изображениями; учитывать PR #30.
-18. `[~] feat: add project version management` — PR #194: ручные снимки в IndexedDB, сравнение и восстановление; последние 10 версий на проект. Ожидает CI и merge.
+18. `[x] feat: add project version management` — PR #194 объединён: ручные снимки в IndexedDB, сравнение и восстановление; перед откатом создаётся резервная версия; хранятся последние 10 версий на проект.
 19. `feat: add merge engine` — безопасное объединение модулей и результатов разработки с проверкой конфликтов.
 
 ### Этап E — главный интерфейс
