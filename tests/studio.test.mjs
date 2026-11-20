@@ -592,5 +592,24 @@ test('редкие действия шапки собраны в меню «Ещ
   for (const id of ['import', 'export', 'prompt', 'change-preview']) assert.ok(menu[0].includes(`id="${id}"`), `${id} в меню`);
   for (const id of ['dashboard-back', 'new', 'save', 'download']) assert.ok(!menu[0].includes(`id="${id}"`), `${id} остаётся в шапке`);
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
-  assert.match(css, /\.preview-fullscreen\{position:absolute;top:auto;bottom:12px/, 'кнопка «На весь экран» не перекрывает шапку сайта');
+  assert.match(css, /\.preview-fullscreen\{position:absolute;top:auto;right:12px;bottom:12px/, 'кнопка «На весь экран» не перекрывает шапку сайта');
+});
+
+
+test('mobile studio toolbar stays hidden on dashboard and workspace tabs remain readable', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('body.dashboard-mode>.top{display:none}'));
+  assert.ok(css.includes('white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere'));
+  assert.ok(css.includes('#ai-usage-details{display:none}'));
+  assert.ok(css.includes('.preview-fullscreen{position:absolute;top:auto;right:12px;bottom:12px'));
+});
+
+
+test('Expanded dashboard menu is not faded by the horizontal-scroll mask', () => {
+  const css = readFileSync(new URL('../studio/redesign.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('.dash-sidebar.is-menu-open .dash-nav{'));
+  const rule = css.slice(css.lastIndexOf('.dash-sidebar.is-menu-open .dash-nav{'));
+  assert.ok(rule.includes('-webkit-mask-image:none;'));
+  assert.ok(rule.includes('mask-image:none;'));
+  assert.ok(rule.includes('scroll-snap-type:none;'));
 });

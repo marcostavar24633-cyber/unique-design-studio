@@ -1,4 +1,6 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
+import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
+import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
@@ -48,8 +50,17 @@ function renderAiUsageStats(data, error = '') {
     return;
   }
   if (!data) return;
-  $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-  const neurons = Number(data.neurons || 0);
+  const hasNeurons = data.neurons !== null && data.neurons !== undefined && data.neurons !== '' && Number.isFinite(Number(data.neurons));
+  if (!hasNeurons) {
+    node.title = 'Cloudflare не вернул показатель Neurons для выбранного периода.';
+    $('#ai-usage-count').textContent = '—';
+    const details = $('#ai-usage-details');
+    if (details) details.textContent = 'Neurons: нет данных';
+    setDashStatus('neurons', 'off', 'Neurons: нет данных');
+    return;
+  }
+  $('#ai-usage-count').textContent = Number(data.neurons).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const neurons = Number(data.neurons);
   const share = data.range === '24h' ? ' (' + Math.round(neurons / WORKERS_AI_FREE_NEURONS * 100) + '% от ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' бесплатных в сутки — ориентир по документации Cloudflare)' : '';
   setDashStatus('neurons', neurons > WORKERS_AI_FREE_NEURONS * 0.8 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
   const details = $('#ai-usage-details');
@@ -62,7 +73,12 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    return renderAiUsageStats(null, 'хранилище настроек недоступно');
+  }
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -75,7 +91,8 @@ async function refreshAiUsage() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
+    let range = $('#ai-usage-range')?.value || '24h';
+    try { range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
     const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
@@ -83,8 +100,14 @@ async function refreshAiUsage() {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
-    if (!Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
-      throw new Error('Cloudflare вернул некорректную статистику');
+    const hasNeurons = payload.neurons !== null && payload.neurons !== undefined && payload.neurons !== '';
+    const hasRequests = payload.requests !== null && payload.requests !== undefined && payload.requests !== '';
+    if (!hasNeurons) {
+      renderAiUsageStats({ ...payload, range });
+      return;
+    }
+    if (!hasRequests || !Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
+      throw new Error('Cloudflare не вернул полную статистику Neurons и запросов');
     }
     renderAiUsageStats(payload);
   } catch (error) {
@@ -116,27 +139,92 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const EMPTY = { formatVersion: 2, brand: '', niche: '', architecture: 'auto', architectureMode: 'auto' };
 let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
+let projectHistoryRenderVersion = 0;
 let aiDesignReview = null;
 let aiDesignReviewLoading = false;
 let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'saved';
 let dashboardQuery = '';
+let userStartedProject = false;
 // Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
 // а вызывается из обработчика кнопок этой вкладки.
 let contentPrompt = () => '';
 
+let localSavedAt = 0;
+let localStorageWritable = true;
+try {
+  const probeKey = 'uds:storage-probe';
+  localStorage.setItem(probeKey, '1');
+  localStorage.removeItem(probeKey);
+} catch { localStorageWritable = false; }
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
-} catch { /* хранилище недоступно — работаем без сохранения */ }
-// Последняя запись в хранилище не удалась: сообщения «сохранено» не должны перекрывать предупреждение.
+  if (saved && saved.raw) {
+    state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
+    localSavedAt = localStorageWritable ? (Number(saved._udsSavedAt) || 0) : 0;
+  }
+} catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
+// Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
 let persistFailed = false;
-const PERSIST_ERROR = 'Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.';
+let persistBackupFailed = false;
+let persistRevision = 0;
+let lastPersistAt = 0;
+let backupNoticeShown = false;
+const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
+const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
-  try { localStorage.setItem(STORE, JSON.stringify(state)); persistFailed = false; return true; }
-  catch { persistFailed = true; toast(PERSIST_ERROR); return false; }
+  const savedAt = Math.max(Date.now(), localSavedAt + 1, lastPersistAt + 1);
+  lastPersistAt = savedAt;
+  const revision = ++persistRevision;
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
+    localSavedAt = savedAt;
+    persistFailed = false;
+    persistBackupFailed = false;
+    return true;
+  } catch {
+    persistFailed = true;
+    persistBackupFailed = false;
+    backupNoticeShown = false;
+    scheduleEmergencyBackup(state, savedAt).then(backup => {
+      if (backup.savedAt >= savedAt && backup.savedAt >= localSavedAt) {
+        persistFailed = false;
+        persistBackupFailed = false;
+        if (!backupNoticeShown) {
+          backupNoticeShown = true;
+          toast('Основное хранилище заполнено. Изменения сохранены в резервной базе IndexedDB.');
+        }
+      }
+    }).catch(() => {
+      if (revision !== persistRevision || savedAt < localSavedAt) return;
+      persistFailed = true;
+      persistBackupFailed = true;
+      toast(PERSIST_ERROR);
+    });
+    return false;
+  }
 };
+let emergencyRestorePromise;
+function restoreEmergencyBackupIfNewer() {
+  if (!emergencyRestorePromise) emergencyRestorePromise = (async () => {
+    try {
+      const backup = await loadEmergencyBackup();
+      if (!backup || backup.savedAt <= localSavedAt || !backup.state?.raw) return false;
+      state = {
+        raw: backup.state.raw,
+        library: Array.isArray(backup.state.library) ? backup.state.library : [],
+        analysis: backup.state.analysis || null
+      };
+      localSavedAt = backup.savedAt;
+      toast('Последняя резервная копия проекта восстановлена из IndexedDB.');
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return emergencyRestorePromise;
+}
 // Похож ли объект на проект студии: пустой или чужой JSON не должен молча заменять текущую работу.
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
   || (Array.isArray(raw.services) && raw.services.length > 0);
@@ -187,7 +275,7 @@ function renderAiBudget() {
   const resetAt = bakuTime(r.at);
   const sessionAt = bakuTime(new Date(sessionStart));
   let today;
-  if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
+  if (aiToday && !aiToday.error && aiToday.neurons !== null && aiToday.neurons !== undefined && aiToday.neurons !== '' && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
     const alert = pct >= 100
       ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Если AI-шлюз подключён, тексты пишет бесплатный резерв (Groq), фото недоступны до 00:00 UTC; платный резервный провайдер отключён.' }
@@ -200,7 +288,7 @@ function renderAiBudget() {
       '<p class="dash-meter-note"><b>Cloudflare с 00:00 UTC:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>' +
       (alert ? '<p class="dash-meter-note" data-ai-budget-alert="' + alert.level + '" role="status" aria-live="polite"><b>Предупреждение:</b> ' + alert.text + '</p>' : '');
   } else {
-    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
+    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : aiToday ? 'нет данных — Cloudflare не вернул показатель Neurons' : 'загружаем данные Cloudflare…') + '</p>';
   }
   box.innerHTML = today +
     '<div class="dash-ai-periods">' +
@@ -211,7 +299,13 @@ function renderAiBudget() {
     '<p class="dash-meter-note">Токены считаются по фактическим данным, которые вернула модель, и хранятся в журнале этого браузера. Neurons берутся отдельно из Cloudflare Analytics; ориентир ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' не является гарантированным лимитом аккаунта.</p>';
 }
 async function refreshAiToday() {
-  const endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    aiToday = { error: 'хранилище настроек недоступно' };
+    return renderAiBudget();
+  }
   if (!endpoint) { aiToday = { error: 'AI-сервер не задан' }; return renderAiBudget(); }
   try {
     const u = new URL(endpoint, location.href); u.pathname = u.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage'); u.search = '?range=today';
@@ -478,6 +572,7 @@ $('#quick-start')?.addEventListener('submit', e => {
   e.preventDefault();
   const niche = $('#qs-niche').value.trim();
   if (!niche) { $('#qs-niche').focus(); return; }
+  userStartedProject = true;
   $('#auto-niche').value = niche;
   $('#auto-brand').value = $('#qs-brand').value.trim();
   $('#auto-tier').value = $('#qs-tier').value;
@@ -1231,6 +1326,7 @@ try {
 } catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
+  userStartedProject = true;
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
@@ -2066,12 +2162,39 @@ function renderRegistry() {
     const s = l.entry.id === result.project.id ? null : similarity(fp, l.entry.fingerprint);
     return `<tr><td><b>${esc(l.entry.brand)}</b></td><td>${esc(ARCHETYPES[l.entry.fingerprint.archetype]?.name || '')}</td><td>${s === null ? '<span class="note">это текущий проект</span>' : `<span class="meter"><i style="width:${s * 100}%"></i></span>${Math.round(s * 100)}%`}</td><td><button type="button" data-load="${i}">Открыть</button> <button type="button" data-del="${i}" aria-label="Удалить ${esc(l.entry.brand)} из реестра">Удалить</button></td></tr>`;
   }).join('')}</tbody></table>` : '<p class="note">Реестр пуст. Кнопка «В реестр» сохраняет проект и его визуальный «отпечаток» в этом браузере — следующие проекты будут проверяться на шаблонность относительно него.</p>';
+  $('#view-registry').insertAdjacentHTML('beforeend', `
+    <section class="project-history" aria-labelledby="project-history-title">
+      <div class="project-history__head"><div><h3 id="project-history-title">История версий текущего проекта</h3><p class="note">Снимки сохраняются отдельно в браузере. Можно восстановить или сравнить любую из последних 10 версий.</p></div></div>
+      <div class="project-history__save"><label for="history-label">Название версии <span class="note">(необязательно)</span></label><input id="history-label" maxlength="80" placeholder="Например: До изменения главного экрана"><button type="button" data-history-save>Сохранить версию</button></div>
+      <div id="project-history-list" aria-live="polite"><p class="note">Загружаем историю…</p></div>
+      <div id="project-history-diff" aria-live="polite"></div>
+    </section>`);
+  renderProjectHistory();
 }
+async function renderProjectHistory() {
+  const host = $('#project-history-list');
+  if (!host || !result) return;
+  const requestId = ++projectHistoryRenderVersion;
+  host.innerHTML = '<p class="note">Загружаем историю версий…</p>';
+  try {
+    const versions = await listProjectVersions(result.project.id);
+    if (requestId !== projectHistoryRenderVersion || !host.isConnected) return;
+    host.innerHTML = versions.length ? '<div class="project-history__list">' + versions.map(version => {
+      const date = new Date(version.createdAt);
+      const stamp = Number.isNaN(date.getTime()) ? 'Дата неизвестна' : date.toLocaleString('ru-RU');
+      const label = version.label || 'Сохранённая версия';
+      return '<article class="project-history__item"><div class="project-history__meta"><b>' + esc(label) + '</b><small>' + esc(stamp) + '</small></div><div class="project-history__actions"><button type="button" data-history-compare="' + esc(version.id) + '">Сравнить</button><button type="button" data-history-restore="' + esc(version.id) + '">Восстановить</button><button type="button" data-history-delete="' + esc(version.id) + '" aria-label="Удалить версию ' + esc(label) + '">Удалить</button></div></article>';
+    }).join('') + '</div>' : '<p class="project-history__empty">Сохранённых версий пока нет. Создайте первый снимок перед крупными изменениями.</p>';
+  } catch (error) {
+    if (requestId === projectHistoryRenderVersion) host.innerHTML = '<p class="project-history__error">История версий недоступна: ' + esc(error.message || 'ошибка IndexedDB') + '</p>';
+  }
+}
+
 
 // ---------- События ----------
 function toast(msg) {
   // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
-  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${PERSIST_ERROR}`;
+  if (persistFailed && msg !== PERSIST_ERROR && !msg.includes(PERSIST_PENDING) && !msg.includes(PERSIST_ERROR)) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
   const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
   const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
@@ -2269,7 +2392,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       }
     }
     const ok = Boolean(response?.ok && payload.image);
-    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || '', provider: payload.provider || '' });
     onProgress(++done, targets.length, slot.label);
     if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
     // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
@@ -2785,13 +2908,48 @@ $('#save').addEventListener('click', () => {
   if (!result.project.brand && !result.project.niche) return toast('Укажите бренд или нишу, чтобы сохранить проект');
   state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry, analysis: currentAnalysis() }];
   run();
-  if (persistFailed) return toast(PERSIST_ERROR);
+  if (persistFailed) return toast(persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING);
   toast(`«${result.entry.brand}» сохранён в реестр`);
 });
-$('#view-registry').addEventListener('click', e => {
+$('#view-registry').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.load) { const item = state.library[b.dataset.load]; state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из реестра'); }
-  if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); }
+  if (b.dataset.load) { const item = state.library[b.dataset.load]; state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из реестра'); return; }
+  if (b.dataset.del) { state.library.splice(Number(b.dataset.del), 1); run(); return; }
+  try {
+    if (b.hasAttribute('data-history-save')) {
+      const snapshot = await saveProjectVersion({ projectId: result.project.id, raw: result.exported, analysis: currentAnalysis(), label: $('#history-label')?.value || '' });
+      if ($('#history-label')) $('#history-label').value = '';
+      toast('Версия сохранена: ' + new Date(snapshot.createdAt).toLocaleString('ru-RU'));
+      await renderProjectHistory();
+      return;
+    }
+    if (b.dataset.historyCompare) {
+      const host = $('#project-history-diff');
+      host.innerHTML = '<p class="note">Сравниваем сохранённую версию с текущим проектом…</p>';
+      const version = await getProjectVersion(b.dataset.historyCompare);
+      if (!version) { host.replaceChildren(); return toast('Версия уже недоступна'); }
+      const changes = compareProjectSnapshots(version.raw, state.raw);
+      host.innerHTML = '<h4>Сравнение: ' + esc(version.label || 'Сохранённая версия') + ' → текущая</h4>' + (changes.length
+        ? '<table><thead><tr><th>Поле</th><th>В версии</th><th>Сейчас</th></tr></thead><tbody>' + changes.map(item => '<tr><td>' + esc(item.field) + '</td><td>' + esc(item.before) + '</td><td>' + esc(item.after) + '</td></tr>').join('') + '</tbody></table>'
+        : '<p class="note">В основных полях и количестве материалов отличий нет.</p>');
+      return;
+    }
+    if (b.dataset.historyRestore) {
+      const version = await getProjectVersion(b.dataset.historyRestore);
+      if (!version) return toast('Версия уже недоступна');
+      if (!confirm('Восстановить эту версию? Текущая работа сначала будет сохранена отдельным снимком.')) return;
+      await saveProjectVersion({ projectId: result.project.id, raw: result.exported, analysis: currentAnalysis(), label: 'Перед восстановлением' });
+      load({ ...version.raw, __udsAnalysis: version.analysis ? { data: version.analysis } : null }, 'Версия восстановлена. Текущая работа сохранена в истории.');
+      return;
+    }
+    if (b.dataset.historyDelete) {
+      if (!confirm('Удалить сохранённую версию? Это действие нельзя отменить.')) return;
+      await deleteProjectVersion(b.dataset.historyDelete);
+      $('#project-history-diff').replaceChildren();
+      await renderProjectHistory();
+      toast('Версия удалена');
+    }
+  } catch (error) { toast('Ошибка истории версий: ' + (error.message || 'не удалось выполнить действие')); }
 });
 
 fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async list => {
@@ -2819,12 +2977,15 @@ fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async lis
       openWorkspace('create');
     } catch (error) { toast(error.message || 'Не удалось открыть пример'); }
   });
-  if (!state.raw.brand && !state.raw.niche && list[0]) {
+  const restoredBackup = await restoreEmergencyBackupIfNewer();
+  if (restoredBackup) { buildForm(); run(); }
+  if (!userStartedProject && !state.raw.brand && !state.raw.niche && list[0]) {
     const first = exampleProjects[0];
     if (first) load(first.raw);
   }
 }).catch(() => { exampleProjects = []; renderDashboard(); });
 
+await restoreEmergencyBackupIfNewer();
 buildForm();
 run();
 

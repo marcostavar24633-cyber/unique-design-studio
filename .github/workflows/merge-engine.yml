@@ -42,11 +42,11 @@ jobs:
       PR_NUMBER: ${{ github.event.inputs.pr }}
       EXECUTE: ${{ github.event.inputs.execute == 'true' && '--execute' || '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Номер PR
@@ -68,7 +68,7 @@ jobs:
         run: node scripts/merge-engine.mjs merge "$PR_NUMBER" $EXECUTE --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Отчёт
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: merge-engine-report
           path: report.json

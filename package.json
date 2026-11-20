@@ -17,6 +17,6 @@
     "build": "node scripts/build.mjs",
     "sync-core": "node scripts/sync-core.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/e2e/responsive.mjs && node tests/e2e/templates.mjs && node tests/e2e/studio-workflow.mjs && node tests/e2e/commerce-interactions.mjs"
+    "test:e2e": "node tests/e2e/responsive.mjs && node tests/e2e/templates.mjs && node tests/e2e/studio-workflow.mjs && node tests/e2e/prompt-manager.mjs && node tests/e2e/commerce-interactions.mjs && node tests/e2e/project-history.mjs && node tests/e2e/project-storage.mjs && node tests/e2e/ai-usage.mjs && node tests/e2e/editor-controls.mjs"
   }
 }
