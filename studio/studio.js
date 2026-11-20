@@ -8,7 +8,7 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 // Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
 const MAX_SERVICE_PHOTOS = 6;
-// Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, лимит Worker — 16 фото в минуту.
+// Ограничиваем параллельность: Workers AI отвечает 429 при пакетной генерации.
 const IMAGE_CONCURRENCY = 1;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
@@ -1155,8 +1155,20 @@ $('#auto').addEventListener('submit', async e => {
       }, 1000);
       let res, body;
       try {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
-        body = await res.json().catch(() => ({}));
+        // Повторяем только временные сбои сети, 429 и 5xx; не повторяем ошибки валидации 4xx.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 90_000);
+          try {
+            res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload), signal: controller.signal });
+            body = await res.json().catch(() => ({}));
+          } finally { clearTimeout(timeout); }
+          if (res.ok || (res.status < 500 && res.status !== 429) || attempt === 1) break;
+          const retryAfter = Number(res.headers.get('Retry-After'));
+          const delay = res.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 2_000;
+          setAutoStatus(res.status === 429 ? 'AI-сервер ограничил частоту запросов. Повторяем через минуту…' : 'Временная ошибка AI-сервера. Повторяем запрос…');
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         clearInterval(aiTicker);
       } catch (error) {
         clearInterval(aiTicker); logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
