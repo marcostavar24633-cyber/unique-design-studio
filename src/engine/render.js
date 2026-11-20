@@ -274,7 +274,7 @@ function jsonLd(c) {
 function visualIdentityCss(identity) {
   if (!identity) return '';
   const p = identity.palette, t = identity.typography, g = identity.geometry, space = identity.spacing;
-  return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--ds-accent-contrast:${p.mode === 'dark' ? '#171615' : '#ffffff'};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
+  return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--u-tint:${p.accentSoft};--u-accent-ink:${p.accent};--ds-accent-contrast:${p.mode === 'dark' ? '#171615' : '#ffffff'};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
 }
 
 export function renderCss(concept, scene = null, identity = null) {
