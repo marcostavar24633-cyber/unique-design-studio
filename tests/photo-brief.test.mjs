@@ -128,3 +128,14 @@ test('кадры галереи берут сцены ниши от AI, а бе�
   const subjects = new Set(Array.from({ length: 8 }, (_, n) => photoPrompt({ id: 'gallery-' + n, role: 'gallery', label: 'x', aspect: '4:5' }, plain).match(/Subject: ([^.]*)\./)[1]));
   assert.equal(subjects.size, 8);
 });
+
+test('промт фото просит документальный реализм, а не рекламный глянец', () => {
+  const g = generate({ niche: 'кофейня', brand: 'Зерно', services: [['Капучино', '']] });
+  const hero = imageSlots(g.project, g.concept).slots.find(slot => slot.role === 'hero');
+  const prompt = photoPrompt(hero, g.project, 'cinematic');
+  assert.match(prompt, /Realistic documentary-style photograph/);
+  assert.match(prompt, /35mm lens/);
+  assert.match(prompt, /Not CGI, not a 3D render, not an illustration; no plastic or airbrushed skin, no oversaturated colors, no HDR glow/);
+  assert.doesNotMatch(prompt, /commercial photograph|dramatic directional light|cinematic color grade/);
+  assert.ok(prompt.length <= 2000);
+});

@@ -20,7 +20,7 @@ test('image generation validates prompt and returns FLUX image data', async () =
   const body = await response.json();
   assert.equal(body.image, 'aGVsbG8=');
   assert.equal(body.mimeType, 'image/jpeg');
-  assert.equal(body.model, '@cf/black-forest-labs/flux-1-schnell');
+  assert.equal(body.model, '@cf/black-forest-labs/flux-2-klein-4b');
 });
 
 test('image generation uses the AI binding and applies rate limiting', async () => {
@@ -34,6 +34,6 @@ test('image generation uses the AI binding and applies rate limiting', async () 
   assert.equal(input, undefined);
   const allowed = await call({ prompt: 'photo' }, { env: { ...env, AI_RATE_LIMITER: { limit: async () => ({ success: true }) } } });
   assert.equal(allowed.status, 200);
-  assert.equal(input.model, '@cf/black-forest-labs/flux-1-schnell');
-  assert.equal(input.args.steps, 4);
+  assert.equal(input.model, '@cf/black-forest-labs/flux-2-klein-4b');
+  assert.ok(input.args.multipart, 'FLUX.2 klein получает multipart/form-data');
 });

@@ -296,19 +296,49 @@ const imageRequest = (body, { origin = ORIGIN, from = `10.1.0.${++ip}`, method =
     body: method === 'GET' ? undefined : JSON.stringify(body),
   });
 
-test('генерация изображения возвращает base64 и использует FLUX.1 Schnell', async () => {
+test('генерация изображения по умолчанию идёт через FLUX.2 klein 4B с размером по пропорции кадра', async () => {
   let called = null;
   const env = { AI: { run: async (model, options) => {
     called = { model, options };
     return { image: 'aGVsbG8=' };
   } } };
-  const res = await worker.fetch(imageRequest({ prompt: 'premium coffee product photo' }), env);
+  const res = await worker.fetch(imageRequest({ prompt: 'premium coffee product photo', aspect: '4:5' }), env);
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.equal(body.image, 'aGVsbG8=');
   assert.equal(body.mimeType, 'image/jpeg');
-  assert.equal(called.model, '@cf/black-forest-labs/flux-1-schnell');
-  assert.deepEqual(called.options, { prompt: 'premium coffee product photo', steps: 4 });
+  assert.equal(body.model, '@cf/black-forest-labs/flux-2-klein-4b');
+  assert.deepEqual([body.width, body.height], [768, 960]);
+  assert.equal(called.model, '@cf/black-forest-labs/flux-2-klein-4b');
+  // Модель принимает multipart/form-data: проверяем поля формы.
+  assert.match(called.options.multipart.contentType, /^multipart\/form-data; boundary=/);
+  const form = await new Response(called.options.multipart.body, { headers: { 'Content-Type': called.options.multipart.contentType } }).formData();
+  assert.equal(form.get('prompt'), 'premium coffee product photo');
+  assert.equal(form.get('width'), '768');
+  assert.equal(form.get('height'), '960');
+});
+
+test('если FLUX.2 klein не ответил, фото генерирует запасной FLUX.1 schnell', async () => {
+  const calls = [];
+  const env = { AI: { run: async (model, options) => {
+    calls.push(model);
+    if (model.includes('klein')) throw new Error('3040: capacity temporarily exceeded');
+    return { image: 'c2Nobmw=' };
+  } } };
+  const body = await (await worker.fetch(imageRequest({ prompt: 'coffee shop interior', aspect: '16:9' }), env)).json();
+  assert.equal(body.image, 'c2Nobmw=');
+  assert.equal(body.model, '@cf/black-forest-labs/flux-1-schnell');
+  assert.deepEqual(calls, ['@cf/black-forest-labs/flux-2-klein-4b', '@cf/black-forest-labs/flux-1-schnell']);
+});
+
+test('модель фото можно выбрать явно, неизвестная модель игнорируется', async () => {
+  const calls = [];
+  const env = { AI: { run: async (model, options) => { calls.push({ model, options }); return { image: 'aGVsbG8=' }; } } };
+  await worker.fetch(imageRequest({ prompt: 'photo', model: 'flux-1-schnell' }), env);
+  assert.equal(calls[0].model, '@cf/black-forest-labs/flux-1-schnell');
+  assert.deepEqual(calls[0].options, { prompt: 'photo', steps: 4 });
+  await worker.fetch(imageRequest({ prompt: 'photo', model: '@cf/some/paid-model' }), env);
+  assert.equal(calls[1].model, '@cf/black-forest-labs/flux-2-klein-4b');
 });
 
 test('генерация изображения отклоняет пустой prompt и не расходует AI', async () => {
