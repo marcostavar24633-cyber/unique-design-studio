@@ -2096,7 +2096,6 @@ async function renderProjectHistory() {
   }
 }
 
-}
 
 // ---------- События ----------
 function toast(msg) {
