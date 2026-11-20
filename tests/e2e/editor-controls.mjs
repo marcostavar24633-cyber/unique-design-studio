@@ -32,7 +32,7 @@ try {
     const stack = String(error.stack || error.message);
     if (/\/studio\/(?:studio|ai-diagnostics)\.js|\/studio\/index\.html/.test(stack)) appErrors.push(stack);
   });
-  await page.goto(\`\${base}/studio/index.html\`, { waitUntil: 'networkidle' });
+  await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
 
   // Генерируем локальный проект и проверяем действие «Новый» без потери реестра.
