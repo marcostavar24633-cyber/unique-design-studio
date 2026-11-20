@@ -418,10 +418,6 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 .dash-ai-periods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}
 .dash-ai-periods .dash-meter-note{min-width:0;overflow-wrap:anywhere}
 @media(max-width:560px){
-  body.dashboard-mode>.top{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;padding:10px 12px}
-  body.dashboard-mode>.top .top__brand{min-width:0}
-  body.dashboard-mode>.top .top__actions{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;width:100%;overflow:visible}
-  body.dashboard-mode>.top .ai-usage{width:100%;box-sizing:border-box;justify-content:flex-start;gap:6px 8px}
   .dash-ai-periods{grid-template-columns:minmax(0,1fr)}
 }
 
@@ -429,13 +425,13 @@ button.primary,.photo-shot-actions button{background:linear-gradient(135deg,#d6b
 
 /* Fullscreen live website preview */
 .view--preview{position:relative}
-.preview-fullscreen{position:absolute;top:12px;right:12px;z-index:4;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid rgba(255,255,255,.24);border-radius:10px;background:rgba(16,18,22,.88);color:#fff;font-size:13px;font-weight:650;box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(10px)}
+.preview-fullscreen{position:absolute;top:auto;bottom:12px;right:12px;z-index:4;display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 12px;border:1px solid rgba(255,255,255,.24);border-radius:10px;background:rgba(16,18,22,.88);color:#fff;font-size:13px;font-weight:650;box-shadow:0 4px 18px rgba(0,0,0,.18);backdrop-filter:blur(10px)}
 .preview-fullscreen:hover{border-color:var(--accent);background:#191c21;color:#f6e5bd}
 #view-preview:fullscreen,#view-preview.is-fullscreen-fallback{position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;height:100dvh;min-height:100vh;min-height:100dvh;max-height:100vh;max-height:100dvh;margin:0;padding:0;border:0;background:#fff}
 #view-preview:fullscreen #frame,#view-preview.is-fullscreen-fallback #frame{display:block;width:100%!important;max-width:none!important;height:100%!important;min-height:0;border:0;box-shadow:none}
-#view-preview:fullscreen .preview-fullscreen,#view-preview.is-fullscreen-fallback .preview-fullscreen{top:12px;right:12px}
+#view-preview:fullscreen .preview-fullscreen,#view-preview.is-fullscreen-fallback .preview-fullscreen{top:auto;bottom:12px;right:12px}
 body.preview-fullscreen-active{overflow:hidden}
-@media(max-width:600px){.preview-fullscreen{top:8px;right:8px;min-height:38px;padding:7px 10px;font-size:12px}}
+@media(max-width:600px){.preview-fullscreen{top:auto;bottom:8px;right:8px;min-height:38px;padding:7px 10px;font-size:12px}}
 
 /* Content Intelligence review panel */
 .content-qa-review { margin: 12px 0 0; padding: 14px; border: 1px solid var(--line, #343434); border-radius: 12px; background: var(--panel, #171717); }
@@ -445,7 +441,7 @@ body.preview-fullscreen-active{overflow:hidden}
 .content-qa-review li { margin: 6px 0; line-height: 1.45; }
 
 /* Вкладки панели: AI-генерация · Свои настройки · Редактор (вместо одной длинной прокрутки) */
-.panel-tabs{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 -16px 4px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.panel-tabs{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:repeat(3,auto);gap:4px;margin:0 -16px 4px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 .panel-tabs [role="tab"]{min-width:0;padding:8px 6px;border:1px solid transparent;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.72}
 .panel-tabs [role="tab"]:hover{opacity:1}
 .panel-tabs [role="tab"][aria-selected="true"]{opacity:1;border-color:var(--line);background:var(--bg)}
@@ -491,3 +487,34 @@ body.preview-fullscreen-active{overflow:hidden}
 .pm-actions,.pm-stats,.pm-history-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.pm-actions button,.pm-record button,.pm-history-actions button,.pm-stats button{min-height:38px;padding:8px 11px}.pm-command{padding:13px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.pm-command>b{display:block;font-size:12px;margin-bottom:8px}.pm-command>code{display:block;overflow-wrap:anywhere;padding:10px;border-radius:7px;background:var(--card);font-size:12px}.pm-command p{color:var(--muted);font-size:11px;line-height:1.6}
 .pm-history{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}.pm-history h3{margin:0}.pm-record{display:grid;gap:10px;margin:14px 0;padding:13px;border:1px solid var(--line);border-radius:10px}.pm-confirm{display:flex;gap:8px;align-items:flex-start;color:var(--muted);font-size:12px}.pm-confirm input{margin-top:2px}.pm-stats button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.pm-history-list{display:grid;gap:9px}.pm-history-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px}.pm-history-meta{display:grid;gap:5px;min-width:0}.pm-history-meta small{color:var(--muted);font-size:11px}.pm-history-meta a{overflow-wrap:anywhere;font-size:12px}.pm-history-actions{flex:none;margin:0}.pm-empty{padding:12px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:12px}
 @media(max-width:620px){.pm-head{display:block}.pm-state{display:inline-block;margin-top:10px}.pm-checks,.pm-settings{grid-template-columns:1fr}.pm-actions{display:grid}.pm-actions button{width:100%}.pm-history-item{align-items:flex-start;flex-direction:column}.pm-history-actions{width:100%}.pm-history-actions button{flex:1}}
+
+/* Шапка рабочей области: счётчик AI — одна компактная строка. Подробности — во всплывающей подсказке
+   блока (title), поэтому длинный текст обрезается многоточием, а не растягивает шапку на два ряда. */
+body:not(.dashboard-mode)>.top .ai-usage{flex-wrap:nowrap;white-space:nowrap;max-width:min(100%,440px);min-height:34px;padding:4px 10px}
+body:not(.dashboard-mode)>.top #ai-usage-details{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;color:var(--muted)}
+body:not(.dashboard-mode)>.top #ai-usage-range{flex:0 0 auto;min-height:26px;padding:2px 6px;font-size:12px}
+/* Меню «Ещё» в шапке рабочей области: редкие действия, чтобы шапка помещалась в одну строку. */
+.top-more{position:relative;flex:0 0 auto}
+.top-more>summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card,transparent);cursor:pointer;list-style:none;font-weight:600;user-select:none}
+.top-more>summary::-webkit-details-marker{display:none}
+.top-more>summary::after{content:"▾";font-size:11px;opacity:.7}
+.top-more[open]>summary{border-color:var(--accent)}
+.top-more>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top-more__menu{position:absolute;left:0;top:calc(100% + 6px);z-index:30;display:grid;gap:4px;min-width:220px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.top-more__menu button{justify-content:flex-start;width:100%;text-align:left}
+/* Шапка на компьютере — одна строка: бренд слева, действия справа. */
+@media(min-width:1100px){
+  body:not(.dashboard-mode)>.top{flex-wrap:nowrap}
+  body:not(.dashboard-mode)>.top .top__brand{flex:0 0 auto}
+  body:not(.dashboard-mode)>.top .top__actions{flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end;align-items:center}
+  body:not(.dashboard-mode)>.top .top__actions>button,body:not(.dashboard-mode)>.top .top-more>summary{white-space:nowrap;flex:0 0 auto}
+  body:not(.dashboard-mode)>.top .ai-usage{flex:0 1 330px;max-width:330px}
+  body:not(.dashboard-mode)>.top #examples{flex:0 1 140px;max-width:140px;min-width:110px}
+  /* В одной строке меню «Ещё» стоит у правого края — раскрываем его влево от кнопки. */
+  .top-more__menu{left:auto;right:0}
+}
+@media(max-width:760px){
+  .top-more[open]{display:flex;align-items:flex-start;gap:6px}
+  .top-more__menu{position:static;display:flex;gap:6px;min-width:0;padding:0;border:0;background:none;box-shadow:none}
+  .top-more__menu button{width:auto;white-space:nowrap}
+}

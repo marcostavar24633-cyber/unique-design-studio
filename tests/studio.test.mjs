@@ -317,7 +317,8 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
 
 test('Studio stylesheet URL is versioned to refresh mobile navigation styles in cached browsers', () => {
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
-  assert.ok(html.includes('href="studio.css?v=mobile-workspace-controls-20261117"'));
+  // Метка меняется при каждом заметном изменении стилей шапки, чтобы браузеры не брали старый файл из кэша.
+  assert.ok(html.includes('href="studio.css?v=studio-header-20261120"'));
 });
 
 test('Mobile workspace tabs and preview controls wrap without horizontal clipping', () => {
@@ -574,4 +575,22 @@ test('Publish Manager: отдельная вкладка, команда сущ�
   assert.ok(source.includes("required> Я проверил успешное завершение Wrangler"), 'URL фиксируется только после явного подтверждения');
   assert.ok(source.includes("catch { return toast('Не удалось сохранить настройки публикации"), 'ошибка хранилища не роняет обработчик');
   assert.ok(!/fetch\([^)]*api\.cloudflare\.com/.test(source), 'панель не обращается к API Cloudflare');
+});
+
+test('на главной панели шапка рабочей области скрыта на любой ширине', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.match(css, /body\.dashboard-mode>\.top,body\.dashboard-mode>\.layout\{display:none\}/);
+  // Мобильное правило с display для шапки в режиме главной панели раньше перекрывало display:none.
+  assert.doesNotMatch(css, /body\.dashboard-mode>\.top\{display:(grid|flex|block)/);
+});
+
+test('редкие действия шапки собраны в меню «Ещё», обработчики по id сохранены', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  const menu = html.match(/<details class="top-more">[\s\S]*?<\/details>/);
+  assert.ok(menu, 'нет меню «Ещё»');
+  for (const id of ['import', 'export', 'prompt', 'change-preview']) assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, id);
+  for (const id of ['import', 'export', 'prompt', 'change-preview']) assert.ok(menu[0].includes(`id="${id}"`), `${id} в меню`);
+  for (const id of ['dashboard-back', 'new', 'save', 'download']) assert.ok(!menu[0].includes(`id="${id}"`), `${id} остаётся в шапке`);
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.match(css, /\.preview-fullscreen\{position:absolute;top:auto;bottom:12px/, 'кнопка «На весь экран» не перекрывает шапку сайта');
 });
