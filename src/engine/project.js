@@ -23,11 +23,11 @@ const TEXT_FIELDS = [
   'seoTitle', 'seoDescription',
 ];
 
-/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT","Категория"] или объект. */
+/** Элемент списка: принимает ["Заголовок","Текст","Цена","Картинка","ALT","Категория","Бейдж"] или объект. */
 function item(raw) {
-  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }), alt: str(raw[4]), category: str(raw[5]) };
+  if (Array.isArray(raw)) return { title: str(raw[0]), text: str(raw[1]), price: str(raw[2]), image: safeUrl(raw[3], { image: true }), alt: str(raw[4]), category: str(raw[5]), badge: str(raw[6]).slice(0, 24) };
   if (raw && typeof raw === 'object') {
-    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }), alt: str(raw.alt), category: str(raw.category) };
+    return { title: str(raw.title ?? raw.name), text: str(raw.text ?? raw.description), price: str(raw.price), image: safeUrl(raw.image, { image: true }), alt: str(raw.alt), category: str(raw.category), badge: str(raw.badge).slice(0, 24) };
   }
   return { title: str(raw), text: '', price: '', image: '' };
 }
@@ -105,10 +105,11 @@ export function normalizeProject(raw = {}) {
 
 const toRow = i => {
   const row = [i.title, i.text];
-  if (i.price || i.image || i.alt || i.category) row.push(i.price);
-  if (i.image || i.alt || i.category) row.push(i.image);
-  if (i.alt || i.category) row.push(i.alt);
-  if (i.category) row.push(i.category);
+  if (i.price || i.image || i.alt || i.category || i.badge) row.push(i.price);
+  if (i.image || i.alt || i.category || i.badge) row.push(i.image);
+  if (i.alt || i.category || i.badge) row.push(i.alt);
+  if (i.category || i.badge) row.push(i.category);
+  if (i.badge) row.push(i.badge);
   return row;
 };
 

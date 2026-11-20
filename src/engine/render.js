@@ -14,6 +14,7 @@ import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js
 import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-layers.js';
 import { transitionCss, transitionHtml } from './cinematic/transitions.js';
 import { cardShapeCss, revealCss } from './variety.js';
+import { cardEffectCss, effectsScript, heroEffectCss, heroEffectMarkup, heroMarqueeHtml } from './effects.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn } from './color.js';
 
@@ -69,7 +70,7 @@ const secondary = (c, id) => (c.order.includes(id) ? `<a class="ds-button ds-but
 const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${esc(c.p.niche)}</p>` : '');
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
 // Сменяющиеся фразы (эффект «исчезающий текст») идут сразу под заголовком первого экрана.
-const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>${c.vs.textEffect === 'fade-words' ? fadeWordsHtml(c.p) : ''}`;
+const h1 = c => `<h1 id="hero-h">${esc(c.title)}</h1>${c.vs.textEffect === 'fade-words' ? fadeWordsHtml(c.p) : ''}${heroMarqueeHtml(c.vs.effects, c.p)}`;
 
 function artStyle(p, role, index = 0) {
   const root = p.passthrough?.imageArtDirection || {};
@@ -210,7 +211,7 @@ const SECTION = {
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
       const shop = c.vs.commerce?.tools || c.vs.commerce?.cart;
-      const parts = { media, title: `<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '' };
+      const parts = { media, title: `${i.badge ? `<span class="item__badge">${esc(i.badge)}</span>` : ''}<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '' };
       const flip = mech === 'flip' && media && parts.text;
       // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
       const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
@@ -258,8 +259,12 @@ function script(c, scene) {
   if (c.vs.motionPlan?.mechanics.includes('parallax')) parts.push(`var px=document.querySelector('[data-parallax]');if(px&&!${reduce}){var tick=false;addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){px.style.transform='translate3d(0,'+Math.min(scrollY*.08,40)+'px,0)';tick=false})},{passive:true})}`);
   if (c.vs.archetype === 'catalog' && c.p.services.length >= 4) parts.push(`var sf=document.querySelector('[data-search]');if(sf){sf.hidden=false;var st=document.querySelector('[data-search-status]');sf.addEventListener('submit',function(e){e.preventDefault();document.getElementById('items').scrollIntoView()});sf.querySelector('input').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase(),n=0;var items=document.querySelectorAll('#items .item'),tools=document.querySelector('[data-catalog-tools]');if(tools){items.forEach(function(li){if(!q||li.textContent.toLowerCase().indexOf(q)>-1)n++});tools.dispatchEvent(new CustomEvent('uds:catalog-search'));}else{items.forEach(function(li){var ok=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!ok;if(ok)n++})}if(!tools)st.textContent=q?'Найдено: '+n:''})}`);
   if ((c.vs.commerce?.tools || c.vs.commerce?.cart) && c.order.includes('items')) parts.push(commerceScript(c.p));
-  const motion = motionScript(c.vs.motionPlan);
+  // «Раскрытие строк» само делит заголовок на строки — пословная кинетика заголовка при нём не нужна.
+  const plan = c.vs.effects?.hero === 'line-split' && c.vs.motionPlan ? { ...c.vs.motionPlan, mechanics: c.vs.motionPlan.mechanics.filter(m => m !== 'kinetic-type') } : c.vs.motionPlan;
+  const motion = motionScript(plan);
   if (motion) parts.push(motion);
+  const fxScript = effectsScript(c.vs.effects);
+  if (fxScript) parts.push(fxScript);
   const cinematic = sceneScript(scene);
   if (cinematic) parts.push(cinematic);
   return parts.length ? `<script>(function(){${parts.join(';')}})();</script>` : '';
@@ -329,6 +334,7 @@ export function renderCss(concept, scene = null, identity = null) {
     transitionCss(vs.transition, vs.sectionLayout),
     cardShapeCss(vs.variety?.cardShape),
     revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
+    vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
   ].join('\n').replace(/\n\s*/g, '');
 }
 
@@ -349,7 +355,7 @@ export function renderSite(input, concept) {
       });
     } catch { visualIdentity = null; }
   }
-  const sceneLayer = sceneMarkup(scene, cinematicLightMarkup(vs.cinematicLayers));
+  const sceneLayer = sceneMarkup(scene, cinematicLightMarkup(vs.cinematicLayers) + heroEffectMarkup(vs.effects, project));
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
   // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.

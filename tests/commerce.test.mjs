@@ -100,5 +100,5 @@ test('студия: категория позиции редактируется
   const { readFileSync } = await import('node:fs');
   const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   assert.match(js, /Название \| Описание \| Цена \| URL картинки \| ALT-текст \| Категория/);
-  assert.match(js, /\[r\.title, r\.text, r\.price, r\.image, r\.alt, r\.category\]/);
+  assert.match(js, /\[r\.title, r\.text, r\.price, r\.image, r\.alt, r\.category(, r\.badge)?\]/);
 });

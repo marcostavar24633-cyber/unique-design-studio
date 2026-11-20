@@ -1,7 +1,7 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITIONS, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITIONS, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS, CARD_EFFECTS, HERO_EFFECTS, describeEffects } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -621,6 +621,8 @@ const GROUPS = [
     ['@cardShape', 'Форма карточек', 'cardShape', 'Форма карточек услуг, товаров и преимуществ: углы, срезы, вырезы, загнутый угол и другие — 15 вариантов. Авто — по характеру формы и архитектуре'],
     ['@revealEffect', 'Появление блоков', 'revealEffect', 'Как блоки проявляются при прокрутке — 15 эффектов. Ручной выбор включает появление. Без JavaScript и при «уменьшить движение» контент виден сразу'],
     ['@buttonStyle', 'Стиль кнопок', 'buttonStyle', '15 стилей: капсула, градиент, свечение, объём, выезжающая заливка, стрелка, стекло, неон и другие. Цвета — из палитры, контраст сохраняется'],
+    ['@cardEffect', 'Эффект карточек', 'cardEffect', '22 эффекта: прожектор, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
+    ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '20 эффектов: аврора, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
@@ -638,7 +640,7 @@ const GROUPS = [
   ]],
   ['Каталог и предложения', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
-    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст | Категория. Последние поля необязательны. У магазина цены и категории включают фильтры, сортировку и корзину-заявку'],
+    ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст | Категория | Бейдж (например, «Хит» — только если это правда). Последние поля необязательны. У магазина цены и категории включают фильтры, сортировку и корзину-заявку'],
     ['categories', 'Категории', 'list', 'Одна категория на строку'],
   ]],
   ['Содержание сайта', false, [
@@ -664,7 +666,7 @@ function set(path, value) {
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
   if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
-  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt, r.category];
+  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt, r.category, r.badge];
   const cells = a.map(x => x ?? '');
   if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
@@ -754,6 +756,8 @@ function buildForm() {
         ${range('transitionIntensity', 'Интенсивность', TRANSITION_LIMITS.intensity, 5, tr?.intensity ?? 40, '%')}
         </div>`;
     }
+    else if (type === 'cardEffect') control = `<select id="${id}" data-special="cardEffect"${d}><option value="">Авто — по архитектуре и классу</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+    else if (type === 'heroEffect') control = `<select id="${id}" data-special="heroEffect"${d}><option value="">Авто — по архитектуре, классу и наличию фото</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'cardShape') control = `<select id="${id}" data-special="cardShape"${d}><option value="">Авто — по форме и архитектуре</option>${Object.entries(CARD_SHAPES).map(([k, v]) => `<option value="${k}"${state.raw.cardShape === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'revealEffect') control = `<select id="${id}" data-special="revealEffect"${d}><option value="">Авто — по плану движения</option>${Object.entries(REVEALS).map(([k, v]) => `<option value="${k}"${state.raw.revealEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'buttonStyle') control = `<select id="${id}" data-special="buttonStyle"${d}><option value="">Авто — по архитектуре и классу</option>${Object.entries(BUTTONS).map(([k, v]) => `<option value="${k}"${state.raw.buttonStyle === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
@@ -1549,7 +1553,7 @@ ${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Биб�
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
     ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Переходы', esc(describeTransition(vs.transition))], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
-    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
   ])}</div>
 <h2>Палитра и контраст</h2>
 <div class="swatches">${sw.map(([n, bg, fg]) => `<div class="swatch" style="background:${bg};color:${fg}"><b>${n}</b>${bg}</div>`).join('')}</div>
@@ -2280,7 +2284,7 @@ $('#form').addEventListener('input', e => {
     state.raw[t.dataset.special] = Number(t.value);
     const out = $('#form').querySelector(`[data-transition-out="${t.dataset.special}"]`); if (out) out.value = t.value + (t.dataset.unit || '');
   }
-  else if (['cardShape', 'revealEffect', 'buttonStyle'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
+  else if (['cardShape', 'revealEffect', 'buttonStyle', 'cardEffect', 'heroEffect'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
   else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
   else if (t.dataset.special === 'graphicDirection') { if (t.value) state.raw.graphicDirection = t.value; else delete state.raw.graphicDirection; }
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
