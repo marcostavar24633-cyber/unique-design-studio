@@ -27,7 +27,7 @@ const captureStudioErrors = (page, errors) => page.on('pageerror', error => {
   const stack = String(error.stack || error.message);
   // Preview documents run in a deliberately sandboxed iframe; their isolated runtime errors
   // are outside this AI Usage test. Capture uncaught errors from the studio application itself.
-  if (/\\/studio\\/(?:studio|ai-diagnostics)\\.js|\\/studio\\/index\\.html/.test(stack)) errors.push(stack);
+  if (/\/studio\/(?:studio|ai-diagnostics)\.js|\/studio\/index\.html/.test(stack)) errors.push(stack);
 });
 try {
   // Browser privacy/security settings can make even getItem throw. This must not break studio startup.
