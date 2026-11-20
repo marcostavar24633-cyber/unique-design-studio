@@ -9,7 +9,7 @@ const MAX_IMAGE_DATA = 3_800_000;
 // Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
 const MAX_SERVICE_PHOTOS = 6;
 // Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, лимит Worker — 16 фото в минуту.
-const IMAGE_CONCURRENCY = 3;
+const IMAGE_CONCURRENCY = 1;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
@@ -1120,7 +1120,7 @@ $('#auto').addEventListener('submit', async e => {
     value.textContent = safe + '%';
     label.textContent = stage;
     if (extra) extra.textContent = detail;
-    root.dataset.state = safe >= 100 ? 'complete' : 'running';
+    root.dataset.state = safe >= 100 ? (/предупреждения/i.test(stage) ? 'warning' : 'complete') : 'running';
   };
   const go = $('#auto-go');
   go.disabled = true;
@@ -1201,7 +1201,7 @@ $('#auto').addEventListener('submit', async e => {
   // Статус обязателен и для локального режима без AI endpoint.
   // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
   setAutoStatus(note);
-  setAutoProgress(100, 'Генерация завершена', note);
+  const hasWarnings = /AI-сервер недоступен|не завершена|Не удалось создать|не удалось/i.test(note);\n  setAutoProgress(100, hasWarnings ? 'Завершено с предупреждениями' : 'Генерация завершена', note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -2099,7 +2099,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
       if (response?.ok && payload.image) break;
       if (response && response.status < 500 && response.status !== 429) break;
-      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
+      if (attempt === 0) {\n        // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.\n        const retryAfter = Number(response?.headers?.get('Retry-After'));\n        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }
     }
     const ok = Boolean(response?.ok && payload.image);
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
