@@ -13,6 +13,7 @@ import { chooseForms } from './forms.js';
 import { chooseTextEffect } from './text-effects.js';
 import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direction.js';
 import { chooseCinematicLayers } from './cinematic/visual-layers.js';
+import { chooseTransition } from './cinematic/transitions.js';
 import { chooseVariety } from './variety.js';
 
 // ---------- Ниша ----------
@@ -431,6 +432,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const graphicDirection = GRAPHIC_DIRECTIONS[project.passthrough?.graphicDirection]
         ? { ...chooseGraphicDirection(project, { archetype: design.primary, seed }), ...(() => { const id = project.passthrough.graphicDirection, d = GRAPHIC_DIRECTIONS[id]; return { id, label: d.label, ru: d.ru, techniques: d.techniques, assetBrief: d.asset, rationale: 'Выбрано владельцем проекта' }; })() }
         : chooseGraphicDirection(project, { archetype: design.primary, seed });
+  const cinematicLayers = chooseCinematicLayers(project, { palette, graphicDirection, motionPlan, seed });
   const signals = uniq(contextSignals(project).map(x => x.why).filter(Boolean));
   return {
     ...(libraryUse ? { libraryUse: { references: refs.map(r => ({ id: r.id, name: r.name, category: r.category, why: r.why })), applied: libraryUse.applied, divergence: libraryUse.divergence, patterns: libraryUse.patterns } } : {}),
@@ -496,7 +498,9 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
       graphicDirection,
       // Фактура и свет страницы (D03): воплощают направление графики в CSS; ручной выбор владельца главнее.
-      cinematicLayers: chooseCinematicLayers(project, { palette, graphicDirection, motionPlan, seed }),
+      cinematicLayers,
+      // Переходы между секциями: тип и настраиваемый градиент; ручные настройки владельца главнее.
+      transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, seed }),
       // Форма карточек и эффект появления блоков; ручной выбор владельца главнее.
       variety: chooseVariety(project, { shape: design.shape, archetype: design.primary, intensity: motionPlan.intensity, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),

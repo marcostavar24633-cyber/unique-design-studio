@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildConcept, generate, exportProject, CINEMATIC_PRESETS, CINEMATIC_PRESET_IDS, chooseCinematicLayers, describeCinematicLayers } from '../src/engine/index.js';
-import { cinematicLayersCss, cinematicLightMarkup, textureStrength, NOISE_TILE } from '../src/engine/cinematic/visual-layers.js';
+import { cinematicLayersCss, cinematicLightMarkup, textureStrength, NOISE_TILE, photoGrade } from '../src/engine/cinematic/visual-layers.js';
+import { motionCss } from '../src/engine/motion.js';
 
 const base = { brand: 'Ханой', niche: 'кафе вьетнамская кухня', title: 'Вьетнамская кухня', contacts: { email: 'hello@example.com' } };
 
@@ -64,4 +65,29 @@ test('выбор фактуры сохраняется в экспорте и п
   const again = generate(JSON.parse(JSON.stringify(r.exported)));
   assert.equal(again.concept.visualSystem.cinematicLayers.id, 'halftone');
   assert.equal(exportProject(r.project).cinematicLayers, 'halftone');
+});
+
+test('цветокоррекция фото: мягкая, сдержаннее для люкса, отключается вместе с фактурой', () => {
+  const layers = (id, extra = {}) => chooseCinematicLayers({ passthrough: { cinematicLayers: id }, ...extra }, { palette: { mode: 'light' }, seed: 1 });
+  assert.equal(photoGrade(layers('film')), 'contrast(1.06) saturate(0.92) sepia(0.06)');
+  assert.equal(photoGrade(layers('film', { tier: 'luxury' })), 'contrast(1.03) saturate(0.96) sepia(0.03)');
+  for (const id of ['none', 'dotgrid']) assert.equal(photoGrade(layers(id)), '', `${id}: фото без коррекции`);
+  for (const id of CINEMATIC_PRESET_IDS) {
+    const g = photoGrade(layers(id));
+    for (const [, fn, v] of g.matchAll(/(contrast|saturate|sepia)\(([\d.]+)\)/g)) {
+      const n = Number(v);
+      assert.ok(fn === 'sepia' ? n <= 0.1 : Math.abs(n - 1) <= 0.2, `${id}: ${fn}(${v}) — слишком сильно для реальных фото`);
+    }
+    const css = cinematicLayersCss(layers(id));
+    assert.equal(css.includes('filter:var(--uds-grade)'), Boolean(g), `${id}: правило фото только при коррекции`);
+  }
+  assert.match(describeCinematicLayers(layers('film')), /фото — тёплый плёночный тон/);
+});
+
+test('наведение на карточку дописывает фильтр к коррекции, а не заменяет её', () => {
+  const css = motionCss({ mechanics: ['hover-lift'], intensity: 'balanced' });
+  if (css.includes(':hover img')) assert.match(css, /filter:var\(--uds-grade,\) saturate\(1\.04\)/);
+  const page = generate({ ...base, cinematicLayers: 'film', services: [['Фо', 'Суп', '450 ₽', 'https://example.com/a.jpg']] }).html;
+  if (page.includes(':hover img')) assert.ok(page.includes('filter:var(--uds-grade,) saturate(1.04)'));
+  assert.ok(page.includes('--uds-grade:contrast(1.06) saturate(0.92) sepia(0.06)'));
 });
