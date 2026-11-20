@@ -68,7 +68,7 @@ jobs:
         run: node scripts/merge-engine.mjs merge "$PR_NUMBER" $EXECUTE --json report.json --summary "$GITHUB_STEP_SUMMARY"
       - name: Отчёт
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: merge-engine-report
           path: report.json

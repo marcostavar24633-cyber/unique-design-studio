@@ -31,7 +31,7 @@ jobs:
           sha256sum --check backup/SHA256SUMS
           echo "Backup verified: $(du -h backup/unique-design-studio-source.tar.gz | cut -f1)"
       - name: Сохранить проверенный архив
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: uds-source-backup-${{ github.run_id }}
           path: backup/
