@@ -562,3 +562,16 @@ test('Responsive overlap audit uses a horizontal sweep to avoid comparing separa
   assert.ok(audit.includes('intersects(previous.rect,current.rect)'));
   assert.ok(!audit.includes('for (let j=i+1;j<candidates.length;j++)'));
 });
+
+test('Publish Manager: отдельная вкладка, команда существующей CLI и история только после подтверждения', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const cli = readFileSync(new URL('../bin/uds.js', import.meta.url), 'utf8');
+  assert.equal((html.match(/id="tab-publish"/g) || []).length, 1, 'вкладка публикации одна');
+  assert.match(html, /<section id="view-publish" role="tabpanel" aria-labelledby="tab-publish"/);
+  assert.ok(source.includes('function renderPublishManager()'));
+  assert.match(cli, /uds deploy <project\.json> --project-name <имя>/, 'панель подсказывает команду, которая есть в CLI');
+  assert.ok(source.includes("required> Я проверил успешное завершение Wrangler"), 'URL фиксируется только после явного подтверждения');
+  assert.ok(source.includes("catch { return toast('Не удалось сохранить настройки публикации"), 'ошибка хранилища не роняет обработчик');
+  assert.ok(!/fetch\([^)]*api\.cloudflare\.com/.test(source), 'панель не обращается к API Cloudflare');
+});
