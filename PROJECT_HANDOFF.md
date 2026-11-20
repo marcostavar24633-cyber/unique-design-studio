@@ -61,7 +61,7 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 - [x] Повторный CI после merge на `main`: run `44776100369` завершился успешно (Node 20, Node 22, Workers Build, E2E).
 - [x] GitHub Pages deployment после PR #193: run `44776100287` завершился успешно для commit `4def920`.
 - [x] PR #194: история версий проектов в IndexedDB — объединён в `main`; полный CI до слияния прошёл успешно.
-- [ ] Проверить итог post-merge CI на `main`: run `44777915069`.
+- [x] Post-merge CI на `main`: run `44777915069` завершился успешно (Node 20, Node 22, Workers Build, E2E).
 - [ ] Проверить актуальный Cloudflare Worker deployment и отдельно подтвердить реальные AI-запросы и вставку изображений. Не считать Workers dry-run публикацией.
 
 ## Правила разработки и передачи
