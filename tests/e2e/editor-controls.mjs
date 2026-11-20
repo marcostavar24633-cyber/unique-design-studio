@@ -20,7 +20,7 @@ const server = createServer((req, res) => {
   res.end(readFileSync(file));
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const base = \`http://127.0.0.1:\${server.address().port}\`;
+const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -119,5 +119,5 @@ try {
   await browser.close();
   server.close();
 }
-if (failures.length) { console.error('Editor controls E2E: ' + failures.join('\\n- ')); process.exit(1); }
+if (failures.length) { console.error('Editor controls E2E: ' + failures.join('\n- ')); process.exit(1); }
 console.log('Editor controls E2E пройден: новый проект, сравнение и применение, AI diagnostics, Publish Manager и локальная история deployment.');
