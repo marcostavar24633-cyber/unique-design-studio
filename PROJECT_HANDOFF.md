@@ -92,19 +92,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T17:58:03.869Z
+Время обновления: 2026-11-20T18:13:09.640Z
 Ветка: main
-Последний commit: b185029b9aae6f7069c9f6223c08975d9397e37a
-Дата коммита: 2026-11-20T21:57:52+04:00
-Сообщение: docs: refresh handoff and roadmap after PRs 197–200 (#201)
+Последний commit: 5380c84b6e34e4e42a0ed26e6ba65b21b2189268
+Дата коммита: 2026-11-20T22:12:54+04:00
+Сообщение: test: cover remaining editor and publish controls (#202)
 
 Последние коммиты:
+- 5380c84 · 2026-11-20 · test: cover remaining editor and publish controls (#202)
+- f120900 · 2026-11-20 · docs: refresh project handoff
 - b185029 · 2026-11-20 · docs: refresh handoff and roadmap after PRs 197–200 (#201)
 - 9a30a86 · 2026-11-20 · docs: refresh project handoff
 - 0bd3aab · 2026-11-20 · fix: make AI Usage resilient to browser storage failures (#199)
 - 6c7ed21 · 2026-11-20 · docs: refresh project handoff
 - 624128a · 2026-11-20 · fix: align GitHub Pages artifact uploader and deployer (#200)
 - eb2eeb8 · 2026-11-20 · docs: refresh project handoff
-- 39d68f7 · 2026-11-20 · fix: wait for Pages artifact before deployment (#198)
-- b35fb75 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
