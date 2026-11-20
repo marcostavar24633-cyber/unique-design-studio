@@ -125,6 +125,7 @@ let lastRenderedRaw = null;
 let exampleProjects = [];
 let dashboardFilter = 'saved';
 let dashboardQuery = '';
+let userStartedProject = false;
 // Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
 // а вызывается из обработчика кнопок этой вкладки.
 let contentPrompt = () => '';
@@ -536,6 +537,7 @@ $('#quick-start')?.addEventListener('submit', e => {
   e.preventDefault();
   const niche = $('#qs-niche').value.trim();
   if (!niche) { $('#qs-niche').focus(); return; }
+  userStartedProject = true;
   $('#auto-niche').value = niche;
   $('#auto-brand').value = $('#qs-brand').value.trim();
   $('#auto-tier').value = $('#qs-tier').value;
@@ -1289,6 +1291,7 @@ try {
 } catch { /* нет хранилища */ }
 $('#auto').addEventListener('submit', async e => {
   e.preventDefault();
+  userStartedProject = true;
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
     details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
@@ -2941,7 +2944,7 @@ fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async lis
   });
   const restoredBackup = await restoreEmergencyBackupIfNewer();
   if (restoredBackup) { buildForm(); run(); }
-  if (!state.raw.brand && !state.raw.niche && list[0]) {
+  if (!userStartedProject && !state.raw.brand && !state.raw.niche && list[0]) {
     const first = exampleProjects[0];
     if (first) load(first.raw);
   }
