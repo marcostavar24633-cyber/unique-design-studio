@@ -139,20 +139,25 @@ try {
 } catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
 // Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
 let persistFailed = false;
+let persistBackupFailed = false;
 let backupNoticeShown = false;
+const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
 const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
-  const savedAt = Date.now();
+  const savedAt = Math.max(Date.now(), localSavedAt + 1);
   try {
     localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
     localSavedAt = savedAt;
     persistFailed = false;
+    persistBackupFailed = false;
     return true;
   } catch {
     persistFailed = true;
+    persistBackupFailed = false;
     scheduleEmergencyBackup(state, savedAt).then(backup => {
       if (backup.savedAt >= savedAt && backup.savedAt >= localSavedAt) {
         persistFailed = false;
+        persistBackupFailed = false;
         if (!backupNoticeShown) {
           backupNoticeShown = true;
           toast('Основное хранилище заполнено. Изменения сохранены в резервной базе IndexedDB.');
@@ -160,6 +165,7 @@ const persist = () => {
       }
     }).catch(() => {
       persistFailed = true;
+      persistBackupFailed = true;
       toast(PERSIST_ERROR);
     });
     return false;
@@ -2142,7 +2148,7 @@ async function renderProjectHistory() {
 // ---------- События ----------
 function toast(msg) {
   // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
-  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${PERSIST_ERROR}`;
+  if (persistFailed && msg !== PERSIST_ERROR) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
   const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
 function load(raw, message) {
   const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
@@ -2856,7 +2862,7 @@ $('#save').addEventListener('click', () => {
   if (!result.project.brand && !result.project.niche) return toast('Укажите бренд или нишу, чтобы сохранить проект');
   state.library = [...state.library.filter(l => l.entry.id !== result.entry.id), { raw: result.exported, entry: result.entry, analysis: currentAnalysis() }];
   run();
-  if (persistFailed) return toast(PERSIST_ERROR);
+  if (persistFailed) return toast(persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING);
   toast(`«${result.entry.brand}» сохранён в реестр`);
 });
 $('#view-registry').addEventListener('click', async e => {
