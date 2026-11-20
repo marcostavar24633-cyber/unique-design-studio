@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T18:18:32.692Z
+Время обновления: 2026-11-20T18:19:17.095Z
 Ветка: main
-Последний commit: d97c78b621357cd9c744df4b0351047b5a59bb0f
-Дата коммита: 2026-11-20T22:18:19+04:00
-Сообщение: docs: record editor controls E2E coverage (#204)
+Последний commit: 6b5a87eccc419031d819420b5b071fd779df8bb0
+Дата коммита: 2026-11-20T22:19:03+04:00
+Сообщение: test: audit studio responsive breakpoints (#205)
 
 Последние коммиты:
+- 6b5a87e · 2026-11-20 · test: audit studio responsive breakpoints (#205)
+- 389070f · 2026-11-20 · docs: refresh project handoff
 - d97c78b · 2026-11-20 · docs: record editor controls E2E coverage (#204)
 - 1bb546b · 2026-11-20 · docs: refresh project handoff
 - 7d8d9cc · 2026-11-20 · Fix expanded mobile dashboard navigation visibility (#203)
 - 48544d4 · 2026-11-20 · docs: refresh project handoff
 - 5380c84 · 2026-11-20 · test: cover remaining editor and publish controls (#202)
 - f120900 · 2026-11-20 · docs: refresh project handoff
-- b185029 · 2026-11-20 · docs: refresh handoff and roadmap after PRs 197–200 (#201)
-- 9a30a86 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
