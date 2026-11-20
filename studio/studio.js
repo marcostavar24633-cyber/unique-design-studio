@@ -2830,10 +2830,11 @@ $('#view-registry').addEventListener('click', async e => {
       return;
     }
     if (b.dataset.historyCompare) {
-      const version = await getProjectVersion(b.dataset.historyCompare);
-      if (!version) return toast('Версия уже недоступна');
-      const changes = compareProjectSnapshots(version.raw, state.raw);
       const host = $('#project-history-diff');
+      host.innerHTML = '<p class="note">Сравниваем сохранённую версию с текущим проектом…</p>';
+      const version = await getProjectVersion(b.dataset.historyCompare);
+      if (!version) { host.replaceChildren(); return toast('Версия уже недоступна'); }
+      const changes = compareProjectSnapshots(version.raw, state.raw);
       host.innerHTML = '<h4>Сравнение: ' + esc(version.label || 'Сохранённая версия') + ' → текущая</h4>' + (changes.length
         ? '<table><thead><tr><th>Поле</th><th>В версии</th><th>Сейчас</th></tr></thead><tbody>' + changes.map(item => '<tr><td>' + esc(item.field) + '</td><td>' + esc(item.before) + '</td><td>' + esc(item.after) + '</td></tr>').join('') + '</tbody></table>'
         : '<p class="note">В основных полях и количестве материалов отличий нет.</p>');
