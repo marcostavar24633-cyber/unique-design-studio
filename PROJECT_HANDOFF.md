@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T15:09:50.210Z
-Ветка: main
-Последний commit: c821f7b77638639c1a787c2ac3df52c2e687d43c
-Дата коммита: 2026-11-20T19:09:30+04:00
-Сообщение: Стабилизировать AI-генерацию и восстановление после rate limit (#178)
+Время обновления: 2026-11-20T15:10:56.599Z
+Ветка: feat/cinematic-motion-system-upgrade
+Последний commit: 3310034f2b20a6efee28adee46ca2e8820aed7de
+Дата коммита: 2026-11-20T19:10:39+04:00
+Сообщение: Merge remote-tracking branch 'origin/main' into feat/cinematic-motion-system-upgrade
 
 Последние коммиты:
+- 3310034 · 2026-11-20 · Merge remote-tracking branch 'origin/main' into feat/cinematic-motion-system-upgrade
+- 346ce66 · 2026-11-20 · motion: исправить недопустимый CSS -clamp() в слое секций
+- 86c92bf · 2026-11-20 · docs: refresh project handoff
 - c821f7b · 2026-11-20 · Стабилизировать AI-генерацию и восстановление после rate limit (#178)
-- 4c5523d · 2026-11-20 · docs: refresh project handoff
-- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
-- d23f6fe · 2026-11-20 · docs: refresh project handoff
-- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
-- b5e7b81 · 2026-11-20 · docs: refresh project handoff
-- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
-- 9def923 · 2026-11-20 · docs: refresh project handoff
+- 69e344b · 2026-11-20 · docs: refresh project handoff
+- 4d6faa3 · 2026-11-20 · Correct responsive motion audit detection
+- a98ebe0 · 2026-11-20 · Make responsive motion audit match actual breakpoint and script markup
+- 38feec1 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
