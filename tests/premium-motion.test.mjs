@@ -14,3 +14,10 @@ test('premium motion layer respects reduced motion', () => {
   const css = motionCss({ duration: 650, distance: 16, mechanics: [] });
   assert.match(css, /prefers-reduced-motion:no-preference/);
 });
+
+test('premium motion layer uses valid CSS for negative clamp offsets', () => {
+  const css = motionCss({ duration: 650, distance: 16, mechanics: [] });
+  // «-clamp(...)» — недопустимый CSS: браузер отбрасывает всё свойство. Отрицательное значение — только через calc().
+  assert.doesNotMatch(css, /[:\s,]-clamp\(/);
+  assert.match(css, /inset:calc\(-1 \* clamp\(28px,5vw,72px\)\) 0 auto/);
+});
