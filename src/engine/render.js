@@ -11,6 +11,7 @@ import { dividerHtml, formsCss } from './forms.js';
 import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
+import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-layers.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn } from './color.js';
 
@@ -319,6 +320,7 @@ export function renderCss(concept, scene = null, identity = null) {
     // Motion CSS подключается последним: стеклянные поверхности сохраняются поверх базовых стилей карточек.
     motionCss(vs.motionPlan),
     sceneCss(scene),
+    cinematicLayersCss(vs.cinematicLayers),
   ].join('\n').replace(/\n\s*/g, '');
 }
 
@@ -339,7 +341,7 @@ export function renderSite(input, concept) {
       });
     } catch { visualIdentity = null; }
   }
-  const sceneLayer = sceneMarkup(scene);
+  const sceneLayer = sceneMarkup(scene, cinematicLightMarkup(vs.cinematicLayers));
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
   // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.

@@ -12,6 +12,7 @@ import { chooseMechanic } from './mechanics.js';
 import { chooseForms } from './forms.js';
 import { chooseTextEffect } from './text-effects.js';
 import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direction.js';
+import { chooseCinematicLayers } from './cinematic/visual-layers.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -420,6 +421,10 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const identity = conceptIdentity(design, project);
   // Анимация подбирается под характер бренда, класс, нишу и архитектуру; бюджет механик ограничен интенсивностью.
   const motionPlan = chooseMotion(project, { archetype: design.primary, motion: arch.motion, nicheId: profile.id, seed });
+  // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
+  const graphicDirection = GRAPHIC_DIRECTIONS[project.passthrough?.graphicDirection]
+        ? { ...chooseGraphicDirection(project, { archetype: design.primary, seed }), ...(() => { const id = project.passthrough.graphicDirection, d = GRAPHIC_DIRECTIONS[id]; return { id, label: d.label, ru: d.ru, techniques: d.techniques, assetBrief: d.asset, rationale: 'Выбрано владельцем проекта' }; })() }
+        : chooseGraphicDirection(project, { archetype: design.primary, seed });
   const signals = uniq(contextSignals(project).map(x => x.why).filter(Boolean));
   return {
     ...(libraryUse ? { libraryUse: { references: refs.map(r => ({ id: r.id, name: r.name, category: r.category, why: r.why })), applied: libraryUse.applied, divergence: libraryUse.divergence, patterns: libraryUse.patterns } } : {}),
@@ -483,9 +488,9 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       commerce: commerceEnabled(project, profile.id),
       textEffect: chooseTextEffect(project, { archetype: design.primary, intensity: motionPlan.intensity }, seed),
       // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
-      graphicDirection: GRAPHIC_DIRECTIONS[project.passthrough?.graphicDirection]
-        ? { ...chooseGraphicDirection(project, { archetype: design.primary, seed }), ...(() => { const id = project.passthrough.graphicDirection, d = GRAPHIC_DIRECTIONS[id]; return { id, label: d.label, ru: d.ru, techniques: d.techniques, assetBrief: d.asset, rationale: 'Выбрано владельцем проекта' }; })() }
-        : chooseGraphicDirection(project, { archetype: design.primary, seed }),
+      graphicDirection,
+      // Фактура и свет страницы (D03): воплощают направление графики в CSS; ручной выбор владельца главнее.
+      cinematicLayers: chooseCinematicLayers(project, { palette, graphicDirection, motionPlan, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,

@@ -5,6 +5,7 @@ import { ARCHETYPES } from './data.js';
 import { normalizeProject, TIERS } from './project.js';
 import { buildCopywritingSystemBrief } from './copywriting.js';
 import { applyManagedPrompt } from './prompt-manager.js';
+import { describeCinematicLayers } from './cinematic/visual-layers.js';
 
 // Тон и лексика по классу проекта.
 const TIER_RULES = {
@@ -85,7 +86,7 @@ ${d.conceptName ? `Концепция: ${d.conceptName} (${d.conceptFormula})\n`
 Типографика: ${d.typographyDirection}
 Изображения: ${d.imageDirection}
 Движение: ${d.motionDirection}
-${libraryBlock}
+${concept.visualSystem?.cinematicLayers ? `Фактура и свет: ${describeCinematicLayers(concept.visualSystem.cinematicLayers)}\n` : ''}${libraryBlock}
 # 7. Секции и требования к текстам
 ${h.sections.map(s => `- ${s.id} — ${s.role}`).join('\n')}
 Требования:
