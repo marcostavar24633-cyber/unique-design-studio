@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T15:10:56.599Z
-Ветка: feat/cinematic-motion-system-upgrade
-Последний commit: 3310034f2b20a6efee28adee46ca2e8820aed7de
-Дата коммита: 2026-11-20T19:10:39+04:00
-Сообщение: Merge remote-tracking branch 'origin/main' into feat/cinematic-motion-system-upgrade
+Время обновления: 2026-11-20T15:12:51.336Z
+Ветка: main
+Последний commit: 900f4263b37f7ce21d38a22042272caa972900f9
+Дата коммита: 2026-11-20T19:12:40+04:00
+Сообщение: Усилить Cinematic Motion и интерактивность сайтов (#177)
 
 Последние коммиты:
-- 3310034 · 2026-11-20 · Merge remote-tracking branch 'origin/main' into feat/cinematic-motion-system-upgrade
-- 346ce66 · 2026-11-20 · motion: исправить недопустимый CSS -clamp() в слое секций
+- 900f426 · 2026-11-20 · Усилить Cinematic Motion и интерактивность сайтов (#177)
 - 86c92bf · 2026-11-20 · docs: refresh project handoff
 - c821f7b · 2026-11-20 · Стабилизировать AI-генерацию и восстановление после rate limit (#178)
-- 69e344b · 2026-11-20 · docs: refresh project handoff
-- 4d6faa3 · 2026-11-20 · Correct responsive motion audit detection
-- a98ebe0 · 2026-11-20 · Make responsive motion audit match actual breakpoint and script markup
-- 38feec1 · 2026-11-20 · docs: refresh project handoff
+- 4c5523d · 2026-11-20 · docs: refresh project handoff
+- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
+- d23f6fe · 2026-11-20 · docs: refresh project handoff
+- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
+- b5e7b81 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
