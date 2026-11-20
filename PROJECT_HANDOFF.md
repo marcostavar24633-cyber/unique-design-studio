@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T05:50:58.233Z
+Время обновления: 2026-11-20T05:52:30.898Z
 Ветка: feat/visual-identity-renderer-integration
-Последний commit: 71a1d006ea58cc39ebf693bed687b17f5da429c2
-Дата коммита: 2026-11-20T09:50:40+04:00
-Сообщение: Add renderer integration regression tests
+Последний commit: 3f131249c9f7c196a16a23d1782ad953688f6291
+Дата коммита: 2026-11-20T09:52:18+04:00
+Сообщение: Add Visual Identity controls to studio editor
 
 Последние коммиты:
+- 3f13124 · 2026-11-20 · Add Visual Identity controls to studio editor
+- 11d8ce5 · 2026-11-20 · docs: refresh project handoff
 - 71a1d00 · 2026-11-20 · Add renderer integration regression tests
 - a052ab4 · 2026-11-20 · Integrate optional Visual Identity into HTML renderer
 - 73aafec · 2026-11-20 · docs: refresh project handoff
 - b1153a6 · 2026-11-20 · Export visual identity engine from public API
 - 5206936 · 2026-11-20 · Document rebased visual identity engine
 - 46d8bd5 · 2026-11-20 · Add visual identity engine regression tests
-- d8eba37 · 2026-11-20 · Add deterministic visual identity engine
-- 4c5523d · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
