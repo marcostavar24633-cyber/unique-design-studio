@@ -90,7 +90,7 @@ export function auditSite(html, concept, input) {
   test(kb < 150, 'weight', `Вес HTML: ${kb} КБ`, `HTML весит ${kb} КБ — сократите встроенные изображения`, 'warn');
 
   // Визуальные механики: проверяем не только доступность, но и наличие premium motion layer.
-  test(/data-cinematic-scene/.test(html), 'cinematic-scene', 'У Hero есть кинематографическая сцена', 'В Hero отсутствует кинематографическая сцена', 'warn');
+  test(/<section\\b[^>]*class=\"[^\"]*\\bhero\\b[^\"]*\"[^>]*data-scene=\"[^\"]+\"/.test(html), 'cinematic-scene', 'У Hero есть визуальная сцена', 'У Hero не задан тип визуальной сцены', 'warn');
   test(/\.ds-button::after/.test(css) && /translateX\(520%\)/.test(css), 'button-motion', 'У кнопок есть световой hover-эффект', 'У кнопок не найден световой hover-эффект', 'warn');
   test(/\.ds-card:hover/.test(css) && /\.item:hover/.test(css), 'card-motion', 'У карточек есть интерактивное hover-состояние', 'Не найдены интерактивные состояния карточек', 'warn');
   test(/@media\s*\(max-width:\s*700px\)/.test(css) && /prefers-reduced-motion/.test(css), 'motion-responsive', 'Анимации учитывают мобильные устройства и reduced motion', 'Не найдены мобильные и reduced-motion ограничения', 'warn');
