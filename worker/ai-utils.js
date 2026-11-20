@@ -46,7 +46,7 @@ export function aboutNiche(landing, niche) {
 // Если к Worker привязан Rate Limiting (AI_RATE_LIMITER) — используется он; иначе — запасной счётчик в памяти
 // экземпляра (не общий для всех серверов Cloudflare, поэтому лишь сдерживает, а не гарантирует лимит).
 export const FALLBACK_LIMIT = { requests: 6, windowMs: 60_000 };
-// Фото — отдельный счётчик: автопилот создаёт до 11 кадров подряд (главное, 2 карточки, 8 кадров галереи).
+// Фото — отдельный счётчик: автопилот создаёт до 15 кадров подряд (главное, до 6 карточек, 8 кадров галереи).
 export const IMAGE_LIMIT = { bucket: 'image', requests: 16, windowMs: 60_000 };
 const recent = new Map();
 export async function allowRequest(request, env, now = Date.now(), limit = FALLBACK_LIMIT) {
