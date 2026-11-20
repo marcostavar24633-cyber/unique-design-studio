@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T15:25:29.531Z
+Время обновления: 2026-11-20T15:54:15.068Z
 Ветка: main
-Последний commit: e10f7b5684458779dce5471bd41c2a326eaaecce
-Дата коммита: 2026-11-20T19:25:16+04:00
-Сообщение: ci: Dependabot for GitHub Actions with minor/patch auto-merge (#181)
+Последний commit: 4b44180b8429e5a73169e2a2cbd15a9700a4918e
+Дата коммита: 2026-11-20T19:54:02+04:00
+Сообщение: feat(worker): CC0 stock photo fallback from Openverse when Workers AI image models fail (#187)
 
 Последние коммиты:
+- 4b44180 · 2026-11-20 · feat(worker): CC0 stock photo fallback from Openverse when Workers AI image models fail (#187)
+- 9315845 · 2026-11-20 · docs: refresh project handoff
 - e10f7b5 · 2026-11-20 · ci: Dependabot for GitHub Actions with minor/patch auto-merge (#181)
 - 86a6831 · 2026-11-20 · docs: refresh project handoff
 - fbdbd8c · 2026-11-20 · Автоматизация: метка автослияния ставится сама, метка-стоп, бот handoff только в main (#180)
 - c0fb362 · 2026-11-20 · docs: refresh project handoff
 - 900f426 · 2026-11-20 · Усилить Cinematic Motion и интерактивность сайтов (#177)
 - 86c92bf · 2026-11-20 · docs: refresh project handoff
-- c821f7b · 2026-11-20 · Стабилизировать AI-генерацию и восстановление после rate limit (#178)
-- 4c5523d · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
