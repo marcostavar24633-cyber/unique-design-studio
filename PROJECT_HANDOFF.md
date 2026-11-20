@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T06:19:20.708Z
+Время обновления: 2026-11-20T06:19:38.358Z
 Ветка: feat/cinematic-motion-system-upgrade
-Последний commit: 2b923ec623df24548a4e3a7f8b35a681139f9037
-Дата коммита: 2026-11-20T10:19:10+04:00
-Сообщение: Add premium interaction layer for generated sites
+Последний commit: 5fe853f821905bbdf183a289fefe4626b98a3dfc
+Дата коммита: 2026-11-20T10:19:26+04:00
+Сообщение: Test premium interaction layer
 
 Последние коммиты:
+- 5fe853f · 2026-11-20 · Test premium interaction layer
+- d438c02 · 2026-11-20 · Audit cinematic and premium interaction output
+- 668390f · 2026-11-20 · docs: refresh project handoff
 - 2b923ec · 2026-11-20 · Add premium interaction layer for generated sites
 - 4c5523d · 2026-11-20 · docs: refresh project handoff
 - 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
 - d23f6fe · 2026-11-20 · docs: refresh project handoff
 - 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
-- b5e7b81 · 2026-11-20 · docs: refresh project handoff
-- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
-- 9def923 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
