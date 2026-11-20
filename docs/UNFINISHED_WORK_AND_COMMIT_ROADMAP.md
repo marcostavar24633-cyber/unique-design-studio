@@ -11,14 +11,14 @@
 - PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация), #194 (история версий), #195 (документация), #196 (аварийное сохранение), #197 (уникальные Pages artifacts), #198 (разделение Pages jobs), #199 (устойчивость AI Usage) и #200 (совместимость Pages actions) объединены.
 - PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
 - PR #194: commit `bc6101298e337872ba9743812af7e6881d3a5484`; полный CI перед слиянием прошёл успешно: [run 44777592604](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777592604).
-- Post-merge CI для `main` завершился успешно: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) — Node 20, Node 22, Workers Build и E2E; GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
+- Post-merge CI после PR #200 и PR #199 завершился успешно: runs `44786022454` и `44787215101` — Node 20/22, Workers Build и E2E; GitHub Pages deployments `44786022419` и `44787215164` завершились успешно. [Открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
 - История версий проекта: IndexedDB, ручные снимки, сравнение, восстановление, резервный снимок перед откатом и лимит 10 версий на проект.
 - Аварийное сохранение редактора: если localStorage не удаётся прочитать/записать, актуальное состояние сохраняется в отдельной базе IndexedDB; при старте более свежая резервная копия восстанавливается. PR #196 прошёл полный CI, включая E2E quota/reload/restore.
 - Pages pipeline исправлен PR #197, #198 и #200: артефакты имеют уникальные имена, build/upload и deploy выполняются в зависимых jobs, а `upload-pages-artifact@v4` совместим с `deploy-pages@v4`. Публикация подтверждена: run `44786022419` после PR #200 и run `44787215164` после PR #199.
 - PR #199 укрепил AI Usage: обработка Storage SecurityError, явное состояние отсутствующих Neurons вместо ложного нуля, E2E и фактические route/provider/usage поля в журнале фото-запросов при наличии их в ответе сервера.
 - Post-merge CI после PR #199: run `44787215101` — Node 20, Node 22, Workers Build и E2E успешно.
 - В ходе аудита подтверждено: до PR #194 реестр хранил только последнюю запись проекта по ID; отдельной истории версий проекта не было. Prompt Manager уже имел собственное версионирование.
-- AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не менялись.
+- В PR #197–#200 и #199 Cloudflare Worker, его production deployment и секреты не менялись.
 
 ## Исторический журнал PR (состояние на 17–18 ноября 2026)
 
