@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T06:42:39.608Z
+Время обновления: 2026-11-20T06:43:08.905Z
 Ветка: fix/ai-generation-rate-limit-recovery
-Последний commit: f117db8e2090e69ad132e612341823ad52023146
-Дата коммита: 2026-11-20T10:42:29+04:00
-Сообщение: Test serialized image generation and rate-limit backoff
+Последний commit: 1dfbd17b71b0eca215dab5f15f0c1348d0ccde49
+Дата коммита: 2026-11-20T10:42:56+04:00
+Сообщение: Correct multiline retry logic and document sequential image queue
 
 Последние коммиты:
+- 1dfbd17 · 2026-11-20 · Correct multiline retry logic and document sequential image queue
+- 4d813c4 · 2026-11-20 · Fix test formatting for rate-limit retry
+- 78a1cdb · 2026-11-20 · Fix retry backoff syntax in image generation
+- 3068eb7 · 2026-11-20 · docs: refresh project handoff
 - f117db8 · 2026-11-20 · Test serialized image generation and rate-limit backoff
 - 3ecf76b · 2026-11-20 · Prevent Workers AI image rate-limit bursts and recover on 429
 - 4c5523d · 2026-11-20 · docs: refresh project handoff
 - 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
-- d23f6fe · 2026-11-20 · docs: refresh project handoff
-- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
-- b5e7b81 · 2026-11-20 · docs: refresh project handoff
-- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
 <!-- HANDOFF:AUTO:END -->
