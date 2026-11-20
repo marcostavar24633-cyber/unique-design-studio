@@ -10,13 +10,30 @@ function openDatabase() {
   if (!globalThis.indexedDB) return Promise.reject(new Error('IndexedDB недоступен в этом браузере'));
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = event => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(META_STORE)) {
+      const hadMetadataStore = db.objectStoreNames.contains(META_STORE);
+      if (!hadMetadataStore) {
         const store = db.createObjectStore(META_STORE, { keyPath: 'id' });
         store.createIndex('projectId', 'projectId', { unique: false });
       }
       if (!db.objectStoreNames.contains(SNAPSHOT_STORE)) db.createObjectStore(SNAPSHOT_STORE, { keyPath: 'id' });
+      // Миграция снимков из ранней схемы: большие JSON-проекты больше не загружаются при отрисовке списка.
+      if (event.oldVersion < 2 && hadMetadataStore) {
+        const metadata = event.target.transaction.objectStore(META_STORE);
+        const snapshots = event.target.transaction.objectStore(SNAPSHOT_STORE);
+        const cursorRequest = metadata.openCursor();
+        cursorRequest.onsuccess = () => {
+          const cursor = cursorRequest.result;
+          if (!cursor) return;
+          const value = cursor.value;
+          if (value && value.raw && value.id) {
+            snapshots.put({ id: value.id, raw: value.raw, analysis: value.analysis || null });
+            cursor.update({ id: value.id, projectId: String(value.projectId || ''), createdAt: String(value.createdAt || ''), label: String(value.label || '') });
+          }
+          cursor.continue();
+        };
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('Не удалось открыть историю версий'));
