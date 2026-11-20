@@ -58,6 +58,28 @@ try {
   check(expandedNav.columns.split(' ').length === 2, 'мобильное меню не отображается в две колонки');
   await menuToggle.click();
   check(await menuToggle.getAttribute('aria-expanded') === 'false', 'мобильная навигация не сворачивается повторным нажатием');
+
+  // Контрольные ширины главной панели: телефон, узкий телефон, планшет и компактный ноутбук.
+  for (const width of [320, 375, 390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    const dashboardLayout = await page.evaluate(() => {
+      const root = document.documentElement;
+      const main = document.querySelector('.dash-main').getBoundingClientRect();
+      const sidebar = document.querySelector('.dash-sidebar').getBoundingClientRect();
+      const right = document.querySelector('.dash-right');
+      return {
+        overflow: root.scrollWidth - root.clientWidth,
+        mainWidth: main.width,
+        mainRight: main.right,
+        sidebarWidth: sidebar.width,
+        rightVisible: getComputedStyle(right).display !== 'none',
+      };
+    });
+    check(dashboardLayout.overflow <= 1, `главная панель имеет горизонтальное переполнение при ширине ${width}px: ${dashboardLayout.overflow}px`);
+    check(dashboardLayout.mainWidth >= Math.min(width * .45, 320), `центральная колонка главной панели слишком узкая при ширине ${width}px: ${dashboardLayout.mainWidth}px`);
+    check(dashboardLayout.mainRight <= width + 1, `главная панель выходит за правую границу при ширине ${width}px`);
+    if (width <= 1280) check(!dashboardLayout.rightVisible, `правая боковая панель не скрыта при ширине ${width}px`);
+  }
   await page.setViewportSize({ width: 1280, height: 900 });
 
   // Главная: примеры — компактными кнопками, состояние студии и хранилище видны сразу.
@@ -122,6 +144,33 @@ try {
     `кнопка полноэкранного предпросмотра не закреплена у нижнего края: ${JSON.stringify(previewControl)}`);
   check(previewControl.rect.top > previewControl.headerBottom,
     'кнопка полноэкранного предпросмотра перекрывает верхнюю шапку');
+
+  // Аудит рабочей области на пяти ширинах: шапка, вкладки, панель настроек и stage.
+  for (const width of [320, 375, 390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 844 });
+    const workspaceLayout = await page.evaluate(() => {
+      const root = document.documentElement;
+      const toolbar = document.querySelector('body:not(.dashboard-mode) > .top .top__actions');
+      const tabs = document.querySelector('.bar .tabs');
+      const panel = document.querySelector('.layout > .panel').getBoundingClientRect();
+      const stage = document.querySelector('.layout > .stage').getBoundingClientRect();
+      return {
+        overflow: root.scrollWidth - root.clientWidth,
+        toolbarOverflowX: getComputedStyle(toolbar).overflowX,
+        tabsRight: tabs.getBoundingClientRect().right,
+        panelRight: panel.right,
+        stageRight: stage.right,
+        stageWidth: stage.width,
+      };
+    });
+    check(workspaceLayout.overflow <= 1, `рабочая область имеет горизонтальное переполнение при ширине ${width}px: ${workspaceLayout.overflow}px`);
+    check(workspaceLayout.tabsRight <= width + 1, `вкладки результата выходят за экран при ширине ${width}px`);
+    check(workspaceLayout.panelRight <= width + 1 && workspaceLayout.stageRight <= width + 1,
+      `панель настроек или предпросмотр выходят за экран при ширине ${width}px`);
+    check(workspaceLayout.stageWidth > 0, `предпросмотр имеет нулевую ширину при ширине ${width}px`);
+    if (width <= 760) check(['auto', 'scroll'].includes(workspaceLayout.toolbarOverflowX),
+      `мобильная шапка не прокручивается при ширине ${width}px`);
+  }
   await page.setViewportSize({ width: 1280, height: 900 });
 
   // Упрощённая навигация ведёт в объединённые рабочие разделы.
