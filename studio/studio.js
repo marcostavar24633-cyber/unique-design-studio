@@ -50,8 +50,17 @@ function renderAiUsageStats(data, error = '') {
     return;
   }
   if (!data) return;
-  $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-  const neurons = Number(data.neurons || 0);
+  const hasNeurons = data.neurons !== null && data.neurons !== undefined && data.neurons !== '' && Number.isFinite(Number(data.neurons));
+  if (!hasNeurons) {
+    node.title = 'Cloudflare не вернул показатель Neurons для выбранного периода.';
+    $('#ai-usage-count').textContent = '—';
+    const details = $('#ai-usage-details');
+    if (details) details.textContent = 'Neurons: нет данных';
+    setDashStatus('neurons', 'off', 'Neurons: нет данных');
+    return;
+  }
+  $('#ai-usage-count').textContent = Number(data.neurons).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const neurons = Number(data.neurons);
   const share = data.range === '24h' ? ' (' + Math.round(neurons / WORKERS_AI_FREE_NEURONS * 100) + '% от ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' бесплатных в сутки — ориентир по документации Cloudflare)' : '';
   setDashStatus('neurons', neurons > WORKERS_AI_FREE_NEURONS * 0.8 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
   const details = $('#ai-usage-details');
@@ -64,7 +73,12 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    return renderAiUsageStats(null, 'хранилище настроек недоступно');
+  }
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -77,7 +91,8 @@ async function refreshAiUsage() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
+    let range = $('#ai-usage-range')?.value || '24h';
+    try { range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
     const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
@@ -85,8 +100,10 @@ async function refreshAiUsage() {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
-    if (!Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
-      throw new Error('Cloudflare вернул некорректную статистику');
+    const hasNeurons = payload.neurons !== null && payload.neurons !== undefined && payload.neurons !== '';
+    const hasRequests = payload.requests !== null && payload.requests !== undefined && payload.requests !== '';
+    if (!hasNeurons || !hasRequests || !Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
+      throw new Error('Cloudflare не вернул полную статистику Neurons и запросов');
     }
     renderAiUsageStats(payload);
   } catch (error) {
@@ -267,7 +284,7 @@ function renderAiBudget() {
       '<p class="dash-meter-note"><b>Cloudflare с 00:00 UTC:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>' +
       (alert ? '<p class="dash-meter-note" data-ai-budget-alert="' + alert.level + '" role="status" aria-live="polite"><b>Предупреждение:</b> ' + alert.text + '</p>' : '');
   } else {
-    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
+    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : aiToday ? 'нет данных — Cloudflare не вернул показатель Neurons' : 'загружаем данные Cloudflare…') + '</p>';
   }
   box.innerHTML = today +
     '<div class="dash-ai-periods">' +
