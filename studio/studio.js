@@ -1141,14 +1141,21 @@ $('#auto').addEventListener('submit', async e => {
         studioPrompt,
         customPrompt: input.customPrompt || '',
         customPromptMode: input.customPromptMode || 'append',
-        contentEngine: 'staged',
+        contentEngine: 'auto',
       };
       const aiStarted = Date.now();
+      // Пока сервер пишет тексты (обычно 20–40 с), шкала движется и показывает прошедшее время, а не стоит на 12%.
+      const aiTicker = setInterval(() => {
+        const seconds = Math.round((Date.now() - aiStarted) / 1000);
+        setAutoProgress(Math.min(45, 12 + seconds * 0.8), 'AI пишет тексты и структуру', 'Прошло ' + seconds + ' с · обычно 20–40 с');
+      }, 1000);
       let res, body;
       try {
         res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
         body = await res.json().catch(() => ({}));
-      } catch (error) { logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
+        clearInterval(aiTicker);
+      } catch (error) {
+        clearInterval(aiTicker); logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
       logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing && body.generation?.status === 'completed' ? 'ok' : 'error', error: body.error || (body.generation?.status === 'partial' ? 'Частичная генерация: ' + (body.generation.failedStage || 'этап не завершён') : res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || body.generation?.stages?.reduce((n, stage) => n + (stage.attempts || 0), 0) || null, route: body.route || '', provider: body.provider || '' });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
@@ -1179,7 +1186,7 @@ $('#auto').addEventListener('submit', async e => {
     setAutoProgress(65, 'Генерация изображений', 'Подготавливаем визуальные материалы');
     try {
       const images = await generateProjectImages(endpoint, draft.project.id, (done, total, subject) => setAutoProgress(65 + (done / Math.max(1, total)) * 30, 'Генерация изображений', 'Готово ' + done + ' из ' + total + ': ' + subject));
-      if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.';
+      if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.' + (images.failed ? ' Не удалось создать: ' + images.failed + ' — их можно перегенерировать или загрузить свои фото.' : '');
       else note += ' Для выбранной композиции отдельные фотографии не требуются.';
     } catch (error) {
       note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
@@ -2035,7 +2042,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     if (hintsResponse.ok && hintsPayload.hints) visualHints = hintsPayload.hints;
   } catch { /* остаются словарь ниш и транслит */ }
   const photoProject = visualHints ? { ...result.project, visualHints } : result.project;
-  let generated = 0;
+  let generated = 0, failed = 0, lastImageError = '';
   for (let index = 0; index < targets.length; index++) {
     const slot = targets[index];
     onProgress(index, targets.length, slot.label);
@@ -2044,12 +2051,20 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     const prompt = photoPrompt(slot, photoProject, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
     const imageStarted = Date.now();
     let response, payload;
-    try {
-      response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-      payload = await response.json().catch(() => ({}));
-    } catch (error) { logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - imageStarted }); throw error; }
+    // Вторая попытка: Workers AI иногда отвечает временной ошибкой за секунду (живой прогон 20.11.2026).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+        payload = await response.json().catch(() => ({}));
+      } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
+      if (response?.ok && payload.image) break;
+      if (response && response.status < 500 && response.status !== 429) break;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    if (!response) { logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: 'error', error: payload.error, ms: Date.now() - imageStarted }); failed++; continue; }
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: response.ok && payload.image ? 'ok' : 'error', error: payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms: Date.now() - imageStarted, model: payload.model || '' });
-    if (!response.ok || !payload.image) throw new Error(payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').');
+    // Один неудачный кадр не обрывает остальные: его можно перегенерировать или загрузить своё фото.
+    if (!response.ok || !payload.image) { failed++; lastImageError = payload.error || 'AI не вернул изображение (HTTP ' + response.status + ').'; continue; }
     const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image);
     if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
     const data = optimized.data;
@@ -2075,9 +2090,10 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     generated++;
     $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
   }
+  if (!generated && failed) throw new Error(lastImageError || 'AI не вернул изображения.');
   buildForm();
   run();
-  return { generated, skipped: false };
+  return { generated, failed, skipped: false };
 }
 async function handleImageUpload(input) {
   const kind = input.dataset.upload, files = [...(input.files || [])];

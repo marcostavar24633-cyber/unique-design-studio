@@ -161,3 +161,11 @@ test('поэтапная генерация возвращает маршрут 
   const result = await generateContentInStages({ ...base, runTextModel: viaGateway });
   assert.equal(result.route, 'gateway');
 });
+
+test('указания этапа стоят после задания студии, чтобы модель не писала все разделы сразу', async () => {
+  const ai = mock();
+  await generateContentInStages({ ...base, studioPrompt: 'ПОЛНАЯ СТРУКТУРА ЛЕНДИНГА', runTextModel: ai.runTextModel });
+  const first = ai.calls[0].options.messages[0].content;
+  assert.ok(first.indexOf('ЭТАП: ') > first.indexOf('ПОЛНАЯ СТРУКТУРА ЛЕНДИНГА'));
+  assert.match(first, /Остальные разделы сайта будут созданы отдельно/);
+});

@@ -428,7 +428,10 @@ export default {
     // Одно сообщение: шаблон чата Gemma не поддерживает отдельную системную роль.
     const prompt = system + '\n\n' + user;
 
-    if (input.contentEngine === 'staged') {
+    // Поэтапный движок: по явному запросу или как спасение, если генерация одним запросом не удалась.
+    // По умолчанию — один запрос: с выключенными рассуждениями он укладывается в 20–35 с, тогда как
+    // поэтапный шёл 3–6 минут (живой замер 20.11.2026).
+    const runStaged = async () => {
       try {
         const staged = await generateContentInStages({
           env, model: MODEL, brief, facts, studioPrompt, formatNote: FORMAT_NOTE, runTextModel,
@@ -447,7 +450,8 @@ export default {
       } catch (error) {
         return json({ error: error?.message || 'Ошибка поэтапной генерации', generation: { mode: 'staged', status: 'failed' } }, 502, origin);
       }
-    }
+    };
+    if (input.contentEngine === 'staged') return runStaged();
 
     // Две попытки: если ответ оборвался или в нём нет обязательных частей, просим короче. Больше — не тратим квоту.
     let lastError = 'AI вернул неполный результат';
@@ -484,7 +488,7 @@ export default {
           landing.niche = brief.niche;
           if (brief.brand) landing.brand = brief.brand;
           else if (/не указ/i.test(String(landing.brand || ''))) landing.brand = '';
-          return json({ landing, attempts: attempt + 1, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started }, 200, origin);
+          return json({ landing, attempts: attempt + 1, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started, generation: { mode: 'single', status: 'completed' } }, 200, origin);
         }
         // Только имена ключей, без содержимого: помогает понять, в каком формате пришёл ответ.
         const keys = result && typeof result === 'object' ? Object.keys(result).slice(0, 8).join(', ') : typeof result;
@@ -493,6 +497,8 @@ export default {
         lastError = error?.message || 'Ошибка генерации Workers AI';
       }
     }
-    return json({ error: lastError, attempts: 2, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started }, 502, origin);
+    // Обе попытки не удались: в режиме auto пробуем поэтапный движок — он сохраняет готовые разделы.
+    if (input.contentEngine === 'auto') return runStaged();
+    return json({ error: lastError, attempts: 2, provider, model: usedModel, route, ...(gatewayError ? { gatewayError } : {}), usage, durationMs: Date.now() - started, generation: { mode: 'single', status: 'failed' } }, 502, origin);
   },
 };

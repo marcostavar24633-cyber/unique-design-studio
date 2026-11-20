@@ -473,3 +473,13 @@ test('AI Content Director запускает безопасную проверк
   ]) assert.ok(source.includes(marker), marker);
   assert.ok(css.includes('.content-quality-review{margin:16px 0'));
 });
+
+test('генерация: режим auto, живой прогресс ожидания, сбой одного фото не обрывает остальные', () => {
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.ok(js.includes("contentEngine: 'auto',"));
+  assert.ok(js.includes("'Прошло ' + seconds + ' с · обычно 20–40 с'"));
+  assert.ok(js.includes('clearInterval(aiTicker);'));
+  assert.ok(js.includes('for (let attempt = 0; attempt < 2; attempt++) {\n      try {\n        response = await fetch(imageEndpoint'));
+  assert.ok(js.includes("if (!response.ok || !payload.image) { failed++;"));
+  assert.ok(js.includes("if (!generated && failed) throw new Error(lastImageError"));
+});
