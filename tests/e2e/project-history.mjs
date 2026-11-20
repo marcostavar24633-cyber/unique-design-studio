@@ -49,7 +49,10 @@ try {
   await page.click('[data-history-save]');
   await page.waitForFunction(() => document.querySelectorAll('.project-history__item').length === 2);
   await page.locator('.project-history__item').filter({ hasText: 'Исходная концепция' }).getByRole('button', { name: 'Сравнить' }).click();
-  check(await page.locator('#project-history-diff').textContent().then(text => text.includes('Заголовок')), 'сравнение не обнаружило изменение заголовка');
+  const comparisonText = await page.locator('#project-history-diff').textContent();
+  const currentTitle = await page.locator('#form [data-path="title"]').inputValue();
+  check(currentTitle === 'Новая редакция главного экрана', 'поле заголовка не сохранило введённое значение: ' + currentTitle);
+  check(comparisonText.includes('Заголовок'), 'сравнение не обнаружило изменение заголовка; сравнение: ' + comparisonText + '; текущее поле: ' + currentTitle);
 
   await page.locator('.project-history__item').filter({ hasText: 'Исходная концепция' }).getByRole('button', { name: 'Восстановить' }).click();
   await page.waitForFunction(value => document.querySelector('#form [data-path="title"]').value === value, originalTitle);
