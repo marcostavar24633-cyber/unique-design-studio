@@ -14,7 +14,9 @@
 - Post-merge CI для `main` завершился успешно: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) — Node 20, Node 22, Workers Build и E2E; GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
 - История версий проекта: IndexedDB, ручные снимки, сравнение, восстановление, резервный снимок перед откатом и лимит 10 версий на проект.
 - Аварийное сохранение редактора: если localStorage не удаётся прочитать/записать, актуальное состояние сохраняется в отдельной базе IndexedDB; при старте более свежая резервная копия восстанавливается. PR #196 прошёл полный CI, включая E2E quota/reload/restore.
-- GitHub Pages deployment для PR #196 не завершился: повторный запуск deploy job создал два артефакта `github-pages`, и `deploy-pages` отказался выбирать между ними. PR #197 добавил уникальные имена артефактов, но отдельный Pages run `44783930667` выявил гонку видимости артефакта: deploy action выполнялся сразу после upload в том же job и не находил артефакт через API. PR #198 разделяет build/upload и deploy на два зависимых jobs; после merge требуется подтвердить публикацию.
+- Pages pipeline исправлен PR #197, #198 и #200: артефакты имеют уникальные имена, build/upload и deploy выполняются в зависимых jobs, а `upload-pages-artifact@v4` совместим с `deploy-pages@v4`. Публикация подтверждена: run `44786022419` после PR #200 и run `44787215164` после PR #199.
+- PR #199 укрепил AI Usage: обработка Storage SecurityError, явное состояние отсутствующих Neurons вместо ложного нуля, E2E и фактические route/provider/usage поля в журнале фото-запросов при наличии их в ответе сервера.
+- Post-merge CI после PR #199: run `44787215101` — Node 20, Node 22, Workers Build и E2E успешно.
 - В ходе аудита подтверждено: до PR #194 реестр хранил только последнюю запись проекта по ID; отдельной истории версий проекта не было. Prompt Manager уже имел собственное версионирование.
 - AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не менялись.
 
@@ -103,17 +105,17 @@
 
 ### Этап E — главный интерфейс
 
-20. `feat: redesign studio control center` — улучшить главную панель управления студией.
-21. `feat: improve project workflow interface` — упростить и сделать понятнее рабочий процесс проекта.
-22. `[~] feat: enhance AI usage dashboard` — базовая статистика, журнал и обработка отсутствующих данных усилены PR #199; дальнейшее развитие аналитики и представления расходов остаётся отдельной задачей.
-23. `feat: add production status tracking` — прозрачные статусы генерации, проверки и публикации.
+21. `feat: redesign studio control center` — улучшить главную панель управления студией.
+22. `feat: improve project workflow interface` — упростить и сделать понятнее рабочий процесс проекта.
+23. `[~] feat: enhance AI usage dashboard` — базовая статистика, журнал и обработка отсутствующих данных усилены PR #199; дальнейшее развитие аналитики и представления расходов остаётся отдельной задачей.
+24. `feat: add production status tracking` — прозрачные статусы генерации, проверки и публикации.
 
 ### Этап F — качество и выпуск
 
-24. `test: expand responsive coverage` — расширить проверки адаптивности на реальных сценариях и ширинах экранов.
-25. `test: improve accessibility and performance` — доступность, клавиатурная навигация, reduced motion и производительность.
-26. `feat: add production readiness validation` — итоговая проверка перед публикацией с понятными блокирующими ошибками.
-27. `docs: update studio architecture and workflows` — актуализировать архитектуру, инструкции запуска, интеграции и пользовательские сценарии.
+25. `test: expand responsive coverage` — расширить проверки адаптивности на реальных сценариях и ширинах экранов.
+26. `test: improve accessibility and performance` — доступность, клавиатурная навигация, reduced motion и производительность.
+27. `feat: add production readiness validation` — итоговая проверка перед публикацией с понятными блокирующими ошибками.
+28. `docs: update studio architecture and workflows` — актуализировать архитектуру, инструкции запуска, интеграции и пользовательские сценарии.
 
 Обозначения статуса: `[x]` — выполнено и подтверждено в `main`; `[~]` — частично реализовано или выполняется в PR; без отметки — задача ещё не завершена.
 
