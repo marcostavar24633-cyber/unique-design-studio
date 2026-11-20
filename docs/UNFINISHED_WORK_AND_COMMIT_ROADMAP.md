@@ -7,16 +7,18 @@
 
 ## Актуальный статус на 20 ноября 2026
 
-- На момент обновления PR #190–#196 объединены; открытых PR нет. Текущий PR #197 исправляет повторные Pages deployment и обновляет handoff.
-- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация), #194 (история версий проекта), #195 (документация после #194) и #196 (аварийное сохранение в IndexedDB) объединены.
+- На момент обновления PR #190–#200 объединены; открытых PR нет. Pages pipeline восстановлен, AI Usage hardening включён в main.
+- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация), #194 (история версий), #195 (документация), #196 (аварийное сохранение), #197 (уникальные Pages artifacts), #198 (разделение Pages jobs), #199 (устойчивость AI Usage) и #200 (совместимость Pages actions) объединены.
 - PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
 - PR #194: commit `bc6101298e337872ba9743812af7e6881d3a5484`; полный CI перед слиянием прошёл успешно: [run 44777592604](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777592604).
-- Post-merge CI для `main` завершился успешно: [run 44777915069](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915069) — Node 20, Node 22, Workers Build и E2E; GitHub Pages deployment после PR #194 успешен: [run 44777915073](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777915073); [открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
+- Post-merge CI после PR #200 и PR #199 завершился успешно: runs `44786022454` и `44787215101` — Node 20/22, Workers Build и E2E; GitHub Pages deployments `44786022419` и `44787215164` завершились успешно. [Открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
 - История версий проекта: IndexedDB, ручные снимки, сравнение, восстановление, резервный снимок перед откатом и лимит 10 версий на проект.
 - Аварийное сохранение редактора: если localStorage не удаётся прочитать/записать, актуальное состояние сохраняется в отдельной базе IndexedDB; при старте более свежая резервная копия восстанавливается. PR #196 прошёл полный CI, включая E2E quota/reload/restore.
-- GitHub Pages deployment для PR #196 не завершился: повторный запуск deploy job создал два артефакта `github-pages`, и `deploy-pages` отказался выбирать между ними. PR #197 добавил уникальные имена артефактов, но отдельный Pages run `44783930667` выявил гонку видимости артефакта: deploy action выполнялся сразу после upload в том же job и не находил артефакт через API. PR #198 разделяет build/upload и deploy на два зависимых jobs; после merge требуется подтвердить публикацию.
+- Pages pipeline исправлен PR #197, #198 и #200: артефакты имеют уникальные имена, build/upload и deploy выполняются в зависимых jobs, а `upload-pages-artifact@v4` совместим с `deploy-pages@v4`. Публикация подтверждена: run `44786022419` после PR #200 и run `44787215164` после PR #199.
+- PR #199 укрепил AI Usage: обработка Storage SecurityError, явное состояние отсутствующих Neurons вместо ложного нуля, E2E и фактические route/provider/usage поля в журнале фото-запросов при наличии их в ответе сервера.
+- Post-merge CI после PR #199: run `44787215101` — Node 20, Node 22, Workers Build и E2E успешно.
 - В ходе аудита подтверждено: до PR #194 реестр хранил только последнюю запись проекта по ID; отдельной истории версий проекта не было. Prompt Manager уже имел собственное версионирование.
-- AI endpoint, Cloudflare Worker, секреты и production Worker deployment в PR #194 не менялись.
+- В PR #197–#200 и #199 Cloudflare Worker, его production deployment и секреты не менялись.
 
 ## Исторический журнал PR (состояние на 17–18 ноября 2026)
 
@@ -71,7 +73,7 @@
 
 ### Этап A — стабилизация ядра
 
-1. `fix: stabilize AI usage counter` — завершить надёжность счётчика Neurons, обработку ошибок и обновление статистики; не дублировать PR #99.
+1. `[x] fix: harden AI Usage metrics and storage access` — PR #199: безопасная обработка Storage SecurityError, null Neurons, E2E и расширение журнала фото-запросов.
 2. `fix: stabilize project persistence` — проверить сохранение, восстановление, импорт/экспорт проектов и AI-анализа.
 3. `test: harden studio end-to-end workflows` — сделать E2E-проверки основных пользовательских сценариев воспроизводимыми.
 4. `fix: validate all studio interactions` — проверить кнопки, формы, переключатели и действия; исправить неработающие элементы.
@@ -99,21 +101,21 @@
 17. `feat: improve asset management` — загрузка, организация, кадрирование и управление изображениями; учитывать PR #30.
 18. `[x] feat: add project version management` — PR #194 объединён: ручные снимки в IndexedDB, сравнение и восстановление; перед откатом создаётся резервная версия; хранятся последние 10 версий на проект.
 19. `[x] fix: protect unsaved projects from storage quota failures` — PR #196 объединён: аварийный snapshot в IndexedDB при недоступном localStorage и восстановление более свежего состояния после перезагрузки.
-19. `feat: add merge engine` — безопасное объединение модулей и результатов разработки с проверкой конфликтов.
+20. `feat: add merge engine` — безопасное объединение модулей и результатов разработки с проверкой конфликтов.
 
 ### Этап E — главный интерфейс
 
-20. `feat: redesign studio control center` — улучшить главную панель управления студией.
-21. `feat: improve project workflow interface` — упростить и сделать понятнее рабочий процесс проекта.
-22. `feat: enhance AI usage dashboard` — статистика Neurons, история расходов и состояния запросов; учитывать PR #99.
-23. `feat: add production status tracking` — прозрачные статусы генерации, проверки и публикации.
+21. `feat: redesign studio control center` — улучшить главную панель управления студией.
+22. `feat: improve project workflow interface` — упростить и сделать понятнее рабочий процесс проекта.
+23. `[~] feat: enhance AI usage dashboard` — базовая статистика, журнал и обработка отсутствующих данных усилены PR #199; дальнейшее развитие аналитики и представления расходов остаётся отдельной задачей.
+24. `feat: add production status tracking` — прозрачные статусы генерации, проверки и публикации.
 
 ### Этап F — качество и выпуск
 
-24. `test: expand responsive coverage` — расширить проверки адаптивности на реальных сценариях и ширинах экранов.
-25. `test: improve accessibility and performance` — доступность, клавиатурная навигация, reduced motion и производительность.
-26. `feat: add production readiness validation` — итоговая проверка перед публикацией с понятными блокирующими ошибками.
-27. `docs: update studio architecture and workflows` — актуализировать архитектуру, инструкции запуска, интеграции и пользовательские сценарии.
+25. `test: expand responsive coverage` — расширить проверки адаптивности на реальных сценариях и ширинах экранов.
+26. `test: improve accessibility and performance` — доступность, клавиатурная навигация, reduced motion и производительность.
+27. `feat: add production readiness validation` — итоговая проверка перед публикацией с понятными блокирующими ошибками.
+28. `docs: update studio architecture and workflows` — актуализировать архитектуру, инструкции запуска, интеграции и пользовательские сценарии.
 
 Обозначения статуса: `[x]` — выполнено и подтверждено в `main`; `[~]` — частично реализовано или выполняется в PR; без отметки — задача ещё не завершена.
 
