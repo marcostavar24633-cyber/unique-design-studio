@@ -50,8 +50,17 @@ function renderAiUsageStats(data, error = '') {
     return;
   }
   if (!data) return;
-  $('#ai-usage-count').textContent = Number(data.neurons || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-  const neurons = Number(data.neurons || 0);
+  const hasNeurons = data.neurons !== null && data.neurons !== undefined && data.neurons !== '' && Number.isFinite(Number(data.neurons));
+  if (!hasNeurons) {
+    node.title = 'Cloudflare не вернул показатель Neurons для выбранного периода.';
+    $('#ai-usage-count').textContent = '—';
+    const details = $('#ai-usage-details');
+    if (details) details.textContent = 'Neurons: нет данных';
+    setDashStatus('neurons', 'off', 'Neurons: нет данных');
+    return;
+  }
+  $('#ai-usage-count').textContent = Number(data.neurons).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const neurons = Number(data.neurons);
   const share = data.range === '24h' ? ' (' + Math.round(neurons / WORKERS_AI_FREE_NEURONS * 100) + '% от ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' бесплатных в сутки — ориентир по документации Cloudflare)' : '';
   setDashStatus('neurons', neurons > WORKERS_AI_FREE_NEURONS * 0.8 && data.range === '24h' ? 'warn' : 'ok', neurons.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' Neurons · ' + Number(data.requests || 0).toLocaleString('ru-RU') + ' запросов' + share);
   const details = $('#ai-usage-details');
@@ -64,7 +73,12 @@ function renderAiUsageStats(data, error = '') {
 }
 async function refreshAiUsage() {
   if (aiUsageLoading) return;
-  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    return renderAiUsageStats(null, 'хранилище настроек недоступно');
+  }
   if (!endpoint) return renderAiUsageStats(null, 'не задан адрес AI-сервера');
   let usageUrl;
   try {
@@ -77,7 +91,8 @@ async function refreshAiUsage() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h';
+    let range = $('#ai-usage-range')?.value || '24h';
+    try { range = $('#ai-usage-range')?.value || localStorage.getItem(AI_USAGE_RANGE_KEY) || '24h'; } catch {}
     const response = await fetch(usageUrl + '?range=' + encodeURIComponent(range), {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
@@ -85,8 +100,14 @@ async function refreshAiUsage() {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || 'HTTP ' + response.status);
-    if (!Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
-      throw new Error('Cloudflare вернул некорректную статистику');
+    const hasNeurons = payload.neurons !== null && payload.neurons !== undefined && payload.neurons !== '';
+    const hasRequests = payload.requests !== null && payload.requests !== undefined && payload.requests !== '';
+    if (!hasNeurons) {
+      renderAiUsageStats({ ...payload, range });
+      return;
+    }
+    if (!hasRequests || !Number.isFinite(Number(payload.neurons)) || !Number.isFinite(Number(payload.requests))) {
+      throw new Error('Cloudflare не вернул полную статистику Neurons и запросов');
     }
     renderAiUsageStats(payload);
   } catch (error) {
@@ -254,7 +275,7 @@ function renderAiBudget() {
   const resetAt = bakuTime(r.at);
   const sessionAt = bakuTime(new Date(sessionStart));
   let today;
-  if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
+  if (aiToday && !aiToday.error && aiToday.neurons !== null && aiToday.neurons !== undefined && aiToday.neurons !== '' && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
     const alert = pct >= 100
       ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Если AI-шлюз подключён, тексты пишет бесплатный резерв (Groq), фото недоступны до 00:00 UTC; платный резервный провайдер отключён.' }
@@ -267,7 +288,7 @@ function renderAiBudget() {
       '<p class="dash-meter-note"><b>Cloudflare с 00:00 UTC:</b> ' + n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' из ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' Neurons (' + pct + '%), ' + Number(aiToday.requests || 0).toLocaleString('ru-RU') + ' запросов. Остаток ~' + Math.max(0, WORKERS_AI_FREE_NEURONS - n).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + '.</p>' +
       (alert ? '<p class="dash-meter-note" data-ai-budget-alert="' + alert.level + '" role="status" aria-live="polite"><b>Предупреждение:</b> ' + alert.text + '</p>' : '');
   } else {
-    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : 'загружаем данные Cloudflare…') + '</p>';
+    today = '<p class="dash-meter-note"><b>До сброса:</b> ' + esc(aiToday?.error ? 'нет данных — ' + aiToday.error : aiToday ? 'нет данных — Cloudflare не вернул показатель Neurons' : 'загружаем данные Cloudflare…') + '</p>';
   }
   box.innerHTML = today +
     '<div class="dash-ai-periods">' +
@@ -278,7 +299,13 @@ function renderAiBudget() {
     '<p class="dash-meter-note">Токены считаются по фактическим данным, которые вернула модель, и хранятся в журнале этого браузера. Neurons берутся отдельно из Cloudflare Analytics; ориентир ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' не является гарантированным лимитом аккаунта.</p>';
 }
 async function refreshAiToday() {
-  const endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    aiToday = { error: 'хранилище настроек недоступно' };
+    return renderAiBudget();
+  }
   if (!endpoint) { aiToday = { error: 'AI-сервер не задан' }; return renderAiBudget(); }
   try {
     const u = new URL(endpoint, location.href); u.pathname = u.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage'); u.search = '?range=today';
@@ -2365,7 +2392,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       }
     }
     const ok = Boolean(response?.ok && payload.image);
-    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || '', provider: payload.provider || '' });
     onProgress(++done, targets.length, slot.label);
     if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
     // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
