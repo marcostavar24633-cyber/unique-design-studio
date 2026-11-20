@@ -8,7 +8,8 @@ const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
 // Сколько карточек услуг автопилот снабжает фото: вместе с главным фото и 8 кадрами галереи — до 15 кадров.
 const MAX_SERVICE_PHOTOS = 6;
-// Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, лимит Worker — 16 фото в минуту.
+// Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, поэтому по одному 15 кадров шли бы ~3 минуты.
+// 3 параллельных запроса укладываются в лимит Worker на фото (IMAGE_LIMIT), а при 429 очередь ждёт Retry-After.
 const IMAGE_CONCURRENCY = 3;
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
@@ -1120,7 +1121,7 @@ $('#auto').addEventListener('submit', async e => {
     value.textContent = safe + '%';
     label.textContent = stage;
     if (extra) extra.textContent = detail;
-    root.dataset.state = safe >= 100 ? 'complete' : 'running';
+    root.dataset.state = safe >= 100 ? (/предупреждения/i.test(stage) ? 'warning' : 'complete') : 'running';
   };
   const go = $('#auto-go');
   go.disabled = true;
@@ -1155,8 +1156,26 @@ $('#auto').addEventListener('submit', async e => {
       }, 1000);
       let res, body;
       try {
-        res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload) });
-        body = await res.json().catch(() => ({}));
+        // Повторяем только временные сбои сети, 429 и 5xx; не повторяем ошибки валидации 4xx.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const controller = new AbortController();
+          // Генерация текста идёт 20–60 с, а с запасным поэтапным режимом — до нескольких минут: не обрываем её раньше.
+          const timeout = setTimeout(() => controller.abort(), 240_000);
+          try {
+            res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload), signal: controller.signal });
+            body = await res.json().catch(() => ({}));
+          } catch (error) {
+            if (attempt === 1) throw error;
+            setAutoStatus('Сетевая ошибка AI-сервера. Повторяем запрос…');
+            await new Promise(resolve => setTimeout(resolve, 2_000));
+            continue;
+          } finally { clearTimeout(timeout); }
+          if (res.ok || (res.status < 500 && res.status !== 429) || attempt === 1) break;
+          const retryAfter = Number(res.headers.get('Retry-After'));
+          const delay = res.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 2_000;
+          setAutoStatus(res.status === 429 ? 'AI-сервер ограничил частоту запросов. Повторяем через минуту…' : 'Временная ошибка AI-сервера. Повторяем запрос…');
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
         clearInterval(aiTicker);
       } catch (error) {
         clearInterval(aiTicker); logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
@@ -1201,7 +1220,8 @@ $('#auto').addEventListener('submit', async e => {
   // Статус обязателен и для локального режима без AI endpoint.
   // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
   setAutoStatus(note);
-  setAutoProgress(100, 'Генерация завершена', note);
+  const hasWarnings = /AI-сервер недоступен|не завершена|Не удалось создать|не удалось/i.test(note);
+  setAutoProgress(100, hasWarnings ? 'Завершено с предупреждениями' : 'Генерация завершена', note);
   go.disabled = false;
   selectTab($('#tab-preview'));
   toast(note);
@@ -2099,7 +2119,12 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
       if (response?.ok && payload.image) break;
       if (response && response.status < 500 && response.status !== 429) break;
-      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1500));
+      if (attempt === 0) {
+        // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.
+        const retryAfter = Number(response?.headers?.get('Retry-After'));
+        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
     const ok = Boolean(response?.ok && payload.image);
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
