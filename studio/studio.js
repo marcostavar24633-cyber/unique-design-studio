@@ -755,7 +755,8 @@ $('#view-publish')?.addEventListener('click', async event => {
     const branch = String($('#pm-branch')?.value || 'production');
     if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(projectName)) return toast('Укажите корректное имя Pages project: строчные латинские буквы, цифры и дефисы.');
     if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branch) || branch.includes('..') || branch.endsWith('/') || branch.endsWith('.')) return toast('Некорректное имя ветки.');
-    localStorage.setItem(PUBLISH_SETTINGS_KEY, JSON.stringify({projectName,branch}));
+    try { localStorage.setItem(PUBLISH_SETTINGS_KEY, JSON.stringify({projectName,branch})); }
+    catch { return toast('Не удалось сохранить настройки публикации: хранилище браузера недоступно или переполнено.'); }
     renderPublishManager(); toast('Настройки публикации сохранены в этом браузере.'); return;
   }
   if (button.id === 'pm-download-json') {
