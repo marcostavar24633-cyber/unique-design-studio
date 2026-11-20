@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T06:48:41.114Z
+Время обновления: 2026-11-20T15:07:48.458Z
 Ветка: fix/ai-generation-rate-limit-recovery
-Последний commit: 14712323add4502ff6445ad862f26aba64620170
-Дата коммита: 2026-11-20T10:43:35+04:00
-Сообщение: Retry transient AI network failures once
+Последний commit: 8f044d0361fbace3455b02bec057ed5a47a06ba8
+Дата коммита: 2026-11-20T19:07:28+04:00
+Сообщение: AI: оставить 3 параллельных фото, поднять лимит фото Worker, таймаут текста 240 с
 
 Последние коммиты:
+- 8f044d0 · 2026-11-20 · AI: оставить 3 параллельных фото, поднять лимит фото Worker, таймаут текста 240 с
+- 9f3412a · 2026-11-20 · docs: refresh project handoff
 - 1471232 · 2026-11-20 · Retry transient AI network failures once
 - fe2f245 · 2026-11-20 · Cover main AI retry and timeout behavior
 - 9912b25 · 2026-11-20 · Add bounded retry and timeout for main AI generation
 - cdd0984 · 2026-11-20 · docs: refresh project handoff
 - 1dfbd17 · 2026-11-20 · Correct multiline retry logic and document sequential image queue
 - 4d813c4 · 2026-11-20 · Fix test formatting for rate-limit retry
-- 78a1cdb · 2026-11-20 · Fix retry backoff syntax in image generation
-- 3068eb7 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
