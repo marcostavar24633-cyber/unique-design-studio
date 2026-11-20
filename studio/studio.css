@@ -518,9 +518,6 @@ body.preview-fullscreen-active{overflow:hidden}
 
 /* Шапка рабочей области: счётчик AI — одна компактная строка. Подробности — во всплывающей подсказке
    блока (title), поэтому длинный текст обрезается многоточием, а не растягивает шапку на два ряда. */
-body:not(.dashboard-mode)>.top .ai-usage{flex-wrap:nowrap;white-space:nowrap;max-width:min(100%,440px);min-height:34px;padding:4px 10px}
-body:not(.dashboard-mode)>.top #ai-usage-details{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;color:var(--muted)}
-body:not(.dashboard-mode)>.top #ai-usage-range{flex:0 0 auto;min-height:26px;padding:2px 6px;font-size:12px}
 /* Меню «Ещё» в шапке рабочей области: редкие действия, чтобы шапка помещалась в одну строку. */
 .top-more{position:relative;flex:0 0 auto}
 .top-more>summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card,transparent);cursor:pointer;list-style:none;font-weight:600;user-select:none}
@@ -536,13 +533,17 @@ body:not(.dashboard-mode)>.top #ai-usage-range{flex:0 0 auto;min-height:26px;pad
   body:not(.dashboard-mode)>.top .top__brand{flex:0 0 auto}
   body:not(.dashboard-mode)>.top .top__actions{flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end;align-items:center}
   body:not(.dashboard-mode)>.top .top__actions>button,body:not(.dashboard-mode)>.top .top-more>summary{white-space:nowrap;flex:0 0 auto}
-  body:not(.dashboard-mode)>.top .ai-usage{flex:0 1 330px;max-width:330px}
+  /* Счётчик AI — одна компактная строка, подробности обрезаются (полный текст — в подсказке блока).
+     На узких экранах действуют мобильные правила счётчика. */
+  body:not(.dashboard-mode)>.top .ai-usage{flex:0 1 330px;max-width:330px;flex-wrap:nowrap;white-space:nowrap;min-height:34px;padding:4px 10px}
+  body:not(.dashboard-mode)>.top #ai-usage-details{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;color:var(--muted)}
+  body:not(.dashboard-mode)>.top #ai-usage-range{flex:0 0 auto;min-height:26px;padding:2px 6px;font-size:12px}
   body:not(.dashboard-mode)>.top #examples{flex:0 1 140px;max-width:140px;min-width:110px}
   /* В одной строке меню «Ещё» стоит у правого края — раскрываем его влево от кнопки. */
   .top-more__menu{left:auto;right:0}
 }
-@media(max-width:760px){
-  .top-more[open]{display:flex;align-items:flex-start;gap:6px}
-  .top-more__menu{position:static;display:flex;gap:6px;min-width:0;padding:0;border:0;background:none;box-shadow:none}
-  .top-more__menu button{width:auto;white-space:nowrap}
+@media(max-width:1099px){
+  /* Пока шапка не помещается в одну строку, ряд действий может прокручиваться и обрезал бы меню:
+     показываем его фиксированно под шапкой. */
+  .top-more__menu{position:fixed;left:auto;right:12px;top:var(--top-more-y,64px);width:min(320px,calc(100vw - 24px));min-width:0}
 }

@@ -2996,7 +2996,9 @@ document.addEventListener('keydown', e => { const menu = document.querySelector(
 // В переносящейся шапке кнопка «Ещё» может стоять у любого края: раскрываем меню туда, где оно помещается.
 document.querySelector('.top-more')?.addEventListener('toggle', e => {
   const menu = e.currentTarget.querySelector('.top-more__menu');
-  if (!e.currentTarget.open || !menu || getComputedStyle(menu).position !== 'absolute') return;
+  if (!e.currentTarget.open || !menu) return;
+  // На узких экранах меню фиксировано под шапкой: ставим его сразу под нижний край шапки.
+  if (getComputedStyle(menu).position === 'fixed') { const top = document.querySelector('body>.top'); menu.style.setProperty('--top-more-y', Math.round((top ? top.getBoundingClientRect().bottom : 56) + 6) + 'px'); return; }
   menu.style.left = ''; menu.style.right = '';
   const r = menu.getBoundingClientRect();
   if (r.right > innerWidth - 8) { menu.style.left = 'auto'; menu.style.right = '0'; }
