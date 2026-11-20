@@ -84,19 +84,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T17:24:19.878Z
+Время обновления: 2026-11-20T17:30:33.656Z
 Ветка: main
-Последний commit: c66f22ee32dc4b44187f93603eadbda8256255ff
-Дата коммита: 2026-11-20T21:24:08+04:00
-Сообщение: feat: protect unsaved studio projects with IndexedDB backup (#196)
+Последний commit: 94eb768bae5c2515c2f610755b4465b1fd951864
+Дата коммита: 2026-11-20T21:30:21+04:00
+Сообщение: fix: make GitHub Pages artifacts unique across retries (#197)
 
 Последние коммиты:
+- 94eb768 · 2026-11-20 · fix: make GitHub Pages artifacts unique across retries (#197)
+- a2fb5bd · 2026-11-20 · docs: refresh project handoff
 - c66f22e · 2026-11-20 · feat: protect unsaved studio projects with IndexedDB backup (#196)
 - ee1adb0 · 2026-11-20 · docs: refresh project handoff
 - 7b6bc2e · 2026-11-20 · docs: close project version history milestone (#195)
 - eb7877f · 2026-11-20 · docs: refresh project handoff
 - bc61012 · 2026-11-20 · feat: add project version history with safe restore (#194)
 - 583206e · 2026-11-20 · docs: refresh project handoff
-- 4def920 · 2026-11-20 · docs: refresh project handoff and roadmap (#193)
-- f5a6ba6 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
