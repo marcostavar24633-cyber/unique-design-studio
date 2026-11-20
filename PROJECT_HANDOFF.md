@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T03:24:53.942Z
-Ветка: main
-Последний commit: 645e06e0fe66a425763ea807e8df5537065fd925
-Дата коммита: 2026-11-20T07:24:42+04:00
-Сообщение: Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
+Время обновления: 2026-11-20T05:23:40.512Z
+Ветка: feat/visual-identity-engine-rebase
+Последний commit: b1153a678de79018de1b1135a03a6cc2ff239034
+Дата коммита: 2026-11-20T09:23:27+04:00
+Сообщение: Export visual identity engine from public API
 
 Последние коммиты:
+- b1153a6 · 2026-11-20 · Export visual identity engine from public API
+- 5206936 · 2026-11-20 · Document rebased visual identity engine
+- 46d8bd5 · 2026-11-20 · Add visual identity engine regression tests
+- d8eba37 · 2026-11-20 · Add deterministic visual identity engine
+- 4c5523d · 2026-11-20 · docs: refresh project handoff
 - 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
 - d23f6fe · 2026-11-20 · docs: refresh project handoff
 - 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
-- b5e7b81 · 2026-11-20 · docs: refresh project handoff
-- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
-- 9def923 · 2026-11-20 · docs: refresh project handoff
-- c042174 · 2026-11-20 · Фото для всех карточек услуг (до 6), а не только для первых двух (#170)
-- b08d960 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
