@@ -14,6 +14,7 @@ import { chooseTextEffect } from './text-effects.js';
 import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direction.js';
 import { chooseCinematicLayers } from './cinematic/visual-layers.js';
 import { chooseTransition } from './cinematic/transitions.js';
+import { chooseVariety } from './variety.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -160,9 +161,14 @@ function compose(project, profile, ranked, seed, avoid) {
   const tierShapes = project.tier === 'luxury' ? arch.shapes.filter(x => x !== 'round') : arch.shapes;
   const shape = pick(stream(seed, 'shape'), tierShapes.length ? tierShapes : arch.shapes, avoid.shapes);
   const motif = pick(stream(seed, 'motif'), profile.motifs);
-  const button = primary === 'brutalist' ? 'block'
+  // Ручной стиль кнопок владельца главнее; авто-выбор: брутализм — плакатная, люкс — сдержанные,
+  // журнальные архитектуры — контурные и текстовые, остальные — весь спектр активных стилей.
+  const button = BUTTONS[project.passthrough?.buttonStyle] ? project.passthrough.buttonStyle
+    : primary === 'brutalist' ? 'block'
     : project.tier === 'luxury' ? pick(stream(seed, 'button'), ['outline', 'underline'])
-    : pick(stream(seed, 'button'), primary === 'editorial' || primary === 'storytelling' ? ['solid', 'outline', 'underline'] : ['solid', 'solid', 'outline']);
+    : pick(stream(seed, 'button'), primary === 'editorial' || primary === 'storytelling'
+      ? ['solid', 'outline', 'underline', 'double', 'slide', 'arrow', 'ghost']
+      : ['solid', 'outline', 'pill', 'gradient', 'glow', 'press', 'arrow', 'slide', 'glass', 'neon', 'inset', 'ghost']);
   // Вариант подачи секций — отдельная композиционная ось, а не только оформление hero.
   const sectionLayout = pick(stream(seed, 'section-layout'), ['editorial', 'offset', 'framed', 'quiet'], avoid.sectionLayouts || []);
   return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button, sectionLayout };
@@ -495,6 +501,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       cinematicLayers,
       // Переходы между секциями: тип и настраиваемый градиент; ручные настройки владельца главнее.
       transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, seed }),
+      // Форма карточек и эффект появления блоков; ручной выбор владельца главнее.
+      variety: chooseVariety(project, { shape: design.shape, archetype: design.primary, intensity: motionPlan.intensity, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,
