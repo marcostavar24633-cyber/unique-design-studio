@@ -134,17 +134,19 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) {
     state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
-    localSavedAt = Number(saved._udsSavedAt) || 0;
+    localSavedAt = Number(saved._udsSavedAt) || Date.now();
   }
 } catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
 // Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
 let persistFailed = false;
 let persistBackupFailed = false;
+let persistRevision = 0;
 let backupNoticeShown = false;
 const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
 const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
   const savedAt = Math.max(Date.now(), localSavedAt + 1);
+  const revision = ++persistRevision;
   try {
     localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
     localSavedAt = savedAt;
@@ -164,6 +166,7 @@ const persist = () => {
         }
       }
     }).catch(() => {
+      if (revision !== persistRevision || savedAt < localSavedAt) return;
       persistFailed = true;
       persistBackupFailed = true;
       toast(PERSIST_ERROR);
