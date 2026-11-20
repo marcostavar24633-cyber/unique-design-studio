@@ -2102,7 +2102,10 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       if (response && response.status < 500 && response.status !== 429) break;
       if (attempt === 0) {
         // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.
-        const retryAfter = Number(response?.headers?.get('Retry-After'));\n        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;\n        await new Promise(resolve => setTimeout(resolve, delay));\n      }
+        const retryAfter = Number(response?.headers?.get('Retry-After'));
+        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
     const ok = Boolean(response?.ok && payload.image);
     logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
