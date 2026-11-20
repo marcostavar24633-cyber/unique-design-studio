@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T15:07:48.458Z
-Ветка: fix/ai-generation-rate-limit-recovery
-Последний commit: 8f044d0361fbace3455b02bec057ed5a47a06ba8
-Дата коммита: 2026-11-20T19:07:28+04:00
-Сообщение: AI: оставить 3 параллельных фото, поднять лимит фото Worker, таймаут текста 240 с
+Время обновления: 2026-11-20T15:09:50.210Z
+Ветка: main
+Последний commit: c821f7b77638639c1a787c2ac3df52c2e687d43c
+Дата коммита: 2026-11-20T19:09:30+04:00
+Сообщение: Стабилизировать AI-генерацию и восстановление после rate limit (#178)
 
 Последние коммиты:
-- 8f044d0 · 2026-11-20 · AI: оставить 3 параллельных фото, поднять лимит фото Worker, таймаут текста 240 с
-- 9f3412a · 2026-11-20 · docs: refresh project handoff
-- 1471232 · 2026-11-20 · Retry transient AI network failures once
-- fe2f245 · 2026-11-20 · Cover main AI retry and timeout behavior
-- 9912b25 · 2026-11-20 · Add bounded retry and timeout for main AI generation
-- cdd0984 · 2026-11-20 · docs: refresh project handoff
-- 1dfbd17 · 2026-11-20 · Correct multiline retry logic and document sequential image queue
-- 4d813c4 · 2026-11-20 · Fix test formatting for rate-limit retry
+- c821f7b · 2026-11-20 · Стабилизировать AI-генерацию и восстановление после rate limit (#178)
+- 4c5523d · 2026-11-20 · docs: refresh project handoff
+- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
+- d23f6fe · 2026-11-20 · docs: refresh project handoff
+- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
+- b5e7b81 · 2026-11-20 · docs: refresh project handoff
+- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
+- 9def923 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
