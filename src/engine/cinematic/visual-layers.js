@@ -40,6 +40,29 @@ const BY_DIRECTION = {
   floating: ['soft-grain'],
 };
 
+/** Цветокоррекция фотографий в тон фактуры: [контраст, насыщенность, сепия]. Сдвиги намеренно малы —
+ *  это реальные снимки владельца, коррекция только объединяет их с фоном страницы в одну «съёмку». */
+const GRADES = {
+  film: { label: 'тёплый плёночный тон', c: 1.06, s: 0.92, sepia: 0.06 },
+  'soft-grain': { label: 'мягкий тон', c: 1.02, s: 0.96, sepia: 0 },
+  paper: { label: 'тёплая печать', c: 1.0, s: 0.9, sepia: 0.08 },
+  'paper-light': { label: 'тёплая печать', c: 1.02, s: 0.9, sepia: 0.1 },
+  halftone: { label: 'печатный контраст', c: 1.08, s: 0.86, sepia: 0 },
+  blueprint: { label: 'приглушённый технический тон', c: 1.04, s: 0.82, sepia: 0 },
+  scanlines: { label: 'контрастный экранный тон', c: 1.08, s: 1.05, sepia: 0 },
+};
+
+/** Значение CSS filter для фотографий или пустая строка (без коррекции). */
+export function photoGrade(layers) {
+  const g = layers && GRADES[layers.id];
+  if (!g) return '';
+  const k = layers.intensity === 'calm' ? 0.5 : 1;
+  const ease = v => Math.round((1 + (v - 1) * k) * 1000) / 1000;
+  const parts = [`contrast(${ease(g.c)})`, `saturate(${ease(g.s)})`];
+  if (g.sepia) parts.push(`sepia(${Math.round(g.sepia * k * 1000) / 1000})`);
+  return parts.filter(p => !/\(1\)$/.test(p)).join(' ');
+}
+
 const LIGHT_LABELS = { vignette: 'виньетка', leak: 'световой засвет', glow: 'свечение секций' };
 const TEXTURE_LABELS = { grain: 'зерно', paper: 'волокна бумаги', halftone: 'полутон', blueprint: 'сетка', scanlines: 'сканлинии', dotgrid: 'точки', none: 'нет' };
 
@@ -69,6 +92,7 @@ export function describeCinematicLayers(layers) {
   if (!layers || layers.texture === 'none') return 'Без фактуры: чистые плоскости цвета';
   const parts = [`фактура — ${TEXTURE_LABELS[layers.texture]}`];
   if (layers.lights.length) parts.push(`свет — ${layers.lights.map(l => LIGHT_LABELS[l]).join(', ')}`);
+  if (photoGrade(layers)) parts.push(`фото — ${GRADES[layers.id].label}`);
   return `${layers.label}: ${parts.join('; ')}${layers.intensity === 'calm' ? ' (сдержанно)' : ''}`;
 }
 
@@ -118,7 +142,10 @@ function lightCss(layers) {
 /** CSS слоёв. Пустая строка, если фактура и свет отключены. */
 export function cinematicLayersCss(layers) {
   if (!layers || (layers.texture === 'none' && !layers.lights.length)) return '';
-  return textureCss(layers) + lightCss(layers) + '.uds-light{pointer-events:none}';
+  const grade = photoGrade(layers);
+  // Коррекция через переменную: правило наведения в motion.js дописывает к ней свой фильтр, а не заменяет её.
+  const photos = grade ? `:root{--uds-grade:${grade}}img.ds-media,.gallery img,.item__media img,img[data-decorative="hero-bg"]{filter:var(--uds-grade)}` : '';
+  return textureCss(layers) + lightCss(layers) + photos + '.uds-light{pointer-events:none}';
 }
 
 /** Световые слои первого экрана: вставляются внутрь декоративной hero-сцены (aria-hidden). */
