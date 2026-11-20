@@ -32,6 +32,12 @@ try {
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
 
+  // Мобильная главная панель: глобальная шапка редактора не должна занимать место над dashboard.
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(await page.locator('body.dashboard-mode > .top').evaluate(node => getComputedStyle(node).display === 'none'),
+    'мобильная шапка редактора перекрывает главную панель');
+  await page.setViewportSize({ width: 1280, height: 900 });
+
   // Главная: примеры — компактными кнопками, состояние студии и хранилище видны сразу.
   await page.waitForFunction(() => document.querySelectorAll('#dash-example-chips [data-open-example]').length > 0);
   check(await page.locator('#dash-status [data-status="ai"]').count() === 1, 'нет виджета состояния AI');
@@ -60,6 +66,41 @@ try {
   await page.click('#toggle-settings');
   check(await page.locator('#toggle-settings').getAttribute('aria-expanded') === 'true', 'панель настроек не раскрылась');
   await page.click('#tab-preview');
+
+  // Регрессия мобильной рабочей области: панель действий прокручивается по горизонтали,
+  // вкладки не обрезаются, а полноэкранная кнопка находится внизу предпросмотра.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileToolbar = await page.locator('body:not(.dashboard-mode) > .top .top__actions').evaluate(node => ({
+    overflowX: getComputedStyle(node).overflowX,
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+  }));
+  check(['auto', 'scroll'].includes(mobileToolbar.overflowX), 'мобильная панель действий не поддерживает горизонтальную прокрутку');
+  check(await page.locator('#ai-usage').evaluate(node => parseFloat(getComputedStyle(node).maxWidth) <= 145),
+    'счётчик AI Neurons занимает слишком много места на мобильном экране');
+  const ownTab = await page.locator('#ptab-own').evaluate(node => ({
+    whiteSpace: getComputedStyle(node).whiteSpace,
+    height: node.getBoundingClientRect().height,
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+  }));
+  check(ownTab.whiteSpace === 'normal' && ownTab.height >= 44 && ownTab.scrollWidth <= ownTab.clientWidth + 1,
+    'вкладка «Свои настройки» обрезана или не переносит текст');
+  const previewControl = await page.locator('#preview-fullscreen').evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    const preview = document.querySelector('#view-preview').getBoundingClientRect();
+    return {
+      position: getComputedStyle(node).position,
+      bottomGap: preview.bottom - rect.bottom,
+      rect: rect.toJSON(),
+      headerBottom: document.querySelector('body:not(.dashboard-mode) > .top').getBoundingClientRect().bottom,
+    };
+  });
+  check(previewControl.position === 'absolute' && previewControl.bottomGap >= -1 && previewControl.bottomGap <= 20,
+    `кнопка полноэкранного предпросмотра не закреплена у нижнего края: ${JSON.stringify(previewControl)}`);
+  check(previewControl.rect.top > previewControl.headerBottom,
+    'кнопка полноэкранного предпросмотра перекрывает верхнюю шапку');
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   // Упрощённая навигация ведёт в объединённые рабочие разделы.
   check(await page.locator('#dash-nav [data-dash]').count() === 7, 'главное меню не сокращено до основных разделов');
