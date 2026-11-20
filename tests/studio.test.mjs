@@ -579,8 +579,8 @@ test('Publish Manager: отдельная вкладка, команда сущ�
 
 test('mobile studio toolbar stays hidden on dashboard and workspace tabs remain readable', () => {
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
-  assert.match(css, /body\\.dashboard-mode>\\.top\\{display:none\\}/);
-  assert.match(css, /white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere/);
-  assert.match(css, /#ai-usage-details\\{display:none\\}/);
-  assert.match(css, /\\.preview-fullscreen\\{position:absolute;top:auto;right:12px;bottom:12px/);
+  assert.ok(css.includes('body.dashboard-mode>.top{display:none}'));
+  assert.ok(css.includes('white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere'));
+  assert.ok(css.includes('#ai-usage-details{display:none}'));
+  assert.ok(css.includes('.preview-fullscreen{position:absolute;top:auto;right:12px;bottom:12px'));
 });
