@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T05:52:52.906Z
+Время обновления: 2026-11-20T05:53:57.100Z
 Ветка: feat/visual-identity-renderer-integration
-Последний commit: 345116183c1cbd993c2a575c23a336fa22f39087
-Дата коммита: 2026-11-20T09:52:42+04:00
-Сообщение: Load selected Visual Identity font families
+Последний commit: 6abc414a0597136d58b252b70a6f9d7ccb446b40
+Дата коммита: 2026-11-20T09:53:46+04:00
+Сообщение: Map Visual Identity accent tint into renderer tokens
 
 Последние коммиты:
+- 6abc414 · 2026-11-20 · Map Visual Identity accent tint into renderer tokens
+- 838ade5 · 2026-11-20 · docs: refresh project handoff
 - 3451161 · 2026-11-20 · Load selected Visual Identity font families
 - 627df13 · 2026-11-20 · docs: refresh project handoff
 - 3f13124 · 2026-11-20 · Add Visual Identity controls to studio editor
 - 11d8ce5 · 2026-11-20 · docs: refresh project handoff
 - 71a1d00 · 2026-11-20 · Add renderer integration regression tests
 - a052ab4 · 2026-11-20 · Integrate optional Visual Identity into HTML renderer
-- 73aafec · 2026-11-20 · docs: refresh project handoff
-- b1153a6 · 2026-11-20 · Export visual identity engine from public API
 <!-- HANDOFF:AUTO:END -->
