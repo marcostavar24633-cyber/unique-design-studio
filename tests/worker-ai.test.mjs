@@ -668,3 +668,35 @@ test('API проверки качества требует объект прое
   assert.match((await res.json()).error, /объект проекта/);
   assert.equal(env.calls.length, 0);
 });
+
+test('по умолчанию лендинг генерируется одним запросом и помечен как завершённый', async () => {
+  const env = aiReturning(JSON.stringify(full));
+  const body = await (await worker.fetch(request({ niche: 'кофейня', contentEngine: 'auto' }), env)).json();
+  assert.equal(env.calls.length, 1);
+  assert.deepEqual(body.generation, { mode: 'single', status: 'completed' });
+});
+
+test('если одиночный запрос дважды не удался, режим auto спасает результат поэтапным движком', async () => {
+  const stageAnswers = [
+    { brand: 'Зерно', niche: 'кофейня', title: 'Кофе рядом', description: 'Кофейня у дома', cta: 'Зайти', targetAudience: 'Соседи', mainOffer: 'Кофе', visualDirection: 'Тепло', strategySummary: 'Кофейня у дома' },
+    { aboutTitle: 'О нас', aboutText: 'Кофейня у дома.' },
+    { servicesTitle: 'Меню', servicesIntro: 'Напитки', services: [['Капучино', 'Кофе с молоком', '']] },
+    { advantagesTitle: 'Почему мы', processTitle: 'Как заказать', advantages: [['Свежий кофе', 'Каждый день']], process: [['Выбрать', 'Напиток']], faqs: [['Есть ли выпечка?', 'Да']] },
+    { contactTitle: 'Контакты', contactText: 'Ждём вас', assumptions: [], marketResearch: '', researchSources: [], segments: [], objections: [], triggers: [], keywords: ['кофейня'], competitors: [], seoTitle: 'Кофейня', seoDescription: 'Кофе', imagePrompts: [] },
+  ];
+  const env = aiReturning('{"oops":', '{"oops":', ...stageAnswers.map(answer => JSON.stringify(answer)));
+  const res = await worker.fetch(request({ niche: 'кофейня', contentEngine: 'auto' }), env);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.generation.mode, 'staged');
+  assert.equal(body.generation.status, 'completed');
+  assert.equal(body.landing.title, 'Кофе рядом');
+  assert.equal(env.calls.length, 7);
+});
+
+test('без режима auto неудачный одиночный запрос не запускает поэтапный движок', async () => {
+  const env = aiReturning('{"oops":');
+  const res = await worker.fetch(request({ niche: 'кофейня' }), env);
+  assert.equal(res.status, 502);
+  assert.equal(env.calls.length, 2);
+});

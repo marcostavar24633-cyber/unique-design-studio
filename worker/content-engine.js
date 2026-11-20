@@ -89,9 +89,11 @@ export async function generateContentInStages({
       'Верни только валидный JSON-объект. Разрешённые ключи этого этапа: ' + allowed + '. Не добавляй другие ключи.',
       'Для services верни массив элементов [название, описание, цена]; неизвестную цену оставляй пустой строкой.',
       'Для advantages, process, faqs, assumptions, marketResearch, researchSources, segments, objections, triggers, keywords, competitors, imagePrompts используй массивы строк или массивы массивов строк только там, где это очевидно по смыслу.',
-      'Этап: ' + stage.label + '.',
-      'Формат полей: ' + stage.schema + '.',
       context,
+      // Указания этапа идут последними: в задании студии описана вся структура лендинга, и без этого
+      // модель писала все разделы сразу, упиралась в лимит этапа и обрывала JSON.
+      'ЭТАП: ' + stage.label + '. Верни ТОЛЬКО ключи: ' + allowed + '. Остальные разделы сайта будут созданы отдельно — не пиши их.',
+      'Формат полей: ' + stage.schema + '.',
     ].filter(Boolean).join('\n\n');
 
     let stageResult = null;
