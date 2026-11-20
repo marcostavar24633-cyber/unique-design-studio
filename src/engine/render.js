@@ -12,6 +12,7 @@ import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
 import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-layers.js';
+import { transitionCss, transitionHtml } from './cinematic/transitions.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn } from './color.js';
 
@@ -321,6 +322,7 @@ export function renderCss(concept, scene = null, identity = null) {
     motionCss(vs.motionPlan),
     sceneCss(scene),
     cinematicLayersCss(vs.cinematicLayers),
+    transitionCss(vs.transition, vs.sectionLayout),
   ].join('\n').replace(/\n\s*/g, '');
 }
 
@@ -345,7 +347,7 @@ export function renderSite(input, concept) {
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
   // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.
-  const sections = c.order.map(id => SECTION[id](c)).join('\n' + dividerHtml(c.vs.forms?.divider) + '\n');
+  const sections = c.order.map(id => SECTION[id](c)).join('\n' + dividerHtml(c.vs.forms?.divider) + transitionHtml(c.vs.transition) + '\n');
   const foot = [project.contacts.phone, project.contacts.email, project.contacts.address].filter(Boolean).map(esc).join(' · ');
   return `<!doctype html>
 <html lang="${esc(project.lang)}">

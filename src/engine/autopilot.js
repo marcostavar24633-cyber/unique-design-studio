@@ -8,6 +8,7 @@ import { normalizeProject, tierOf, TIERS } from './project.js';
 import { buildPrompt } from './prompt.js';
 import { str } from './util.js';
 import { describeCinematicLayers } from './cinematic/visual-layers.js';
+import { describeTransition } from './cinematic/transitions.js';
 
 const cap = s => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const inCity = city => (city ? ` в ${city}` : '');
@@ -426,7 +427,7 @@ ${d.conceptName ? `- Концепция: **${d.conceptName}** — ${d.conceptFor
 - Типографика: ${d.typographyDirection}
 - Изображения: ${d.imageDirection}
 - Движение: ${d.motionDirection}
-${concept.visualSystem?.cinematicLayers ? `- Фактура и свет: ${describeCinematicLayers(concept.visualSystem.cinematicLayers)}\n` : ''}${concept.libraryUse ? `
+${concept.visualSystem?.cinematicLayers ? `- Фактура и свет: ${describeCinematicLayers(concept.visualSystem.cinematicLayers)}\n` : ''}${concept.visualSystem?.transition ? `- Переходы между секциями: ${describeTransition(concept.visualSystem.transition)}\n` : ''}${concept.libraryUse ? `
 ### Профили библиотеки шаблонов
 Изучены: ${concept.libraryUse.references.map(r => `«${r.name}» (${r.category})`).join(', ')}. Использованы принципы, не готовый дизайн.
 
