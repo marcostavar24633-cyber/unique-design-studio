@@ -1,5 +1,6 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
+import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
 import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
@@ -128,17 +129,58 @@ let dashboardQuery = '';
 // а вызывается из обработчика кнопок этой вкладки.
 let contentPrompt = () => '';
 
+let localSavedAt = 0;
 try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
-  if (saved && saved.raw) state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
-} catch { /* хранилище недоступно — работаем без сохранения */ }
-// Последняя запись в хранилище не удалась: сообщения «сохранено» не должны перекрывать предупреждение.
+  if (saved && saved.raw) {
+    state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
+    localSavedAt = Number(saved._udsSavedAt) || 0;
+  }
+} catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
+// Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
 let persistFailed = false;
-const PERSIST_ERROR = 'Не удалось сохранить проект в браузере: возможно, закончилось место. Скачайте JSON, чтобы не потерять изменения.';
+let backupNoticeShown = false;
+const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
 const persist = () => {
-  try { localStorage.setItem(STORE, JSON.stringify(state)); persistFailed = false; return true; }
-  catch { persistFailed = true; toast(PERSIST_ERROR); return false; }
+  const savedAt = Date.now();
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ ...state, _udsSavedAt: savedAt }));
+    localSavedAt = savedAt;
+    persistFailed = false;
+    return true;
+  } catch {
+    persistFailed = true;
+    scheduleEmergencyBackup(state, savedAt).then(backup => {
+      if (backup.savedAt >= savedAt && backup.savedAt >= localSavedAt) {
+        persistFailed = false;
+        if (!backupNoticeShown) {
+          backupNoticeShown = true;
+          toast('Основное хранилище заполнено. Изменения сохранены в резервной базе IndexedDB.');
+        }
+      }
+    }).catch(() => {
+      persistFailed = true;
+      toast(PERSIST_ERROR);
+    });
+    return false;
+  }
 };
+async function restoreEmergencyBackupIfNewer() {
+  try {
+    const backup = await loadEmergencyBackup();
+    if (!backup || backup.savedAt <= localSavedAt || !backup.state?.raw) return false;
+    state = {
+      raw: backup.state.raw,
+      library: Array.isArray(backup.state.library) ? backup.state.library : [],
+      analysis: backup.state.analysis || null
+    };
+    localSavedAt = backup.savedAt;
+    toast('Последняя резервная копия проекта восстановлена из IndexedDB.');
+    return true;
+  } catch {
+    return false;
+  }
+}
 // Похож ли объект на проект студии: пустой или чужой JSON не должен молча заменять текущую работу.
 const looksLikeProject = raw => ['brand', 'niche', 'title', 'description'].some(k => typeof raw[k] === 'string' && raw[k].trim())
   || (Array.isArray(raw.services) && raw.services.length > 0);
@@ -2883,11 +2925,14 @@ fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async lis
       openWorkspace('create');
     } catch (error) { toast(error.message || 'Не удалось открыть пример'); }
   });
+  const restoredBackup = await restoreEmergencyBackupIfNewer();
+  if (restoredBackup) { buildForm(); run(); }
   if (!state.raw.brand && !state.raw.niche && list[0]) {
     const first = exampleProjects[0];
     if (first) load(first.raw);
   }
 }).catch(() => { exampleProjects = []; renderDashboard(); });
 
+await restoreEmergencyBackupIfNewer();
 buildForm();
 run();
