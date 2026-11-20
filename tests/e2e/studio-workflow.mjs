@@ -259,11 +259,22 @@ try {
     };
   });
   await page.click('#save');
+  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('резервной базе IndexedDB'), null, { timeout: 10000 });
   const quotaToast = await toastText();
-  check(quotaToast.includes('Не удалось сохранить проект в браузере') && !quotaToast.includes('сохранён в реестр'), `при переполнении хранилища показан успех: «${quotaToast}»`);
+  check(quotaToast.includes('резервной базе IndexedDB') && !quotaToast.includes('сохранён в реестр'), `при переполнении хранилища не подтверждена резервная запись: «${quotaToast}»`);
   await page.locator('#file').setInputFiles({ name: 'ok.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ brand: 'Импорт при полном хранилище', niche: 'кофейня' })) });
-  await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Импортирован проект'));
-  check((await toastText()).includes('Не удалось сохранить проект в браузере'), 'сообщение об импорте скрыло ошибку сохранения');
+  await page.waitForFunction(() => new Promise(resolve => {
+    const request = indexedDB.open('uds-emergency-project-backup', 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('state', 'readonly');
+      const get = tx.objectStore('state').get('latest');
+      get.onsuccess = () => { const ok = get.result?.state?.raw?.brand === 'Импорт при полном хранилище'; db.close(); resolve(ok); };
+      get.onerror = () => { db.close(); resolve(false); };
+    };
+    request.onerror = () => resolve(false);
+  }), null, { timeout: 10000 });
+  check((await toastText()).includes('Импортирован проект'), 'сообщение об импорте не показано после резервного сохранения');
   await page.evaluate(() => window.__restoreStorage());
 
   check(errors.length === 0, `ошибки браузерного JavaScript: ${errors.join('; ')}`);
