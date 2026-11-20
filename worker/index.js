@@ -1,6 +1,7 @@
 import { IMAGE_LIMIT, NO_THINKING, modelOutput, MAX_OUTPUT_TOKENS, RETRY_NOTE, missingFields, aboutNiche, allowRequest, usageOf, addUsage, FORMAT_NOTE } from './ai-utils.js';
 import { runTextModel, DEFAULT_NVIDIA_MODEL, isFreeAiMode, isNvidiaFallbackEnabled } from './nvidia.js';
 import { gatewayStatus, isGatewayConfigured } from './gateway.js';
+import { stockPhoto } from './stock-photo.js';
 import { generateContentInStages, regenerateContentStage, editContentField } from './content-engine.js';
 import { reviewContentQuality } from './content-quality.js';
 
@@ -289,6 +290,15 @@ export default {
           lastError = 'Модель не вернула изображение';
         } catch (error) {
           lastError = error?.message || 'Workers AI error';
+        }
+      }
+      // Обе модели Workers AI не ответили (обычно кончились бесплатные нейроны) — реальное фото из Openverse.
+      if (env.IMAGE_STOCK_FALLBACK !== 'false') {
+        try {
+          const stock = await stockPhoto(prompt, input.aspect);
+          return json({ ...stock, fallback: true, fallbackReason: lastError.slice(0, 200) }, 200, origin);
+        } catch (error) {
+          lastError += '; ' + (error?.message || 'Openverse error');
         }
       }
       return json({ error: 'Не удалось сгенерировать изображение', details: lastError }, 502, origin);

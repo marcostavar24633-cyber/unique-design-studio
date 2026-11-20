@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T05:59:54.014Z
-Ветка: feat/publish-manager-local-history
-Последний commit: fd0f7eb486e752df5567f6c0b7b8e7e78d795366
-Дата коммита: 2026-11-20T09:59:43+04:00
-Сообщение: Style local Publish Manager for desktop and mobile
+Время обновления: 2026-11-20T15:54:15.068Z
+Ветка: main
+Последний commit: 4b44180b8429e5a73169e2a2cbd15a9700a4918e
+Дата коммита: 2026-11-20T19:54:02+04:00
+Сообщение: feat(worker): CC0 stock photo fallback from Openverse when Workers AI image models fail (#187)
 
 Последние коммиты:
-- fd0f7eb · 2026-11-20 · Style local Publish Manager for desktop and mobile
-- 0350891 · 2026-11-20 · Add local Publish Manager and deployment history
-- 3757c8f · 2026-11-20 · Add Publish Manager tab and view
-- 4c5523d · 2026-11-20 · docs: refresh project handoff
-- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
-- d23f6fe · 2026-11-20 · docs: refresh project handoff
-- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
-- b5e7b81 · 2026-11-20 · docs: refresh project handoff
+- 4b44180 · 2026-11-20 · feat(worker): CC0 stock photo fallback from Openverse when Workers AI image models fail (#187)
+- 9315845 · 2026-11-20 · docs: refresh project handoff
+- e10f7b5 · 2026-11-20 · ci: Dependabot for GitHub Actions with minor/patch auto-merge (#181)
+- 86a6831 · 2026-11-20 · docs: refresh project handoff
+- fbdbd8c · 2026-11-20 · Автоматизация: метка автослияния ставится сама, метка-стоп, бот handoff только в main (#180)
+- c0fb362 · 2026-11-20 · docs: refresh project handoff
+- 900f426 · 2026-11-20 · Усилить Cinematic Motion и интерактивность сайтов (#177)
+- 86c92bf · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
