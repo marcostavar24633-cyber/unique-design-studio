@@ -30,14 +30,26 @@ function cloneState(state) {
 async function writeSnapshot(snapshot) {
   const db = await openDatabase();
   try {
+    let committedAt = snapshot.savedAt;
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).put({ id: RECORD_ID, savedAt: snapshot.savedAt, state: snapshot.state });
+      const store = tx.objectStore(STORE_NAME);
+      const current = store.get(RECORD_ID);
+      current.onsuccess = () => {
+        const existing = current.result;
+        // An older asynchronous save must never overwrite a newer project snapshot.
+        if (existing && Number(existing.savedAt) > snapshot.savedAt) {
+          committedAt = existing.savedAt;
+          return;
+        }
+        store.put({ id: RECORD_ID, savedAt: snapshot.savedAt, state: snapshot.state });
+      };
+      current.onerror = () => { try { tx.abort(); } catch {} };
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error || new Error('Не удалось записать резервную копию'));
       tx.onabort = () => reject(tx.error || new Error('Запись резервной копии отменена'));
     });
-    return { savedAt: snapshot.savedAt };
+    return { savedAt: committedAt };
   } finally {
     db.close();
   }
