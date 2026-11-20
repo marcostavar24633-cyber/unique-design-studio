@@ -11,6 +11,7 @@ import { dividerHtml, formsCss } from './forms.js';
 import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
+import { createVisualIdentity } from '../visual-identity.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -270,11 +271,17 @@ function jsonLd(c) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
 
-export function renderCss(concept, scene = null) {
+function visualIdentityCss(identity) {
+  if (!identity) return '';
+  const p = identity.palette, t = identity.typography, g = identity.geometry, space = identity.spacing;
+  return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--ds-accent-contrast:${p.mode === 'dark' ? '#171615' : '#ffffff'};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
+}
+
+export function renderCss(concept, scene = null, identity = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
-    CORE_CSS, tokensCss(vs), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
+    CORE_CSS, tokensCss(vs), visualIdentityCss(identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
@@ -298,6 +305,17 @@ export function renderSite(input, concept) {
   const c = context(project, concept);
   const vs = c.vs;
   const scene = directScene(concept, project);
+  // Визуальная идентичность включается явно: старые проекты сохраняют прежний вид без миграции.
+  let visualIdentity = null;
+  if (project.passthrough.visualIdentityEnabled === true) {
+    try {
+      visualIdentity = createVisualIdentity({
+        concept, businessType: project.niche, businessName: project.brand, identitySeed: project.id,
+        paletteId: project.passthrough.visualIdentityPaletteId || undefined,
+        shapeId: project.passthrough.visualIdentityShapeId || undefined,
+      });
+    } catch { visualIdentity = null; }
+  }
   const sceneLayer = sceneMarkup(scene);
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
@@ -316,7 +334,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept, scene)}</style>
+${fontLinks(vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
