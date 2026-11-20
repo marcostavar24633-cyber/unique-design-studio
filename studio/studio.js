@@ -254,7 +254,7 @@ function renderAiBudget() {
   const resetAt = bakuTime(r.at);
   const sessionAt = bakuTime(new Date(sessionStart));
   let today;
-  if (aiToday && !aiToday.error && Number.isFinite(Number(aiToday.neurons))) {
+  if (aiToday && !aiToday.error && aiToday.neurons !== null && aiToday.neurons !== undefined && aiToday.neurons !== '' && Number.isFinite(Number(aiToday.neurons))) {
     const n = Number(aiToday.neurons), pct = Math.min(100, Math.round(n / WORKERS_AI_FREE_NEURONS * 100));
     const alert = pct >= 100
       ? { level: 'err', text: 'Бесплатная квота исчерпана по данным аналитики. Если AI-шлюз подключён, тексты пишет бесплатный резерв (Groq), фото недоступны до 00:00 UTC; платный резервный провайдер отключён.' }
@@ -278,7 +278,13 @@ function renderAiBudget() {
     '<p class="dash-meter-note">Токены считаются по фактическим данным, которые вернула модель, и хранятся в журнале этого браузера. Neurons берутся отдельно из Cloudflare Analytics; ориентир ~' + WORKERS_AI_FREE_NEURONS.toLocaleString('ru-RU') + ' не является гарантированным лимитом аккаунта.</p>';
 }
 async function refreshAiToday() {
-  const endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  let endpoint;
+  try {
+    endpoint = (localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  } catch {
+    aiToday = { error: 'хранилище настроек недоступно' };
+    return renderAiBudget();
+  }
   if (!endpoint) { aiToday = { error: 'AI-сервер не задан' }; return renderAiBudget(); }
   try {
     const u = new URL(endpoint, location.href); u.pathname = u.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/usage'); u.search = '?range=today';
@@ -2365,7 +2371,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       }
     }
     const ok = Boolean(response?.ok && payload.image);
-    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '' });
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || '', provider: payload.provider || '' });
     onProgress(++done, targets.length, slot.label);
     if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
     // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
