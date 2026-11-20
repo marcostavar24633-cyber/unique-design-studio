@@ -575,3 +575,12 @@ test('Publish Manager: отдельная вкладка, команда сущ�
   assert.ok(source.includes("catch { return toast('Не удалось сохранить настройки публикации"), 'ошибка хранилища не роняет обработчик');
   assert.ok(!/fetch\([^)]*api\.cloudflare\.com/.test(source), 'панель не обращается к API Cloudflare');
 });
+
+
+test('mobile studio toolbar stays hidden on dashboard and workspace tabs remain readable', () => {
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('body.dashboard-mode>.top{display:none}'));
+  assert.ok(css.includes('white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere'));
+  assert.ok(css.includes('#ai-usage-details{display:none}'));
+  assert.ok(css.includes('.preview-fullscreen{position:absolute;top:auto;right:12px;bottom:12px'));
+});
