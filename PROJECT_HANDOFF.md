@@ -66,19 +66,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T06:30:10.194Z
-Ветка: feat/cinematic-motion-system-upgrade
-Последний commit: 4d6faa3aa06bbcb6279542a9721db504f96782b9
-Дата коммита: 2026-11-20T10:29:58+04:00
-Сообщение: Correct responsive motion audit detection
+Время обновления: 2026-11-20T15:09:50.210Z
+Ветка: main
+Последний commit: c821f7b77638639c1a787c2ac3df52c2e687d43c
+Дата коммита: 2026-11-20T19:09:30+04:00
+Сообщение: Стабилизировать AI-генерацию и восстановление после rate limit (#178)
 
 Последние коммиты:
-- 4d6faa3 · 2026-11-20 · Correct responsive motion audit detection
-- a98ebe0 · 2026-11-20 · Make responsive motion audit match actual breakpoint and script markup
-- 38feec1 · 2026-11-20 · docs: refresh project handoff
-- 585a0bf · 2026-11-20 · Correct hero scene audit regular expression
-- a05c7df · 2026-11-20 · docs: refresh project handoff
-- 4f97608 · 2026-11-20 · Fix cinematic scene audit selector to match rendered markup
-- 496c432 · 2026-11-20 · docs: refresh project handoff
-- 5fe853f · 2026-11-20 · Test premium interaction layer
+- c821f7b · 2026-11-20 · Стабилизировать AI-генерацию и восстановление после rate limit (#178)
+- 4c5523d · 2026-11-20 · docs: refresh project handoff
+- 645e06e · 2026-11-20 · Фото генерируются по 3 параллельно — около минуты вместо трёх (#173)
+- d23f6fe · 2026-11-20 · docs: refresh project handoff
+- 9577b5f · 2026-11-20 · Фото: реалистичнее — FLUX.2 klein 4B, пропорции кадра, документальный промт (#172)
+- b5e7b81 · 2026-11-20 · docs: refresh project handoff
+- d288d9b · 2026-11-20 · QA предпросмотра: доступные имена, фокус, реальная ширина окна, быстрый поиск перекрытий (#171)
+- 9def923 · 2026-11-20 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->

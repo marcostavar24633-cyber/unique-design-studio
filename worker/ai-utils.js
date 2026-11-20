@@ -47,7 +47,8 @@ export function aboutNiche(landing, niche) {
 // экземпляра (не общий для всех серверов Cloudflare, поэтому лишь сдерживает, а не гарантирует лимит).
 export const FALLBACK_LIMIT = { requests: 6, windowMs: 60_000 };
 // Фото — отдельный счётчик: автопилот создаёт до 15 кадров подряд (главное, до 6 карточек, 8 кадров галереи).
-export const IMAGE_LIMIT = { bucket: 'image', requests: 16, windowMs: 60_000 };
+// 30 в минуту: 15 кадров автопилота плюс повторы при временных сбоях не упираются в собственный лимит Worker.
+export const IMAGE_LIMIT = { bucket: 'image', requests: 30, windowMs: 60_000 };
 const recent = new Map();
 export async function allowRequest(request, env, now = Date.now(), limit = FALLBACK_LIMIT) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
