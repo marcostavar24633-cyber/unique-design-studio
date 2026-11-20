@@ -134,7 +134,7 @@ try {
   const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.raw) {
     state = { raw: saved.raw, library: Array.isArray(saved.library) ? saved.library : [], analysis: saved.analysis || null };
-    localSavedAt = Number(saved._udsSavedAt) || Date.now();
+    localSavedAt = Number(saved._udsSavedAt) || 0;
   }
 } catch { /* хранилище недоступно — попробуем восстановить IndexedDB */ }
 // Если localStorage переполнен, изменения сохраняются в отдельной резервной базе IndexedDB.
