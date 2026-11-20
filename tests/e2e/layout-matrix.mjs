@@ -5,6 +5,8 @@ import { ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { MECHANICS } from '../../src/engine/mechanics.js';
 import { MASKS, DIVIDERS } from '../../src/engine/forms.js';
 import { LAYOUT_QA_SOURCE } from '../../src/engine/layout-qa.js';
+import { CARD_SHAPE_IDS, REVEAL_IDS } from '../../src/engine/variety.js';
+import { BUTTONS } from '../../src/engine/data.js';
 import { CINEMATIC_PRESET_IDS } from '../../src/engine/cinematic/visual-layers.js';
 
 // Фото-заглушка нужных пропорций: встроенный SVG, чтобы раскладка была как с настоящими снимками.
@@ -36,7 +38,9 @@ export function layoutPages() {
       itemsMechanic: mechs[i % mechs.length], imageMask: masks[i % masks.length], sectionDivider: divs[(i + 2) % divs.length],
       textEffect: i % 2 ? 'fade-words' : 'scroll-fade', fonts: 'system',
       // Фактура и свет (D03): каждая архитектура проверяется со своим пресетом слоёв.
-      cinematicLayers: CINEMATIC_PRESET_IDS[i % CINEMATIC_PRESET_IDS.length] };
+      cinematicLayers: CINEMATIC_PRESET_IDS[i % CINEMATIC_PRESET_IDS.length],
+      // Формы карточек, эффекты появления и стили кнопок: каждая архитектура — со своим набором.
+      cardShape: CARD_SHAPE_IDS[i % CARD_SHAPE_IDS.length], revealEffect: REVEAL_IDS[(i * 2) % REVEAL_IDS.length], buttonStyle: Object.keys(BUTTONS)[(i * 3) % 15] };
     const g = generate(raw);
     pages.push({ name: `${arch}/${raw.itemsMechanic}/${raw.imageMask}`, html: g.html });
     // Второй проход: тёмная палитра, Google Fonts и другие сочетания механик и форм.

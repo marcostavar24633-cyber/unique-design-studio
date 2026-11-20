@@ -37,8 +37,9 @@ export { nicheVisual, itemSubject, photoPrompt, translit } from './photo-brief.j
 export { MECHANICS, chooseMechanic } from './mechanics.js';
 export { MASKS, DIVIDERS, chooseForms } from './forms.js';
 export { TEXT_EFFECTS, chooseTextEffect } from './text-effects.js';
-export { WEB_FONT_PAIRS } from './data.js';
+export { WEB_FONT_PAIRS, BUTTONS } from './data.js';
 export { GRAPHIC_DIRECTIONS, chooseGraphicDirection } from './graphic-art-direction.js';
 export { CINEMATIC_PRESETS, CINEMATIC_PRESET_IDS, chooseCinematicLayers, describeCinematicLayers } from './cinematic/visual-layers.js';
+export { CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, chooseVariety } from './variety.js';
 export { directScene } from './cinematic/scene-director.js';
 export { SCENE_PROFILES } from './cinematic/scene-profiles.js';

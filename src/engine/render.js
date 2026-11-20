@@ -12,6 +12,7 @@ import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
 import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-layers.js';
+import { cardShapeCss, revealCss } from './variety.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn } from './color.js';
 
@@ -252,7 +253,7 @@ const SECTION = {
 function script(c, scene) {
   const parts = [];
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
-  if (c.vs.motionPlan?.mechanics.includes('scroll-reveal')) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
+  if (revealActive(c.vs)) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
   if (c.vs.motionPlan?.mechanics.includes('parallax')) parts.push(`var px=document.querySelector('[data-parallax]');if(px&&!${reduce}){var tick=false;addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){px.style.transform='translate3d(0,'+Math.min(scrollY*.08,40)+'px,0)';tick=false})},{passive:true})}`);
   if (c.vs.archetype === 'catalog' && c.p.services.length >= 4) parts.push(`var sf=document.querySelector('[data-search]');if(sf){sf.hidden=false;var st=document.querySelector('[data-search-status]');sf.addEventListener('submit',function(e){e.preventDefault();document.getElementById('items').scrollIntoView()});sf.querySelector('input').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase(),n=0;var items=document.querySelectorAll('#items .item'),tools=document.querySelector('[data-catalog-tools]');if(tools){items.forEach(function(li){if(!q||li.textContent.toLowerCase().indexOf(q)>-1)n++});tools.dispatchEvent(new CustomEvent('uds:catalog-search'));}else{items.forEach(function(li){var ok=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!ok;if(ok)n++})}if(!tools)st.textContent=q?'Найдено: '+n:''})}`);
   if ((c.vs.commerce?.tools || c.vs.commerce?.cart) && c.order.includes('items')) parts.push(commerceScript(c.p));
@@ -301,6 +302,9 @@ function visualIdentityCss(identity) {
   return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--u-tint:${p.accentSoft};--u-accent-ink:${p.accentInk};--ds-accent-contrast:${p.accentText};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
 }
 
+/** Появление при прокрутке: по плану движения или по ручному выбору эффекта владельцем. */
+const revealActive = vs => Boolean(vs.motionPlan?.mechanics.includes('scroll-reveal') || vs.variety?.revealForced);
+
 export function renderCss(concept, scene = null, identity = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
@@ -321,6 +325,8 @@ export function renderCss(concept, scene = null, identity = null) {
     motionCss(vs.motionPlan),
     sceneCss(scene),
     cinematicLayersCss(vs.cinematicLayers),
+    cardShapeCss(vs.variety?.cardShape),
+    revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
   ].join('\n').replace(/\n\s*/g, '');
 }
 
