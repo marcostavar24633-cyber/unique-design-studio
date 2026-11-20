@@ -45,7 +45,7 @@ try {
   const metricContext = await browser.newContext();
   await metricContext.addInitScript(() => localStorage.setItem('uds:ai-endpoint', 'https://example.test/api/generate-landing'));
   const metricPage = await metricContext.newPage();
-  await metricPage.route('https://example.test/api/usage?range=today', route => route.fulfill({
+  await metricPage.route('https://example.test/api/usage?range=*', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ neurons: null, requests: 0 })
@@ -56,6 +56,8 @@ try {
   await metricPage.waitForFunction(() => document.querySelector('#dash-ai-budget')?.textContent.includes('нет данных'));
   const budgetText = await metricPage.locator('#dash-ai-budget').innerText();
   check(!budgetText.includes('0 из ~10 000 Neurons'), 'отсутствующий показатель Neurons ошибочно показан как нулевой расход');
+  check(await metricPage.locator('#ai-usage-count').innerText() === '—', 'верхний счётчик AI ошибочно показал null как нулевой расход');
+  check((await metricPage.locator('#ai-usage-details').innerText()).includes('нет данных'), 'верхний счётчик не обозначил отсутствие Neurons');
   check(metricErrors.length === 0, 'ошибки JavaScript в AI Usage: ' + metricErrors.join('; '));
   await metricContext.close();
 } finally {
