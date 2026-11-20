@@ -1,8 +1,9 @@
 // История версий проектов хранится отдельно от текущего localStorage в IndexedDB.
-// Снимки создаются только по явному действию пользователя; последние 10 версий каждого проекта сохраняются.
+// Список содержит только метаданные; большие снимки (включая фотографии) читаются лишь при сравнении/восстановлении.
 const DB_NAME = 'uds-project-history';
-const DB_VERSION = 1;
-const STORE_NAME = 'versions';
+const DB_VERSION = 2;
+const META_STORE = 'versions';
+const SNAPSHOT_STORE = 'snapshots';
 export const MAX_PROJECT_VERSIONS = 10;
 
 function openDatabase() {
@@ -11,10 +12,11 @@ function openDatabase() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(META_STORE)) {
+        const store = db.createObjectStore(META_STORE, { keyPath: 'id' });
         store.createIndex('projectId', 'projectId', { unique: false });
       }
+      if (!db.objectStoreNames.contains(SNAPSHOT_STORE)) db.createObjectStore(SNAPSHOT_STORE, { keyPath: 'id' });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('Не удалось открыть историю версий'));
@@ -32,8 +34,8 @@ export async function listProjectVersions(projectId) {
   const db = await openDatabase();
   try {
     return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const request = tx.objectStore(STORE_NAME).index('projectId').getAll(String(projectId));
+      const tx = db.transaction(META_STORE, 'readonly');
+      const request = tx.objectStore(META_STORE).index('projectId').getAll(String(projectId));
       request.onsuccess = () => resolve(request.result.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       request.onerror = () => reject(request.error || new Error('Не удалось прочитать историю версий'));
       tx.onerror = () => reject(tx.error || new Error('Ошибка чтения истории версий'));
@@ -51,23 +53,29 @@ export async function saveProjectVersion({ projectId, raw, analysis = null, labe
     raw,
     analysis: analysis && typeof analysis === 'object' ? analysis : null,
   };
+  const metadata = { id: snapshot.id, projectId: snapshot.projectId, createdAt: snapshot.createdAt, label: snapshot.label };
   const db = await openDatabase();
   try {
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      store.add(snapshot);
-      const request = store.index('projectId').getAll(String(projectId));
+      const tx = db.transaction([META_STORE, SNAPSHOT_STORE], 'readwrite');
+      const metaStore = tx.objectStore(META_STORE);
+      const snapshotStore = tx.objectStore(SNAPSHOT_STORE);
+      metaStore.add(metadata);
+      snapshotStore.add({ id: snapshot.id, raw: snapshot.raw, analysis: snapshot.analysis });
+      const request = metaStore.index('projectId').getAll(String(projectId));
       request.onsuccess = () => {
         const versions = request.result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        for (const old of versions.slice(MAX_PROJECT_VERSIONS)) store.delete(old.id);
+        for (const old of versions.slice(MAX_PROJECT_VERSIONS)) {
+          metaStore.delete(old.id);
+          snapshotStore.delete(old.id);
+        }
       };
       request.onerror = () => { try { tx.abort(); } catch {} };
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error || new Error('Не удалось сохранить версию проекта'));
       tx.onabort = () => reject(tx.error || new Error('Сохранение версии отменено'));
     });
-    return snapshot;
+    return metadata;
   } finally { db.close(); }
 }
 
@@ -75,10 +83,19 @@ export async function getProjectVersion(versionId) {
   const db = await openDatabase();
   try {
     return await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const request = tx.objectStore(STORE_NAME).get(String(versionId));
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error || new Error('Не удалось открыть версию проекта'));
+      const tx = db.transaction([META_STORE, SNAPSHOT_STORE], 'readonly');
+      const metadataRequest = tx.objectStore(META_STORE).get(String(versionId));
+      const snapshotRequest = tx.objectStore(SNAPSHOT_STORE).get(String(versionId));
+      let metadata, snapshot;
+      const finish = () => {
+        if (metadata === undefined || snapshot === undefined) return;
+        resolve(metadata && snapshot ? { ...metadata, ...snapshot } : null);
+      };
+      metadataRequest.onsuccess = () => { metadata = metadataRequest.result || null; finish(); };
+      snapshotRequest.onsuccess = () => { snapshot = snapshotRequest.result || null; finish(); };
+      metadataRequest.onerror = () => reject(metadataRequest.error || new Error('Не удалось открыть версию проекта'));
+      snapshotRequest.onerror = () => reject(snapshotRequest.error || new Error('Не удалось открыть снимок проекта'));
+      tx.onerror = () => reject(tx.error || new Error('Ошибка чтения снимка проекта'));
     });
   } finally { db.close(); }
 }
@@ -87,8 +104,9 @@ export async function deleteProjectVersion(versionId) {
   const db = await openDatabase();
   try {
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      tx.objectStore(STORE_NAME).delete(String(versionId));
+      const tx = db.transaction([META_STORE, SNAPSHOT_STORE], 'readwrite');
+      tx.objectStore(META_STORE).delete(String(versionId));
+      tx.objectStore(SNAPSHOT_STORE).delete(String(versionId));
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error || new Error('Не удалось удалить версию проекта'));
       tx.onabort = () => reject(tx.error || new Error('Удаление версии отменено'));
