@@ -59,6 +59,16 @@ try {
   await page.waitForFunction(value => document.querySelector('#form [data-path="title"]').value === value, originalTitle);
   check(await page.locator('#form [data-path="title"]').inputValue() === originalTitle, 'восстановление не вернуло исходный заголовок');
   await page.waitForFunction(() => [...document.querySelectorAll('.project-history__item')].some(item => item.textContent.includes('Перед восстановлением')));
+  const retainedVersions = await page.evaluate(async () => {
+    const api = await import('/studio/project-history.js');
+    const saved = JSON.parse(localStorage.getItem('uds:studio:v1'));
+    const projectId = saved.raw.id;
+    for (let i = 0; i < 11; i++) {
+      await api.saveProjectVersion({ projectId, raw: { ...saved.raw, title: 'Cap test ' + i }, label: 'Cap test ' + i });
+    }
+    return (await api.listProjectVersions(projectId)).length;
+  });
+  check(retainedVersions === 10, 'ограничение истории не оставило ровно 10 последних версий: ' + retainedVersions);
   check(errors.length === 0, 'ошибки браузерного JavaScript: ' + errors.join('; '));
   await page.close();
 } finally {
