@@ -3,10 +3,10 @@ import { SCENE_PROFILES } from './scene-profiles.js';
 const escClass = value => Object.hasOwn(SCENE_PROFILES, value) ? value : 'immersive-environment';
 
 /** Декоративные слои сцены. Контент и CTA остаются поверх и доступны без JS. */
-export function sceneMarkup(scene) {
+export function sceneMarkup(scene, extra = '') {
   const type = escClass(scene?.type);
   const count = Math.min(3, Math.max(1, Number(scene?.layers) || 2));
-  return `<div class="uds-scene uds-scene--${type}" data-cinematic-scene aria-hidden="true">${Array.from({ length: count }, (_, i) => `<span class="uds-scene__layer uds-scene__layer--${i + 1}"></span>`).join('')}</div>`;
+  return `<div class="uds-scene uds-scene--${type}" data-cinematic-scene aria-hidden="true">${Array.from({ length: count }, (_, i) => `<span class="uds-scene__layer uds-scene__layer--${i + 1}"></span>`).join('')}${extra}</div>`;
 }
 
 export function sceneCss(scene) {

@@ -5,6 +5,7 @@ import { ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { MECHANICS } from '../../src/engine/mechanics.js';
 import { MASKS, DIVIDERS } from '../../src/engine/forms.js';
 import { LAYOUT_QA_SOURCE } from '../../src/engine/layout-qa.js';
+import { CINEMATIC_PRESET_IDS } from '../../src/engine/cinematic/visual-layers.js';
 
 // Фото-заглушка нужных пропорций: встроенный SVG, чтобы раскладка была как с настоящими снимками.
 const photo = (w, h, hue) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="100%" height="100%" fill="hsl(${hue} 40% 45%)"/><circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) / 3}" fill="hsl(${hue} 50% 70%)"/></svg>`);
@@ -33,7 +34,9 @@ export function layoutPages() {
   ARCHETYPE_IDS.forEach((arch, i) => {
     const raw = { ...base, id: `qa-${arch}`, architecture: arch, designArchitecture: arch, architectureMode: 'manual',
       itemsMechanic: mechs[i % mechs.length], imageMask: masks[i % masks.length], sectionDivider: divs[(i + 2) % divs.length],
-      textEffect: i % 2 ? 'fade-words' : 'scroll-fade', fonts: 'system' };
+      textEffect: i % 2 ? 'fade-words' : 'scroll-fade', fonts: 'system',
+      // Фактура и свет (D03): каждая архитектура проверяется со своим пресетом слоёв.
+      cinematicLayers: CINEMATIC_PRESET_IDS[i % CINEMATIC_PRESET_IDS.length] };
     const g = generate(raw);
     pages.push({ name: `${arch}/${raw.itemsMechanic}/${raw.imageMask}`, html: g.html });
     // Второй проход: тёмная палитра, Google Fonts и другие сочетания механик и форм.

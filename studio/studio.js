@@ -1,7 +1,7 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions } from '../src/engine/index.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions , CINEMATIC_PRESETS, describeCinematicLayers } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -616,6 +616,7 @@ const GROUPS = [
     ['@imageMask', 'Форма фотографий', 'imageMask', 'Авто — по форме углов и характеру бренда. Маска применяется только к фото, рамки фокуса не обрезаются'],
     ['@sectionDivider', 'Разделители секций', 'sectionDivider', 'Авто — по мотиву бренда: волна, зигзаг, ступени, точки или линия'],
     ['@graphicDirection', 'Направление графики', 'graphicDirection', 'Стиль фото и заданий на графику: кинематографичная съёмка, макрофактура, студийная съёмка товара и др. Авто — по нише'],
+    ['@cinematicLayers', 'Фактура и свет', 'cinematicLayers', 'Зерно, бумага, полутон, сетка или сканлинии и световые слои первого экрана. Авто — по направлению графики. Только декор позади текста: контраст не меняется'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
@@ -737,6 +738,7 @@ function buildForm() {
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'mechanic') control = `<select id="${id}" data-special="mechanic"${d}><option value="">Авто</option>${Object.entries(MECHANICS).map(([k, v]) => `<option value="${k}"${state.raw.itemsMechanic === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
     else if (type === 'imageMask' || type === 'sectionDivider') { const dict = type === 'imageMask' ? MASKS : DIVIDERS; control = `<select id="${id}" data-special="${type}"${d}><option value="">Авто</option>${Object.entries(dict).map(([k, v]) => `<option value="${k}"${state.raw[type] === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`; }
+    else if (type === 'cinematicLayers') control = `<select id="${id}" data-special="cinematicLayers"${d}><option value="">Авто — по направлению графики</option>${Object.entries(CINEMATIC_PRESETS).map(([k, v]) => `<option value="${k}"${state.raw.cinematicLayers === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`;
     else if (type === 'graphicDirection') control = `<select id="${id}" data-special="graphicDirection"${d}><option value="">Авто</option>${Object.entries(GRAPHIC_DIRECTIONS).map(([k, v]) => `<option value="${k}"${state.raw.graphicDirection === k ? ' selected' : ''}>${esc(v.ru)}</option>`).join('')}</select>`;
     else if (type === 'textEffect') control = `<select id="${id}" data-special="textEffect"${d}><option value="">Авто</option>${Object.entries(TEXT_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.textEffect === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
     else if (type === 'fontPair') control = `<select id="${id}" data-special="fontPair"${d}><option value="">Авто</option>${Object.values(WEB_FONT_PAIRS).flat().map(pr => `<option value="${esc(pr.display[0])}"${state.raw.fontPair === pr.display[0] ? ' selected' : ''}>${esc(pr.display[0] + ' + ' + pr.body[0])}${pr.accent ? ' · акцент ' + esc(pr.accent[0]) : ''}</option>`).join('')}</select>`;
@@ -1527,7 +1529,7 @@ ${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Биб�
     ['Концепция', '<b>' + esc(d.conceptName || '') + '</b> <span class="note">— ' + esc(d.conceptFormula || '') + '</span>'], ['Что учтено', ul(b.contextFactors || [])],
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
-    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
   ])}</div>
 <h2>Палитра и контраст</h2>
 <div class="swatches">${sw.map(([n, bg, fg]) => `<div class="swatch" style="background:${bg};color:${fg}"><b>${n}</b>${bg}</div>`).join('')}</div>
@@ -2248,6 +2250,7 @@ $('#form').addEventListener('input', e => {
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
+  else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
   else if (t.dataset.special === 'graphicDirection') { if (t.value) state.raw.graphicDirection = t.value; else delete state.raw.graphicDirection; }
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
   else if (t.dataset.special === 'imageMask' || t.dataset.special === 'sectionDivider') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
