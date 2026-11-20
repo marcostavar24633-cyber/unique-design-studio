@@ -515,3 +515,35 @@ body.preview-fullscreen-active{overflow:hidden}
 #project-history-diff table{width:100%;border-collapse:collapse;font-size:12px}
 #project-history-diff th,#project-history-diff td{padding:9px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 @media(max-width:620px){.project-history{padding:14px}.project-history__save{grid-template-columns:1fr}.project-history__save label{grid-column:auto}.project-history__save button{width:100%}.project-history__item{align-items:stretch;flex-direction:column}.project-history__actions{width:100%}.project-history__actions button{flex:1;min-width:0}}
+
+/* Шапка рабочей области: счётчик AI — одна компактная строка. Подробности — во всплывающей подсказке
+   блока (title), поэтому длинный текст обрезается многоточием, а не растягивает шапку на два ряда. */
+/* Меню «Ещё» в шапке рабочей области: редкие действия, чтобы шапка помещалась в одну строку. */
+.top-more{position:relative;flex:0 0 auto}
+.top-more>summary{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card,transparent);cursor:pointer;list-style:none;font-weight:600;user-select:none}
+.top-more>summary::-webkit-details-marker{display:none}
+.top-more>summary::after{content:"▾";font-size:11px;opacity:.7}
+.top-more[open]>summary{border-color:var(--accent)}
+.top-more>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top-more__menu{position:absolute;left:0;top:calc(100% + 6px);z-index:30;display:grid;gap:4px;min-width:220px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:0 14px 40px rgba(0,0,0,.35)}
+.top-more__menu button{justify-content:flex-start;width:100%;text-align:left}
+/* Шапка на компьютере — одна строка: бренд слева, действия справа. */
+@media(min-width:1100px){
+  body:not(.dashboard-mode)>.top{flex-wrap:nowrap}
+  body:not(.dashboard-mode)>.top .top__brand{flex:0 0 auto}
+  body:not(.dashboard-mode)>.top .top__actions{flex:1 1 auto;flex-wrap:nowrap;justify-content:flex-end;align-items:center}
+  body:not(.dashboard-mode)>.top .top__actions>button,body:not(.dashboard-mode)>.top .top-more>summary{white-space:nowrap;flex:0 0 auto}
+  /* Счётчик AI — одна компактная строка, подробности обрезаются (полный текст — в подсказке блока).
+     На узких экранах действуют мобильные правила счётчика. */
+  body:not(.dashboard-mode)>.top .ai-usage{flex:0 1 330px;max-width:330px;flex-wrap:nowrap;white-space:nowrap;min-height:34px;padding:4px 10px}
+  body:not(.dashboard-mode)>.top #ai-usage-details{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;color:var(--muted)}
+  body:not(.dashboard-mode)>.top #ai-usage-range{flex:0 0 auto;min-height:26px;padding:2px 6px;font-size:12px}
+  body:not(.dashboard-mode)>.top #examples{flex:0 1 140px;max-width:140px;min-width:110px}
+  /* В одной строке меню «Ещё» стоит у правого края — раскрываем его влево от кнопки. */
+  .top-more__menu{left:auto;right:0}
+}
+@media(max-width:1099px){
+  /* Пока шапка не помещается в одну строку, ряд действий может прокручиваться и обрезал бы меню:
+     показываем его фиксированно под шапкой. */
+  .top-more__menu{position:fixed;left:auto;right:12px;top:var(--top-more-y,64px);width:min(320px,calc(100vw - 24px));min-width:0}
+}

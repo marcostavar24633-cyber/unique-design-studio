@@ -290,7 +290,7 @@ try {
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'проект не открылся из реестра');
 
   // Проверяем скачивание JSON и готового HTML — не только наличие кнопок.
-  const [jsonDownload] = await Promise.all([page.waitForEvent('download'), page.click('#export')]);
+  const [jsonDownload] = await Promise.all([page.waitForEvent('download'), page.click('.top-more summary').then(() => page.click('#export'))]);
   const jsonPath = await jsonDownload.path();
   const { readFileSync: readDownloaded } = await import('node:fs');
   const exported = JSON.parse(readDownloaded(jsonPath, 'utf8'));
@@ -299,7 +299,7 @@ try {
   // Импортируем тот же файл и проверяем, что анализ не теряется при повторном экспорте.
   await page.locator('#file').setInputFiles({ name: 'analysis-roundtrip.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
   await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Импортирован проект'));
-  const [roundtripDownload] = await Promise.all([page.waitForEvent('download'), page.click('#export')]);
+  const [roundtripDownload] = await Promise.all([page.waitForEvent('download'), page.click('.top-more summary').then(() => page.click('#export'))]);
   const roundtripPath = await roundtripDownload.path();
   const roundtrip = JSON.parse(readDownloaded(roundtripPath, 'utf8'));
   check(roundtrip.__udsAnalysis?.data?.segments?.[0]?.name === 'Дизайнеры', 'AI-анализ не пережил импорт и повторный экспорт');

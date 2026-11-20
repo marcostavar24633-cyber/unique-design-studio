@@ -2991,3 +2991,19 @@ fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async lis
 await restoreEmergencyBackupIfNewer();
 buildForm();
 run();
+
+// Меню «Ещё» в шапке: закрываем после выбора действия и по клику вне меню.
+document.querySelector('.top-more')?.addEventListener('click', e => { if (e.target.closest('.top-more__menu button')) e.currentTarget.open = false; });
+document.addEventListener('click', e => { const menu = document.querySelector('.top-more[open]'); if (menu && !menu.contains(e.target)) menu.open = false; });
+document.addEventListener('keydown', e => { const menu = document.querySelector('.top-more[open]'); if (e.key === 'Escape' && menu) { menu.open = false; menu.querySelector('summary').focus(); } });
+// В переносящейся шапке кнопка «Ещё» может стоять у любого края: раскрываем меню туда, где оно помещается.
+document.querySelector('.top-more')?.addEventListener('toggle', e => {
+  const menu = e.currentTarget.querySelector('.top-more__menu');
+  if (!e.currentTarget.open || !menu) return;
+  // На узких экранах меню фиксировано под шапкой: ставим его сразу под нижний край шапки.
+  if (getComputedStyle(menu).position === 'fixed') { const top = document.querySelector('body>.top'); menu.style.setProperty('--top-more-y', Math.round((top ? top.getBoundingClientRect().bottom : 56) + 6) + 'px'); return; }
+  menu.style.left = ''; menu.style.right = '';
+  const r = menu.getBoundingClientRect();
+  if (r.right > innerWidth - 8) { menu.style.left = 'auto'; menu.style.right = '0'; }
+  else if (r.left < 8) { menu.style.left = '0'; menu.style.right = 'auto'; }
+});

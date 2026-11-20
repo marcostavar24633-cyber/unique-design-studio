@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Unique Design Studio</title>
 <meta name="description" content="Студия уникальных главных страниц: Design Brief, Design DNA, генерация HTML и антишаблонная проверка.">
-<link rel="stylesheet" href="studio.css?v=mobile-workspace-controls-20261117">
+<link rel="stylesheet" href="studio.css?v=studio-header-20261120">
 <link rel="stylesheet" href="redesign.css">
 </head>
 <body class="dashboard-mode">
@@ -18,12 +18,17 @@
     <label class="vh" for="examples">Примеры проектов</label>
     <select id="examples"><option value="">Примеры…</option></select>
     <button type="button" id="new">Новый</button>
-    <button type="button" id="import">Импорт JSON</button>
-    <input type="file" id="file" accept="application/json,.json" hidden>
-    <button type="button" id="export">Экспорт JSON</button>
-    <button type="button" id="prompt">Промт для AI</button>
     <button type="button" id="save">В реестр</button>
-    <button type="button" id="change-preview" disabled>Сравнить до / после</button>
+    <input type="file" id="file" accept="application/json,.json" hidden>
+    <details class="top-more">
+      <summary>Ещё</summary>
+      <div class="top-more__menu">
+        <button type="button" id="import">Импорт JSON</button>
+        <button type="button" id="export">Экспорт JSON</button>
+        <button type="button" id="prompt">Промт для AI</button>
+        <button type="button" id="change-preview" disabled>Сравнить до / после</button>
+      </div>
+    </details>
     <button type="button" id="download" class="primary">Скачать HTML</button>
   </div>
 </header>

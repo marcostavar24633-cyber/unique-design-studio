@@ -70,6 +70,7 @@ try {
   await titleField.fill('Версия после изменений E2E');
   await page.waitForFunction(() => document.querySelector('#change-preview')?.disabled === false, null, { timeout: 10000 });
   const popupPromise = page.waitForEvent('popup');
+  await page.click('.top-more summary'); // «Сравнить до / после» находится в меню «Ещё»
   await page.click('#change-preview');
   const popup = await popupPromise;
   await popup.waitForLoadState('domcontentloaded');

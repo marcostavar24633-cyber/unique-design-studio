@@ -100,3 +100,10 @@ test('спокойная ниша не получает избыточные э�
   assert.ok(!plan.mechanics.includes('tilt-cards'));
   assert.ok(!plan.mechanics.includes('dynamic-gradient'));
 });
+
+test('кинетический заголовок: пробелы остаются текстом, а не отдельными блоками', () => {
+  // Пробел в элементе inline-block не схлопывается на переносе и сдвигал начало второй строки заголовка.
+  const js = motionScript({ mechanics: ['kinetic-type'] });
+  assert.ok(js.includes("document.createTextNode(' ')"), 'пробелы вставляются текстовыми узлами');
+  assert.ok(js.includes('if(/^\\s+$/.test(w))'), 'пробельные части не оборачиваются в span');
+});
