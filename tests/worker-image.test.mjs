@@ -37,3 +37,39 @@ test('image generation uses the AI binding and applies rate limiting', async () 
   assert.equal(input.model, '@cf/black-forest-labs/flux-2-klein-4b');
   assert.ok(input.args.multipart, 'FLUX.2 klein получает multipart/form-data');
 });
+
+test('stock queries are built from the studio prompt: subject words plus niche', async () => {
+  const { stockQueries } = await import('../worker/stock-photo.js');
+  const prompt = 'Realistic documentary-style photograph for the website of a artisan bakery, taken on a full-frame camera with a 35mm lens. Subject: fresh baguettes on wooden shelves, a product or service of a artisan bakery, shown clearly as the main subject. Setting: x.';
+  const queries = stockQueries(prompt).map(item => item.q);
+  assert.equal(queries[0], 'fresh baguettes bakery');
+  assert.ok(queries.includes('artisan bakery'));
+});
+
+test('when every Workers AI model fails, a CC0 stock photo from Openverse is returned', async () => {
+  const realFetch = globalThis.fetch;
+  const requested = [];
+  globalThis.fetch = async (url) => {
+    requested.push(String(url));
+    if (String(url).startsWith('https://api.openverse.org/')) {
+      return new Response(JSON.stringify({ results: [{ url: 'https://img.example/a.jpg', width: 1200, height: 800, title: 'Bread', creator: 'x', license: 'cc0', foreign_landing_url: 'https://img.example/a' }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+    return new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'image/jpeg', 'Content-Length': '3' } });
+  };
+  try {
+    const env = { AI: { run: async () => { throw new Error('4006: you have used up your daily free allocation of 10,000 neurons'); } }, AI_RATE_LIMITER: { limit: async () => ({ success: true }) } };
+    const response = await call({ prompt: 'photograph for the website of a artisan bakery, taken on. Subject: fresh bread loaves. ', aspect: '16:9' }, { env });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.model, 'openverse');
+    assert.equal(body.image, 'AQID');
+    assert.equal(body.fallback, true);
+    assert.equal(body.source.license, 'cc0');
+    assert.match(requested[0], /license=cc0%2Cpdm/);
+    assert.match(requested[0], /aspect_ratio=wide/);
+    const disabled = await call({ prompt: 'Subject: bread. ' }, { env: { ...env, IMAGE_STOCK_FALLBACK: 'false' } });
+    assert.equal(disabled.status, 502);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
