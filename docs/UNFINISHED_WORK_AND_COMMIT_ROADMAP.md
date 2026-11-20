@@ -7,8 +7,8 @@
 
 ## Актуальный статус на 20 ноября 2026
 
-- На момент обновления PR #190–#200 объединены; открытых PR нет. Pages pipeline восстановлен, AI Usage hardening включён в main.
-- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация), #194 (история версий), #195 (документация), #196 (аварийное сохранение), #197 (уникальные Pages artifacts), #198 (разделение Pages jobs), #199 (устойчивость AI Usage) и #200 (совместимость Pages actions) объединены.
+- На момент обновления PR #190–#202 объединены; открытых PR нет. Pages pipeline восстановлен, AI Usage hardening и расширенные E2E редактора включены в main.
+- PR #190 (мобильная шапка), #191 (мобильная E2E-проверка), #192 (Prompt Manager E2E), #193 (документация), #194 (история версий), #195 (документация), #196 (аварийное сохранение), #197 (уникальные Pages artifacts), #198 (разделение Pages jobs), #199 (устойчивость AI Usage), #200 (совместимость Pages actions), #201 (документация) и #202 (E2E редакторских действий) объединены.
 - PR #193: commit `4def92001ac6314255b4e0490b34cf29725fa641`.
 - PR #194: commit `bc6101298e337872ba9743812af7e6881d3a5484`; полный CI перед слиянием прошёл успешно: [run 44777592604](https://github.com/marcostavar24633-cyber/unique-design-studio/actions/runs/44777592604).
 - Post-merge CI после PR #200 и PR #199 завершился успешно: runs `44786022454` и `44787215101` — Node 20/22, Workers Build и E2E; GitHub Pages deployments `44786022419` и `44787215164` завершились успешно. [Открыть сайт](https://marcostavar24633-cyber.github.io/unique-design-studio/).
@@ -76,7 +76,7 @@
 1. `[x] fix: harden AI Usage metrics and storage access` — PR #199: безопасная обработка Storage SecurityError, null Neurons, E2E и расширение журнала фото-запросов.
 2. `fix: stabilize project persistence` — проверить сохранение, восстановление, импорт/экспорт проектов и AI-анализа.
 3. `test: harden studio end-to-end workflows` — сделать E2E-проверки основных пользовательских сценариев воспроизводимыми.
-4. `fix: validate all studio interactions` — проверить кнопки, формы, переключатели и действия; исправить неработающие элементы.
+4. `[~] fix: validate all studio interactions` — PR #202 покрывает основные действия (новый проект, сравнение/применение, AI diagnostics, Publish Manager, HTTPS, локальная история и экспорты); оставшиеся второстепенные действия нужно проверить отдельными сценариями.
 
 ### Этап B — AI Engine
 

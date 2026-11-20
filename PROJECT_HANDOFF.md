@@ -15,9 +15,12 @@
 - PR #198 (разделение build/upload и deploy Pages на зависимые jobs) объединён: commit `39d68f71478e00c2a4e4848c80f9f91466b25b33`.
 - PR #200 (совместимая пара upload-pages-artifact@v4 и deploy-pages@v4) объединён: commit `624128aceecca7c8f8722abe40feb01ce992e900`.
 - PR #199 (устойчивость AI Usage к Storage SecurityError и отсутствующим Neurons metrics) объединён: commit `0bd3aab42fdb8fc45dda62ae853d77a88d117e12`.
+- PR #201 (обновление handoff и roadmap после PR #197–#200) объединён: commit `b185029b9aae6f7069c9f6223c08975d9397e37a`.
+- PR #202 (E2E для оставшихся действий редактора и Publish Manager) объединён: commit `5380c84b6e34e4e42a0ed26e6ba65b21b2189268`.
 - Полный CI PR #194 перед слиянием прошёл успешно: run `44777592604` — Node 20, Node 22, Workers Build и E2E.
 - Post-merge CI после PR #200: run `44786022454` завершился успешно (Node 20/22, Workers Build, E2E); Pages deployment run `44786022419` успешно опубликовал сайт.
 - Post-merge CI после PR #199: run `44787215101` завершился успешно (Node 20/22, Workers Build, E2E); Pages deployment run `44787215164` завершился успешно.
+- Post-merge CI после PR #202: run `44790645964` завершился успешно (Node 20/22, Workers Build, E2E); Pages deployment run `44790646103` завершился успешно.
 - История версий проектов хранится в IndexedDB: ручные снимки, сравнение, восстановление, автоматический снимок перед откатом, последние 10 версий на проект.
 - PR #196 объединён: аварийная резервная копия текущего состояния редактора записывается в IndexedDB, если localStorage недоступен или переполнен; при старте восстанавливается более свежая копия. E2E проверяет quota error → backup → reload → restore.
 - Pages pipeline исправлен в PR #197, #198 и #200: артефакты имеют уникальные имена; сборка/загрузка и deploy разделены на зависимые jobs; uploader v4 совместим с deploy action v4. Успешные публикации подтверждены runs `44786022419` и `44787215164`.
@@ -59,6 +62,7 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 - История версий проекта реализована в PR #194; снимки хранятся в IndexedDB отдельно от текущего localStorage.
 - Аварийное сохранение редактора реализовано в PR #196; IndexedDB используется как резервный путь при сбое localStorage.
 - AI Usage hardening реализован в PR #199: корректная обработка недоступного localStorage, явное состояние «нет данных» для отсутствующих Neurons, E2E для обоих сценариев и запись фактических route/provider/usage полей в журнале фото-запросов при наличии этих данных от сервера.
+- PR #202 добавил `tests/e2e/editor-controls.mjs`: новый проект без потери реестра, AI diagnostics, сравнение/применение версий, HTTPS-проверка и локальная история Publish Manager, загрузка JSON/HTML. Тест не выполняет реальный deploy.
 
 ## Незавершённые задачи / обязательная проверка
 
@@ -76,6 +80,7 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 - [ ] Проверить актуальный Cloudflare Worker deployment и отдельно подтвердить реальные AI-запросы и вставку изображений. Не считать Workers dry-run публикацией.
 - [x] GitHub Pages deployment после PR #200: run `44786022419` успешно завершил build и deploy.
 - [x] Повторный Pages deployment после PR #199: run `44787215164` завершился успешно.
+- [x] PR #202: браузерные E2E-проверки редакторских действий и Publish Manager; pre-merge CI и post-merge CI `44790645964` успешны.
 - [x] PR #199: AI Usage E2E подтверждает обработку SecurityError и отсутствующего Neurons metric; pre-merge CI `44786890662` и post-merge CI `44787215101` успешны.
 
 ## Правила разработки и передачи
