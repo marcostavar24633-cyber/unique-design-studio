@@ -20,13 +20,13 @@ const server = createServer((req, res) => {
     // Resolve against the root, then check path boundaries (not a string prefix).
     const candidate = resolve(servingRoot, '.' + pathname);
     const relativePath = relative(servingRoot, candidate);
-    if (relativePath === '..' || relativePath.startsWith('../') || relativePath.startsWith('..\\\\') || isAbsolute(relativePath)) {
+    if (relativePath === '..' || relativePath.split(/[\\\\/]/)[0] === '..' || isAbsolute(relativePath)) {
       res.writeHead(404); res.end('not found'); return;
     }
     // Also reject symlinks that escape the served tree.
     file = realpathSync(candidate);
     const realRelative = relative(servingRoot, file);
-    if (realRelative === '..' || realRelative.startsWith('../') || realRelative.startsWith('..\\\\') || isAbsolute(realRelative) || !existsSync(file) || statSync(file).isDirectory()) {
+    if (realRelative === '..' || realRelative.split(/[\\\\/]/)[0] === '..' || isAbsolute(realRelative) || !existsSync(file) || statSync(file).isDirectory()) {
       res.writeHead(404); res.end('not found'); return;
     }
   } catch {
