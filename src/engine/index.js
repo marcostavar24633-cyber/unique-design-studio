@@ -4,7 +4,7 @@ import { renderSite } from './render.js';
 import { auditSite } from './audit.js';
 import { exportProject, normalizeProject } from './project.js';
 
-export { buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
+export { applyManualOrder, buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
 export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
 export { buildPrompt, withCustomPrompt } from './prompt.js';
@@ -43,5 +43,6 @@ export { CINEMATIC_PRESETS, CINEMATIC_PRESET_IDS, chooseCinematicLayers, describ
 export { TRANSITIONS, TRANSITION_IDS, TRANSITION_LIMITS, chooseTransition, describeTransition } from './cinematic/transitions.js';
 export { CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, chooseVariety } from './variety.js';
 export { CARD_EFFECTS, CARD_EFFECT_IDS, HERO_EFFECTS, HERO_EFFECT_IDS, chooseEffects, describeEffects } from './effects.js';
+export { TYPE_STYLES, TYPE_STYLE_IDS, SECTION_LAYOUTS, SECTION_LAYOUT_IDS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS, BUTTON_ANIMATION_IDS, chooseTypography } from './typography-layout.js';
 export { directScene } from './cinematic/scene-director.js';
 export { SCENE_PROFILES } from './cinematic/scene-profiles.js';

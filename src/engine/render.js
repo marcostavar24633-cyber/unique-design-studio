@@ -15,6 +15,7 @@ import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-lay
 import { transitionCss, transitionHtml } from './cinematic/transitions.js';
 import { cardShapeCss, revealCss } from './variety.js';
 import { cardEffectCss, effectsScript, heroEffectCss, heroEffectMarkup, heroMarqueeHtml } from './effects.js';
+import { EXTRA_LAYOUT_CSS, LAYOUT_ORDER_FAMILY, buttonAnimationCss, buttonAnimationScript, textAnimationCss, typeStyleCss } from './typography-layout.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn } from './color.js';
 
@@ -265,6 +266,8 @@ function script(c, scene) {
   if (motion) parts.push(motion);
   const fxScript = effectsScript(c.vs.effects);
   if (fxScript) parts.push(fxScript);
+  const btnScript = buttonAnimationScript(compatibleButtonAnimation(c.vs));
+  if (btnScript) parts.push(btnScript);
   const cinematic = sceneScript(scene);
   if (cinematic) parts.push(cinematic);
   return parts.length ? `<script>(function(){${parts.join(';')}})();</script>` : '';
@@ -308,6 +311,25 @@ function visualIdentityCss(identity) {
   return `:root{color-scheme:${p.mode};--ds-bg:${p.background};--ds-surface:${p.surface};--ds-text:${p.text};--ds-text-muted:${p.muted};--ds-accent:${p.accent};--u-tint:${p.accentSoft};--u-accent-ink:${p.accentInk};--ds-accent-contrast:${p.accentText};--ds-radius-sm:${g.radius.small};--ds-radius-md:${g.radius.medium};--ds-radius-lg:${g.radius.large};--ds-radius-pill:${g.radius.pill};--ds-section-space:${space.section};--ds-font-display:"${t.display}",sans-serif;--ds-font-body:"${t.body}",sans-serif}`;
 }
 
+/** CSS раскладки секций. Новые раскладки получают своё оформление и композицию фотогалереи
+ *  от базовой раскладки того же семейства (те же правила, переименованные под новую раскладку). */
+function sectionLayoutCss(id) {
+  if (SECTION_LAYOUT_CSS[id]) return SECTION_LAYOUT_CSS[id];
+  const family = LAYOUT_ORDER_FAMILY[id];
+  if (!EXTRA_LAYOUT_CSS[id] || !family) return SECTION_LAYOUT_CSS.editorial;
+  const re = new RegExp(`(@media\\([^{]*\\)\\{)?[^{}]*\\.sec--gallery\\.section-layout--${family}[^{]*\\{[^}]*\\}(\\})?`, 'g');
+  const gallery = (SECTION_LAYOUT_CSS[family].match(re) || []).join('').replaceAll(`section-layout--${family}`, `section-layout--${id}`);
+  return EXTRA_LAYOUT_CSS[id] + gallery;
+}
+
+// Стили кнопок и анимации, которые используют одни и те же псевдоэлементы, не совмещаются:
+// «выезжающая заливка» занимает ::before (как блик), «стрелка» — ::after (как пульс, толчок и обводка).
+const BUTTON_PSEUDO = { slide: ['shine'], arrow: ['pulse', 'nudge', 'border-draw'], block: ['border-draw'], underline: ['underline-grow', 'border-draw'] };
+function compatibleButtonAnimation(vs) {
+  const a = vs.typography2?.buttonAnimation;
+  return a && !(BUTTON_PSEUDO[vs.button?.id] || []).includes(a) ? a : '';
+}
+
 /** Появление при прокрутке: по плану движения или по ручному выбору эффекта владельцем. */
 const revealActive = vs => Boolean(vs.motionPlan?.mechanics.includes('scroll-reveal') || vs.variety?.revealForced);
 
@@ -315,7 +337,7 @@ export function renderCss(concept, scene = null, identity = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
-    CORE_CSS, tokensCss(vs), visualIdentityCss(identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], SECTION_LAYOUT_CSS[vs.sectionLayout || 'editorial'],
+    CORE_CSS, tokensCss(vs), visualIdentityCss(identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
@@ -335,6 +357,7 @@ export function renderCss(concept, scene = null, identity = null) {
     cardShapeCss(vs.variety?.cardShape),
     revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
+    vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
   ].join('\n').replace(/\n\s*/g, '');
 }
 

@@ -40,6 +40,8 @@ export function chooseTransition(project = {}, visual = {}) {
     let pool = BY_LAYERS[visual.cinematicLayers?.id] || ['fade', 'glow'];
     if (visual.archetype === 'brutalist') pool = ['split', 'diagonal'];
     if (visual.archetype === 'minimal') pool = ['none', 'fade'];
+    // Секции с заливкой (полосы, панели, карточки): полоса-переход между ними выглядела бы плашкой фона.
+    if (['bands', 'inset-panel', 'stacked-cards'].includes(visual.sectionLayout)) pool = ['none'];
     if (project.tier === 'luxury') pool = pool.filter(p => ['fade', 'glow', 'arch', 'none'].includes(p)).concat('fade');
     type = pick(stream(visual.seed || 0, 'section-transition'), [...new Set(pool)]);
     rationale = 'Подобрано к фактуре и архитектуре страницы';

@@ -126,3 +126,6 @@ try {
 }
 if (failures.length) { console.error('Editor controls E2E: ' + failures.join('\n- ')); process.exit(1); }
 console.log('Editor controls E2E пройден: новый проект, сравнение и применение, AI diagnostics, Publish Manager и локальная история deployment.');
+
+// Расположение блоков (перетаскивание и кнопки ↑↓) — отдельный сценарий, запускается следом.
+await import('./layout-order.mjs');
