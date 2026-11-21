@@ -1,0 +1,14 @@
+{
+  "name": "unique-design-studio-ai-staging",
+  "main": "../worker/index.js",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": false,
+  "preview_urls": false,
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "AI_BILLING_MODE": "free",
+    "NVIDIA_NIM_ENABLED": "false"
+  }
+}
