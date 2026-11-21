@@ -97,10 +97,14 @@ async function reportFailure(failures) {
     'Content-Type': 'application/json',
   };
   const title = '[Autonomy Monitor] Проверка доступности Unique Design Studio';
+  const runId = String(process.env.GITHUB_RUN_ID || '').match(/^\d+$/)?.[0];
+  const serverUrl = String(process.env.GITHUB_SERVER_URL || 'https://github.com').replace(/\/+$/, '');
+  const runUrl = runId ? `${serverUrl}/${repo}/actions/runs/${runId}` : '';
   const body = [
     'Автоматический монитор обнаружил сбой.',
     '',
     `Время UTC: ${new Date().toISOString()}`,
+    ...(runUrl ? [`Запуск Health Monitor: ${runUrl}`] : []),
     '',
     ...failures.map(item => `- **${item.label}**: ${item.message}`),
     '',
