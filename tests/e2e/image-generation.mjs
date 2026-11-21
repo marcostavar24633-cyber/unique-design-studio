@@ -90,6 +90,9 @@ try {
   });
 
   await page.goto(base + '/studio/index.html', { waitUntil: 'networkidle' });
+  // The studio starts on the dashboard; editor tabs are hidden until Create is opened.
+  await page.click('[data-dash="create"]');
+  await page.locator('#ptab-own').waitFor({ state: 'visible' });
   await page.click('#ptab-own');
   await page.locator('#auto-endpoint').waitFor({ state: 'visible' });
   await page.fill('#auto-endpoint', 'https://example.test/api/generate-landing');
