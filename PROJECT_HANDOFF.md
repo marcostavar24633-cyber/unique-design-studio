@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-21T12:44:54.689Z
+Время обновления: 2026-11-21T20:33:12.006Z
 Ветка: main
-Последний commit: bdcd84cf03efbc76972059c2c1130ff8165aa152
-Дата коммита: 2026-11-21T16:44:42+04:00
-Сообщение: Add manual staging Worker workflow (#217)
+Последний commit: d8db28450a0a7a0ed7debc0e443a2009286c2a13
+Дата коммита: 2026-11-22T00:33:00+04:00
+Сообщение: Merge pull request #220 from marcostavar24633-cyber/fix/health-monitor-diagnostics
 
 Последние коммиты:
-- bdcd84c · 2026-11-21 · Add manual staging Worker workflow (#217)
-- 1bbbd48 · 2026-11-21 · docs: refresh project handoff
-- 61454f8 · 2026-11-21 · test: cover AI image generation and project insertion (#206)
-- f4e1489 · 2026-11-21 · 15 стилей типографики, 15 раскладок секций и перетаскивание блоков в редакторе (#213)
-- f8e442e · 2026-11-21 · 22 эффекта карточек и 20 эффектов первого экрана (#212)
-- 2668996 · 2026-11-21 · 15 форм карточек, 15 эффектов появления и 15 стилей кнопок (#211)
-- fa840af · 2026-11-21 · Переходы между секциями с настраиваемым градиентом (#210)
-- cf2b0fe · 2026-11-21 · D03 Cinematic Visual: цветокоррекция фото в тон фактуры (#209)
+- d8db284 · 2026-11-22 · Merge pull request #220 from marcostavar24633-cyber/fix/health-monitor-diagnostics
+- 5a304e2 · 2026-11-22 · test(monitor): cover safe incident triage and inference contract
+- 4eb7cf3 · 2026-11-22 · fix(monitor): redact diagnostic errors consistently and expose testable helpers
+- b29bdf8 · 2026-11-21 · feat: link incidents to monitor runs
+- 431fd9c · 2026-11-21 · docs: clarify current repair agent scope
+- c8ed4bd · 2026-11-21 · feat: add safe repair hints to monitor issues
+- 286b89e · 2026-11-21 · fix: preserve safe diagnostics for AI monitor failures
+- a51d249 · 2026-11-21 · test: protect private staging Worker configuration (#218)
 <!-- HANDOFF:AUTO:END -->
