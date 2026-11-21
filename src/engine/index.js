@@ -42,5 +42,6 @@ export { GRAPHIC_DIRECTIONS, chooseGraphicDirection } from './graphic-art-direct
 export { CINEMATIC_PRESETS, CINEMATIC_PRESET_IDS, chooseCinematicLayers, describeCinematicLayers } from './cinematic/visual-layers.js';
 export { TRANSITIONS, TRANSITION_IDS, TRANSITION_LIMITS, chooseTransition, describeTransition } from './cinematic/transitions.js';
 export { CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, chooseVariety } from './variety.js';
+export { CARD_EFFECTS, CARD_EFFECT_IDS, HERO_EFFECTS, HERO_EFFECT_IDS, chooseEffects, describeEffects } from './effects.js';
 export { directScene } from './cinematic/scene-director.js';
 export { SCENE_PROFILES } from './cinematic/scene-profiles.js';

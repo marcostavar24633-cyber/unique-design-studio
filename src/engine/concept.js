@@ -15,6 +15,7 @@ import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direct
 import { chooseCinematicLayers } from './cinematic/visual-layers.js';
 import { chooseTransition } from './cinematic/transitions.js';
 import { chooseVariety } from './variety.js';
+import { chooseEffects } from './effects.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -503,6 +504,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, seed }),
       // Форма карточек и эффект появления блоков; ручной выбор владельца главнее.
       variety: chooseVariety(project, { shape: design.shape, archetype: design.primary, intensity: motionPlan.intensity, seed }),
+      // Эффекты карточек и первого экрана; ручной выбор владельца главнее, фотоэффекты — только при наличии фото.
+      effects: chooseEffects(project, { archetype: design.primary, tier: project.tier, intensity: motionPlan.intensity, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
       variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
       seed,
