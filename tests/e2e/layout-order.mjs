@@ -42,7 +42,7 @@ try {
   await page.click('#ptab-editor');
   const frameOrder = () => page.evaluate(() => [...new DOMParser().parseFromString(document.querySelector('#frame').srcdoc, 'text/html').querySelectorAll('main section.ds-section')]
     .map(s => ([...s.classList].find(c => c.startsWith('sec--')) || '').slice(5)).filter(id => id && id !== 'hero' && id !== 'contact'));
-  const group = page.locator('details.group', { has: page.locator('summary', { hasText: 'Расположение блоков' }) });
+  const group = page.locator('details.group', { has: page.locator('summary', { hasText: 'Содержание сайта' }) });
   await group.locator('summary').click();
   const sections = group.locator('[data-order-list="sections"] li');
   check(await sections.count() >= 3, 'панель не показала секции страницы');
