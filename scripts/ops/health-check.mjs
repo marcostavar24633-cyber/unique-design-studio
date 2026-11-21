@@ -58,6 +58,27 @@ function summarizeHttpFailure({ data, text, response }) {
   return summary.length ? ` (${summary.join('; ')})` : '';
 }
 
+function repairHint(failure) {
+  const message = String(failure.message || '');
+  if (failure.label === 'Studio Pages') {
+    return 'Проверьте последний Pages deployment и ответ главного URL; повторную публикацию выполняйте только после подтверждения сбоя deployment.';
+  }
+  if (failure.label === 'AI Worker /health') {
+    return 'Сверьте последнюю версию Worker и её health-ответ. Не запускайте rollback без проверки конкретной last-known-good версии.';
+  }
+  if (failure.label === 'Workers AI binding') {
+    return 'Сначала сравните /api/diagnostics с конфигурацией binding AI; inference probe не поможет, пока binding не подтверждён.';
+  }
+  if (failure.label === 'Workers AI inference') {
+    if (/HTTP 429\b/.test(message)) return 'Проверьте квоту и ограничение частоты по уже имеющейся статистике; не повторяйте AI-запрос до выяснения доступного лимита.';
+    if (/HTTP 401\b|HTTP 403\b/.test(message)) return 'Проверьте разрешённый Origin и доступ к выбранному AI-маршруту; не публикуйте ключи и заголовки авторизации в отчёте.';
+    if (/HTTP 502\b/.test(message)) return 'Сопоставьте безопасные поля error/details/provider/model/route с логом этого запуска и Worker analytics. Сам статус 502 не устанавливает причину.';
+    if (/timeout|timed out/i.test(message)) return 'Сверьте длительность запроса и временные метки Worker; одиночный тайм-аут не является основанием для повторного платного вызова или rollback.';
+    return 'Изучите полный результат шага Health Monitor и /api/diagnostics; не запускайте повторный inference, пока не определены причина и расход квоты.';
+  }
+  return 'Сверьте детали сбоя с соответствующим GitHub Actions run и диагностикой сервиса; автоматические исправления не выполнялись.';
+}
+
 async function checkUrl(label, url, options = {}) {
   const { response, data, text } = await requestJson(url, options);
   if (!response.ok) throw new Error(`${label}: HTTP ${response.status}${summarizeHttpFailure({ data, text, response })}`);
@@ -82,6 +103,11 @@ async function reportFailure(failures) {
     `Время UTC: ${new Date().toISOString()}`,
     '',
     ...failures.map(item => `- **${item.label}**: ${item.message}`),
+    '',
+    '## Следующие безопасные шаги',
+    ...failures.map(item => `- **${item.label}**: ${repairHint(item)}`),
+    '',
+    'Рекомендации основаны на типе проверки и не подтверждают первопричину. Автоматические повторы AI, rollback и изменения кода не выполняются.',
     '',
     'Проверьте GitHub Actions → Health Monitor. Секреты и тела пользовательских запросов в отчёт не включаются.',
   ].join('\n');
@@ -169,3 +195,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   });
 }
+
