@@ -241,6 +241,24 @@ function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', se
   return [...lead, ...rest, 'contact'];
 }
 
+/** Ручной порядок секций (перетаскивание в редакторе). Принимает массив id или строку «a>b>c».
+ *  Неизвестные и отсутствующие секции отбрасываются, новые секции встают на автоматические места,
+ *  контакты всегда последние: так сохранённый порядок не ломается при изменении содержимого. */
+export function applyManualOrder(order, manual) {
+  const list = Array.isArray(manual) ? manual : typeof manual === 'string' ? manual.split(/[>,\s]+/) : null;
+  if (!list) return null;
+  const wanted = uniq(list.map(String)).filter(id => id !== 'contact' && order.includes(id));
+  if (!wanted.length) return null;
+  const out = [...wanted];
+  for (const [i, id] of order.entries()) {
+    if (id === 'contact' || out.includes(id)) continue;
+    // Новая секция встаёт после своего автоматического предшественника.
+    const prev = order.slice(0, i).reverse().find(x => out.includes(x));
+    out.splice(prev ? out.indexOf(prev) + 1 : 0, 0, id);
+  }
+  return [...out, 'contact'];
+}
+
 // ---------- Главная функция ----------
 export function buildConcept(input, { registry = [], neighbors = 2, references } = {}) {
   const project = normalizeProject(input);
@@ -377,6 +395,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   let order = sectionOrder(project, profile, arch, s, design.sectionLayout, seed);
   const libraryUse = refs.length ? applyReferences(refs, design, order, project) : null;
   if (libraryUse) order = libraryUse.order;
+  const manualOrder = applyManualOrder(order, project.passthrough?.sectionOrder);
+  if (manualOrder) order = manualOrder;
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;

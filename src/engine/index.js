@@ -4,7 +4,7 @@ import { renderSite } from './render.js';
 import { auditSite } from './audit.js';
 import { exportProject, normalizeProject } from './project.js';
 
-export { buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
+export { applyManualOrder, buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
 export { renderSite, renderCss } from './render.js';
 export { auditSite } from './audit.js';
 export { buildPrompt, withCustomPrompt } from './prompt.js';

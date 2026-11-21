@@ -642,6 +642,9 @@ const GROUPS = [
     ['@galleryUpload', 'Добавить фотографии в галерею', 'upload-gallery', 'Можно выбрать несколько снимков. Автооптимизация WebP; до 8 МБ исходник, до 1 МБ результат.'],
     ['@serviceUpload', 'Фото товара или услуги', 'upload-service', 'Выберите позицию и загрузите фото (автооптимизация WebP, до 8 МБ исходник).'],
   ]],
+  ['Расположение блоков', false, [
+    ['@layout', 'Порядок секций и элементов', 'layout', 'Перетащите мышью или переставьте кнопками ↑ ↓ (клавиатура: Tab до кнопки, Enter). Порядок сохраняется в проекте и экспорте. Секции можно двигать и прямо в предпросмотре — кнопка «Перетаскивать в предпросмотре».'],
+  ]],
   ['Каталог и предложения', false, [
     ['servicesTitle', 'Заголовок раздела'], ['servicesIntro', 'Вступление', 'area'],
     ['services', 'Позиции', 'list', 'Название | Описание | Цена | URL картинки | ALT-текст | Категория | Бейдж (например, «Хит» — только если это правда). Последние поля необязательны. У магазина цены и категории включают фильтры, сортировку и корзину-заявку'],
@@ -767,6 +770,7 @@ function buildForm() {
     else if (type === 'cardEffect') control = `<select id="${id}" data-special="cardEffect"${d}><option value="">Авто — по архитектуре и классу</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'heroEffect') control = `<select id="${id}" data-special="heroEffect"${d}><option value="">Авто — по архитектуре, классу и наличию фото</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'cardShape') control = `<select id="${id}" data-special="cardShape"${d}><option value="">Авто — по форме и архитектуре</option>${Object.entries(CARD_SHAPES).map(([k, v]) => `<option value="${k}"${state.raw.cardShape === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+    else if (type === 'layout') control = layoutControl(id);
     else if (type === 'revealEffect') control = `<select id="${id}" data-special="revealEffect"${d}><option value="">Авто — по плану движения</option>${Object.entries(REVEALS).map(([k, v]) => `<option value="${k}"${state.raw.revealEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'buttonStyle') control = `<select id="${id}" data-special="buttonStyle"${d}><option value="">Авто — по архитектуре и классу</option>${Object.entries(BUTTONS).map(([k, v]) => `<option value="${k}"${state.raw.buttonStyle === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'cinematicLayers') control = `<select id="${id}" data-special="cinematicLayers"${d}><option value="">Авто — по направлению графики</option>${Object.entries(CINEMATIC_PRESETS).map(([k, v]) => `<option value="${k}"${state.raw.cinematicLayers === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`;
@@ -781,7 +785,12 @@ function buildForm() {
     else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
     return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
+  // Раскрытые группы и прокрутка сохраняются: пересборка после перестановки не должна сворачивать панель.
+  const openGroups = new Set([...$('#form').querySelectorAll('details.group[open]>summary')].map(n => n.textContent));
+  const scrollTop = $('#form').scrollTop;
   $('#form').innerHTML = html;
+  if (openGroups.size) $('#form').querySelectorAll('details.group').forEach(d => { if (openGroups.has(d.querySelector('summary').textContent)) d.open = true; });
+  $('#form').scrollTop = scrollTop;
 }
 
 // ---------- Генерация и отображение ----------
@@ -814,7 +823,7 @@ function run() {
   }
   result = nextResult;
   lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
-  $('#frame').srcdoc = result.html;
+  $('#frame').srcdoc = previewHtml(result.html);
   renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
   renderPublishManager();
   updateChangePreviewButton();
@@ -2597,6 +2606,116 @@ function moveGalleryImage(from, direction) {
   swapIndexedEntries(mobile, from, to);
   buildForm(); run(); toast('Порядок фотографий обновлён');
 }
+// ---------- Расположение блоков: перетаскивание и кнопки ↑↓ ----------
+const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', faq: 'Вопросы и ответы' };
+const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle' };
+const ORDER_LISTS = [['services', 'Позиции каталога'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы']];
+const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r ?? '').trim() || 'Без названия';
+function currentSectionOrder() {
+  return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
+}
+function orderList(kind, label, titles) {
+  if (titles.length < 2) return '';
+  const last = titles.length - 1;
+  const reset = kind === 'sections' && state.raw.sectionOrder ? '<button type="button" data-order-reset>Вернуть автоматический порядок</button>' : '';
+  return `<div class="order-block"><p class="order-block__title">${esc(label)}${kind === 'sections' ? (state.raw.sectionOrder ? ' · вручную' : ' · авто') : ''}</p><ol class="order-list" data-order-list="${kind}">${titles.map((t, i) => `<li draggable="true" data-order-item="${i}"><span class="order-list__grip" aria-hidden="true">⋮⋮</span><span class="order-list__name">${esc(t)}</span><span class="order-list__btns"><button type="button" data-order-move="${i}" data-direction="-1" ${i === 0 ? 'disabled' : ''} aria-label="«${esc(t)}» выше" title="Выше">↑</button><button type="button" data-order-move="${i}" data-direction="1" ${i === last ? 'disabled' : ''} aria-label="«${esc(t)}» ниже" title="Ниже">↓</button></span></li>`).join('')}</ol>${reset}</div>`;
+}
+function layoutControl() {
+  const sections = currentSectionOrder().map(sid => {
+    const custom = ORDER_SECTION_TITLES[sid] && String(state.raw[ORDER_SECTION_TITLES[sid]] || '').trim();
+    return custom ? `${ORDER_SECTION_LABELS[sid] || sid}: ${custom}` : ORDER_SECTION_LABELS[sid] || sid;
+  });
+  const html = orderList('sections', 'Секции страницы (первый экран всегда сверху, контакты — внизу)', sections)
+    + ORDER_LISTS.map(([key, label]) => orderList(key, label, (Array.isArray(state.raw[key]) ? state.raw[key] : []).map(orderItemTitle))).join('');
+  return html || '<span class="note">Пока нечего переставлять: добавьте секции и позиции.</span>';
+}
+/** Переставляет элемент from → to в секциях или в списке проекта и пересобирает страницу. */
+function reorderLayout(kind, from, to) {
+  if (from === to || to < 0) return;
+  if (kind === 'sections') {
+    const order = currentSectionOrder();
+    if (from >= order.length || to >= order.length) return;
+    order.splice(to, 0, order.splice(from, 1)[0]);
+    state.raw.sectionOrder = order;
+  } else {
+    const list = state.raw[kind];
+    if (!Array.isArray(list) || from >= list.length || to >= list.length) return;
+    list.splice(to, 0, list.splice(from, 1)[0]);
+    if (kind === 'services') {
+      const art = state.raw.imageArtDirection || {};
+      reorderIndexedEntries(art.services, from, to);
+      reorderIndexedEntries(art.mobileSources?.services, from, to);
+    }
+  }
+  buildForm(); run(); toast('Расположение сохранено');
+  requestAnimationFrame(() => $(`[data-order-list="${kind}"] [data-order-item="${to}"] [data-order-move]:not([disabled])`)?.focus());
+}
+let orderDrag = null;
+$('#form').addEventListener('dragstart', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item) return;
+  orderDrag = { kind: item.parentElement.dataset.orderList, from: Number(item.dataset.orderItem) };
+  item.classList.add('is-dragging');
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(orderDrag.from)); }
+});
+$('#form').addEventListener('dragover', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item || !orderDrag || item.parentElement.dataset.orderList !== orderDrag.kind) return;
+  e.preventDefault();
+  $('#form').querySelectorAll('[data-order-item].is-drop-target').forEach(n => n.classList.remove('is-drop-target'));
+  if (Number(item.dataset.orderItem) !== orderDrag.from) item.classList.add('is-drop-target');
+});
+$('#form').addEventListener('drop', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item || !orderDrag || item.parentElement.dataset.orderList !== orderDrag.kind) return;
+  e.preventDefault();
+  const { kind, from } = orderDrag; orderDrag = null;
+  reorderLayout(kind, from, Number(item.dataset.orderItem));
+});
+$('#form').addEventListener('dragend', () => {
+  orderDrag = null;
+  $('#form').querySelectorAll('[data-order-item].is-dragging,[data-order-item].is-drop-target').forEach(n => n.classList.remove('is-dragging', 'is-drop-target'));
+});
+$('#form').addEventListener('click', e => {
+  const move = e.target.closest('[data-order-move]');
+  if (move) { const from = Number(move.dataset.orderMove); reorderLayout(move.closest('[data-order-list]').dataset.orderList, from, from + Number(move.dataset.direction)); return; }
+  if (e.target.closest('[data-order-reset]')) { delete state.raw.sectionOrder; buildForm(); run(); toast('Порядок секций снова подбирает движок'); }
+});
+
+// Перетаскивание прямо в предпросмотре: в страницу добавляется служебный скрипт (только в редакторе, не в экспорт).
+let arrangeMode = false;
+const ARRANGE_SCRIPT = `<script>(()=>{const css=document.createElement('style');css.textContent='.uds-arrange [data-arrange]{outline:2px dashed rgba(80,120,255,.55);outline-offset:-4px;cursor:grab;position:relative}.uds-arrange [data-arrange].is-over{outline:3px solid #3b6cff}.uds-arrange [data-arrange].is-drag{opacity:.45}.uds-arrange [data-arrange]>.uds-arrange-tag{position:absolute;top:8px;left:8px;z-index:50;padding:3px 8px;border-radius:6px;background:#3b6cff;color:#fff;font:600 12px/1.4 system-ui;display:flex;gap:6px;align-items:center}.uds-arrange-tag button{all:unset;cursor:pointer;min-width:24px;min-height:24px;text-align:center;border-radius:4px;background:rgba(255,255,255,.2)}.uds-arrange-tag button:focus-visible{outline:2px solid #fff}';document.head.append(css);document.documentElement.classList.add('uds-arrange');document.querySelectorAll('[data-reveal]').forEach(n=>n.classList.add('is-in'));
+const order=()=>secs.map(s=>([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));const send=(kind,from,to)=>parent.postMessage({type:'uds-arrange',kind,from,to,order:order()},'*');
+const mark=(nodes,kind,label)=>nodes.forEach((n,i)=>{n.dataset.arrange=kind;n.dataset.arrangeIndex=i;n.draggable=true;if(label){const t=document.createElement('span');t.className='uds-arrange-tag';t.textContent=label(n,i);[['↑',-1],['↓',1]].forEach(([s,d])=>{if(i+d<0||i+d>=nodes.length)return;const b=document.createElement('button');b.type='button';b.textContent=s;b.setAttribute('aria-label',(d<0?'Выше: ':'Ниже: ')+label(n,i).slice(2));b.addEventListener('click',()=>send(kind,i,i+d));t.append(b);});n.prepend(t);}});
+const secs=[...document.querySelectorAll('main section.ds-section')].filter(s=>!s.classList.contains('sec--contact')&&[...s.classList].some(c=>c.startsWith('sec--')));
+mark(secs,'section',s=>'⇅ '+([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));
+mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');
+let drag=null;addEventListener('dragstart',e=>{const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
+addEventListener('dragover',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
+addEventListener('drop',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');if(!n)return;e.preventDefault();const kind=drag.dataset.arrange;const from=kind==='item'?Number(drag.id.slice(5)):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.id.slice(5)):Number(n.dataset.arrangeIndex);send(kind,from,to);});
+addEventListener('dragend',()=>{if(drag)drag.classList.remove('is-drag');drag=null;document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));});
+addEventListener('click',e=>{if(e.target.closest('a,button'))e.preventDefault();},true);})();<\/script>`;
+function previewHtml(html) {
+  return arrangeMode ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, ARRANGE_SCRIPT + '</body>') : html;
+}
+window.addEventListener('message', e => {
+  if (e.source !== $('#frame').contentWindow || e.data?.type !== 'uds-arrange') return;
+  const { kind, from, to, order } = e.data;
+  if (!Number.isInteger(from) || !Number.isInteger(to)) return;
+  if (kind === 'section') {
+    if (Array.isArray(order) && order.every(id => typeof id === 'string')) {
+      const next = [...order]; next.splice(to, 0, next.splice(from, 1)[0]);
+      state.raw.sectionOrder = next; buildForm(); run(); toast('Порядок секций сохранён');
+    }
+  } else if (kind === 'item') reorderLayout('services', from, to);
+});
+$('#arrange-toggle')?.addEventListener('click', e => {
+  arrangeMode = !arrangeMode;
+  e.currentTarget.setAttribute('aria-pressed', String(arrangeMode));
+  if (result) $('#frame').srcdoc = previewHtml(result.html);
+  toast(arrangeMode ? 'Перетаскивайте секции и карточки каталога прямо на странице. Ссылки в этом режиме отключены.' : 'Режим перетаскивания выключен');
+});
+
 let draggedGalleryIndex = null;
 $('#form').addEventListener('dragstart', e => {
   const item = e.target.closest('[data-gallery-item]');

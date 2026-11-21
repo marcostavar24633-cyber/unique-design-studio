@@ -67,3 +67,17 @@ test('выбор сохраняется в экспорте; каждый сти
   const v = generate(JSON.parse(JSON.stringify(exportProject(r.project)))).concept.visualSystem;
   assert.deepEqual([v.typography2.typeStyle, v.sectionLayout, v.typography2.textAnimation, v.typography2.buttonAnimation], ['small-caps', 'rail', 'underline-draw', 'lift']);
 });
+
+test('ручной порядок секций: сохраняется, переживает изменения содержимого, контакты последние', async () => {
+  const { applyManualOrder } = await import('../src/engine/index.js');
+  assert.deepEqual(applyManualOrder(['about', 'items', 'faq', 'contact'], ['faq', 'about', 'items']), ['faq', 'about', 'items', 'contact']);
+  assert.deepEqual(applyManualOrder(['about', 'items', 'faq', 'contact'], 'faq>about'), ['faq', 'about', 'items', 'contact'], 'новая секция — после своего соседа');
+  assert.deepEqual(applyManualOrder(['about', 'contact'], ['contact', 'gallery', 'about']), ['about', 'contact'], 'удалённые секции и контакты отбрасываются');
+  assert.equal(applyManualOrder(['about', 'contact'], ['zzz']), null);
+  assert.equal(applyManualOrder(['about', 'contact'], 5), null);
+  const r = generate({ ...base, sectionOrder: ['gallery', 'advantages', 'items'] });
+  assert.deepEqual(r.concept.homepage.sectionOrder.slice(0, 3), ['gallery', 'advantages', 'items']);
+  assert.ok(r.html.indexOf('sec--gallery') < r.html.indexOf('sec--advantages'));
+  const again = generate(JSON.parse(JSON.stringify(exportProject(r.project))));
+  assert.deepEqual(again.concept.homepage.sectionOrder, r.concept.homepage.sectionOrder, 'порядок сохраняется в экспорте');
+});
