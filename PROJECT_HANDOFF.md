@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-20T18:19:17.095Z
+Время обновления: 2026-11-21T11:57:08.009Z
 Ветка: main
-Последний commit: 6b5a87eccc419031d819420b5b071fd779df8bb0
-Дата коммита: 2026-11-20T22:19:03+04:00
-Сообщение: test: audit studio responsive breakpoints (#205)
+Последний commit: 61454f811972073d48943c1eac06bfa4bf745064
+Дата коммита: 2026-11-21T15:56:55+04:00
+Сообщение: test: cover AI image generation and project insertion (#206)
 
 Последние коммиты:
-- 6b5a87e · 2026-11-20 · test: audit studio responsive breakpoints (#205)
-- 389070f · 2026-11-20 · docs: refresh project handoff
-- d97c78b · 2026-11-20 · docs: record editor controls E2E coverage (#204)
-- 1bb546b · 2026-11-20 · docs: refresh project handoff
-- 7d8d9cc · 2026-11-20 · Fix expanded mobile dashboard navigation visibility (#203)
-- 48544d4 · 2026-11-20 · docs: refresh project handoff
-- 5380c84 · 2026-11-20 · test: cover remaining editor and publish controls (#202)
-- f120900 · 2026-11-20 · docs: refresh project handoff
+- 61454f8 · 2026-11-21 · test: cover AI image generation and project insertion (#206)
+- f4e1489 · 2026-11-21 · 15 стилей типографики, 15 раскладок секций и перетаскивание блоков в редакторе (#213)
+- f8e442e · 2026-11-21 · 22 эффекта карточек и 20 эффектов первого экрана (#212)
+- 2668996 · 2026-11-21 · 15 форм карточек, 15 эффектов появления и 15 стилей кнопок (#211)
+- fa840af · 2026-11-21 · Переходы между секциями с настраиваемым градиентом (#210)
+- cf2b0fe · 2026-11-21 · D03 Cinematic Visual: цветокоррекция фото в тон фактуры (#209)
+- 7e3f53e · 2026-11-21 · Дизайн: шапка студии в одну строку, мобильная главная и типографика сайтов (#207)
+- 588b2ee · 2026-11-21 · D03 Cinematic Visual: фактуры, свет и визуальные слои страницы (#208)
 <!-- HANDOFF:AUTO:END -->
