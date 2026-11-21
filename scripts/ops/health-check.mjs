@@ -28,9 +28,39 @@ async function requestJson(url, options = {}, fetchImpl = fetch) {
   return { response, data, text };
 }
 
+function redactDiagnostic(value) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]')
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|(?:api[_-]?key|access[_-]?token|secret)\s*[:=]\s*["']?[^\s,"'<>]{6,})/gi, '[REDACTED]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
+function summarizeHttpFailure({ data, text, response }) {
+  if (data && typeof data === 'object') {
+    const fields = ['error', 'details', 'provider', 'model', 'route'];
+    const summary = fields
+      .filter(key => typeof data[key] === 'string' && data[key].trim())
+      .map(key => `${key}=${redactDiagnostic(data[key])}`);
+    const generation = data.generation;
+    if (generation && typeof generation === 'object') {
+      for (const key of ['mode', 'status', 'stage']) {
+        if (typeof generation[key] === 'string' && generation[key].trim()) summary.push(`generation.${key}=${redactDiagnostic(generation[key])}`);
+      }
+    }
+    return summary.length ? ` (${summary.join('; ')})` : '';
+  }
+  const contentType = response.headers.get('content-type') || '';
+  const title = text.match(/<title[^>]*>([^<]{1,160})<\/title>/i)?.[1];
+  const summary = [contentType ? `content-type=${redactDiagnostic(contentType)}` : '', title ? `title=${redactDiagnostic(title)}` : ''].filter(Boolean);
+  return summary.length ? ` (${summary.join('; ')})` : '';
+}
+
 async function checkUrl(label, url, options = {}) {
   const { response, data, text } = await requestJson(url, options);
-  if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`${label}: HTTP ${response.status}${summarizeHttpFailure({ data, text, response })}`);
   return { label, status: response.status, data, text };
 }
 
