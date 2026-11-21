@@ -397,6 +397,9 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   if (libraryUse) order = libraryUse.order;
   const manualOrder = applyManualOrder(order, project.passthrough?.sectionOrder);
   if (manualOrder) order = manualOrder;
+  // Скрытые владельцем секции убираются со страницы, данные остаются. Контакты не скрываются.
+  const hiddenSections = (Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []).map(String).filter(id => id !== 'contact' && order.includes(id));
+  if (hiddenSections.length) order = order.filter(id => !hiddenSections.includes(id));
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
@@ -496,6 +499,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       heroComposition: arch.placements[design.placement],
       navigationPattern: NAV_LABELS[design.nav],
       sectionOrder: order,
+      hiddenSections,
       sections: [{ id: 'hero', role: ROLES.hero }, ...order.map(id => ({ id, role: ROLES[id] }))],
       primaryCTA: cta,
     },

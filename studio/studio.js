@@ -804,9 +804,54 @@ function updateChangePreviewButton() {
     button.title = available ? 'Открыть сравнение в отдельной вкладке' : 'Сначала внесите изменение в текущий проект';
   } catch { button.disabled = true; }
 }
+// ---------- Отмена и повтор ----------
+// Снимок проекта до изменения кладётся в историю при каждой пересборке. Быстрые подряд правки
+// (набор текста) объединяются в один шаг. История сбрасывается при открытии другого проекта.
+const undoStack = [], redoStack = [];
+let historyMuted = false, lastHistoryPush = 0;
+function recordHistory(previousRaw) {
+  if (historyMuted || !previousRaw || previousRaw.id !== state.raw.id) return;
+  if (JSON.stringify(previousRaw) === JSON.stringify(state.raw)) return;
+  redoStack.length = 0;
+  const now = Date.now();
+  if (now - lastHistoryPush > 1000 || !undoStack.length) { undoStack.push(previousRaw); if (undoStack.length > 60) undoStack.shift(); }
+  lastHistoryPush = now;
+  updateHistoryButtons();
+}
+function updateHistoryButtons() {
+  const u = $('#undo'), r = $('#redo');
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
+}
+function stepHistory(from, to, label) {
+  if (!from.length) return;
+  to.push(JSON.parse(JSON.stringify(state.raw)));
+  state.raw = from.pop();
+  historyMuted = true;
+  try { buildForm(); run(); } finally { historyMuted = false; }
+  lastHistoryPush = 0;
+  updateHistoryButtons();
+  toast(label);
+}
+const undo = () => stepHistory(undoStack, redoStack, 'Изменение отменено');
+const redo = () => stepHistory(redoStack, undoStack, 'Изменение возвращено');
+function resetHistory() { undoStack.length = 0; redoStack.length = 0; updateHistoryButtons(); }
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const t = e.target;
+  // В полях ввода работает собственная отмена браузера.
+  if (t.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); }
+});
+$('#undo')?.addEventListener('click', undo);
+$('#redo')?.addEventListener('click', redo);
+
 function run() {
   const previousResult = result;
   const previousRaw = lastRenderedRaw;
+  recordHistory(previousRaw);
   const nextResult = generate(state.raw, { registry: registry() });
   if (previousResult && previousRaw && previousResult.project.id === nextResult.project.id && previousResult.html !== nextResult.html) {
     try {
@@ -822,6 +867,7 @@ function run() {
   result = nextResult;
   lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
   $('#frame').srcdoc = previewHtml(result.html);
+  if (trioMode) renderTrio();
   renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
   renderPublishManager();
   updateChangePreviewButton();
@@ -2243,6 +2289,7 @@ function load(raw, message) {
   const cleanRaw = raw && typeof raw === 'object' ? { ...raw } : raw;
   if (cleanRaw && typeof cleanRaw === 'object') delete cleanRaw.__udsAnalysis;
   state.raw = exportProject(normalizeProject(cleanRaw));
+  resetHistory();
   if (hasAttachedAnalysis) state.analysis = attachedAnalysis && attachedAnalysis.data ? { projectId: state.raw.id, data: attachedAnalysis.data } : null;
   else if (state.analysis?.data) {
     // При открытии записи реестра raw.id может отличаться от нормализованного ID проекта.
@@ -2612,11 +2659,18 @@ const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r
 function currentSectionOrder() {
   return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
 }
+function hiddenSectionList() {
+  return result?.concept?.homepage?.hiddenSections || [];
+}
 function orderList(kind, label, titles) {
-  if (titles.length < 2) return '';
+  if (titles.length < (kind === 'sections' && hiddenSectionList().length ? 1 : 2)) return '';
   const last = titles.length - 1;
   const reset = kind === 'sections' && state.raw.sectionOrder ? '<button type="button" data-order-reset>Вернуть автоматический порядок</button>' : '';
-  return `<div class="order-block"><p class="order-block__title">${esc(label)}${kind === 'sections' ? (state.raw.sectionOrder ? ' · вручную' : ' · авто') : ''}</p><ol class="order-list" data-order-list="${kind}">${titles.map((t, i) => `<li draggable="true" data-order-item="${i}"><span class="order-list__grip" aria-hidden="true">⋮⋮</span><span class="order-list__name">${esc(t)}</span><span class="order-list__btns"><button type="button" data-order-move="${i}" data-direction="-1" ${i === 0 ? 'disabled' : ''} aria-label="«${esc(t)}» выше" title="Выше">↑</button><button type="button" data-order-move="${i}" data-direction="1" ${i === last ? 'disabled' : ''} aria-label="«${esc(t)}» ниже" title="Ниже">↓</button></span></li>`).join('')}</ol>${reset}</div>`;
+  const sectionIds = kind === 'sections' ? currentSectionOrder() : [];
+  const extra = kind === 'sections' ? (id, t) => `<label class="order-list__toggle" title="Показывать на странице"><input type="checkbox" data-section-visible="${id}" checked aria-label="Показывать «${esc(t)}»"></label>`
+    : (i, t) => `<button type="button" data-order-dup="${i}" aria-label="Дублировать «${esc(t)}»" title="Дублировать">⧉</button>`;
+  const hidden = kind === 'sections' ? hiddenSectionList().map(id => `<li class="is-hidden"><span class="order-list__grip" aria-hidden="true">·</span><span class="order-list__name">${esc(ORDER_SECTION_LABELS[id] || id)} — скрыта</span><span class="order-list__btns"><label class="order-list__toggle" title="Показывать на странице"><input type="checkbox" data-section-visible="${id}" aria-label="Показывать «${esc(ORDER_SECTION_LABELS[id] || id)}»"></label></span></li>`).join('') : '';
+  return `<div class="order-block"><p class="order-block__title">${esc(label)}${kind === 'sections' ? (state.raw.sectionOrder ? ' · вручную' : ' · авто') : ''}</p><ol class="order-list" data-order-list="${kind}">${titles.map((t, i) => `<li draggable="true" data-order-item="${i}"><span class="order-list__grip" aria-hidden="true">⋮⋮</span><span class="order-list__name">${esc(t)}</span><span class="order-list__btns">${extra(kind === 'sections' ? sectionIds[i] : i, t)}<button type="button" data-order-move="${i}" data-direction="-1" ${i === 0 ? 'disabled' : ''} aria-label="«${esc(t)}» выше" title="Выше">↑</button><button type="button" data-order-move="${i}" data-direction="1" ${i === last ? 'disabled' : ''} aria-label="«${esc(t)}» ниже" title="Ниже">↓</button></span></li>`).join('')}${hidden}</ol>${reset}</div>`;
 }
 function layoutControl() {
   const sections = currentSectionOrder().map(sid => {
@@ -2648,6 +2702,34 @@ function reorderLayout(kind, from, to) {
   buildForm(); run(); toast('Расположение сохранено');
   requestAnimationFrame(() => $(`[data-order-list="${kind}"] [data-order-item="${to}"] [data-order-move]:not([disabled])`)?.focus());
 }
+/** Копия строки списка встаёт сразу после оригинала (у позиции копируются и настройки фото). */
+function duplicateRow(kind, i) {
+  const list = state.raw[kind];
+  if (!Array.isArray(list) || !list[i]) return;
+  list.splice(i + 1, 0, JSON.parse(JSON.stringify(list[i])));
+  if (kind === 'services') {
+    const art = state.raw.imageArtDirection || {};
+    for (const bucket of [art.services, art.mobileSources?.services]) {
+      if (!bucket || typeof bucket !== 'object') continue;
+      if (Array.isArray(bucket)) { if (bucket.length > i) bucket.splice(i + 1, 0, bucket[i] === undefined ? undefined : JSON.parse(JSON.stringify(bucket[i]))); continue; }
+      const keys = Object.keys(bucket).map(Number).filter(Number.isInteger).sort((a, b) => b - a);
+      for (const k of keys) if (k > i) { bucket[k + 1] = bucket[k]; delete bucket[k]; }
+      if (bucket[i] !== undefined) bucket[i + 1] = JSON.parse(JSON.stringify(bucket[i]));
+    }
+  }
+  buildForm(); run(); toast('Копия добавлена');
+  requestAnimationFrame(() => $(`[data-order-list="${kind}"] [data-order-item="${i + 1}"] [data-order-dup]`)?.focus());
+}
+$('#form').addEventListener('change', e => {
+  const box = e.target.closest?.('[data-section-visible]');
+  if (!box) return;
+  const id = box.dataset.sectionVisible;
+  const hidden = new Set(Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []);
+  if (box.checked) hidden.delete(id); else hidden.add(id);
+  if (hidden.size) state.raw.hiddenSections = [...hidden]; else delete state.raw.hiddenSections;
+  buildForm(); run(); toast(box.checked ? 'Секция снова на странице' : 'Секция скрыта — данные сохранены');
+  requestAnimationFrame(() => $(`[data-section-visible="${id}"]`)?.focus());
+});
 let orderDrag = null;
 $('#form').addEventListener('dragstart', e => {
   const item = e.target.closest?.('[data-order-item]');
@@ -2677,6 +2759,8 @@ $('#form').addEventListener('dragend', () => {
 $('#form').addEventListener('click', e => {
   const move = e.target.closest('[data-order-move]');
   if (move) { const from = Number(move.dataset.orderMove); reorderLayout(move.closest('[data-order-list]').dataset.orderList, from, from + Number(move.dataset.direction)); return; }
+  const dup = e.target.closest('[data-order-dup]');
+  if (dup) { duplicateRow(dup.closest('[data-order-list]').dataset.orderList, Number(dup.dataset.orderDup)); return; }
   if (e.target.closest('[data-order-reset]')) { delete state.raw.sectionOrder; buildForm(); run(); toast('Порядок секций снова подбирает движок'); }
 });
 
@@ -2687,15 +2771,59 @@ const order=()=>secs.map(s=>([...s.classList].find(c=>c.startsWith('sec--'))||''
 const mark=(nodes,kind,label)=>nodes.forEach((n,i)=>{n.dataset.arrange=kind;n.dataset.arrangeIndex=i;n.draggable=true;if(label){const t=document.createElement('span');t.className='uds-arrange-tag';t.textContent=label(n,i);[['↑',-1],['↓',1]].forEach(([s,d])=>{if(i+d<0||i+d>=nodes.length)return;const b=document.createElement('button');b.type='button';b.textContent=s;b.setAttribute('aria-label',(d<0?'Выше: ':'Ниже: ')+label(n,i).slice(2));b.addEventListener('click',()=>send(kind,i,i+d));t.append(b);});n.prepend(t);}});
 const secs=[...document.querySelectorAll('main section.ds-section')].filter(s=>!s.classList.contains('sec--contact')&&[...s.classList].some(c=>c.startsWith('sec--')));
 mark(secs,'section',s=>'⇅ '+([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));
-mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');
+mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');[['advantages','.sec--advantages ul.adv>li'],['process','.sec--process ol.proc>li'],['faqs','.sec--faq details'],['gallery','.sec--gallery li']].forEach(([k,q])=>mark([...document.querySelectorAll(q)],k));
 let drag=null;addEventListener('dragstart',e=>{const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
 addEventListener('dragover',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
 addEventListener('drop',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');if(!n)return;e.preventDefault();const kind=drag.dataset.arrange;const from=kind==='item'?Number(drag.id.slice(5)):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.id.slice(5)):Number(n.dataset.arrangeIndex);send(kind,from,to);});
 addEventListener('dragend',()=>{if(drag)drag.classList.remove('is-drag');drag=null;document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));});
 addEventListener('click',e=>{if(e.target.closest('a,button'))e.preventDefault();},true);})();<\/script>`;
+// Правка текста прямо на странице: тексты становятся редактируемыми, изменение уходит в поле проекта.
+let editMode = false;
+const EDIT_SCRIPT = `<script>(()=>{const css=document.createElement('style');css.textContent='[data-edit]{outline:1px dashed rgba(80,120,255,.6);outline-offset:3px;cursor:text}[data-edit]:hover{outline-style:solid}[data-edit]:focus{outline:2px solid #3b6cff;outline-offset:3px}';document.head.append(css);document.querySelectorAll('[data-reveal]').forEach(n=>n.classList.add('is-in'));
+const plain=n=>{const c=n.cloneNode(true);c.querySelectorAll('.item__badge,.uds-marquee,[aria-hidden="true"]').forEach(x=>x.remove());return c.textContent.replace(/\\s+/g,' ').trim();};
+const bind=(n,field,index,col)=>{if(!n||n.dataset.edit)return;n.dataset.edit=field;n.contentEditable='true';n.spellcheck=true;const start=plain(n);n.querySelectorAll('[aria-hidden="true"]').forEach(x=>x.remove());n.addEventListener('keydown',e=>{if(e.key==='Enter'&&!/Text|description/.test(field)){e.preventDefault();n.blur();}if(e.key==='Escape'){n.textContent=start;n.blur();}});n.addEventListener('blur',()=>{const v=plain(n);if(v&&v!==start)parent.postMessage({type:'uds-edit',field,index,col,value:v},'*');});};
+bind(document.querySelector('#hero-h'),'title');bind(document.querySelector('.hero .lede,section:first-of-type .lede'),'description');
+bind(document.querySelector('.hero .ds-button:not(.ds-button--secondary),main section:first-of-type .ds-button:not(.ds-button--secondary)'),'cta');
+[['about','aboutTitle'],['items','servicesTitle'],['advantages','advantagesTitle'],['process','processTitle'],['faq','faqTitle'],['gallery','galleryTitle'],['contact','contactTitle']].forEach(([id,f])=>bind(document.getElementById(id+'-h'),f));
+bind(document.querySelector('.about__text'),'aboutText');
+document.querySelectorAll('li.item[id^="item-"]').forEach(li=>{const i=Number(li.id.slice(5));bind(li.querySelector('h3'),'services',i,0);bind(li.querySelector('.item__more>p,.item__body>p:not(.price)'),'services',i,1);});
+[['advantages','.sec--advantages ul.adv>li'],['process','.sec--process ol.proc>li']].forEach(([k,q])=>document.querySelectorAll(q).forEach((li,i)=>{bind(li.querySelector('h3'),k,i,0);bind(li.querySelector('p'),k,i,1);}));
+document.querySelectorAll('.sec--faq details').forEach((d,i)=>{bind(d.querySelector('summary'),'faqs',i,0);bind(d.querySelector('p'),'faqs',i,1);});
+addEventListener('click',e=>{if(e.target.closest('[data-edit]')){if(e.target.closest('a,button,summary'))e.preventDefault();return;}if(e.target.closest('a'))e.preventDefault();},true);})();<\/script>`;
 function previewHtml(html) {
-  return arrangeMode ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, ARRANGE_SCRIPT + '</body>') : html;
+  const script = arrangeMode ? ARRANGE_SCRIPT : editMode ? EDIT_SCRIPT : '';
+  return script ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, script + '</body>') : html;
 }
+/** Номер элемента на странице → номер строки данных (пустые строки на страницу не выводятся). */
+function shownIndex(key, n) {
+  const list = Array.isArray(state.raw[key]) ? state.raw[key] : [];
+  const shown = list.map((r, i) => [r, i]).filter(([r]) => key === 'gallery' ? Boolean(typeof r === 'string' ? r : r?.src)
+    : (Array.isArray(r) ? r.slice(0, 2) : [r?.title, r?.text]).some(v => String(v ?? '').trim())).map(([, i]) => i);
+  return shown[n];
+}
+const EDIT_FIELDS = new Set(['title', 'description', 'cta', 'aboutTitle', 'servicesTitle', 'advantagesTitle', 'processTitle', 'faqTitle', 'galleryTitle', 'contactTitle', 'aboutText']);
+const EDIT_LISTS = new Set(['services', 'advantages', 'process', 'faqs']);
+window.addEventListener('message', e => {
+  if (e.source !== $('#frame').contentWindow || e.data?.type !== 'uds-edit') return;
+  const { field, index, col, value } = e.data;
+  if (typeof value !== 'string' || !value.trim()) return;
+  const text = value.trim().slice(0, 2000);
+  if (EDIT_FIELDS.has(field)) state.raw[field] = text;
+  else if (EDIT_LISTS.has(field) && Number.isInteger(index) && (col === 0 || col === 1)) {
+    const i = shownIndex(field, index);
+    const row = i === undefined ? null : state.raw[field][i];
+    if (!row) return;
+    if (Array.isArray(row)) row[col] = text; else row[col ? 'text' : 'title'] = text;
+  } else return;
+  buildForm(); run(); toast('Текст обновлён');
+});
+$('#edit-toggle')?.addEventListener('click', e => {
+  editMode = !editMode;
+  if (editMode && arrangeMode) { arrangeMode = false; $('#arrange-toggle')?.setAttribute('aria-pressed', 'false'); }
+  e.currentTarget.setAttribute('aria-pressed', String(editMode));
+  if (result) $('#frame').srcdoc = previewHtml(result.html);
+  toast(editMode ? 'Кликните по тексту на странице и правьте. Enter — сохранить, Esc — отменить.' : 'Правка текста на странице выключена');
+});
 window.addEventListener('message', e => {
   if (e.source !== $('#frame').contentWindow || e.data?.type !== 'uds-arrange') return;
   const { kind, from, to, order } = e.data;
@@ -2705,13 +2833,21 @@ window.addEventListener('message', e => {
       const next = [...order]; next.splice(to, 0, next.splice(from, 1)[0]);
       state.raw.sectionOrder = next; buildForm(); run(); toast('Порядок секций сохранён');
     }
-  } else if (kind === 'item') reorderLayout('services', from, to);
+  } else if (['item', 'advantages', 'process', 'faqs', 'gallery'].includes(kind)) {
+    // На странице пустые строки не выводятся: номер на странице переводится в номер строки данных.
+    const key = kind === 'item' ? 'services' : kind;
+    const a = shownIndex(key, from), b = shownIndex(key, to);
+    if (a === undefined || b === undefined) return;
+    if (key === 'gallery') reorderGalleryImage(a, b);
+    else reorderLayout(key, a, b);
+  }
 });
 $('#arrange-toggle')?.addEventListener('click', e => {
   arrangeMode = !arrangeMode;
+  if (arrangeMode && editMode) { editMode = false; $('#edit-toggle')?.setAttribute('aria-pressed', 'false'); }
   e.currentTarget.setAttribute('aria-pressed', String(arrangeMode));
   if (result) $('#frame').srcdoc = previewHtml(result.html);
-  toast(arrangeMode ? 'Перетаскивайте секции и карточки каталога прямо на странице. Ссылки в этом режиме отключены.' : 'Режим перетаскивания выключен');
+  toast(arrangeMode ? 'Перетаскивайте секции, карточки, преимущества, этапы, вопросы и фото прямо на странице. Ссылки в этом режиме отключены.' : 'Режим перетаскивания выключен');
 });
 
 let draggedGalleryIndex = null;
@@ -2985,8 +3121,33 @@ $('#toggle-settings')?.addEventListener('click', () => {
   $('#toggle-settings').setAttribute('aria-expanded', String(!collapsed));
   $('#toggle-settings').textContent = collapsed ? 'Показать настройки' : 'Скрыть настройки';
 });
+// Три ширины сразу: телефон, планшет и компьютер рядом; каждая копия масштабируется под свою колонку.
+let trioMode = false;
+const TRIO_WIDTHS = [390, 768, 1280];
+function renderTrio() {
+  const host = $('#trio');
+  if (!host) return;
+  host.hidden = !trioMode;
+  $('#frame').hidden = trioMode;
+  if (!trioMode || !result) { if (!trioMode) host.innerHTML = ''; return; }
+  if (!host.children.length) host.innerHTML = TRIO_WIDTHS.map(w => `<figure class="trio__cell"><figcaption>${w === 390 ? 'Телефон' : w === 768 ? 'Планшет' : 'Компьютер'} · ${w}px</figcaption><div class="trio__viewport"><iframe title="Предпросмотр ${w}px" sandbox="allow-scripts" data-trio-w="${w}" style="width:${w}px"></iframe></div></figure>`).join('');
+  host.querySelectorAll('iframe').forEach(f => { if (f.srcdoc !== result.html) f.srcdoc = result.html; });
+  fitTrio();
+}
+function fitTrio() {
+  $('#trio')?.querySelectorAll('.trio__viewport').forEach(v => {
+    const f = v.querySelector('iframe'); const w = Number(f.dataset.trioW);
+    const k = Math.min(1, v.clientWidth / w);
+    f.style.transform = `scale(${k})`; f.style.height = Math.round(v.clientHeight / k) + 'px';
+  });
+}
+window.addEventListener('resize', () => trioMode && fitTrio());
 document.querySelectorAll('.sizes button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.sizes button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  if (b.id === 'toggle-settings' || b.id === 'undo' || b.id === 'redo') return;
+  document.querySelectorAll('.sizes button[data-w]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  trioMode = b.dataset.w === 'trio';
+  renderTrio();
+  if (trioMode) { selectTab($('#tab-preview')); return; }
   const w = b.dataset.w; $('#frame').style.width = w ? w + 'px' : '100%'; $('#view-preview').classList.toggle('sized', Boolean(w));
   selectTab($('#tab-preview'));
 }));
