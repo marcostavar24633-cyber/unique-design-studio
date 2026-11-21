@@ -28,17 +28,18 @@ async function requestJson(url, options = {}, fetchImpl = fetch) {
   return { response, data, text };
 }
 
-function redactDiagnostic(value) {
+export function redactDiagnostic(value) {
   return String(value || '')
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]')
     .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|(?:api[_-]?key|access[_-]?token|secret)\s*[:=]\s*["']?[^\s,"'<>]{6,})/gi, '[REDACTED]')
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|AIza[A-Za-z0-9_-]{20,})\b/g, '[REDACTED]')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 240);
 }
 
-function summarizeHttpFailure({ data, text, response }) {
+export function summarizeHttpFailure({ data, text, response }) {
   if (data && typeof data === 'object') {
     const fields = ['error', 'details', 'provider', 'model', 'route'];
     const summary = fields
@@ -58,7 +59,7 @@ function summarizeHttpFailure({ data, text, response }) {
   return summary.length ? ` (${summary.join('; ')})` : '';
 }
 
-function repairHint(failure) {
+export function repairHint(failure) {
   const message = String(failure.message || '');
   if (failure.label === 'Studio Pages') {
     return 'Проверьте последний Pages deployment и ответ главного URL; повторную публикацию выполняйте только после подтверждения сбоя deployment.';
@@ -106,7 +107,7 @@ async function reportFailure(failures) {
     `Время UTC: ${new Date().toISOString()}`,
     ...(runUrl ? [`Запуск Health Monitor: ${runUrl}`] : []),
     '',
-    ...failures.map(item => `- **${item.label}**: ${item.message}`),
+    ...failures.map(item => `- **${item.label}**: ${redactDiagnostic(item.message)}`),
     '',
     '## Следующие безопасные шаги',
     ...failures.map(item => `- **${item.label}**: ${repairHint(item)}`),
@@ -187,7 +188,7 @@ export async function runHealthChecks({ siteUrl = process.env.SITE_URL || DEFAUL
   if (failures.length) {
     try { await reportFailure(failures); }
     catch (error) { console.error(`Не удалось создать Issue: ${error.message}`); }
-    for (const item of failures) console.error(`FAIL ${item.label}: ${item.message}`);
+    for (const item of failures) console.error(`FAIL ${item.label}: ${redactDiagnostic(item.message)}`);
     process.exitCode = 1;
   }
   return { ok: failures.length === 0, results, failures };
