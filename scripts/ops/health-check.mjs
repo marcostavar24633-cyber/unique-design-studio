@@ -28,9 +28,61 @@ async function requestJson(url, options = {}, fetchImpl = fetch) {
   return { response, data, text };
 }
 
+export function redactDiagnostic(value) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]')
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{12,}|(?:api[_-]?key|access[_-]?token|secret)\s*[:=]\s*["']?[^\s,"'<>]{6,})/gi, '[REDACTED]')
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|AIza[A-Za-z0-9_-]{20,})\b/g, '[REDACTED]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
+export function summarizeHttpFailure({ data, text, response }) {
+  if (data && typeof data === 'object') {
+    const fields = ['error', 'details', 'provider', 'model', 'route'];
+    const summary = fields
+      .filter(key => typeof data[key] === 'string' && data[key].trim())
+      .map(key => `${key}=${redactDiagnostic(data[key])}`);
+    const generation = data.generation;
+    if (generation && typeof generation === 'object') {
+      for (const key of ['mode', 'status', 'stage']) {
+        if (typeof generation[key] === 'string' && generation[key].trim()) summary.push(`generation.${key}=${redactDiagnostic(generation[key])}`);
+      }
+    }
+    return summary.length ? ` (${summary.join('; ')})` : '';
+  }
+  const contentType = response.headers.get('content-type') || '';
+  const title = text.match(/<title[^>]*>([^<]{1,160})<\/title>/i)?.[1];
+  const summary = [contentType ? `content-type=${redactDiagnostic(contentType)}` : '', title ? `title=${redactDiagnostic(title)}` : ''].filter(Boolean);
+  return summary.length ? ` (${summary.join('; ')})` : '';
+}
+
+export function repairHint(failure) {
+  const message = String(failure.message || '');
+  if (failure.label === 'Studio Pages') {
+    return 'Проверьте последний Pages deployment и ответ главного URL; повторную публикацию выполняйте только после подтверждения сбоя deployment.';
+  }
+  if (failure.label === 'AI Worker /health') {
+    return 'Сверьте последнюю версию Worker и её health-ответ. Не запускайте rollback без проверки конкретной last-known-good версии.';
+  }
+  if (failure.label === 'Workers AI binding') {
+    return 'Сначала сравните /api/diagnostics с конфигурацией binding AI; inference probe не поможет, пока binding не подтверждён.';
+  }
+  if (failure.label === 'Workers AI inference') {
+    if (/HTTP 429\b/.test(message)) return 'Проверьте квоту и ограничение частоты по уже имеющейся статистике; не повторяйте AI-запрос до выяснения доступного лимита.';
+    if (/HTTP 401\b|HTTP 403\b/.test(message)) return 'Проверьте разрешённый Origin и доступ к выбранному AI-маршруту; не публикуйте ключи и заголовки авторизации в отчёте.';
+    if (/HTTP 502\b/.test(message)) return 'Сопоставьте безопасные поля error/details/provider/model/route с логом этого запуска и Worker analytics. Сам статус 502 не устанавливает причину.';
+    if (/timeout|timed out/i.test(message)) return 'Сверьте длительность запроса и временные метки Worker; одиночный тайм-аут не является основанием для повторного платного вызова или rollback.';
+    return 'Изучите полный результат шага Health Monitor и /api/diagnostics; не запускайте повторный inference, пока не определены причина и расход квоты.';
+  }
+  return 'Сверьте детали сбоя с соответствующим GitHub Actions run и диагностикой сервиса; автоматические исправления не выполнялись.';
+}
+
 async function checkUrl(label, url, options = {}) {
   const { response, data, text } = await requestJson(url, options);
-  if (!response.ok) throw new Error(`${label}: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`${label}: HTTP ${response.status}${summarizeHttpFailure({ data, text, response })}`);
   return { label, status: response.status, data, text };
 }
 
@@ -46,12 +98,21 @@ async function reportFailure(failures) {
     'Content-Type': 'application/json',
   };
   const title = '[Autonomy Monitor] Проверка доступности Unique Design Studio';
+  const runId = String(process.env.GITHUB_RUN_ID || '').match(/^\d+$/)?.[0];
+  const serverUrl = String(process.env.GITHUB_SERVER_URL || 'https://github.com').replace(/\/+$/, '');
+  const runUrl = runId ? `${serverUrl}/${repo}/actions/runs/${runId}` : '';
   const body = [
     'Автоматический монитор обнаружил сбой.',
     '',
     `Время UTC: ${new Date().toISOString()}`,
+    ...(runUrl ? [`Запуск Health Monitor: ${runUrl}`] : []),
     '',
-    ...failures.map(item => `- **${item.label}**: ${item.message}`),
+    ...failures.map(item => `- **${item.label}**: ${redactDiagnostic(item.message)}`),
+    '',
+    '## Следующие безопасные шаги',
+    ...failures.map(item => `- **${item.label}**: ${repairHint(item)}`),
+    '',
+    'Рекомендации основаны на типе проверки и не подтверждают первопричину. Автоматические повторы AI, rollback и изменения кода не выполняются.',
     '',
     'Проверьте GitHub Actions → Health Monitor. Секреты и тела пользовательских запросов в отчёт не включаются.',
   ].join('\n');
@@ -127,7 +188,7 @@ export async function runHealthChecks({ siteUrl = process.env.SITE_URL || DEFAUL
   if (failures.length) {
     try { await reportFailure(failures); }
     catch (error) { console.error(`Не удалось создать Issue: ${error.message}`); }
-    for (const item of failures) console.error(`FAIL ${item.label}: ${item.message}`);
+    for (const item of failures) console.error(`FAIL ${item.label}: ${redactDiagnostic(item.message)}`);
     process.exitCode = 1;
   }
   return { ok: failures.length === 0, results, failures };
@@ -139,3 +200,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exitCode = 1;
   });
 }
+

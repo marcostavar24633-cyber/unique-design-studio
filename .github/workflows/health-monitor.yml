@@ -16,7 +16,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: uds-health-monitor
+  group: ${{ (github.event.schedule == '17 6 * * *' || inputs.ai_probe == true) && 'uds-health-ai-probe' || 'uds-health-monitor' }}
   cancel-in-progress: false
 
 jobs:
