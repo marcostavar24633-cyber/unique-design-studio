@@ -25,6 +25,8 @@ jobs:
       # Проверяем оба независимых Worker-конфига без публикации и без Cloudflare-секретов.
       - run: npx --yes wrangler@4 deploy --dry-run --config worker/wrangler.jsonc
       - run: npx --yes wrangler@4 deploy --dry-run --config worker/wrangler.toml
+      # Validate the private staging Worker configuration without deploying or invoking AI.
+      - run: npx --yes wrangler@4 deploy --dry-run --config config/wrangler.ai-staging.json
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
