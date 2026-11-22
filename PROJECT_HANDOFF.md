@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T15:17:11.302Z
+Время обновления: 2026-11-22T15:49:51.160Z
 Ветка: main
-Последний commit: d8e496ae8d22a03b62168ec74097e8573198e690
-Дата коммита: 2026-11-22T19:16:59+04:00
-Сообщение: Merge pull request #229 from marcostavar24633-cyber/fix/editor-link-targets
+Последний commit: 9ab76276229741c34cf4dc5304e3391b40f821be
+Дата коммита: 2026-11-22T19:49:39+04:00
+Сообщение: Merge pull request #230 from marcostavar24633-cyber/fix/editor-context-menu-photo-layout
 
 Последние коммиты:
+- 9ab7627 · 2026-11-22 · Merge pull request #230 from marcostavar24633-cyber/fix/editor-context-menu-photo-layout
+- d9cecdc · 2026-11-22 · fix(editor): improve canvas interactions for photos and context menu
+- 9865379 · 2026-11-22 · docs: refresh project handoff
 - d8e496a · 2026-11-22 · Merge pull request #229 from marcostavar24633-cyber/fix/editor-link-targets
 - 2caf243 · 2026-11-22 · feat(editor): edit selected link destinations
 - 582daca · 2026-11-22 · docs: refresh project handoff
 - a1feecd · 2026-11-22 · Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
 - ace0634 · 2026-11-22 · fix(editor): replace selected elements with components
-- 24727b9 · 2026-11-22 · fix(editor): replace selected elements with components
-- 6d297da · 2026-11-22 · docs: refresh project handoff
-- 250ef88 · 2026-11-22 · Merge pull request #227 from marcostavar24633-cyber/fix/editor-element-resize-and-styles
 <!-- HANDOFF:AUTO:END -->
