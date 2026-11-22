@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T11:10:37.277Z
+Время обновления: 2026-11-22T12:59:58.543Z
 Ветка: main
-Последний commit: 48e902fedfde2542c6cb3e66c8e9f0cf81650354
-Дата коммита: 2026-11-22T15:10:25+04:00
-Сообщение: ci: trigger the private staging probe from issue #214 (#222)
+Последний commit: 9e8603f00f2906c23f2aa3b38ccc4749e99406c4
+Дата коммита: 2026-11-22T16:59:45+04:00
+Сообщение: Merge pull request #223 from marcostavar24633-cyber/codex/editor-free-canvas
 
 Последние коммиты:
+- 9e8603f · 2026-11-22 · Merge pull request #223 from marcostavar24633-cyber/codex/editor-free-canvas
+- 103a564 · 2026-11-22 · feat: add free canvas editing and expand design controls
+- 07d4918 · 2026-11-22 · docs: refresh project handoff
 - 48e902f · 2026-11-22 · ci: trigger the private staging probe from issue #214 (#222)
 - 61d06a4 · 2026-11-22 · docs: refresh project handoff
 - 25eb6ee · 2026-11-22 · ci: add private one-shot real image staging probe (#221)
 - d4334d6 · 2026-11-22 · docs: refresh project handoff
 - b17fbde · 2026-11-22 · ci: dry-run private staging Worker config on every PR (#219)
-- f55707b · 2026-11-22 · docs: refresh project handoff
-- 1fce0b5 · 2026-11-22 · ci: verify Pages and AI binding after Worker deploy and rollback (#216)
-- 377301c · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
