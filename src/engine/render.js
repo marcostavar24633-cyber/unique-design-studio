@@ -517,9 +517,9 @@ ${sections}
 <footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>
 ${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
 ${script(c, scene)}
-${canvasEditsRuntime(project.passthrough.canvasEdits)}
 ${canvasOrderRuntime(project.passthrough.canvasOrder)}
 ${canvasMovesRuntime(project.passthrough.canvasMoves)}
+${canvasEditsRuntime(project.passthrough.canvasEdits)}
 </body>
 </html>
 `;
