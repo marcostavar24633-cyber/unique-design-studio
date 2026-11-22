@@ -81,7 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in {1..8}; do
-            if node scripts/ops/health-check.mjs --worker-only; then
+            if node scripts/ops/health-check.mjs; then
               echo "Post-deploy health checks passed."
               exit 0
             fi
@@ -120,17 +120,17 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           VERSION_ID: ${{ github.event.inputs.version_id }}
         run: npx --yes wrangler@4 rollback "$VERSION_ID" --config worker/wrangler.jsonc --message "Guarded rollback via GitHub Actions"
-      - name: Проверить Worker после отката
+      - name: Проверить Pages, Worker и AI binding после отката
         run: |
           set -euo pipefail
           for attempt in {1..8}; do
-            if curl --fail --silent --show-error --max-time 10 https://unique-design-studio-ai.marcostavar24633.workers.dev/health | grep -q '"ok":true'; then
-              echo "Worker health check passed after rollback."
+            if node scripts/ops/health-check.mjs; then
+              echo "Post-rollback health checks passed."
               exit 0
             fi
             sleep 15
           done
-          echo "::error::Worker health check failed after rollback."
+          echo "::error::Post-rollback health checks failed."
           exit 1
 
   reject-rollback:
