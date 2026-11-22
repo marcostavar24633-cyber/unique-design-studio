@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T18:45:49.522Z
+Время обновления: 2026-11-22T19:09:41.611Z
 Ветка: main
-Последний commit: 0d629732e6f246ba5e97fb96787b7476a37365b2
-Дата коммита: 2026-11-22T22:45:38+04:00
-Сообщение: feat: add safe static repository page editor
+Последний commit: 6fcc88c3b9738b39828cdcd5afda9ff4a0edd114
+Дата коммита: 2026-11-22T23:09:26+04:00
+Сообщение: test: cover repository page editor in Playwright
 
 Последние коммиты:
+- 6fcc88c · 2026-11-22 · test: cover repository page editor in Playwright
+- 9835aa5 · 2026-11-22 · docs: refresh project handoff
 - 0d62973 · 2026-11-22 · feat: add safe static repository page editor
 - c82f17b · 2026-11-22 · docs: refresh project handoff
 - 3274023 · 2026-11-22 · feat: import public GitHub site sources for analysis (#232)
 - fc2ce29 · 2026-11-22 · docs: refresh project handoff
 - 9814248 · 2026-11-22 · fix: preserve editor element offsets on free canvas (#231)
 - bff8bcd · 2026-11-22 · docs: refresh project handoff
-- 9ab7627 · 2026-11-22 · Merge pull request #230 from marcostavar24633-cyber/fix/editor-context-menu-photo-layout
-- d9cecdc · 2026-11-22 · fix(editor): improve canvas interactions for photos and context menu
 <!-- HANDOFF:AUTO:END -->
