@@ -77,7 +77,15 @@ try {
   await page.fill('#repo-x', '18');
   await page.fill('#repo-y', '-9');
   await page.click('#repo-apply');
-  check((await frame.locator('#headline').textContent()) === 'Новый заголовок', 'текст элемента не обновился в предпросмотре');
+  const textUpdated = await frame.locator('#headline').evaluate(node => new Promise(resolve => {
+    if (node.textContent === 'Новый заголовок') return resolve(true);
+    const observer = new MutationObserver(() => {
+      if (node.textContent === 'Новый заголовок') { observer.disconnect(); resolve(true); }
+    });
+    observer.observe(node, { childList: true, characterData: true, subtree: true });
+    setTimeout(() => { observer.disconnect(); resolve(node.textContent === 'Новый заголовок'); }, 1500);
+  }));
+  check(textUpdated, `текст элемента не обновился в предпросмотре: ${await frame.locator('#headline').textContent()}`);
   check((await frame.locator('#headline').evaluate(node => node.style.color)) === 'rgb(255, 0, 0)', 'цвет элемента не применился');
   check((await frame.locator('#headline').evaluate(node => node.style.rotate)) === '12deg', 'наклон элемента не применился');
   check((await frame.locator('#headline').evaluate(node => node.style.translate)) === '18px -9px', 'смещение элемента не применилось');
