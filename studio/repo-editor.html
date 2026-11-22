@@ -32,6 +32,12 @@
     <div class="repo-layout">
       <div class="repo-preview"><iframe id="repo-frame" title="Безопасный предпросмотр сайта" sandbox="allow-scripts"></iframe><p class="hint">Нажмите элемент в предпросмотре, чтобы выбрать его. Ссылки и формы отключены.</p></div>
       <aside class="repo-inspector" aria-label="Настройки выбранного элемента">
+        <details id="repo-structure" class="repo-structure">
+          <summary>Структура страницы <span id="repo-structure-count">—</span></summary>
+          <label for="repo-node-filter">Найти элемент</label>
+          <input id="repo-node-filter" type="search" placeholder="Текст, тег или класс">
+          <div id="repo-node-tree" role="tree" aria-label="Элементы HTML-страницы"></div>
+        </details>
         <h2>Элемент</h2><p id="repo-selection" class="muted">Выберите элемент на странице.</p>
         <label id="repo-text-row" hidden>Текст<textarea id="repo-text" rows="3" maxlength="2000"></textarea></label>
         <div class="repo-controls">
