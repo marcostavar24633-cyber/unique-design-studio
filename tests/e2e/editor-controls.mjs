@@ -151,6 +151,9 @@ try {
   await page.locator('#canvas-element-image-file').setInputFiles({ name: 'editor-photo.png', mimeType: 'image/png', buffer: tinyPng });
   const addedImage = preview.locator('#about .uds-added-element--image').last();
   await addedImage.waitFor({ state: 'visible', timeout: 10000 });
+  await page.click('#canvas-inspector-close');
+  await addedImage.click();
+  await page.click('#canvas-options-trigger');
   await page.waitForFunction(() => [...document.querySelector('#canvas-element-style')?.options || []].some(option => option.value === 'polaroid'));
   const captionRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.fill('#canvas-text', 'Портрет для обложки');
@@ -160,7 +163,7 @@ try {
   const photoStyleRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.selectOption('#canvas-element-style', 'polaroid');
   await photoStyleRender;
-  check(await addedImage.getAttribute('data-uds-canvas-style') === 'polaroid', 'стиль фото «Полароид» не сохранился');
+  check(await addedImage.locator('[data-uds-canvas-style="polaroid"]').count() === 1, 'стиль фото «Полароид» не сохранился на выбранном элементе');
   const circleRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.selectOption('#canvas-shape', 'circle');
   await circleRender;
