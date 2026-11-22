@@ -90,7 +90,12 @@ test('в коде Worker и страницы библиотеки нет сек�
   assert.doesNotMatch(worker, /api[_-]?key|secret\s*=|token\s*=|bearer /i);
   const page = readFileSync(root + 'studio/templates.js', 'utf8');
   const fetches = [...page.matchAll(/fetch\(([^)]*)\)/g)].map(m => m[1]);
-  assert.deepEqual(fetches, ['ep + path, { signal: ctrl.signal, headers: { Accept: \'application/json\' } }'], 'страница обращается только к анализатору-серверу');
+  assert.deepEqual(fetches, [
+    'url, { headers: githubHeaders, signal: AbortSignal.timeout(15000',
+    'ep + path, { signal: ctrl.signal, headers: { Accept: \'application/json\' } }',
+  ], 'страница обращается только к GitHub API и анализатору-серверу');
+  assert.match(page, /const githubApi = 'https:\/\/api\.github\.com'/, 'репозиторий читается только через официальный GitHub API');
+  assert.match(page, /url\.hostname\.toLowerCase\(\) !== 'github\.com'/, 'источник ограничен GitHub');
 });
 
 test('robots.txt проверяется и для адреса, на который ведёт перенаправление', async () => {
