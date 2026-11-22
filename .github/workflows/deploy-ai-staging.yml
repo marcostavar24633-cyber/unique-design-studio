@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Validate configuration or deploy the private staging Worker
+        description: Validate, deploy private staging Worker, or run one real image probe
         type: choice
         required: true
         default: validate
         options:
           - validate
           - deploy
+          - probe
 
 permissions:
   contents: read
@@ -40,3 +41,57 @@ jobs:
           : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
           : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
           npx --yes wrangler@4 deploy --config config/wrangler.ai-staging.json
+      - name: Probe one real image through temporary remote dev
+        if: ${{ inputs.operation == 'probe' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
+          log_file="$(mktemp)"
+          response_file="$(mktemp)"
+          npx --yes wrangler@4 dev --remote --config config/wrangler.ai-staging.json --ip 127.0.0.1 --port 8787 >"$log_file" 2>&1 &
+          wrangler_pid=$!
+          cleanup() {
+            kill "$wrangler_pid" 2>/dev/null || true
+            wait "$wrangler_pid" 2>/dev/null || true
+            rm -f "$log_file" "$response_file"
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if ! kill -0 "$wrangler_pid" 2>/dev/null; then
+              echo "Temporary remote Worker exited before readiness."
+              exit 1
+            fi
+            if curl --silent --fail http://127.0.0.1:8787/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Temporary remote Worker did not become ready."
+            exit 1
+          fi
+          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+            --max-time 120 \
+            -H 'Origin: https://marcostavar24633-cyber.github.io' \
+            -H 'Content-Type: application/json' \
+            --data '{"prompt":"Photorealistic editorial image of a small independent coffee shop interior, warm natural window light, oak counter, a single ceramic cup, no text or logos","aspect":"4:3","model":"flux-2-klein-4b"}' \
+            http://127.0.0.1:8787/api/generate-image)"
+          STATUS="$status" RESPONSE_FILE="$response_file" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const status = Number(process.env.STATUS);
+            if (status !== 200) throw new Error(`Image probe returned HTTP ${status}`);
+            const result = JSON.parse(readFileSync(process.env.RESPONSE_FILE, "utf8"));
+            if (result.fallback === true) throw new Error("Probe returned stock fallback instead of Workers AI");
+            if (result.model !== "@cf/black-forest-labs/flux-2-klein-4b") throw new Error("Unexpected image model");
+            if (result.mimeType !== "image/jpeg" || !Number.isInteger(result.width) || !Number.isInteger(result.height)) throw new Error("Invalid image metadata");
+            if (typeof result.image !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(result.image)) throw new Error("Image payload is missing or invalid");
+            const bytes = Buffer.from(result.image, "base64").byteLength;
+            if (bytes < 1024 || bytes > 12 * 1024 * 1024) throw new Error("Image payload size is outside safe bounds");
+            console.log(`Workers AI image probe passed: model=${result.model}, ${result.width}x${result.height}, ${bytes} bytes`);
+          '
