@@ -111,6 +111,12 @@ function buildPreview(html, baseUrl, cssParts, repoRootUrl) {
   const runtime = doc.createElement('script');
   runtime.textContent = `(()=>{const send=n=>{if(!n)return;const s=getComputedStyle(n),r=n.getBoundingClientRect(),leaf=!n.children.length;const hex=v=>{const m=v.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);return m?'#'+[m[1],m[2],m[3]].map(x=>Number(x).toString(16).padStart(2,'0')).join(''):''};parent.postMessage({type:'uds-repo-select',key:n.dataset.udsRepoKey||'',text:leaf?n.textContent.slice(0,2000):null,color:hex(s.color),background:hex(s.backgroundColor),fontSize:parseFloat(s.fontSize)||16,opacity:Math.round((parseFloat(s.opacity)||0)*100),width:Math.round(r.width),height:Math.round(r.height),radius:parseFloat(s.borderRadius)||0,rotation:parseFloat(s.rotate)||0},'*')};document.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();send(e.target.closest('[data-uds-repo-key]'))},true);document.addEventListener('submit',e=>e.preventDefault(),true);addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='uds-repo-edit')return;const n=document.body.querySelectorAll('*')[Number(d.key)];if(!n)return;if(d.reset){n.setAttribute('style',n.dataset.udsRepoOriginalStyle||'');return}const p=d.patch||{};if(p.text!==undefined&& !n.children.length)n.textContent=p.text;if(p.color)n.style.color=p.color;if(p.background)n.style.backgroundColor=p.background;if(p.fontSize)n.style.fontSize=p.fontSize+'px';if(p.width!==undefined)n.style.width=p.width?p.width+'px':'';if(p.height!==undefined)n.style.height=p.height?p.height+'px':'';if(p.opacity!==undefined)n.style.opacity=String(p.opacity/100);if(p.radius!==undefined)n.style.borderRadius=p.radius?p.radius+'px':'';if(p.rotation!==undefined)n.style.rotate=p.rotation+'deg';if(p.x!==undefined||p.y!==undefined)n.style.translate=(Number(p.x)||0)+'px '+(Number(p.y)||0)+'px'})})();`;
   doc.body.append(runtime);
+  const highlight = doc.createElement('style');
+  highlight.textContent = '[data-uds-repo-key].uds-repo-selected{outline:2px solid #4d7cfe!important;outline-offset:2px!important;cursor:pointer!important}';
+  doc.head.append(highlight);
+  const structureRuntime = doc.createElement('script');
+  structureRuntime.textContent = `(()=>{const allNodes=[...document.body.querySelectorAll('[data-uds-repo-key]')];const nodes=allNodes.filter(n=>!['SCRIPT','STYLE','LINK','META','TITLE'].includes(n.tagName));const read=n=>{let depth=0;for(let p=n.parentElement;p&&p!==document.body;p=p.parentElement)depth++;return{key:n.dataset.udsRepoKey,tag:n.tagName.toLowerCase(),id:n.id||'',className:typeof n.className==='string'?n.className.split(/\\s+/).filter(Boolean).slice(0,3).join(' '):'',label:(n.getAttribute('aria-label')||n.getAttribute('alt')||(!n.children.length?n.textContent:'')||'').replace(/\\s+/g,' ').trim().slice(0,72),depth}};parent.postMessage({type:'uds-repo-tree',nodes:nodes.slice(0,800).map(read),total:nodes.length},'*');const highlight=e=>{const n=e.target.closest('[data-uds-repo-key]');if(!n)return;document.querySelectorAll('.uds-repo-selected').forEach(x=>x.classList.remove('uds-repo-selected'));n.classList.add('uds-repo-selected')};document.addEventListener('click',highlight,true);addEventListener('message',e=>{const d=e.data;if(d?.type!=='uds-repo-focus')return;const n=allNodes[Number(d.key)];if(!n)return;n.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});n.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))})})();`;
+  doc.body.append(structureRuntime);
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 }
 function resolvePreviewUrl(value, baseUrl, repoRootUrl) {
@@ -175,8 +181,37 @@ $('#repo-load').addEventListener('click', async () => {
   finally { button.disabled = false; }
 });
 
+let repoTreeNodes = [];
+function renderRepoTree() {
+  const query = $('#repo-node-filter').value.trim().toLowerCase();
+  const list = $('#repo-node-tree');
+  list.replaceChildren();
+  const matches = repoTreeNodes.filter(node => !query || `${node.tag} ${node.id} ${node.className} ${node.label}`.toLowerCase().includes(query));
+  for (const node of matches) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.dataset.nodeKey = node.key; button.setAttribute('role', 'treeitem');
+    button.style.paddingInlineStart = `${Math.min(12, node.depth) * 10 + 8}px`;
+    const identity = `${node.id ? `#${node.id}` : ''}${node.className ? ` .${node.className.split(/\s+/).join('.')}` : ''}`;
+    button.textContent = `${node.tag.toUpperCase()}${identity}${node.label ? ` · ${node.label}` : ''}`;
+    list.append(button);
+  }
+  if (!matches.length) list.textContent = query ? 'Совпадений нет.' : 'Структура пока загружается.';
+}
+$('#repo-node-filter').addEventListener('input', renderRepoTree);
+$('#repo-node-tree').addEventListener('click', event => {
+  const button = event.target.closest('button[data-node-key]');
+  if (!button) return;
+  $('#repo-frame').contentWindow.postMessage({ type: 'uds-repo-focus', key: button.dataset.nodeKey }, '*');
+});
 window.addEventListener('message', event => {
-  if (event.source !== $('#repo-frame').contentWindow || event.data?.type !== 'uds-repo-select') return;
+  if (event.source !== $('#repo-frame').contentWindow) return;
+  if (event.data?.type === 'uds-repo-tree') {
+    repoTreeNodes = Array.isArray(event.data.nodes) ? event.data.nodes : [];
+    $('#repo-structure-count').textContent = `${repoTreeNodes.length}${event.data.total > repoTreeNodes.length ? '+' : ''}`;
+    renderRepoTree();
+    return;
+  }
+  if (event.data?.type !== 'uds-repo-select') return;
   const data = event.data; selectedKey = String(data.key || '');
   if (!selectedKey) return;
   $('#repo-selection').textContent = `Элемент №${Number(selectedKey) + 1}`;

@@ -62,7 +62,16 @@ try {
   check(await page.locator('#repo-page option').count() === 1, 'HTML-страница не найдена в списке репозитория');
   await page.click('#repo-load');
   await page.waitForSelector('#editor-workspace:not([hidden])');
+  await page.waitForFunction(() => Number.parseInt(document.querySelector('#repo-structure-count')?.textContent, 10) > 0);
   const frame = page.frameLocator('#repo-frame');
+  await page.click('#repo-structure summary');
+  await page.fill('#repo-node-filter', 'Старая надпись');
+  const treeItem = page.locator('#repo-node-tree [data-node-key]').filter({ hasText: 'Старая надпись' });
+  check(await treeItem.count() === 1, 'поиск по дереву не находит HTML-элемент');
+  await treeItem.click();
+  await page.waitForFunction(() => document.querySelector('#repo-text')?.value === 'Старая надпись');
+  check((await frame.locator('#headline').getAttribute('class')).includes('uds-repo-selected'), 'выбор из структуры не подсвечивает элемент');
+  await page.fill('#repo-node-filter', '');
   await frame.locator('#headline').click();
   await page.waitForFunction(() => document.querySelector('#repo-selection')?.textContent?.startsWith('Элемент №'));
   check((await frame.locator('h1').evaluate(node => getComputedStyle(node).fontSize)) === '28px', 'импортированный CSS не применился');
@@ -109,4 +118,3 @@ try {
 
 if (failures.length) { console.error(`FAIL repo editor (${failures.length}/${checks})\n- ${failures.join('\n- ')}`); process.exitCode = 1; }
 else console.log(`PASS repo editor: ${checks} checks`);
-
