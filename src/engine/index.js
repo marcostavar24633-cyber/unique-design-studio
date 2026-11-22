@@ -6,6 +6,7 @@ import { exportProject, normalizeProject } from './project.js';
 
 export { applyManualOrder, buildConcept, buildBrandPalette, buildPalette, detectNiche, fingerprintOf, registryEntry, similarity, upsertRegistry } from './concept.js';
 export { renderSite, renderCss } from './render.js';
+export { canvasFanPlacements } from './canvas.js';
 export { auditSite } from './audit.js';
 export { buildPrompt, withCustomPrompt } from './prompt.js';
 export { PROMPT_MANAGER_KEY, PROMPT_MODULES, PROMPT_LIMITS, emptyPromptRegistry, normalizePromptRegistry, loadPromptRegistry, savePromptRegistry, activePrompt, savePromptVersion, activatePromptVersion, applyManagedPrompt, exportPromptRegistry, importPromptRegistry } from './prompt-manager.js';
