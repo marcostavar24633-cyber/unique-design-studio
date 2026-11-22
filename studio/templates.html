@@ -34,6 +34,7 @@
     <fieldset class="modes">
       <legend>Откуда взять данные страницы</legend>
       <label class="mode"><input type="radio" name="mode" value="worker"><span><b>Анализатор-сервер</b><small>Страницы загружает ваш Cloudflare Worker. <span id="worker-chip" class="chip chip--off">не подключён</span></small></span></label>
+      <label class="mode"><input type="radio" name="mode" value="github"><span><b>Публичный GitHub-репозиторий</b><small>Загрузить HTML/CSS в этот браузер и создать редактируемый профиль. Репозиторий останется без изменений.</small></span></label>
       <label class="mode"><input type="radio" name="mode" value="html" checked><span><b>HTML-код страницы</b><small>Вставьте разметку или загрузите сохранённый файл — анализ выполнится в браузере.</small></span></label>
       <label class="mode"><input type="radio" name="mode" value="manual"><span><b>Ручной ввод</b><small>Заполните профиль самостоятельно, без автоматического анализа.</small></span></label>
     </fieldset>
@@ -45,6 +46,16 @@
         <div class="field"><label for="worker-endpoint">Адрес Worker</label><input id="worker-endpoint" type="url" inputmode="url" placeholder="https://uds-site-fetch.ваш-аккаунт.workers.dev" autocomplete="off" aria-describedby="worker-endpoint-h"><small class="hint" id="worker-endpoint-h">Сервер не входит в сайт студии: его нужно развернуть самостоятельно по инструкции <a href="https://github.com/marcostavar24633-cyber/unique-design-studio/blob/main/docs/site-analyzer.md" target="_blank" rel="noopener noreferrer">docs/site-analyzer.md</a>. Адрес хранится только в этом браузере. Ключи и пароли не нужны.</small></div>
         <div class="actions"><button type="button" id="worker-save">Сохранить и проверить</button><button type="button" id="worker-clear">Отключить</button></div>
       </details>
+    </div>
+
+    <div id="mode-github" class="mode-body" hidden>
+      <div class="field"><label for="github-repo-url">Ссылка на публичный репозиторий</label><input id="github-repo-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" autocomplete="off"></div>
+      <div class="actions"><button type="button" id="github-connect">Найти страницы</button></div>
+      <div id="github-files" hidden>
+        <div class="field"><label for="github-html-file">HTML-страница</label><select id="github-html-file"></select><small class="hint">По умолчанию выберется index.html. Можно выбрать другую страницу.</small></div>
+        <div class="actions"><button type="button" id="github-load-page" class="primary">Загрузить страницу и стили</button></div>
+      </div>
+      <p id="github-import-status" class="notice" role="status" aria-live="polite">Доступны публичные репозитории с HTML-файлом. GitHub-токен не запрашивается; запись и публикация изменений в репозиторий не выполняются.</p>
     </div>
 
     <div id="mode-html" class="mode-body">
