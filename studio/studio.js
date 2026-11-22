@@ -2834,6 +2834,14 @@ function rememberCanvasChange() {
   canvasUndo.push(canvasSnapshot()); if (canvasUndo.length > 60) canvasUndo.shift();
   canvasRedo.length = 0; refreshCanvasHistory();
 }
+function refreshCanvasOverlapLayers(sectionId = selectedCanvasMeta?.sectionId) {
+  const row = $('#canvas-overlap-list-row'), select = $('#canvas-overlap-layers');
+  const entries = Object.entries(state.raw.canvasMoves || {}).filter(([, move]) => move?.sectionId === sectionId)
+    .sort(([keyA], [keyB]) => (Number(state.raw.canvasEdits?.[keyB]?.zIndex) || 0) - (Number(state.raw.canvasEdits?.[keyA]?.zIndex) || 0));
+  row.hidden = !sectionId || entries.length < 2;
+  const labels = new Map([...$('#canvas-layers').options].map(option => [option.value, option.textContent]));
+  select.replaceChildren(...entries.map(([key], index) => new Option(`${index + 1}. ${labels.get(key) || key}`, key, false, key === selectedCanvasKey)));
+}
 function setCanvasSelection(info) {
   if (!info || !/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(info.key || '')) return;
   selectedCanvasKey = info.key; selectedCanvasMeta = info;
@@ -2888,6 +2896,7 @@ function setCanvasSelection(info) {
   }
   const layer = $('#canvas-layers');
   for (const option of layer.options) option.selected = option.value === selectedCanvasKey;
+  refreshCanvasOverlapLayers(info.sectionId);
   $('#canvas-paste-style').disabled = !canvasStyleClipboard;
   $('#canvas-paste-position').disabled = !canvasPositionClipboard;
   $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey];
@@ -3063,6 +3072,7 @@ $('#canvas-block-placement').addEventListener('change', e => {
 });
 $('#canvas-inspector-close').addEventListener('click', () => { canvasInspectorOpen = false; $('#canvas-inspector').hidden = true; $('#canvas-options-trigger').hidden = true; selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-paste-style').disabled = !canvasStyleClipboard; });
 $('#canvas-layers').addEventListener('change', e => { selectedCanvasKey = e.target.value; $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'); });
+$('#canvas-overlap-layers').addEventListener('change', e => { selectedCanvasKey = e.target.value; $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'); });
 $('#canvas-add').addEventListener('click', () => $('#canvas-menu').showModal());
 $('#canvas-replace').addEventListener('click', () => $('#canvas-menu').showModal());
 $('#canvas-duplicate').addEventListener('click', () => {
@@ -3227,6 +3237,7 @@ window.addEventListener('message', e => {
   if (e.data?.type === 'uds-canvas-layers') {
     const select = $('#canvas-layers'), current = selectedCanvasKey;
     select.replaceChildren(...(e.data.layers || []).map(layer => new Option(layer.label, layer.key, false, layer.key === current)));
+    refreshCanvasOverlapLayers();
     return;
   }
   if (e.data?.type === 'uds-canvas-menu') {
