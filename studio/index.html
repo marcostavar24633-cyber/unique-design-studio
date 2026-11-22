@@ -188,7 +188,7 @@
         <button type="button" id="canvas-reset-edit" disabled>Сбросить правки</button>
         <button type="button" id="canvas-delete" class="danger">Удалить</button>
       </div>
-      <div class="canvas-inspector__history"><button type="button" id="canvas-undo" disabled>↶ Отменить</button><button type="button" id="canvas-redo" disabled>↷ Повторить</button></div>
+      <div class="canvas-actions canvas-layer-actions" role="group" aria-label="Перекрытие элементов" id="canvas-layer-actions" hidden><button type="button" id="canvas-bring-front">На передний план</button><button type="button" id="canvas-send-back">На задний план</button><button type="button" id="canvas-fan-five" class="canvas-layer-actions__fan">Разложить 5 фото веером</button></div><div class="canvas-inspector__history"><button type="button" id="canvas-undo" disabled>↶ Отменить</button><button type="button" id="canvas-redo" disabled>↷ Повторить</button></div>
       <label>Слои страницы<select id="canvas-layers" size="4" aria-label="Выбрать текстовый элемент"></select></label>
       <small class="canvas-hotkeys">Перетаскивайте элемент мышью или пальцем, чтобы менять его положение внутри секции. Автовыравнивание возвращает его в поток и к ближайшему краю или центру.</small>
       <small class="canvas-hotkeys">Двойной клик — править текст · Shift+F10 — меню · Esc — отменить · Ctrl/⌘+Z — отмена · Ctrl/⌘+D — дубликат · Delete — удалить</small>

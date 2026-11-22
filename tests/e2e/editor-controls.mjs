@@ -61,6 +61,12 @@ try {
   const movedCard = preview.locator('#about [data-uds-free-canvas] li.item');
   await movedCard.waitFor({ state: 'visible', timeout: 10000 });
   check(await movedCard.count() === 1, 'карточка каталога не переместилась в другой раздел');
+  const headerCta = preview.locator('.nav__cta');
+  await headerCta.waitFor({ state: 'visible' });
+  await headerCta.dragTo(preview.locator('.hero h1'), { targetPosition: { x: 20, y: 20 } });
+  const heroCta = preview.locator('.hero [data-uds-free-canvas] .nav__cta');
+  await heroCta.waitFor({ state: 'visible', timeout: 10000 });
+  check(await heroCta.count() === 1, 'кнопка из шапки не переместилась на первый экран');
   await movedElement.click();
   await page.click('#canvas-options-trigger');
   const widthRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
@@ -80,6 +86,14 @@ try {
   check(movedStyle.width === '420px', `ширина после повторного рендера: ${movedStyle.width}`);
   check(movedStyle.rotate === '15deg', `угол после повторного рендера: ${movedStyle.rotate}`);
   check(await movedElement.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
+  await heroCta.click();
+  await page.click('#canvas-options-trigger');
+  check(await page.locator('#canvas-layer-actions').isVisible(), 'для свободно размещённого элемента не показаны действия со слоями');
+  const bringFront = page.locator('#canvas-bring-front');
+  const layerRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await bringFront.click();
+  await layerRender;
+  const movedZ = await heroCta.evaluate(node => getComputedStyle(node).zIndex); check(movedZ === '1', `кнопка из шапки не вышла на передний план: ${movedZ}`);
 
   // Добавленная пользователем кнопка должна редактировать подпись прямо в инспекторе.
   await preview.locator('#about h2').click();
