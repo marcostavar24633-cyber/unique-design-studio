@@ -67,7 +67,10 @@ try {
   const heroCta = preview.locator('.hero [data-uds-free-canvas] .nav__cta');
   await heroCta.waitFor({ state: 'visible', timeout: 10000 });
   check(await heroCta.count() === 1, 'кнопка из шапки не переместилась на первый экран');
-  await movedElement.click();
+  await movedElement.dragTo(preview.locator('.hero'), { targetPosition: { x: 20, y: 320 } });
+  const heroMovedText = preview.locator('.hero [data-uds-free-canvas] .about__text');
+  await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
+  await heroMovedText.click();
   await page.click('#canvas-options-trigger');
   const widthRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.fill('#canvas-width', '420');
@@ -81,19 +84,23 @@ try {
   });
   await page.waitForFunction(() => document.querySelector('#canvas-rotation-out')?.textContent === '15°');
   await rotationRender;
-  await movedElement.waitFor({ state: 'visible', timeout: 10000 });
-  const movedStyle = await movedElement.evaluate(node => ({ width: getComputedStyle(node).width, rotate: getComputedStyle(node).rotate }));
+  await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
+  const movedStyle = await heroMovedText.evaluate(node => ({ width: getComputedStyle(node).width, rotate: getComputedStyle(node).rotate }));
   check(movedStyle.width === '420px', `ширина после повторного рендера: ${movedStyle.width}`);
   check(movedStyle.rotate === '15deg', `угол после повторного рендера: ${movedStyle.rotate}`);
-  check(await movedElement.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
+  check(await heroMovedText.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
   await heroCta.click();
   await page.click('#canvas-options-trigger');
   check(await page.locator('#canvas-layer-actions').isVisible(), 'для свободно размещённого элемента не показаны действия со слоями');
+  check(await page.locator('#canvas-overlap-list-row').isVisible(), 'список перекрывающихся элементов не показан при двух слоях');
+  check(await page.locator('#canvas-overlap-layers option').count() === 2, 'список перекрытия не содержит оба свободно размещённых элемента');
   const bringFront = page.locator('#canvas-bring-front');
   const layerRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await bringFront.click();
   await layerRender;
   const movedZ = await heroCta.evaluate(node => getComputedStyle(node).zIndex); check(movedZ === '1', `кнопка из шапки не вышла на передний план: ${movedZ}`);
+  const frontLayerKey = await heroCta.getAttribute('data-uds-edit-key');
+  check(await page.locator('#canvas-overlap-layers option').first().getAttribute('value') === frontLayerKey, 'передний слой не отображается первым в списке наложения');
 
   // Добавленная пользователем кнопка должна редактировать подпись прямо в инспекторе.
   await preview.locator('#about h2').click();
