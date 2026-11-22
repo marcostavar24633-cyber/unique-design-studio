@@ -80,6 +80,11 @@ try {
   await page.waitForFunction(() => Number(document.querySelector('#repo-x')?.value) >= 30);
   check(Number(await page.inputValue('#repo-y')) >= 15, 'перетаскивание не обновило вертикальное смещение');
   const resizeHandle = await frame.locator('#uds-repo-resize').boundingBox();
+  const resizeHitTarget = await frame.locator('#uds-repo-resize').evaluate(handle => {
+    const rect = handle.getBoundingClientRect();
+    return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === handle;
+  });
+  check(resizeHitTarget, 'маркер размера не попадает в область hit-testing iframe');
   const widthBeforeResize = Number(await page.inputValue('#repo-width'));
   await page.mouse.move(resizeHandle.x + resizeHandle.width / 2, resizeHandle.y + resizeHandle.height / 2);
   await page.mouse.down(); await page.mouse.move(resizeHandle.x + resizeHandle.width / 2 + 28, resizeHandle.y + resizeHandle.height / 2 + 18, { steps: 4 }); await page.mouse.up();
