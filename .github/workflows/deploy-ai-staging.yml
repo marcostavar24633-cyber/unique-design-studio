@@ -12,6 +12,8 @@ on:
           - validate
           - deploy
           - probe
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   staging:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'issue_comment' && github.event.issue.number == 214 && github.event.comment.body == '/run-staging-probe' && github.actor == 'marcostavar24633-cyber') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,7 +45,7 @@ jobs:
           : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
           npx --yes wrangler@4 deploy --config config/wrangler.ai-staging.json
       - name: Probe one real image through temporary remote dev
-        if: ${{ inputs.operation == 'probe' }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.operation == 'probe') || (github.event_name == 'issue_comment' && github.event.issue.number == 214 && github.event.comment.body == '/run-staging-probe' && github.actor == 'marcostavar24633-cyber') }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
