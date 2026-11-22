@@ -80,6 +80,21 @@ try {
   check(movedStyle.width === '420px', `ширина после повторного рендера: ${movedStyle.width}`);
   check(movedStyle.rotate === '15deg', `угол после повторного рендера: ${movedStyle.rotate}`);
   check(await movedElement.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
+
+  // Добавленная пользователем кнопка должна редактировать подпись прямо в инспекторе.
+  await preview.locator('#about h2').click();
+  await page.click('#canvas-options-trigger');
+  await page.click('#canvas-add');
+  await page.click('#canvas-menu [data-canvas-menu="add-button"]');
+  const addedButton = preview.locator('#about .uds-added-element--button');
+  await addedButton.waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForFunction(() => document.querySelector('#canvas-text')?.value === 'Новая кнопка');
+  check(await page.inputValue('#canvas-text') === 'Новая кнопка', 'подпись добавленной кнопки не показана в инспекторе');
+  const buttonTextRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.fill('#canvas-text', 'Записаться на консультацию');
+  await page.locator('#canvas-text').press('Tab');
+  await buttonTextRender;
+  check((await preview.locator('#about .uds-added-element--button').innerText()).includes('Записаться на консультацию'), 'новая кнопка не сохранила изменённую подпись');
   await page.click('#arrange-toggle');
 
   await page.click('#save');

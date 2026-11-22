@@ -2838,18 +2838,24 @@ function setCanvasSelection(info) {
   if (!info || !/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(info.key || '')) return;
   selectedCanvasKey = info.key; selectedCanvasMeta = info;
   const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  const customElement = info.elementId && info.sectionId
+    ? (state.raw.canvasElements?.[info.sectionId] || []).find(item => item.id === info.elementId)
+    : null;
   $('#canvas-inspector').hidden = !canvasInspectorOpen;
   $('#canvas-selected-label').textContent = info.label || info.tag || 'Элемент';
   $('#canvas-options-trigger').hidden = false;
-  $('#canvas-text').closest('label').hidden = ['img','figure','svg','dialog'].includes(info.tag)||info.layout;
-  $('#canvas-font-size-field').hidden = ['img','figure','svg','dialog'].includes(info.tag)||info.layout;
-  $('#canvas-button-style-field').hidden = !info.button;
+  const textless = ['img','figure','svg','dialog'].includes(info.tag) && !customElement;
+  $('#canvas-text').closest('label').hidden = textless || (info.layout && !customElement);
+  $('#canvas-font-size-field').hidden = textless || (info.layout && !customElement);
+  $('#canvas-button-style-field').hidden = !(info.button || customElement?.type === 'button');
   $('#canvas-shape').value = edit.shape || 'auto';
   $('#canvas-button-style').value = edit.buttonStyle || 'inherit';
   $('#canvas-animation').value = edit.animation || 'none';
-  $('#canvas-text').value = edit.text ?? info.text ?? '';
-  $('#canvas-alt-field').hidden = info.tag !== 'img';
-  $('#canvas-alt').value = edit.alt ?? info.alt ?? '';
+  $('#canvas-text').value = edit.text ?? (customElement
+    ? (customElement.type === 'card' && info.tag !== 'h3' ? customElement.text : customElement.title || customElement.text)
+    : info.text) ?? '';
+  $('#canvas-alt-field').hidden = info.tag !== 'img' && customElement?.type !== 'image';
+  $('#canvas-alt').value = edit.alt ?? info.alt ?? customElement?.alt ?? '';
   $('#canvas-color').value = canvasColorHex(edit.color || info.color, '#202329');
   $('#canvas-background').value = canvasColorHex(edit.background || info.background, '#ffffff');
   const size = Number(edit.fontSize || info.fontSize || 24);
