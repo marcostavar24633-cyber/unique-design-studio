@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Безопасный редактор статической HTML-страницы из публичного GitHub-репозитория.">
+<title>Редактор страницы — UNIQUE DESIGN STUDIO</title>
+<link rel="stylesheet" href="templates.css">
+<link rel="stylesheet" href="repo-editor.css">
+</head>
+<body>
+<header class="top"><strong>✦ UNIQUE DESIGN STUDIO</strong><nav><a href="templates.html">← Анализ сайтов</a> · <a href="index.html">Вернуться в студию</a></nav></header>
+<main class="repo-editor-main">
+  <section class="intro">
+    <div class="eyebrow">STATIC HTML EDITOR</div>
+    <h1>Редактирование страницы из репозитория</h1>
+    <p>Подключите публичный GitHub-репозиторий, выберите HTML-страницу и внесите визуальные правки. Предпросмотр не запускает скрипты сайта. Изменения можно скачать как HTML и вручную добавить в репозиторий.</p>
+  </section>
+  <section class="panel repo-source" aria-label="Источник страницы">
+    <div class="repo-source__row">
+      <div class="field"><label for="repo-url">Публичный GitHub-репозиторий</label><input id="repo-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" autocomplete="off"></div>
+      <button id="repo-connect" type="button">Найти страницы</button>
+    </div>
+    <div id="repo-pages-row" class="repo-source__row" hidden>
+      <div class="field"><label for="repo-page">HTML-страница</label><select id="repo-page"></select></div>
+      <button id="repo-load" class="primary" type="button">Открыть в редакторе</button>
+    </div>
+    <p id="repo-status" class="notice" role="status" aria-live="polite">Публичный репозиторий доступен только для чтения. Авторизация GitHub не запрашивается.</p>
+  </section>
+  <section id="editor-workspace" class="repo-workspace" hidden>
+    <div class="repo-toolbar"><div><b id="repo-current-file"></b><small>Предпросмотр без JavaScript исходного сайта</small></div><div class="actions"><button id="repo-download" class="primary" type="button">Скачать изменённый HTML</button><button id="repo-reset" type="button">Сбросить все правки</button></div></div>
+    <div class="repo-layout">
+      <div class="repo-preview"><iframe id="repo-frame" title="Безопасный предпросмотр сайта" sandbox="allow-scripts"></iframe><p class="hint">Нажмите элемент в предпросмотре, чтобы выбрать его. Ссылки и формы отключены.</p></div>
+      <aside class="repo-inspector" aria-label="Настройки выбранного элемента">
+        <h2>Элемент</h2><p id="repo-selection" class="muted">Выберите элемент на странице.</p>
+        <label id="repo-text-row" hidden>Текст<textarea id="repo-text" rows="3" maxlength="2000"></textarea></label>
+        <div class="repo-controls">
+          <label>Цвет<input id="repo-color" type="color" value="#202329"></label>
+          <label>Фон<input id="repo-background" type="color" value="#ffffff"></label>
+          <label>Размер текста, px<input id="repo-size" type="number" min="8" max="120" value="16"></label>
+          <label>Ширина, px<input id="repo-width" type="number" min="0" max="2400" placeholder="Авто"></label>
+          <label>Высота, px<input id="repo-height" type="number" min="0" max="1600" placeholder="Авто"></label>
+          <label>Наклон, °<input id="repo-rotation" type="number" min="-45" max="45" value="0"></label>
+          <label>Прозрачность, %<input id="repo-opacity" type="number" min="0" max="100" value="100"></label>
+          <label>Скругление, px<input id="repo-radius" type="number" min="0" max="999" placeholder="По умолчанию"></label>
+          <label>Смещение X, px<input id="repo-x" type="number" min="-1600" max="1600" value="0"></label>
+          <label>Смещение Y, px<input id="repo-y" type="number" min="-1200" max="1200" value="0"></label>
+        </div>
+        <button id="repo-apply" type="button" class="primary" disabled>Применить к выбранному</button>
+      </aside>
+    </div>
+  </section>
+</main>
+<script src="file-guard.js"></script>
+<script type="module" src="repo-editor.js"></script>
+</body>
+</html>
