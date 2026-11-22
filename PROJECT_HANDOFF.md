@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T15:49:51.160Z
+Время обновления: 2026-11-22T17:28:07.066Z
 Ветка: main
-Последний commit: 9ab76276229741c34cf4dc5304e3391b40f821be
-Дата коммита: 2026-11-22T19:49:39+04:00
-Сообщение: Merge pull request #230 from marcostavar24633-cyber/fix/editor-context-menu-photo-layout
+Последний commit: 9814248f49b9d62b33ad2977ffcd61be253fe508
+Дата коммита: 2026-11-22T21:27:53+04:00
+Сообщение: fix: preserve editor element offsets on free canvas (#231)
 
 Последние коммиты:
+- 9814248 · 2026-11-22 · fix: preserve editor element offsets on free canvas (#231)
+- bff8bcd · 2026-11-22 · docs: refresh project handoff
 - 9ab7627 · 2026-11-22 · Merge pull request #230 from marcostavar24633-cyber/fix/editor-context-menu-photo-layout
 - d9cecdc · 2026-11-22 · fix(editor): improve canvas interactions for photos and context menu
 - 9865379 · 2026-11-22 · docs: refresh project handoff
 - d8e496a · 2026-11-22 · Merge pull request #229 from marcostavar24633-cyber/fix/editor-link-targets
 - 2caf243 · 2026-11-22 · feat(editor): edit selected link destinations
 - 582daca · 2026-11-22 · docs: refresh project handoff
-- a1feecd · 2026-11-22 · Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
-- ace0634 · 2026-11-22 · fix(editor): replace selected elements with components
 <!-- HANDOFF:AUTO:END -->
