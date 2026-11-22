@@ -91,11 +91,112 @@ for (const id of ['#source-url', '#page-urls']) $(id).addEventListener('change',
 const mode = () => document.querySelector('input[name=mode]:checked').value;
 function renderMode() {
   const m = mode();
-  for (const id of ['worker', 'html', 'manual']) $(`#mode-${id}`).hidden = id !== m;
+  for (const id of ['worker', 'github', 'html', 'manual']) $(`#mode-${id}`).hidden = id !== m;
   $('#start').textContent = m === 'manual' ? 'Открыть пустой профиль' : 'Начать анализ';
   if (m === 'html') renderHtmlInputs();
   renderWorker();
 }
+
+// Импорт публичного GitHub-репозитория: читаем только git blobs и не выполняем код источника.
+let githubRepo = null;
+const githubApi = 'https://api.github.com';
+const githubHeaders = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+function parseGitHubRepo(value) {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'github.com') return null;
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts.length < 2 || !/^[a-z\d-]+$/i.test(parts[0]) || !/^[a-z\d_.-]+$/i.test(parts[1])) return null;
+    return { owner: parts[0], name: parts[1].replace(/\.git$/i, '') };
+  } catch { return null; }
+}
+async function githubJson(url) {
+  const response = await fetch(url, { headers: githubHeaders, signal: AbortSignal.timeout(15000) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 429) throw new Error('GitHub ограничил частоту запросов. Подождите минуту и повторите.');
+    if (response.status === 404) throw new Error('Репозиторий недоступен: проверьте ссылку и убедитесь, что он публичный.');
+    throw new Error(data?.message || `GitHub ответил кодом ${response.status}`);
+  }
+  return data;
+}
+function decodeGitHubBlob(blob, limit) {
+  if (blob?.encoding !== 'base64' || !blob.content) throw new Error('GitHub не вернул содержимое файла.');
+  const bytes = Uint8Array.from(atob(blob.content.replace(/\s/g, '')), ch => ch.charCodeAt(0));
+  if (bytes.byteLength > limit) throw new Error('Файл слишком большой для импорта в браузер.');
+  return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+}
+$('#github-connect').addEventListener('click', async () => {
+  const parsed = parseGitHubRepo($('#github-repo-url').value);
+  if (!parsed) { $('#github-import-status').textContent = 'Введите ссылку вида https://github.com/owner/repository на публичный репозиторий.'; return; }
+  const button = $('#github-connect'); button.disabled = true;
+  $('#github-import-status').textContent = 'Читаю сведения о репозитории и ищу HTML-страницы…';
+  try {
+    const base = `${githubApi}/repos/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.name)}`;
+    const repo = await githubJson(base);
+    if (repo.private) throw new Error('Поддерживаются только публичные репозитории.');
+    const branch = String(repo.default_branch || 'main');
+    const tree = await githubJson(`${base}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+    if (tree.truncated) throw new Error('Репозиторий слишком большой для полного списка файлов. Уменьшите его или выберите конкретную страницу в HTML-режиме.');
+    const pages = (tree.tree || []).filter(file => file.type === 'blob' && /\.html?$/i.test(file.path) && Number(file.size) <= 4_000_000);
+    if (!pages.length) throw new Error('В репозитории не найден подходящий HTML-файл (лимит 4 МБ).');
+    const rank = path => /(^|\/)index\.html?$/i.test(path) ? (path === 'index.html' ? 0 : /^(public|dist|build)\//i.test(path) ? 1 : 2) : 3;
+    pages.sort((a, b) => rank(a.path) - rank(b.path) || a.path.localeCompare(b.path));
+    githubRepo = { ...parsed, branch, base, files: tree.tree || [], pages };
+    const select = $('#github-html-file'); select.replaceChildren(...pages.slice(0, 100).map(file => new Option(file.path, file.path)));
+    $('#github-files').hidden = false;
+    $('#github-import-status').textContent = `Найдено HTML-страниц: ${pages.length}. Ветка по умолчанию: ${branch}. Выберите страницу для загрузки.`;
+  } catch (error) {
+    githubRepo = null; $('#github-files').hidden = true;
+    $('#github-import-status').textContent = error.message || 'Не удалось прочитать репозиторий.';
+  } finally { button.disabled = false; }
+});
+$('#github-load-page').addEventListener('click', async () => {
+  if (!githubRepo) return;
+  const button = $('#github-load-page'); button.disabled = true;
+  try {
+    const path = $('#github-html-file').value;
+    const file = githubRepo.pages.find(item => item.path === path);
+    if (!file) throw new Error('Выберите HTML-страницу из списка.');
+    $('#github-import-status').textContent = `Загружаю ${path} и связанные таблицы стилей…`;
+    const htmlBlob = await githubJson(`${githubRepo.base}/git/blobs/${file.sha}`);
+    const html = decodeGitHubBlob(htmlBlob, 4_000_000);
+    const byPath = new Map(githubRepo.files.filter(entry => entry.type === 'blob').map(entry => [entry.path, entry]));
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '';
+    const cssPaths = [...doc.querySelectorAll('link[rel~="stylesheet"][href]')].map(link => {
+      const href = link.getAttribute('href')?.trim() || '';
+      if (!href || /^(?:[a-z]+:|\/\/|data:|#)/i.test(href)) return '';
+      let clean = href.split(/[?#]/, 1)[0];
+      try { clean = decodeURIComponent(clean); } catch { /* Некорректный URL пропускается ниже. */ }
+      clean = clean.replace(/^\.\//, '');
+      const parts = (clean.startsWith('/') ? clean.slice(1) : folder + clean).split('/');
+      const resolved = [];
+      for (const part of parts) { if (!part || part === '.') continue; if (part === '..') resolved.pop(); else resolved.push(part); }
+      return resolved.join('/');
+    }).filter(Boolean).filter((value, index, all) => all.indexOf(value) === index).slice(0, MAX_STYLESHEETS);
+    const cssParts = [];
+    for (const cssPath of cssPaths) {
+      const cssFile = byPath.get(cssPath);
+      if (!cssFile || cssFile.size > 2_000_000) continue;
+      try {
+        const blob = await githubJson(`${githubRepo.base}/git/blobs/${cssFile.sha}`);
+        cssParts.push(`/* ${cssPath} */\n${decodeGitHubBlob(blob, 2_000_000)}`);
+      } catch { /* Недоступный внешний или динамический стиль не блокирует разбор HTML. */ }
+    }
+    const sourceUrl = `https://github.com/${githubRepo.owner}/${githubRepo.name}`;
+    $('#source-url').value = sourceUrl; $('#page-urls').value = '';
+    if (!$('#template-name').value.trim()) $('#template-name').value = `${githubRepo.name} — копия сайта`.slice(0, 120);
+    renderHtmlInputs();
+    const canonicalUrl = validUrl(sourceUrl);
+    pasted.set(canonicalUrl, html);
+    const textarea = $('#html-inputs textarea'); if (textarea) textarea.value = html;
+    $('#css-input').value = cssParts.join('\n\n');
+    $('#github-import-status').textContent = `Загружена копия ${path}; CSS-файлов: ${cssParts.length}. Код сайта не запускался и репозиторий не менялся. Теперь нажмите «Начать анализ».`;
+  } catch (error) {
+    $('#github-import-status').textContent = error.message || 'Не удалось загрузить файлы репозитория.';
+  } finally { button.disabled = false; }
+});
 function renderWorker() {
   const ep = getEndpoint();
   const chip = $('#worker-chip');
