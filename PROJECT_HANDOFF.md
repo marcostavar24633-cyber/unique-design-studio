@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T11:02:39.618Z
+Время обновления: 2026-11-22T11:10:37.277Z
 Ветка: main
-Последний commit: 25eb6ee673d656b34039b46a73a0793d0f91d07a
-Дата коммита: 2026-11-22T15:02:22+04:00
-Сообщение: ci: add private one-shot real image staging probe (#221)
+Последний commit: 48e902fedfde2542c6cb3e66c8e9f0cf81650354
+Дата коммита: 2026-11-22T15:10:25+04:00
+Сообщение: ci: trigger the private staging probe from issue #214 (#222)
 
 Последние коммиты:
+- 48e902f · 2026-11-22 · ci: trigger the private staging probe from issue #214 (#222)
+- 61d06a4 · 2026-11-22 · docs: refresh project handoff
 - 25eb6ee · 2026-11-22 · ci: add private one-shot real image staging probe (#221)
 - d4334d6 · 2026-11-22 · docs: refresh project handoff
 - b17fbde · 2026-11-22 · ci: dry-run private staging Worker config on every PR (#219)
 - f55707b · 2026-11-22 · docs: refresh project handoff
 - 1fce0b5 · 2026-11-22 · ci: verify Pages and AI binding after Worker deploy and rollback (#216)
 - 377301c · 2026-11-22 · docs: refresh project handoff
-- 5fad5d0 · 2026-11-22 · ci: avoid duplicate health checks during daily AI probe (#215)
-- 8a83abd · 2026-11-21 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
