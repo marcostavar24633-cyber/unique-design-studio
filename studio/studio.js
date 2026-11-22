@@ -2912,8 +2912,9 @@ function setCanvasSelection(info) {
   const moved = Boolean(state.raw.canvasMoves?.[selectedCanvasKey]);
   $('#canvas-layer-actions').hidden = !moved && !info.sectionId;
   $('#canvas-bring-front').hidden = !moved; $('#canvas-send-back').hidden = !moved;
-  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="tag-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout||info.layout; });
-  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="align-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout||info.layout; });
+  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="tag-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout; });
+  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="align-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout; });
+  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="replace-"]').forEach(button => { button.disabled = !info.sectionId || (info.layout && !info.elementId); });
 }
 function canvasPreview(patch) {
   $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-preview', key: selectedCanvasKey, patch }, '*');
@@ -2949,7 +2950,7 @@ function addCanvasBlock(type = 'text') {
   pendingCanvasBlockId = id;
   run(); toast('Блок добавлен перед контактами');
 }
-function addCanvasElement(type, sectionId) {
+function addCanvasElement(type, sectionId, alreadyRemembered = false) {
   if (!sectionId || !['card', 'button', 'image'].includes(type)) { toast('Сначала выберите секцию, куда добавить элемент'); return; }
   const id = `element-${Date.now().toString(36)}`;
   const item = type === 'button'
@@ -2957,13 +2958,41 @@ function addCanvasElement(type, sectionId) {
     : type === 'image'
       ? { id, type, title: 'Новое фото', alt: 'Иллюстрация к секции', src: '' }
       : { id, type: 'card', title: 'Новая карточка', text: 'Добавьте описание карточки.' };
-  rememberCanvasChange();
+  if (!alreadyRemembered) rememberCanvasChange();
   state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: [...(state.raw.canvasElements?.[sectionId] || []), item] };
   pendingCanvasElementId = id;
   if (type === 'image') pendingCanvasImageTarget = { sectionId, id };
   run();
   if (type === 'image') $('#canvas-element-image-file').click();
   toast(type === 'image' ? 'Выберите изображение для секции' : 'Элемент добавлен в выбранную секцию');
+}
+function replaceCanvasElement(type) {
+  const sectionId = selectedCanvasMeta?.sectionId;
+  if (!sectionId || !['card', 'button', 'image'].includes(type)) { toast('Выберите элемент внутри секции'); return; }
+  const text = String(selectedCanvasMeta.text || selectedCanvasMeta.label || '').trim().slice(0, 180);
+  rememberCanvasChange();
+  if (selectedCanvasMeta.elementId) {
+    const items = [...(state.raw.canvasElements?.[sectionId] || [])];
+    const index = items.findIndex(item => item.id === selectedCanvasMeta.elementId);
+    if (index < 0) return;
+    const previous = items[index];
+    const title = String(previous.title || previous.text || text || 'Новый элемент').slice(0, 180);
+    const replacement = type === 'image'
+      ? { id: previous.id, type, title, alt: previous.alt || text || 'Иллюстрация к секции', src: '' }
+      : type === 'button'
+        ? { id: previous.id, type, title, text: '', href: previous.href || '#contact' }
+        : { id: previous.id, type, title, text: previous.text || text || 'Добавьте описание карточки.' };
+    items[index] = replacement;
+    state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: items };
+    pendingCanvasElementId = replacement.id;
+    if (type === 'image') pendingCanvasImageTarget = { sectionId, id: replacement.id };
+    run();
+    if (type === 'image') $('#canvas-element-image-file').click();
+    toast(type === 'image' ? 'Элемент заменён. Выберите фото' : 'Элемент заменён');
+    return;
+  }
+  state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [selectedCanvasKey]: { ...(state.raw.canvasEdits?.[selectedCanvasKey] || {}), deleted: true } };
+  addCanvasElement(type, sectionId, true);
 }
 function restoreCanvasSnapshot(snapshot, from, to) {
   to.push(canvasSnapshot());
@@ -3171,6 +3200,7 @@ $('#canvas-menu').addEventListener('click', e => {
     else addCanvasBlock(type);
     return;
   }
+  if (action.startsWith('replace-')) { replaceCanvasElement(action.slice(8)); return; }
   if (action.startsWith('tag-')) { commitCanvasEdit({ tag: action.slice(4) }); return; }
   if (action.startsWith('align-')) { commitCanvasEdit({ align: action.slice(6) === 'auto' ? canvasAutoAlignment() : action.slice(6) }); return; }
 });

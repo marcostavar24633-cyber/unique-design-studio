@@ -132,6 +132,15 @@ try {
   await page.locator('#canvas-text').press('Tab');
   await buttonTextRender;
   check((await preview.locator('#about .uds-added-element--button').innerText()).includes('Записаться на консультацию'), 'новая кнопка не сохранила изменённую подпись');
+  await preview.locator('#about .uds-added-element--button').click();
+  await page.click('#canvas-options-trigger');
+  await page.click('#canvas-replace');
+  check(await page.locator('#canvas-menu [data-canvas-menu="replace-card"]').isEnabled(), 'замена типа отключена для выбранной кнопки');
+  const replaceRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.click('#canvas-menu [data-canvas-menu="replace-card"]');
+  await replaceRender;
+  check(await preview.locator('#about .uds-added-element--button').count() === 0, 'замена кнопки на карточку оставила прежний элемент');
+  check((await preview.locator('#about .uds-added-element--card').last().innerText()).includes('Записаться на консультацию'), 'замена типа потеряла исходный текст кнопки');
 
   // Фото должны открывать собственные стили и применять круглую маску к самому изображению.
   await preview.locator('#about h2').click();
@@ -157,6 +166,17 @@ try {
   await circleRender;
   const circleImageStyle = await addedImage.locator('img').evaluate(node => ({ radius: getComputedStyle(node).borderRadius, fit: getComputedStyle(node).objectFit, ratio: getComputedStyle(node).aspectRatio }));
   check(circleImageStyle.radius === '50%' && circleImageStyle.fit === 'cover' && circleImageStyle.ratio === '1 / 1', `круглая маска фото неполная: ${JSON.stringify(circleImageStyle)}`);
+
+  // Обычный элемент страницы заменяется компонентом, а не только меняет HTML-тег.
+  const faqHeading = preview.locator('#faq h2');
+  await faqHeading.click();
+  await page.click('#canvas-options-trigger');
+  await page.click('#canvas-replace');
+  const staticReplaceRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.click('#canvas-menu [data-canvas-menu="replace-card"]');
+  await staticReplaceRender;
+  check(await preview.locator('#faq h2').count() === 0, 'замена статического заголовка не удалила исходный элемент');
+  check(await preview.locator('#faq .uds-added-element--card').count() === 1, 'замена статического заголовка не создала карточку в той же секции');
   await page.click('#arrange-toggle');
 
   await page.click('#save');
