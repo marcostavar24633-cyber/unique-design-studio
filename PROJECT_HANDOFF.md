@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T10:39:47.357Z
+Время обновления: 2026-11-22T10:40:11.898Z
 Ветка: main
-Последний commit: 1fce0b5e2aa8628d8e5bf367248159a1a8f3bded
-Дата коммита: 2026-11-22T14:39:35+04:00
-Сообщение: ci: verify Pages and AI binding after Worker deploy and rollback (#216)
+Последний commit: b17fbde26ea2df289b4cc506ed1bd044ddffb28f
+Дата коммита: 2026-11-22T14:39:59+04:00
+Сообщение: ci: dry-run private staging Worker config on every PR (#219)
 
 Последние коммиты:
+- b17fbde · 2026-11-22 · ci: dry-run private staging Worker config on every PR (#219)
+- f55707b · 2026-11-22 · docs: refresh project handoff
 - 1fce0b5 · 2026-11-22 · ci: verify Pages and AI binding after Worker deploy and rollback (#216)
 - 377301c · 2026-11-22 · docs: refresh project handoff
 - 5fad5d0 · 2026-11-22 · ci: avoid duplicate health checks during daily AI probe (#215)
 - 8a83abd · 2026-11-21 · docs: refresh project handoff
 - d8db284 · 2026-11-22 · Merge pull request #220 from marcostavar24633-cyber/fix/health-monitor-diagnostics
 - 5a304e2 · 2026-11-22 · test(monitor): cover safe incident triage and inference contract
-- 4eb7cf3 · 2026-11-22 · fix(monitor): redact diagnostic errors consistently and expose testable helpers
-- b29bdf8 · 2026-11-21 · feat: link incidents to monitor runs
 <!-- HANDOFF:AUTO:END -->
