@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T13:53:58.543Z
+Время обновления: 2026-11-22T14:06:44.064Z
 Ветка: main
-Последний commit: d39306d1525a02de53adcfcc8baaa5a92fc70bb8
-Дата коммита: 2026-11-22T17:53:47+04:00
-Сообщение: feat(editor): arrange photos in fan and control overlap
+Последний commit: ba32a5d8ce3680a5d6ad560849628b4cdf8a3566
+Дата коммита: 2026-11-22T18:06:32+04:00
+Сообщение: feat(editor): show overlapping elements by layer
 
 Последние коммиты:
+- ba32a5d · 2026-11-22 · feat(editor): show overlapping elements by layer
+- 38a1bd7 · 2026-11-22 · docs: refresh project handoff
 - d39306d · 2026-11-22 · feat(editor): arrange photos in fan and control overlap
 - e694af1 · 2026-11-22 · docs: refresh project handoff
 - 01c1a92 · 2026-11-22 · Merge pull request #224 from marcostavar24633-cyber/fix/editor-added-button-label
 - 2abd2cc · 2026-11-22 · fix: edit labels on added canvas buttons
 - acd9910 · 2026-11-22 · docs: refresh project handoff
 - 9e8603f · 2026-11-22 · Merge pull request #223 from marcostavar24633-cyber/codex/editor-free-canvas
-- 103a564 · 2026-11-22 · feat: add free canvas editing and expand design controls
-- 07d4918 · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
