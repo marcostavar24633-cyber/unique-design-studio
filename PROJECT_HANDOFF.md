@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T14:42:00.175Z
+Время обновления: 2026-11-22T15:03:05.964Z
 Ветка: main
-Последний commit: 250ef88ddd9727d0a13d824c63cc8298d83ce00f
-Дата коммита: 2026-11-22T18:41:48+04:00
-Сообщение: Merge pull request #227 from marcostavar24633-cyber/fix/editor-element-resize-and-styles
+Последний commit: a1feecdfcd1f05e7f3ff8cb94b8a48c2071f4c13
+Дата коммита: 2026-11-22T19:02:53+04:00
+Сообщение: Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
 
 Последние коммиты:
+- a1feecd · 2026-11-22 · Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
+- ace0634 · 2026-11-22 · fix(editor): replace selected elements with components
+- 24727b9 · 2026-11-22 · fix(editor): replace selected elements with components
+- 6d297da · 2026-11-22 · docs: refresh project handoff
 - 250ef88 · 2026-11-22 · Merge pull request #227 from marcostavar24633-cyber/fix/editor-element-resize-and-styles
 - 651e295 · 2026-11-22 · fix(editor): add direct element resizing and styles
 - 61ef693 · 2026-11-22 · docs: refresh project handoff
 - ba32a5d · 2026-11-22 · feat(editor): show overlapping elements by layer
-- 38a1bd7 · 2026-11-22 · docs: refresh project handoff
-- d39306d · 2026-11-22 · feat(editor): arrange photos in fan and control overlap
-- e694af1 · 2026-11-22 · docs: refresh project handoff
-- 01c1a92 · 2026-11-22 · Merge pull request #224 from marcostavar24633-cyber/fix/editor-added-button-label
 <!-- HANDOFF:AUTO:END -->
