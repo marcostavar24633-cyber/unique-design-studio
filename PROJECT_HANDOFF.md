@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T19:09:41.611Z
+Время обновления: 2026-11-22T19:34:16.585Z
 Ветка: main
-Последний commit: 6fcc88c3b9738b39828cdcd5afda9ff4a0edd114
-Дата коммита: 2026-11-22T23:09:26+04:00
-Сообщение: test: cover repository page editor in Playwright
+Последний commit: 6c2a7e4029effa50b435e2b47bf77782524bd93a
+Дата коммита: 2026-11-22T23:34:05+04:00
+Сообщение: feat: add searchable HTML structure panel
 
 Последние коммиты:
+- 6c2a7e4 · 2026-11-22 · feat: add searchable HTML structure panel
+- e3549d6 · 2026-11-22 · docs: refresh project handoff
 - 6fcc88c · 2026-11-22 · test: cover repository page editor in Playwright
 - 9835aa5 · 2026-11-22 · docs: refresh project handoff
 - 0d62973 · 2026-11-22 · feat: add safe static repository page editor
 - c82f17b · 2026-11-22 · docs: refresh project handoff
 - 3274023 · 2026-11-22 · feat: import public GitHub site sources for analysis (#232)
 - fc2ce29 · 2026-11-22 · docs: refresh project handoff
-- 9814248 · 2026-11-22 · fix: preserve editor element offsets on free canvas (#231)
-- bff8bcd · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
