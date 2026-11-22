@@ -75,7 +75,7 @@
   </form>
 
   <div id="progress" class="progress" hidden aria-live="polite">
-    <div class="progress__head"><b id="progress-title">Анализ</b><span id="progress-count"></span></div>
+    <div class="progress__head"><b id="progress-title">Анализ</b><div class="progress__controls"><span id="progress-count"></span><button type="button" id="analysis-cancel" hidden>Отменить</button></div></div>
     <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progress-title" id="progress-bar"><i></i></div>
     <ol id="progress-list" class="progress__list"></ol>
     <div id="progress-result"></div>

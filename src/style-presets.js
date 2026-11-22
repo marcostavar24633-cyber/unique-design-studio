@@ -1,0 +1,23 @@
+/** Согласованные сочетания архитектуры, палитры и геометрии для быстрого выбора стиля. */
+export const STYLE_PRESETS = [
+  ['porcelain-editorial','Фарфор и чернила','product-first','porcelain-ink','soft-geometry','none'],
+  ['carbon-lime','Графит и лайм','product-first','carbon-lime','technical','blueprint'],
+  ['technical-blue','Технический синий','catalog','technical-blue','technical','dotgrid'],
+  ['ivory-oxblood','Айвори и винный','editorial','ivory-oxblood','hard-editorial','paper-light'],
+  ['gallery-noir','Галерейный нуар','editorial','gallery-noir','hard-editorial','film'],
+  ['sage-paper','Шалфейная бумага','storytelling','sage-paper','organic','paper'],
+  ['midnight-cinema','Полночное кино','immersive','midnight-cinema','soft-geometry','soft-grain'],
+  ['warm-gallery','Тёплая галерея','immersive','warm-gallery','organic','paper-light'],
+  ['deep-ocean','Глубокий океан','immersive','deep-ocean','technical','scanlines'],
+  ['electric-paper','Электрическая бумага','asymmetric','electric-paper','soft-geometry','halftone'],
+  ['signal-red','Сигнальный красный','brutalist','signal-red','brutal','none'],
+  ['acid-black','Кислотный чёрный','brutalist','acid-black','brutal','scanlines'],
+  ['terracotta-cream','Терракота и сливки','split-utility','terracotta-cream','organic','paper'],
+  ['cocoa-rose','Какао и роза','storytelling','cocoa-rose','organic','soft-grain'],
+  ['citrus-market','Цитрусовый рынок','catalog','citrus-market','soft-geometry','dotgrid'],
+  ['stone-monochrome','Каменный монохром','minimal','stone-monochrome','hard-editorial','none'],
+  ['soft-lilac','Мягкая сирень','minimal','soft-lilac','soft-geometry','soft-grain'],
+  ['forest-night','Лесная ночь','modular-grid','forest-night','technical','blueprint'],
+  ['porcelain-grid','Фарфор и сетка','modular-grid','porcelain-ink','technical','blueprint'],
+  ['noir-cinema','Нуарное кино','immersive','gallery-noir','hard-editorial','film'],
+].map(([id, name, architecture, palette, shape, background]) => ({ id, name, architecture, palette, shape, background }));

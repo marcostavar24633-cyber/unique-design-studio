@@ -11,6 +11,12 @@ import { reviewImageSet } from './image-director.js';
 export const SEVERITIES = Object.freeze(['critical', 'high', 'medium', 'low']);
 export const SEVERITY_LABELS = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
 
+/** Не показываем контроль качества как завершённый без замечаний, требующих просмотра. */
+export function qualityStageStatus(report) {
+  if (report?.counts?.critical || report?.counts?.high) return 'attention';
+  return report?.findings?.length ? 'review' : 'done';
+}
+
 export const CATEGORIES = Object.freeze({
   uniqueness: 'Визуальная уникальность',
   niche: 'Соответствие нише',

@@ -15,8 +15,6 @@
     <span class="ai-usage" id="ai-usage" role="status" aria-live="polite" title="Фактическая статистика Cloudflare Workers AI"><span aria-hidden="true">✦</span> AI Neurons: <b id="ai-usage-count">—</b><small id="ai-usage-details">Ожидание статистики</small><select id="ai-usage-range" aria-label="Период статистики AI"><option value="24h">24 часа</option><option value="7d">7 дней</option><option value="30d">30 дней</option></select></span>
 
     <button type="button" id="dashboard-back" aria-label="Вернуться на главную панель">← Главная</button>
-    <label class="vh" for="examples">Примеры проектов</label>
-    <select id="examples"><option value="">Примеры…</option></select>
     <button type="button" id="new">Новый</button>
     <button type="button" id="save">В реестр</button>
     <input type="file" id="file" accept="application/json,.json" hidden>
@@ -61,10 +59,9 @@
         <div class="qs-field"><label for="qs-tier">Класс</label><select id="qs-tier"><option value="standard">Стандарт</option><option value="premium">Премиум</option><option value="luxury">Люкс</option></select></div>
         <button class="dash-primary qs-submit" type="submit">Собрать сайт →</button>
       </form>
-      <div class="qs-examples"><span>Или начните с готового примера:</span><div class="qs-chips" id="dash-example-chips"></div></div>
     </section>
     <section class="dash-continue" id="dash-continue" aria-label="Текущий проект" hidden></section>
-    <section class="dash-project-head" id="dash-projects-head"><div><h2>Мои проекты <span id="dash-project-count">0</span></h2><small>Сохранены кнопкой «В реестр» в этом браузере</small></div><div class="dash-filters"><button data-filter="saved">Мои</button><button data-filter="examples">Примеры</button><button data-filter="all">Все</button></div></section>
+    <section class="dash-project-head" id="dash-projects-head"><div><h2>Мои проекты <span id="dash-project-count">0</span></h2><small>Сохранены кнопкой «В реестр» в этом браузере</small></div></section>
     <section class="dash-projects" id="dash-projects"></section>
   </main>
   <aside class="dash-right">
@@ -170,15 +167,42 @@
         <button type="button" data-w="" aria-pressed="true">Вся ширина</button>
       </div>
     </div>
-    <section id="view-preview" role="tabpanel" aria-labelledby="tab-preview" class="view view--preview"><iframe id="frame" title="Предпросмотр страницы" sandbox="allow-scripts"></iframe><button type="button" id="arrange-toggle" class="preview-fullscreen preview-arrange" aria-pressed="false" title="Перетаскивать секции и карточки прямо на странице">⇅ <span>Перетаскивать в предпросмотре</span></button><button type="button" id="preview-fullscreen" class="preview-fullscreen" aria-pressed="false" aria-label="Развернуть предпросмотр на весь экран" title="На весь экран">⛶ <span>На весь экран</span></button></section>
+    <section id="view-preview" role="tabpanel" aria-labelledby="tab-preview" class="view view--preview"><iframe id="frame" title="Предпросмотр страницы" sandbox="allow-scripts"></iframe><button type="button" id="arrange-toggle" class="preview-fullscreen preview-arrange" aria-pressed="false" title="Перетаскивать, выбирать и менять элементы на странице">✎ <span>Редактировать на странице</span></button><button type="button" id="canvas-options-trigger" class="preview-fullscreen canvas-options-trigger" hidden>⚙ <span>Настроить элемент</span></button><button type="button" id="preview-fullscreen" class="preview-fullscreen" aria-pressed="false" aria-label="Развернуть предпросмотр на весь экран" title="На весь экран">⛶ <span>На весь экран</span></button></section>
     <section id="view-spec" role="tabpanel" aria-labelledby="tab-spec" class="view" hidden></section>
     <section id="view-concept" role="tabpanel" aria-labelledby="tab-concept" class="view" hidden></section>
     <section id="view-audit" role="tabpanel" aria-labelledby="tab-audit" class="view" hidden></section>
     <section id="view-production" role="tabpanel" aria-labelledby="tab-production" class="view" hidden></section>
     <section id="view-publish" role="tabpanel" aria-labelledby="tab-publish" class="view" hidden></section>
     <section id="view-registry" role="tabpanel" aria-labelledby="tab-registry" class="view" hidden></section>
+    <aside id="canvas-inspector" class="canvas-inspector" aria-label="Свойства выбранного элемента" hidden>
+      <header><div><b id="canvas-selected-label">Элемент</b><small>Правки сохраняются в проекте</small></div><button type="button" id="canvas-inspector-close" aria-label="Закрыть панель">×</button></header>
+      <label>Текст<textarea id="canvas-text" rows="3" maxlength="2000" autocomplete="off" spellcheck="true"></textarea></label>
+      <label id="canvas-alt-field" hidden>Описание изображения<input id="canvas-alt" type="text" maxlength="240" autocomplete="off" placeholder="Кратко опишите изображение"></label>
+      <label id="canvas-block-placement-row" hidden>Разместить после<select id="canvas-block-placement" aria-label="Позиция добавленного блока"></select></label>
+      <div class="canvas-inspector__grid"><label>Цвет текста<input id="canvas-color" type="color" value="#202329"></label><label>Фон элемента<input id="canvas-background" type="color" value="#ffffff"></label><label id="canvas-font-size-field" class="canvas-inspector__range">Размер текста <output id="canvas-size-out">24 px</output><input id="canvas-size" type="range" min="12" max="96" value="24"></label><label class="canvas-inspector__range">Угол наклона <output id="canvas-rotation-out">0°</output><input id="canvas-rotation" type="range" min="-45" max="45" step="1" value="0"></label><label>Смещение X, px<input id="canvas-offset-x" type="number" min="-1600" max="1600" step="1" value="0"></label><label>Смещение Y, px<input id="canvas-offset-y" type="number" min="-1200" max="1200" step="1" value="0"></label><label>Ширина, px<input id="canvas-width" type="number" min="0" max="1600" step="10" placeholder="Авто"></label><label>Высота, px<input id="canvas-height" type="number" min="0" max="1200" step="10" placeholder="Авто"></label><label class="canvas-inspector__ratio"><input id="canvas-lock-ratio" type="checkbox"> Сохранять пропорции</label><label>Форма элемента<select id="canvas-shape"><option value="auto">По умолчанию</option><option value="square">Прямые углы</option><option value="soft">Мягкие углы</option><option value="round">Скруглённый</option><option value="pill">Капсула</option><option value="circle">Круглая маска</option></select></label><label id="canvas-button-style-field" hidden>Стиль кнопки<select id="canvas-button-style"><option value="inherit">По умолчанию проекта</option><option value="solid">Заливка</option><option value="outline">Контур</option><option value="ghost">Лёгкая</option><option value="gradient">Градиент</option><option value="glass">Стекло</option><option value="glow">Свечение</option></select></label><label class="canvas-inspector__range">Прозрачность <output id="canvas-opacity-out">100%</output><input id="canvas-opacity" type="range" min="0" max="100" step="5" value="100"></label><label>Анимация элемента<select id="canvas-animation"><option value="none">Без анимации</option><option value="fade">Мягкое появление</option><option value="rise">Подъём</option><option value="float">Плавание</option><option value="pulse">Пульсация</option><option value="glow">Свечение</option><option value="tilt">Наклон при наведении</option></select></label></div>
+      <p class="canvas-inspector__hint">Перемещение: стрелки — 1 px, Shift + стрелки — 10 px. Можно также перетащить элемент мышью или пальцем.</p>
+      <div class="canvas-actions" role="group" aria-label="Действия с элементом">
+        <button type="button" id="canvas-align">Автовыравнивание</button><button type="button" id="canvas-reset-position">Сбросить смещение</button><button type="button" id="canvas-add">＋ Добавить</button>
+        <button type="button" id="canvas-replace">Заменить</button><button type="button" id="canvas-duplicate">Дублировать</button>
+        <button type="button" id="canvas-copy-position">Копировать положение</button><button type="button" id="canvas-paste-position" disabled>Вставить положение</button><button type="button" id="canvas-copy-style">Копировать стиль</button><button type="button" id="canvas-paste-style" disabled>Вставить стиль</button>
+        <button type="button" id="canvas-reset-edit" disabled>Сбросить правки</button>
+        <button type="button" id="canvas-delete" class="danger">Удалить</button>
+      </div>
+      <div class="canvas-inspector__history"><button type="button" id="canvas-undo" disabled>↶ Отменить</button><button type="button" id="canvas-redo" disabled>↷ Повторить</button></div>
+      <label>Слои страницы<select id="canvas-layers" size="4" aria-label="Выбрать текстовый элемент"></select></label>
+      <small class="canvas-hotkeys">Перетаскивайте элемент мышью или пальцем, чтобы менять его положение внутри секции. Автовыравнивание возвращает его в поток и к ближайшему краю или центру.</small>
+      <small class="canvas-hotkeys">Двойной клик — править текст · Shift+F10 — меню · Esc — отменить · Ctrl/⌘+Z — отмена · Ctrl/⌘+D — дубликат · Delete — удалить</small>
+    </aside>
   </main>
 </div>
+<dialog id="canvas-menu" class="canvas-menu" aria-labelledby="canvas-menu-title">
+  <form method="dialog"><header><b id="canvas-menu-title">Действия с элементом</b><button value="cancel" aria-label="Закрыть">×</button></header>
+    <p>Добавить на страницу</p><div class="canvas-menu__grid"><button value="add-text" data-canvas-menu="add-text">Текстовый блок</button><button value="add-quote" data-canvas-menu="add-quote">Цитату</button><button value="add-features" data-canvas-menu="add-features">Преимущества</button><button value="add-cta" data-canvas-menu="add-cta">Блок с кнопкой</button><button value="add-card" data-canvas-menu="add-card">Карточку в секцию</button><button value="add-button" data-canvas-menu="add-button">Кнопку в секцию</button><button value="add-image" data-canvas-menu="add-image">Фото в секцию</button></div>
+    <p>Заменить выбранный элемент</p><div class="canvas-menu__grid"><button value="tag-h2" data-canvas-menu="tag-h2">Заголовок</button><button value="tag-p" data-canvas-menu="tag-p">Абзац</button><button value="tag-a" data-canvas-menu="tag-a">Ссылка</button><button value="tag-button" data-canvas-menu="tag-button">Кнопка</button></div>
+    <p>Выравнивание</p><div class="canvas-menu__grid"><button value="align-left" data-canvas-menu="align-left">Слева</button><button value="align-center" data-canvas-menu="align-center">По центру</button><button value="align-right" data-canvas-menu="align-right">Справа</button><button value="align-auto" data-canvas-menu="align-auto">По сетке</button></div>
+  </form>
+</dialog>
+<input id="canvas-element-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" hidden>
 <p id="toast" class="toast" role="status" aria-live="polite"></p>
 <script src="file-guard.js"></script>
 <script src="ai-diagnostics.js" defer></script>

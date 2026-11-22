@@ -61,3 +61,8 @@ test('ссылки телефона и почты в контактах удоб
   const { html } = generate({ brand: 'Тест', niche: 'фотограф', contacts: { email: 'hello@example.com', phone: '+7 900 000-00-00' } });
   assert.match(html, /\.contact__list a\{display:inline-flex;align-items:center;min-height:44px/);
 });
+
+test('компактная кнопка в навигации сохраняет сенсорную высоту 44 px', async () => {
+  const { NAV_CSS } = await import('../src/engine/css.js');
+  assert.match(NAV_CSS.compact, /\.nav--compact \.nav__cta\{min-height:44px/);
+});

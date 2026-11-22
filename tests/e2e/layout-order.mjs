@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
-import { root } from '../helpers.mjs';
+import { full, root } from '../helpers.mjs';
 
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); }
@@ -28,17 +28,17 @@ const appErrors = [];
 try {
   const context = await browser.newContext({ acceptDownloads: true });
   const page = await context.newPage();
+  const seed = { ...full, id: 'layout-order-e2e', brand: 'LAYOUT ORDER E2E', niche: 'салон красоты', architecture: 'editorial', architectureMode: 'manual', sectionOrder: ['about', 'process', 'faq', 'advantages', 'items', 'gallery', 'contact'] };
+  await page.addInitScript(raw => localStorage.setItem('uds:studio:v1', JSON.stringify({ raw, library: [] })), seed);
   page.on('pageerror', error => {
     const stack = String(error.stack || error.message);
     if (/\/studio\/(?:studio|ai-diagnostics)\.js|\/studio\/index\.html/.test(stack)) appErrors.push(stack);
   });
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
+  await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]') !== null);
+  await page.waitForTimeout(500);
 
-  await page.fill('#qs-niche', 'кофейня');
-  await page.fill('#qs-brand', 'LAYOUT ORDER E2E');
-  await page.click('#quick-start [type="submit"]');
-  await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'), null, { timeout: 20000 });
+  await page.click('#dashboard [data-dash="editor"]');
   await page.click('#ptab-editor');
   const frameOrder = () => page.evaluate(() => [...new DOMParser().parseFromString(document.querySelector('#frame').srcdoc, 'text/html').querySelectorAll('main section.ds-section')]
     .map(s => ([...s.classList].find(c => c.startsWith('sec--')) || '').slice(5)).filter(id => id && id !== 'hero' && id !== 'contact'));

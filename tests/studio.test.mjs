@@ -393,7 +393,7 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /Cloudflare с 00:00 UTC/);
   assert.match(js, /До сброса Cloudflare/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
-  assert.match(js, /autopilot\(input, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
+  assert.match(js, /autopilot\(promptInput, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
   assert.match(js, /До сброса Cloudflare/);
 });
 
@@ -612,4 +612,11 @@ test('Expanded dashboard menu is not faded by the horizontal-scroll mask', () =>
   assert.ok(rule.includes('-webkit-mask-image:none;'));
   assert.ok(rule.includes('mask-image:none;'));
   assert.ok(rule.includes('scroll-snap-type:none;'));
+});
+
+test('публичная студия не загружает и не показывает демо-проекты', () => {
+  const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /id="examples"|data-filter="examples"|qs-examples|dash-example-chips/);
+  assert.doesNotMatch(js, /exampleProjects|data-open-example|\.\.\/examples\//);
 });

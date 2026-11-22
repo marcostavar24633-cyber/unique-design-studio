@@ -88,7 +88,9 @@ try {
   await page.selectOption('#template-category', 'Услуги и бизнес');
   await page.dispatchEvent('#source-url', 'change');
   await page.click('#start');
-  check((await page.textContent('#status')).includes('Вставьте HTML'), 'анализ без HTML должен быть остановлен с объяснением');
+  check((await page.textContent('#status')).includes('нужен Worker-анализатор'), 'при пустом HTML должно объясняться требование Worker для анализа по адресу');
+  check(await page.locator('input[name=mode][value=worker]').isChecked(), 'при отсутствии HTML выбран режим анализа по адресу');
+  await page.check('input[name=mode][value=html]');
 
   // --- Анализ вставленного HTML ---
   await page.fill('#html-0', fixture);

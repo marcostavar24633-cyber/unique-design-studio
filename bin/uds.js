@@ -78,7 +78,7 @@ function serve(port) {
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Не найдено'); }
     res.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(readFileSync(file));
-  }).listen(port, () => console.log(`Студия запущена: http://localhost:${port}/studio/`));
+  }).listen(port, '127.0.0.1', () => console.log(`Студия запущена: http://127.0.0.1:${port}/studio/`));
 }
 
 const [cmd, ...rest] = process.argv.slice(2);

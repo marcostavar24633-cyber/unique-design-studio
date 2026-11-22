@@ -98,7 +98,7 @@ export function normalizeProject(raw = {}) {
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
   const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
     'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
-    'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode']);
+    'ctaUrl', 'formAction', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode', 'sectionDivider']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
   return p;
 }

@@ -89,11 +89,11 @@ test('справочники согласованы', () => {
     for (const a of n.candidates) assert.ok(ARCHETYPES[a], `${n.id}: ${a}`);
     for (const d of n.directions) assert.ok(DIRECTIONS[d], `${n.id}: ${d}`);
   }
-  assert.equal(ARCHETYPE_IDS.length, 10);
+  assert.equal(ARCHETYPE_IDS.length, 30);
   for (const a of Object.values(ARCHETYPES)) assert.ok(Object.keys(a.placements).length >= 2);
 });
 
-test('все 10 архитектур дают разные композиции hero и проходят проверку', () => {
+test('все 30 архитектур дают разные композиции hero и проходят проверку', () => {
   const heroes = new Set();
   for (const id of ARCHETYPE_IDS) {
     const r = generate({ ...full, architecture: id });
@@ -102,7 +102,7 @@ test('все 10 архитектур дают разные композиции 
     const hero = /<section class="hero[\s\S]*?<\/section>/.exec(r.html)[0].replace(/>[^<]+</g, '><');
     heroes.add(hero);
   }
-  assert.equal(heroes.size, 10);
+  assert.equal(heroes.size, 30);
 });
 
 test('контраст палитры не ниже 4.5:1 для всех направлений и множества сидов', () => {

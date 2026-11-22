@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generate } from '../src/engine/index.js';
 import { autopilot } from '../src/engine/autopilot.js';
-import { CATEGORIES, SEVERITIES, applyAutoFixes, clipWords, fixAndRecheck, qualityReport } from '../src/engine/quality.js';
+import { CATEGORIES, SEVERITIES, applyAutoFixes, clipWords, fixAndRecheck, qualityReport, qualityStageStatus } from '../src/engine/quality.js';
 import { runWorkflow, WORKFLOW_STAGES } from '../src/engine/workflow.js';
 
 const project = niche => autopilot({ niche, email: 'hello@example.com' }, { registry: [] }).project;
@@ -22,6 +22,12 @@ test('14 направлений и 4 уровня серьёзности; каж
   const ranks = r.findings.map(f => SEVERITIES.indexOf(f.severity));
   assert.deepEqual(ranks, [...ranks].sort((a, b) => a - b));
   assert.equal(r.counts.critical + r.counts.high + r.counts.medium + r.counts.low, r.findings.length);
+});
+
+test('панель качества различает отсутствие замечаний, просмотр и блокирующие уровни', () => {
+  assert.equal(qualityStageStatus({ findings: [], counts: { critical: 0, high: 0 } }), 'done');
+  assert.equal(qualityStageStatus({ findings: [{ severity: 'low' }], counts: { critical: 0, high: 0 } }), 'review');
+  assert.equal(qualityStageStatus({ findings: [{ severity: 'high' }], counts: { critical: 0, high: 1 } }), 'attention');
 });
 
 test('опасные ссылки и выдуманные цены — Critical', () => {
@@ -100,6 +106,8 @@ test('вкладка «Производство» подключена к сту
   assert.match(js, /renderAudit\(\); renderProduction\(\);/);
   assert.match(js, /fixAndRecheck\(state\.raw, raw => generate\(raw, \{ registry: registry\(\) \}\), \{ maxPasses: 2 \}\)/, 'ограниченное число проходов');
   assert.match(js, /\['Публикация', 'manual'/);
+  assert.match(js, /result\.audit\.warnings\.length \? 'review'/);
+  assert.match(js, /\['Контроль качества', qualityStageStatus\(q\)/);
   assert.match(js, /\['seoTitle', 'SEO-заголовок \(title\)'/);
   assert.match(js, /\$\{esc\(f\.message\)\}/, 'тексты замечаний экранируются');
 });

@@ -29,7 +29,7 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', dialog => dialog.accept());
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
+  await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]') !== null);
   await page.fill('#qs-niche', 'Студия интерьерного освещения');
   await page.fill('#qs-brand', 'VERSION E2E');
   await page.click('#quick-start [type="submit"]');

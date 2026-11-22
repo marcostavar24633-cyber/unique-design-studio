@@ -1,7 +1,8 @@
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, DIVIDERS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITIONS, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS, CARD_EFFECTS, HERO_EFFECTS, describeEffects, TYPE_STYLES, SECTION_LAYOUTS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS } from '../src/engine/index.js';
+import { STYLE_PRESETS } from '../src/style-presets.js';
+import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, ART_DIRECTION_PRESETS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, qualityStageStatus, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS, CARD_EFFECTS, HERO_EFFECTS, describeEffects, TYPE_STYLES, SECTION_LAYOUTS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -143,8 +144,6 @@ let projectHistoryRenderVersion = 0;
 let aiDesignReview = null;
 let aiDesignReviewLoading = false;
 let lastRenderedRaw = null;
-let exampleProjects = [];
-let dashboardFilter = 'saved';
 let dashboardQuery = '';
 let userStartedProject = false;
 // Задание AI Content Director: собирается при отрисовке вкладки «ТЗ и анализ» по текущему проекту,
@@ -375,12 +374,10 @@ function projectCard(item) {
   const cover = image
     ? '<img src="' + esc(image) + '" alt="">'
     : '<span class="dash-cover-type" style="color:' + esc(text) + '">' + esc(name.slice(0, 1).toUpperCase()) + '</span>';
-  const action = item.kind === 'saved'
-    ? '<button type="button" data-open-project="' + item.index + '">Открыть</button>'
-    : '<button type="button" data-open-example="' + item.index + '">Открыть пример</button>';
+  const action = '<button type="button" data-open-project="' + item.index + '">Открыть</button>';
   return '<article class="dash-project-card"><div class="dash-project-image" style="background:linear-gradient(135deg,' + esc(bg) + ',' + esc(bg) + ' 55%,' + esc(accent) + ')">' + cover + swatches(look) + '</div>' +
     '<div class="dash-project-info"><b>' + esc(name) + '</b><small>' + esc(p.niche || 'Коммерческий сайт') + '</small>' +
-    (look ? '<small class="dash-arch">' + esc(look.archetype) + (item.kind === 'example' ? ' · пример' : '') + '</small>' : '') + action + '</div></article>';
+    (look ? '<small class="dash-arch">' + esc(look.archetype) + '</small>' : '') + action + '</div></article>';
 }
 // Карточка «Продолжить работу»: текущий проект рабочей области, если он не пустой.
 function renderContinue() {
@@ -399,19 +396,35 @@ function renderContinue() {
     (inLibrary ? '' : '<span class="dash-badge">Не сохранён в реестр</span>') + '</div></div>' +
     '<div class="dash-continue-actions"><button type="button" class="dash-primary" data-dash="editor">Открыть редактор</button><button type="button" data-dash="qa">Проверка и выпуск</button><button type="button" data-continue="download">Скачать HTML</button></div>';
 }
-// Сколько студия занимает в хранилище браузера (около 5 МБ на сайт): большие фото быстро его заполняют.
+// Локальное хранилище ограничено отдельно; общий лимит origin может быть больше за счёт IndexedDB.
+let storageEstimateRevision = 0;
 function renderStorage() {
   const meter = $('#dash-storage'); if (!meter) return;
   let bytes = 0;
   try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); bytes += (k.length + (localStorage.getItem(k) || '').length) * 2; } } catch { /* хранилище недоступно */ }
-  const LIMIT = 5 * 1024 * 1024, pct = Math.min(100, Math.round(bytes / LIMIT * 100));
-  meter.setAttribute('aria-valuenow', String(pct));
-  meter.dataset.level = pct >= 85 ? 'err' : pct >= 65 ? 'warn' : 'ok';
-  meter.querySelector('span').style.width = Math.max(2, pct) + '%';
-  const mb = (bytes / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
-  $('#dash-storage-note').textContent = 'Занято ' + mb + ' из ~5 МБ (' + pct + '%). ' + (pct >= 65
-    ? 'Скачайте JSON важных проектов и удалите лишние фото или записи реестра.'
-    : 'Проекты и фото хранятся только в этом браузере — сохраняйте важное через «Экспорт JSON».');
+  const LOCAL_LIMIT = 5 * 1024 * 1024, localPct = Math.min(100, Math.round(bytes / LOCAL_LIMIT * 100));
+  const note = $('#dash-storage-note');
+  const update = (used, quota) => {
+    const pct = quota > 0 ? Math.min(100, Math.round(used / quota * 100)) : localPct;
+    const level = Math.max(localPct, pct);
+    meter.setAttribute('aria-valuenow', String(pct));
+    meter.dataset.level = level >= 85 ? 'err' : level >= 65 ? 'warn' : 'ok';
+    meter.querySelector('span').style.width = Math.max(2, pct) + '%';
+    const mb = value => (value / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+    const local = 'localStorage: ' + mb(bytes) + ' из ~5 МБ (' + localPct + '%)';
+    const origin = quota > 0 ? 'Весь сайт в браузере: ' + mb(used) + ' из ' + mb(quota) + ' МБ (' + pct + '%).' : '';
+    note.textContent = local + (origin ? '. ' + origin : '.') + (level >= 65
+      ? ' Экспортируйте важные проекты. Лимит localStorage отдельно не увеличивается; изображения лучше хранить в IndexedDB.'
+      : ' Данные браузера локальны; используйте «Экспорт JSON» для резервной копии.');
+  };
+  update(bytes, LOCAL_LIMIT);
+  const revision = ++storageEstimateRevision;
+  try {
+    if (navigator.storage?.estimate) navigator.storage.estimate().then(result => {
+      if (revision !== storageEstimateRevision) return;
+      update(Number(result.usage) || bytes, Number(result.quota) || LOCAL_LIMIT);
+    }).catch(() => {});
+  } catch { /* оценка квоты не поддерживается */ }
 }
 // Подключения: проверяем /health серверов, адреса которых заданы в этом браузере.
 async function pingHealth(endpoint) {
@@ -457,23 +470,17 @@ function renderConnections() {
   if (!analyzer) setDashStatus('analyzer', 'off', 'Не подключён — настройка в «Анализ сайтов и шаблоны»');
   else pingHealth(analyzer).then(ok => setDashStatus('analyzer', ok ? 'ok' : 'warn', ok ? 'Анализатор-сервер отвечает' : 'Анализатор-сервер не ответил'));
 }
-function renderDashboard(filter = dashboardFilter) {
+function renderDashboard() {
   const root = $('#dash-projects'); if (!root) return;
-  dashboardFilter = filter;
   const saved = state.library.map((item, index) => ({ raw: item.raw, analysis: item.analysis || null, index, kind: 'saved' }));
-  const examples = exampleProjects.map((item, index) => ({ raw: item.raw, index, kind: 'example' }));
-  const entries = filter === 'saved' ? saved : filter === 'examples' ? examples : [...saved, ...examples];
+  const entries = saved;
   const q = dashboardQuery.trim().toLowerCase();
   const shown = entries.filter(item => {
     const p = normalizeProject(item.raw);
     return !q || [p.brand, p.niche, p.title].some(value => String(value || '').toLowerCase().includes(q));
   });
   $('#dash-project-count').textContent = String(saved.length);
-  const chips = $('#dash-example-chips');
-  if (chips) chips.innerHTML = exampleProjects.map((item, index) => '<button type="button" data-open-example="' + index + '" title="' + esc(item.niche || '') + '">' + esc(item.brand || item.niche) + '</button>').join('');
-  document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('selected', button.dataset.filter === filter));
   const empty = q ? '<b>Ничего не найдено</b><p>Измените поисковый запрос.</p>'
-    : filter === 'examples' ? '<b>Примеры пока не загружены</b>'
     : '<b>Здесь появятся ваши сайты</b><p>Соберите сайт выше и нажмите «В реестр» в рабочей области. Проект сохранится в этом браузере, а новые сайты будут сверяться с ним на непохожесть.</p>';
   root.innerHTML = shown.length ? shown.map(projectCard).join('') : '<div class="dash-empty">' + empty + '</div>';
   renderContinue();
@@ -548,24 +555,16 @@ $('#dashboard')?.addEventListener('click', async e => {
   }
   const project = e.target.closest('[data-open-project]');
   if (project) { const item = state.library[Number(project.dataset.openProject)]; if (item) { state.analysis = item.analysis ? { projectId: item.raw.id, data: item.analysis } : null; load(item.raw, 'Проект открыт из главной панели'); openWorkspace('editor'); } return; }
-  const example = e.target.closest('[data-open-example]');
-  if (example) {
-    const item = exampleProjects[Number(example.dataset.openExample)];
-    if (item) { load(item.raw, 'Пример открыт: ' + (item.brand || item.niche)); openWorkspace('create'); }
-    return;
-  }
   if (e.target.closest('[data-journal-clear]')) { try { localStorage.removeItem(AI_JOURNAL_KEY); } catch { /* нет хранилища */ } renderAiJournal(); return; }
   if (e.target.closest('[data-continue="download"]')) { $('#download').click(); return; }
   const action = e.target.closest('[data-dash]')?.dataset.dash;
   if (action === 'projects') {
-    renderDashboard('saved');
+    renderDashboard();
     $('#dash-projects-head')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.querySelectorAll('.dash-nav [data-dash]').forEach(button => button.classList.toggle('is-active', button.dataset.dash === 'projects'));
     return;
   }
   if (action && action !== 'home') openWorkspace(action);
-  const filter = e.target.closest('[data-filter]')?.dataset.filter;
-  if (filter) renderDashboard(filter);
 });
 // Быстрый старт с главной: те же поля автопилота и тот же запуск, без лишнего перехода.
 $('#quick-start')?.addEventListener('submit', e => {
@@ -608,14 +607,15 @@ const GROUPS = [
     ['seoDescription', 'SEO-описание (meta description)', 'area', 'Необязательно. 120–160 символов. Если пусто — описание предложения'],
   ]],
   ['Дизайн и фирменный стиль', false, [
+    ['@stylePreset', 'Готовый стиль оформления', 'stylePreset', '20 согласованных сочетаний композиции, палитры и геометрии. После выбора каждый параметр можно менять вручную.'],
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
     ['@visualIdentity', 'Новая визуальная система', 'visualIdentity', 'Новая система: палитры по нише, геометрия, типографика и интервалы. Можно включить отдельно, не меняя старые проекты.'],
     ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
     ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@mechanic', 'Поведение карточек', 'mechanic', 'Авто — движок выбирает по архитектуре и данным: раскрытие, переворот, колода, лента или мозаика. Всё работает с клавиатуры и без анимации'],
     ['@imageMask', 'Форма фотографий', 'imageMask', 'Авто — по форме углов и характеру бренда. Маска применяется только к фото, рамки фокуса не обрезаются'],
-    ['@sectionDivider', 'Разделители секций', 'sectionDivider', 'Авто — по мотиву бренда: волна, зигзаг, ступени, точки или линия'],
     ['@graphicDirection', 'Направление графики', 'graphicDirection', 'Стиль фото и заданий на графику: кинематографичная съёмка, макрофактура, студийная съёмка товара и др. Авто — по нише'],
+    ['@artDirectionPreset', 'Сценарий арт-дирекции', 'artDirectionPreset', 'Согласованный комплект: архитектура и положение заголовка, шапка и навигация, стиль CTA, типографика, движение, свет, фактура и переходы. Явные настройки отдельных эффектов имеют приоритет'],
     ['@cinematicLayers', 'Фактура и свет', 'cinematicLayers', 'Зерно, бумага, полутон, сетка или сканлинии и световые слои первого экрана. Авто — по направлению графики. Только декор позади текста: контраст не меняется'],
     ['@transition', 'Переходы между секциями', 'transition', 'Полоса между секциями: градиент, свечение, диагональ, арка, волна или срез. Цвета «Авто» — акцент палитры и его глубокий оттенок. Переход не ложится на текст'],
     ['@cardShape', 'Форма карточек', 'cardShape', 'Форма карточек услуг, товаров и преимуществ: углы, срезы, вырезы, загнутый угол и другие — 15 вариантов. Авто — по характеру формы и архитектуре'],
@@ -627,6 +627,7 @@ const GROUPS = [
     ['@buttonAnimation', 'Анимация кнопок', 'buttonAnimation', 'Пульс, блик, волна от нажатия, толчок стрелки, обводка, подъём, упругое нажатие, дыхание свечения, желе, подчёркивание. Несовместимые со стилем кнопки сочетания пропускаются'],
     ['@cardEffect', 'Эффект карточек', 'cardEffect', '22 эффекта: прожектор, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
     ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '20 эффектов: аврора, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
+    ['@motionStyle', 'Интенсивность движения', 'motionStyle', 'Авто подбирает эффекты по нише и бренду. Кинематографичный режим включает выразительные сцены и анимацию. Статичный сохраняет только лёгкие интерфейсные отклики'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
@@ -733,6 +734,7 @@ function buildForm() {
 <option value="auto">${LEGACY_LABELS.auto}</option>
 <optgroup label="Семейства (как в редакторе Landing Studio)">${Object.entries(LEGACY_LABELS).filter(([k]) => k !== 'auto').map(([k, v]) => `<option value="family:${k}">${v}</option>`).join('')}</optgroup>
 <optgroup label="Точная архитектура">${Object.entries(ARCHETYPES).map(([k, a]) => `<option value="exact:${k}">${a.name} — ${a.ru}</option>`).join('')}</optgroup></select>`.replace(`value="${archValue}"`, `value="${archValue}" selected`);
+    else if (type === 'stylePreset') control = `<select id="${id}" data-special="stylePreset"><option value="">Выберите готовое сочетание</option>${STYLE_PRESETS.map(item => `<option value="${item.id}"${state.raw.stylePresetId === item.id ? ' selected' : ''}>${esc(item.name)}</option>`).join('')}</select>`;
     else if (type === 'palette') control = `<select id="${id}" data-special="palette">${[['auto', 'Автоматически по нише'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, v]) => `<option value="${k}"${p.palette === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'visualIdentity') {
       const options = listVisualIdentityOptions();
@@ -748,12 +750,12 @@ function buildForm() {
     else if (type === 'promptMode') control = `<select id="${id}" data-special="promptMode">${[['append', 'Дополнить стандартный — мои указания важнее'], ['replace', 'Заменить стандартный моим']].map(([k, v]) => `<option value="${k}"${p.customPromptMode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'mechanic') control = `<select id="${id}" data-special="mechanic"${d}><option value="">Авто</option>${Object.entries(MECHANICS).map(([k, v]) => `<option value="${k}"${state.raw.itemsMechanic === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
-    else if (type === 'imageMask' || type === 'sectionDivider') { const dict = type === 'imageMask' ? MASKS : DIVIDERS; control = `<select id="${id}" data-special="${type}"${d}><option value="">Авто</option>${Object.entries(dict).map(([k, v]) => `<option value="${k}"${state.raw[type] === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`; }
+    else if (type === 'imageMask') { const dict = MASKS; control = `<select id="${id}" data-special="${type}"${d}><option value="">Авто</option>${Object.entries(dict).map(([k, v]) => `<option value="${k}"${state.raw[type] === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`; }
     else if (type === 'transition') {
       const t = state.raw, tr = result?.concept?.visualSystem?.transition, pal = result?.concept?.visualSystem?.palette || {};
       const color = (key, label, auto) => `<div class="transition-color"><label for="${id}-${key}">${label}</label><input type="color" id="${id}-${key}" data-special="${key}" value="${esc(t[key] || auto || '#888888')}"><span class="note" data-transition-state="${key}">${t[key] ? esc(t[key]) : 'авто'}</span><button type="button" data-transition-reset="${key}"${t[key] ? '' : ' disabled'}>Авто</button></div>`;
       const range = (key, label, [min, max], step, value, unit) => `<label for="${id}-${key}">${label}: <output data-transition-out="${key}">${value}${unit}</output></label><input type="range" id="${id}-${key}" data-special="${key}" min="${min}" max="${max}" step="${step}" value="${value}" data-unit="${unit}">`;
-      control = `<select id="${id}" data-special="transitionType"><option value="">Авто — по фактуре и архитектуре</option>${Object.entries(TRANSITIONS).map(([k, v]) => `<option value="${k}"${t.transitionType === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>
+      control = `<p class="note transition-fixed">Постоянный мягкий градиент между первым экраном и каждым блоком. Можно настроить цвета, угол и высоту.</p>
         <div class="transition-gradient" role="group" aria-label="Настройка градиента перехода">
         ${color('transitionFrom', 'Цвет начала', pal.accent)}${color('transitionTo', 'Цвет конца', pal.accentInk || pal.accent)}
         ${range('transitionAngle', 'Угол', TRANSITION_LIMITS.angle, 15, tr?.angle ?? 180, '°')}
@@ -767,6 +769,8 @@ function buildForm() {
     else if (type === 'buttonAnimation') control = `<select id="${id}" data-special="buttonAnimation"${d}><option value="">Авто — по плану движения</option><option value="none"${state.raw.buttonAnimation === 'none' ? ' selected' : ''}>Без</option>${Object.entries(BUTTON_ANIMATIONS).map(([k, v]) => `<option value="${k}"${state.raw.buttonAnimation === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'cardEffect') control = `<select id="${id}" data-special="cardEffect"${d}><option value="">Авто — по архитектуре и классу</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'heroEffect') control = `<select id="${id}" data-special="heroEffect"${d}><option value="">Авто — по архитектуре, классу и наличию фото</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+    else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}><option value=""${!state.raw.motionStyle ? ' selected' : ''}>Авто — по нише и бренду</option><option value="cinematic"${state.raw.motionStyle === 'cinematic' ? ' selected' : ''}>Кинематографичный — выразительный</option><option value="static"${state.raw.motionStyle === 'static' ? ' selected' : ''}>Статичный — минимум движения</option></select>`;
+    else if (type === 'artDirectionPreset') control = `<select id="${id}" data-special="artDirectionPreset"${d}><option value=""${!state.raw.artDirectionPreset ? ' selected' : ''}>Авто — под нишу и содержимое</option>${Object.entries(ART_DIRECTION_PRESETS).map(([k, v]) => `<option value="${k}"${state.raw.artDirectionPreset === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`;
     else if (type === 'cardShape') control = `<select id="${id}" data-special="cardShape"${d}><option value="">Авто — по форме и архитектуре</option>${Object.entries(CARD_SHAPES).map(([k, v]) => `<option value="${k}"${state.raw.cardShape === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'layout') control = layoutControl(id);
     else if (type === 'revealEffect') control = `<select id="${id}" data-special="revealEffect"${d}><option value="">Авто — по плану движения</option>${Object.entries(REVEALS).map(([k, v]) => `<option value="${k}"${state.raw.revealEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
@@ -1285,7 +1289,7 @@ function recordQualityHistory(entry) {
     localStorage.setItem(QUALITY_HISTORY, JSON.stringify(all.slice(-50)));
   } catch { /* история — удобство, без неё работа продолжается */ }
 }
-const STAGE_LABEL = { done: 'Готово', attention: 'Нужно внимание', input: 'Нужны данные', manual: 'Вручную' };
+const STAGE_LABEL = { done: 'Готово', attention: 'Нужно внимание', review: 'Есть замечания', input: 'Нужны данные', manual: 'Вручную' };
 function renderProduction() {
   const host = $('#view-production');
   if (!host || !result) return;
@@ -1303,8 +1307,8 @@ function renderProduction() {
     ['Design DNA', 'done', `${esc(arch.name)} — ${esc(result.concept.homepage.heroComposition)}`],
     ['Визуальный бриф', photos ? 'done' : 'input', photos ? `Фотографий: ${photos}` : 'Фото не загружены: на странице абстрактный мотив. Задание для съёмки — во вкладке «Проверка».'],
     ['HTML', 'done', `Самодостаточная страница, ${kb} КБ`],
-    ['Аудит', result.audit.ok ? 'done' : 'attention', `Ошибок: ${result.audit.errors.length}, предупреждений: ${result.audit.warnings.length}`],
-    ['Контроль качества', q.counts.critical || q.counts.high ? 'attention' : 'done', `Critical ${q.counts.critical} · High ${q.counts.high} · Medium ${q.counts.medium} · Low ${q.counts.low}`],
+    ['Аудит', result.audit.errors.length ? 'attention' : result.audit.warnings.length ? 'review' : 'done', `Ошибок: ${result.audit.errors.length}, предупреждений: ${result.audit.warnings.length}`],
+    ['Контроль качества', qualityStageStatus(q), `Critical ${q.counts.critical} · High ${q.counts.high} · Medium ${q.counts.medium} · Low ${q.counts.low}`],
     ['Design Director', director.length ? 'attention' : 'done', director.length ? `Рекомендаций: ${director.length}. Применяются только вручную.` : 'Рекомендаций нет'],
     ['Исправления', fixable.length ? 'attention' : 'done', fixable.length ? `Можно исправить автоматически: ${fixable.length}` : 'Автоматически исправлять нечего'],
     ['Экспорт', 'done', 'HTML и JSON проекта доступны'],
@@ -1407,11 +1411,14 @@ $('#auto').addEventListener('submit', async e => {
     setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — ход генерации отображается ниже…');
     setAutoProgress(12, 'AI формирует тексты и структуру', 'Отправляем бриф в Cloudflare Workers AI');
     try {
-      // Серверу уходит полный подробный промт студии (концепция, тон класса, требования к блокам, свой промт),
-      // а не только ниша: так AI пишет тексты внутри выбранной композиции.
-      const studioPrompt = autopilot(input, { registry: registry(), forWorker: true }).prompt.slice(0, 16000);
-      // Передаём только данные, которые Worker действительно использует. Весь input содержал
-      // повторяющиеся поля и крупные локальные объекты; customPrompt уже включён в studioPrompt.
+      // В append-режиме пользовательская инструкция передаётся отдельно: иначе длинный промт
+      // обрезал её по лимиту studioPrompt. Worker добавит её к брифу после контекста студии.
+      const promptInput = input.customPromptMode === 'append' && input.customPrompt
+        ? { ...input, customPrompt: '' }
+        : input;
+      const studioPrompt = autopilot(promptInput, { registry: registry(), forWorker: true }).prompt.slice(0, 16000);
+      // Передаём только данные, которые Worker действительно использует; большие локальные объекты
+      // из полного input не нужны. customPrompt отдельно нужен Worker, если его нет в studioPrompt.
       const aiPayload = {
         niche: input.niche,
         brand: input.brand,
@@ -1567,8 +1574,9 @@ ${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Биб�
     ['Концепция', '<b>' + esc(d.conceptName || '') + '</b> <span class="note">— ' + esc(d.conceptFormula || '') + '</span>'], ['Что учтено', ul(b.contextFactors || [])],
     ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
-    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Переходы', esc(describeTransition(vs.transition))], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
-    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Разделители', esc(DIVIDERS[vs.forms?.divider || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Типографика', esc(TYPE_STYLES[vs.typography2?.typeStyle] || 'без доп. оформления')], ['Раскладка секций', esc(SECTION_LAYOUTS[vs.sectionLayout] || vs.sectionLayout)], ['Анимации', esc('текст — ' + (TEXT_ANIMATIONS[vs.typography2?.textAnimation] || 'без') + '; кнопки — ' + (BUTTON_ANIMATIONS[vs.typography2?.buttonAnimation] || 'без'))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Арт-дирекция', esc(vs.artDirection?.label || 'Авто по нише и содержимому')], ['Шапка', esc(c.homepage.navigationPattern)], ['Положение заголовка', esc(c.homepage.heroComposition)],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Переходы', esc(describeTransition(vs.transition))], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Типографика', esc(TYPE_STYLES[vs.typography2?.typeStyle] || 'без доп. оформления')], ['Раскладка секций', esc(SECTION_LAYOUTS[vs.sectionLayout] || vs.sectionLayout)], ['Анимации', esc('текст — ' + (TEXT_ANIMATIONS[vs.typography2?.textAnimation] || 'без') + '; кнопки — ' + (BUTTON_ANIMATIONS[vs.typography2?.buttonAnimation] || 'без'))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
   ])}</div>
 <h2>Палитра и контраст</h2>
 <div class="swatches">${sw.map(([n, bg, fg]) => `<div class="swatch" style="background:${bg};color:${fg}"><b>${n}</b>${bg}</div>`).join('')}</div>
@@ -1916,7 +1924,7 @@ function auditHeroReadability() {
   const originalHeight = frame.style.height;
   const originalMaxWidth = frame.style.maxWidth;
   const checks = [];
-  const viewports = [{width:320,label:'Телефон 320 px'},{width:768,label:'Планшет 768 px'},{width:1280,label:'Компьютер 1280 px'}];
+  const viewports = [{width:320,label:'Телефон 320 px'},{width:360,label:'Телефон 360 px'},{width:375,label:'Телефон 375 px'},{width:390,label:'Телефон 390 px'},{width:768,label:'Планшет 768 px'},{width:1024,label:'Ноутбук 1024 px'},{width:1280,label:'Компьютер 1280 px'}];
   const rectsOverlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   // Проверяем именно фотографию Hero, а не все изображения страницы.
   // SVG-мотив без фотографии допустим для части архитектур и не считается ошибкой.
@@ -1940,7 +1948,12 @@ function auditHeroReadability() {
   try {
     for (const viewport of viewports) {
       frame.style.width = viewport.width + 'px';
-      frame.style.maxWidth = '100%';
+      frame.style.maxWidth = 'none';
+      const actualWidth = doc.defaultView.innerWidth;
+      if (!Number.isFinite(actualWidth) || Math.abs(actualWidth - viewport.width) > 2) {
+        checks.push({level:'manual',title:viewport.label + ': ширина тестового окна не подтверждена',text:'Не удалось установить фактическую ширину предпросмотра ' + viewport.width + ' px. Проверка этого размера пропущена, чтобы не выдавать результат другого viewport за точный.'});
+        continue;
+      }
       heroImages.forEach((img,index) => {
         if (!img.complete || img.naturalWidth === 0) return;
         const rect = img.getBoundingClientRect();
@@ -1989,8 +2002,10 @@ function auditHeroReadability() {
 function renderHeroReadabilityChecks() {
   const host = $('#hero-readability-results');
   if (!host) return;
-  const checks = auditHeroReadability();
+  const checks = qaRunResults.hero = auditHeroReadability();
+  qaRunTimes.hero = Date.now();
   host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+  renderQaOverview();
 }
 
 
@@ -2019,6 +2034,47 @@ function previewAccessibleName(el, doc) {
   return clean(el.getAttribute('title'));
 }
 
+const qaRunResults = { content: null, responsive: null, hero: null };
+const qaRunTimes = { content: null, responsive: null, hero: null };
+function qaCheckStatus(items, checkedAt) {
+  if (!items) return { level: 'manual', status: 'Не проверено', detail: 'Проверка ещё не запускалась.', notRun: true };
+  const time = checkedAt ? new Date(checkedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+  const suffix = time ? ` Запуск: ${time}.` : '';
+  const failed = items.filter(item => item.level === 'error');
+  const warnings = items.filter(item => item.level === 'check');
+  const manual = items.filter(item => item.level === 'manual');
+  if (failed.length) return { level: 'check', status: 'Есть ошибки', detail: `Ошибок: ${failed.length}; замечаний: ${warnings.length}.${suffix}` };
+  if (warnings.length) return { level: 'check', status: 'Нужны исправления', detail: `Замечаний: ${warnings.length}; ручных проверок: ${manual.length}.${suffix}` };
+  if (manual.length) return { level: 'manual', status: 'Нужен просмотр', detail: `Ручных проверок: ${manual.length}; автоматических замечаний нет.${suffix}` };
+  return { level: 'good', status: 'Пройдена', detail: `Автоматические проверки не нашли замечаний.${suffix}` };
+}
+function renderQaOverview() {
+  const host = $('#qa-overview-results');
+  if (!host || !result) return;
+  const audit = result.audit;
+  const staticState = audit.errors.length
+    ? { level: 'check', status: 'Есть ошибки', detail: `Ошибок: ${audit.errors.length}; предупреждений: ${audit.warnings.length}.` }
+    : audit.warnings.length
+      ? { level: 'check', status: 'Нужен просмотр', detail: `Предупреждений: ${audit.warnings.length}.` }
+      : { level: 'good', status: 'Пройдена', detail: 'Статическая проверка генератора без ошибок и предупреждений.' };
+  const rows = [
+    ['Сборка и статический аудит', staticState],
+    ['Контент, ссылки и действия', qaCheckStatus(qaRunResults.content, qaRunTimes.content)],
+    ['Адаптивность и доступность', qaCheckStatus(qaRunResults.responsive, qaRunTimes.responsive)],
+    ['Первый экран и читаемость', qaCheckStatus(qaRunResults.hero, qaRunTimes.hero)],
+  ];
+  host.innerHTML = rows.map(([label, state]) => `<article class="qa-overview__item is-${state.level}"><span>${esc(label)}</span><b>${esc(state.status)}</b><small>${esc(state.detail)}</small></article>`).join('');
+  const states = rows.map(([, state]) => state);
+  const overall = states.some(state => state.level === 'check')
+    ? { level: 'check', text: 'Найдены замечания. Исправьте их и повторите проверки.' }
+    : states.some(state => state.notRun)
+      ? { level: 'manual', text: 'Проверки не завершены: запустите остальные проверки для полной картины.' }
+      : states.some(state => state.level === 'manual')
+        ? { level: 'manual', text: 'Автоматические проверки выполнены; остались пункты для ручной оценки.' }
+        : { level: 'good', text: 'Все запущенные проверки пройдены без автоматических замечаний.' };
+  const overallHost = $('#qa-overall-results');
+  if (overallHost) overallHost.innerHTML = `<b class="is-${overall.level}">${esc(overall.text)}</b>`;
+}
 function auditResponsiveLayoutAndAccessibility() {
   const frame = $('#frame');
   const doc = frame?.contentDocument;
@@ -2027,7 +2083,7 @@ function auditResponsiveLayoutAndAccessibility() {
   const originalHeight = frame.style.height;
   const originalMaxWidth = frame.style.maxWidth;
   const results = [];
-  const sizes = [{width:320,label:'Телефон 320 px'},{width:375,label:'Телефон 375 px'},{width:768,label:'Планшет 768 px'}];
+  const sizes = [{width:320,label:'Телефон 320 px'},{width:360,label:'Телефон 360 px'},{width:375,label:'Телефон 375 px'},{width:390,label:'Телефон 390 px'},{width:768,label:'Планшет 768 px'},{width:1024,label:'Ноутбук 1024 px'},{width:1280,label:'Компьютер 1280 px'}];
   const visible = el => {
     const style = doc.defaultView.getComputedStyle(el);
     const rect = el.getBoundingClientRect();
@@ -2097,8 +2153,10 @@ function auditResponsiveLayoutAndAccessibility() {
 function renderResponsiveAccessibilityChecks() {
   const host = $('#responsive-a11y-results');
   if (!host) return;
-  const checks = auditResponsiveLayoutAndAccessibility();
+  const checks = qaRunResults.responsive = auditResponsiveLayoutAndAccessibility();
+  qaRunTimes.responsive = Date.now();
   host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+  renderQaOverview();
 }
 
 
@@ -2158,7 +2216,10 @@ function auditSiteContentAndInteractions() {
 }
 function renderSiteContentInteractionChecks() {
   const host=$('#site-content-qa-results'); if(!host) return;
-  host.innerHTML=auditSiteContentAndInteractions().map(item=>'<article class="visual-quality-card is-'+esc(item.level)+'"><b>'+esc(item.title)+'</b><p>'+esc(item.text)+'</p></article>').join('');
+  const checks = qaRunResults.content = auditSiteContentAndInteractions();
+  qaRunTimes.content = Date.now();
+  host.innerHTML=checks.map(item=>'<article class="visual-quality-card is-'+esc(item.level)+'"><b>'+esc(item.title)+'</b><p>'+esc(item.text)+'</p></article>').join('');
+  renderQaOverview();
 }
 
 function renderAiDesignReview() {
@@ -2182,14 +2243,17 @@ function renderAiDesignReview() {
 }
 function renderAudit() {
   const a = result.audit;
+  qaRunResults.content = qaRunResults.responsive = qaRunResults.hero = null;
+  qaRunTimes.content = qaRunTimes.responsive = qaRunTimes.hero = null;
   const badge = $('#audit-badge');
   badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
-  $('#view-audit').innerHTML = `<section class="ai-design-review"><h3>AI Design Director</h3><p class="note">Нейросеть оценивает предложение, структуру и тексты сайта. Каждое изменение можно отдельно проверить и применить вручную.</p><button type="button" data-run-ai-design-review>Запустить AI-аудит дизайна и контента</button><div id="ai-design-review-results" class="visual-quality-list" aria-live="polite"></div></section><section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на трёх мобильных и планшетных ширинах.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на трёх ширинах окна. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 3 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+  $('#view-audit').innerHTML = `<section class="qa-overview" aria-labelledby="qa-overview-title"><h3 id="qa-overview-title">Сводка QA текущей версии</h3><p class="note">Незапущенные проверки отмечены отдельно. Результаты ручных проверок относятся к текущему предпросмотру.</p><div id="qa-overall-results" class="qa-overview__overall" role="status" aria-live="polite"></div><div id="qa-overview-results" class="qa-overview__grid" aria-live="polite"></div></section><section class="ai-design-review"><h3>AI Design Director</h3><p class="note">Нейросеть оценивает предложение, структуру и тексты сайта. Каждое изменение можно отдельно проверить и применить вручную.</p><button type="button" data-run-ai-design-review>Запустить AI-аудит дизайна и контента</button><div id="ai-design-review-results" class="visual-quality-list" aria-live="polite"></div></section><section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на телефонах 320, 360 и 390 px, планшете 768 px, ноутбуке 1024 px и компьютере 1280 px.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на ширинах 320, 360, 390, 768, 1024 и 1280 px. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 6 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
 <ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
 <h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
 <h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
 <p class="note" style="margin-top:16px">Статическая проверка не заменяет просмотр на реальных устройствах: используйте переключатель ширины 320 / 768 в предпросмотре.</p>`;
   renderImageIntelligence();
+  renderQaOverview();
   renderAiDesignReview();
 }
 
@@ -2243,6 +2307,8 @@ function load(raw, message) {
   const cleanRaw = raw && typeof raw === 'object' ? { ...raw } : raw;
   if (cleanRaw && typeof cleanRaw === 'object') delete cleanRaw.__udsAnalysis;
   state.raw = exportProject(normalizeProject(cleanRaw));
+  if (typeof canvasUndo !== 'undefined') { canvasUndo.length = 0; canvasRedo.length = 0; refreshCanvasHistory(); }
+  selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-inspector').hidden = true;
   if (hasAttachedAnalysis) state.analysis = attachedAnalysis && attachedAnalysis.data ? { projectId: state.raw.id, data: attachedAnalysis.data } : null;
   else if (state.analysis?.data) {
     // При открытии записи реестра raw.id может отличаться от нормализованного ID проекта.
@@ -2282,14 +2348,23 @@ $('#form').addEventListener('input', e => {
   }
   else if (t.dataset.path) set(t.dataset.path, t.value);
   else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
-  else if (t.dataset.special === 'arch') {
+  else if (t.dataset.special === 'stylePreset') {
+    const preset = STYLE_PRESETS.find(item => item.id === t.value);
+    if (preset) {
+      state.raw.stylePresetId = preset.id;
+      state.raw.architecture = preset.architecture; state.raw.architectureMode = 'exact'; delete state.raw.designArchitecture;
+      state.raw.visualIdentityEnabled = true;
+      state.raw.visualIdentityPaletteId = preset.palette;
+      state.raw.visualIdentityShapeId = preset.shape;
+      state.raw.cinematicLayers = preset.background;
+    }
+  } else if (t.dataset.special === 'arch') {
     const [mode, id] = t.value.split(':');
     delete state.raw.designArchitecture;
     state.raw.architectureMode = mode; state.raw.architecture = mode === 'exact' ? id : 'auto';
     if (mode === 'family') state.raw.designArchitecture = id;
   } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
   else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
-  else if (t.dataset.special === 'transitionType') { if (t.value) state.raw.transitionType = t.value; else delete state.raw.transitionType; }
   else if (t.dataset.special === 'transitionFrom' || t.dataset.special === 'transitionTo') {
     state.raw[t.dataset.special] = t.value;
     const st = $('#form').querySelector(`[data-transition-state="${t.dataset.special}"]`); if (st) st.textContent = t.value;
@@ -2299,11 +2374,11 @@ $('#form').addEventListener('input', e => {
     state.raw[t.dataset.special] = Number(t.value);
     const out = $('#form').querySelector(`[data-transition-out="${t.dataset.special}"]`); if (out) out.value = t.value + (t.dataset.unit || '');
   }
-  else if (['cardShape', 'revealEffect', 'buttonStyle', 'cardEffect', 'heroEffect', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
+  else if (['cardShape', 'revealEffect', 'buttonStyle', 'cardEffect', 'heroEffect', 'motionStyle', 'artDirectionPreset', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
   else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
   else if (t.dataset.special === 'graphicDirection') { if (t.value) state.raw.graphicDirection = t.value; else delete state.raw.graphicDirection; }
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
-  else if (t.dataset.special === 'imageMask' || t.dataset.special === 'sectionDivider') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
+  else if (t.dataset.special === 'imageMask') { if (t.value) state.raw.imageMask = t.value; else delete state.raw.imageMask; }
   else if (t.dataset.special === 'mechanic') { if (t.value) state.raw.itemsMechanic = t.value; else delete state.raw.itemsMechanic; }
   else if (t.dataset.special === 'visualIdentityEnabled') state.raw.visualIdentityEnabled = t.checked;
   else if (t.dataset.special === 'visualIdentityPalette') { if (t.value) state.raw.visualIdentityPaletteId = t.value; else delete state.raw.visualIdentityPaletteId; }
@@ -2324,7 +2399,7 @@ $('#form').addEventListener('input', e => {
   schedule();
 });
 function imageDataSize() {
-  const values = [state.raw.images?.hero, state.raw.images?.heroMobile, ...Object.values(state.raw.imageArtDirection?.mobileSources?.gallery || {}), ...Object.values(state.raw.imageArtDirection?.mobileSources?.services || {}), ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image)];
+  const values = [state.raw.images?.hero, state.raw.images?.heroMobile, ...Object.values(state.raw.imageArtDirection?.mobileSources?.gallery || {}), ...Object.values(state.raw.imageArtDirection?.mobileSources?.services || {}), ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image), ...Object.values(state.raw.canvasElements || {}).flatMap(items => (Array.isArray(items) ? items : []).map(item => item?.src))];
   return values.filter(v => typeof v === 'string' && v.startsWith('data:image/')).reduce((n, v) => n + v.length, 0);
 }
 function blobToDataUrl(blob) {
@@ -2413,8 +2488,12 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
   let visualHints = null;
   try {
     const hintsEndpoint = new URL(imageEndpoint); hintsEndpoint.pathname = hintsEndpoint.pathname.replace(/\/api\/generate-image\/?$/i, '/api/visual-hints');
+    const photoAnalysis = currentAnalysis() || {};
+    const photoPrompts = Array.isArray(photoAnalysis.imagePrompts) ? photoAnalysis.imagePrompts.slice(0, 5) : [];
+    const photoDetails = [result.project.mainOffer || result.project.description, ...photoPrompts]
+      .filter(Boolean).join('\n').slice(0, 600);
     const hintsResponse = await fetch(hintsEndpoint.toString(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      niche: result.project.niche || '', details: result.project.description || '',
+      niche: result.project.niche || '', details: photoDetails,
       items: targets.filter(slot => slot.role === 'service').map(slot => slot.label),
     }) });
     const hintsPayload = await hintsResponse.json().catch(() => ({}));
@@ -2607,10 +2686,18 @@ function moveGalleryImage(from, direction) {
 // ---------- Расположение блоков: перетаскивание и кнопки ↑↓ ----------
 const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', faq: 'Вопросы и ответы' };
 const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle' };
-const ORDER_LISTS = [['services', 'Позиции каталога'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы']];
+const ORDER_LISTS = [['services', 'Позиции каталога'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['canvasBlocks', 'Добавленные блоки']];
 const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r ?? '').trim() || 'Без названия';
 function currentSectionOrder() {
   return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
+}
+function orderedCanvasBlocks() {
+  const anchors = ['hero', ...currentSectionOrder(), 'contact'];
+  const rank = new Map(anchors.map((anchor, index) => [anchor, index]));
+  return (Array.isArray(state.raw.canvasBlocks) ? state.raw.canvasBlocks : [])
+    .map((block, index) => ({ block, index, rank: rank.get(block.after) ?? rank.get('contact') }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(entry => entry.block);
 }
 function orderList(kind, label, titles) {
   if (titles.length < 2) return '';
@@ -2624,7 +2711,10 @@ function layoutControl() {
     return custom ? `${ORDER_SECTION_LABELS[sid] || sid}: ${custom}` : ORDER_SECTION_LABELS[sid] || sid;
   });
   const html = orderList('sections', 'Секции страницы (первый экран всегда сверху, контакты — внизу)', sections)
-    + ORDER_LISTS.map(([key, label]) => orderList(key, label, (Array.isArray(state.raw[key]) ? state.raw[key] : []).map(orderItemTitle))).join('');
+    + ORDER_LISTS.map(([key, label]) => {
+      const rows = key === 'canvasBlocks' ? orderedCanvasBlocks() : (Array.isArray(state.raw[key]) ? state.raw[key] : []);
+      return orderList(key, label, rows.map(orderItemTitle));
+    }).join('');
   return html || '<span class="note">Пока нечего переставлять: добавьте секции и позиции.</span>';
 }
 /** Переставляет элемент from → to в секциях или в списке проекта и пересобирает страницу. */
@@ -2633,11 +2723,22 @@ function reorderLayout(kind, from, to) {
   if (kind === 'sections') {
     const order = currentSectionOrder();
     if (from >= order.length || to >= order.length) return;
+    rememberCanvasChange();
     order.splice(to, 0, order.splice(from, 1)[0]);
     state.raw.sectionOrder = order;
+  } else if (kind === 'canvasBlocks') {
+    const list = orderedCanvasBlocks();
+    if (from >= list.length || to >= list.length) return;
+    rememberCanvasChange();
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    const neighbor = list[to - 1] || list[to + 1];
+    if (neighbor) moved.after = neighbor.after || 'contact';
+    state.raw.canvasBlocks = list;
   } else {
     const list = state.raw[kind];
     if (!Array.isArray(list) || from >= list.length || to >= list.length) return;
+    rememberCanvasChange();
     list.splice(to, 0, list.splice(from, 1)[0]);
     if (kind === 'services') {
       const art = state.raw.imageArtDirection || {};
@@ -2645,7 +2746,7 @@ function reorderLayout(kind, from, to) {
       reorderIndexedEntries(art.mobileSources?.services, from, to);
     }
   }
-  buildForm(); run(); toast('Расположение сохранено');
+  run(); buildForm(); toast('Расположение сохранено');
   requestAnimationFrame(() => $(`[data-order-list="${kind}"] [data-order-item="${to}"] [data-order-move]:not([disabled])`)?.focus());
 }
 let orderDrag = null;
@@ -2677,7 +2778,7 @@ $('#form').addEventListener('dragend', () => {
 $('#form').addEventListener('click', e => {
   const move = e.target.closest('[data-order-move]');
   if (move) { const from = Number(move.dataset.orderMove); reorderLayout(move.closest('[data-order-list]').dataset.orderList, from, from + Number(move.dataset.direction)); return; }
-  if (e.target.closest('[data-order-reset]')) { delete state.raw.sectionOrder; buildForm(); run(); toast('Порядок секций снова подбирает движок'); }
+  if (e.target.closest('[data-order-reset]')) { rememberCanvasChange(); delete state.raw.sectionOrder; run(); buildForm(); toast('Порядок секций снова подбирает движок'); }
 });
 
 // Перетаскивание прямо в предпросмотре: в страницу добавляется служебный скрипт (только в редакторе, не в экспорт).
@@ -2685,33 +2786,482 @@ let arrangeMode = false;
 const ARRANGE_SCRIPT = `<script>(()=>{const css=document.createElement('style');css.textContent='.uds-arrange [data-arrange]{outline:2px dashed rgba(80,120,255,.55);outline-offset:-4px;cursor:grab;position:relative}.uds-arrange [data-arrange].is-over{outline:3px solid #3b6cff}.uds-arrange [data-arrange].is-drag{opacity:.45}.uds-arrange [data-arrange]>.uds-arrange-tag{position:absolute;top:8px;left:8px;z-index:50;padding:3px 8px;border-radius:6px;background:#3b6cff;color:#fff;font:600 12px/1.4 system-ui;display:flex;gap:6px;align-items:center}.uds-arrange-tag button{all:unset;cursor:pointer;min-width:24px;min-height:24px;text-align:center;border-radius:4px;background:rgba(255,255,255,.2)}.uds-arrange-tag button:focus-visible{outline:2px solid #fff}';document.head.append(css);document.documentElement.classList.add('uds-arrange');document.querySelectorAll('[data-reveal]').forEach(n=>n.classList.add('is-in'));
 const order=()=>secs.map(s=>([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));const send=(kind,from,to)=>parent.postMessage({type:'uds-arrange',kind,from,to,order:order()},'*');
 const mark=(nodes,kind,label)=>nodes.forEach((n,i)=>{n.dataset.arrange=kind;n.dataset.arrangeIndex=i;n.draggable=true;if(label){const t=document.createElement('span');t.className='uds-arrange-tag';t.textContent=label(n,i);[['↑',-1],['↓',1]].forEach(([s,d])=>{if(i+d<0||i+d>=nodes.length)return;const b=document.createElement('button');b.type='button';b.textContent=s;b.setAttribute('aria-label',(d<0?'Выше: ':'Ниже: ')+label(n,i).slice(2));b.addEventListener('click',()=>send(kind,i,i+d));t.append(b);});n.prepend(t);}});
-const secs=[...document.querySelectorAll('main section.ds-section')].filter(s=>!s.classList.contains('sec--contact')&&[...s.classList].some(c=>c.startsWith('sec--')));
+const secs=[...document.querySelectorAll('main section.ds-section')].filter(s=>!s.classList.contains('sec--contact')&&!s.classList.contains('sec--custom')&&[...s.classList].some(c=>c.startsWith('sec--')));
 mark(secs,'section',s=>'⇅ '+([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));
+mark([...document.querySelectorAll('section[data-uds-block]')],'custom-block',s=>'⇅ '+(s.querySelector('h2')?.textContent||'Блок'));
 mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');
-let drag=null;addEventListener('dragstart',e=>{const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
-addEventListener('dragover',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
-addEventListener('drop',e=>{if(!drag)return;const n=e.target.closest('[data-arrange="'+drag.dataset.arrange+'"]');if(!n)return;e.preventDefault();const kind=drag.dataset.arrange;const from=kind==='item'?Number(drag.id.slice(5)):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.id.slice(5)):Number(n.dataset.arrangeIndex);send(kind,from,to);});
+let drag=null;addEventListener('dragstart',e=>{if(e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')&&!e.target.closest('.uds-arrange-tag,li.item'))return;const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
+const dropTarget=e=>{if(drag?.dataset.arrange==='custom-block')return e.target.closest('main section:not(.sec--contact)');if(drag?.dataset.arrange==='item'){const section=e.target.closest('main section');if(section&&section!==drag.closest('section'))return section}return e.target.closest('[data-arrange="'+drag?.dataset.arrange+'"]')};
+addEventListener('dragover',e=>{if(!drag)return;const n=dropTarget(e);document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
+addEventListener('drop',e=>{if(!drag)return;const kind=drag.dataset.arrange;const n=dropTarget(e);if(!n)return;e.preventDefault();if(kind==='item'&&n.matches('main section')&&n!==drag.closest('section')){const rect=n.getBoundingClientRect();parent.postMessage({type:'uds-canvas-move',key:drag.dataset.udsEditKey,sectionId:n.classList.contains('hero')?'hero':n.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))},'*');return}if(kind==='custom-block'){if(n===drag)return;const detail={type:'uds-arrange',kind:'custom-place',blockId:drag.dataset.udsBlock};if(n.dataset.udsBlock)detail.targetBlockId=n.dataset.udsBlock;else detail.after=n.classList.contains('hero')?'hero':n.id;parent.postMessage(detail,'*');return}const from=kind==='item'?Number(drag.id.slice(5)):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.id.slice(5)):Number(n.dataset.arrangeIndex);send(kind,from,to);});
 addEventListener('dragend',()=>{if(drag)drag.classList.remove('is-drag');drag=null;document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));});
 addEventListener('click',e=>{if(e.target.closest('a,button'))e.preventDefault();},true);})();<\/script>`;
+const CANVAS_SCRIPT = `<script>(()=>{const editCss=document.createElement('style');editCss.textContent='.uds-edit-selected{outline:2px solid #4d7cff!important;outline-offset:3px!important;border-radius:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote,.uds-arrange a,.uds-arrange button{cursor:text}.uds-arrange h1:hover:not(.uds-edit-selected),.uds-arrange h2:hover:not(.uds-edit-selected),.uds-arrange h3:hover:not(.uds-edit-selected),.uds-arrange h4:hover:not(.uds-edit-selected),.uds-arrange p:hover:not(.uds-edit-selected),.uds-arrange blockquote:hover:not(.uds-edit-selected),.uds-arrange a:hover:not(.uds-edit-selected),.uds-arrange button:hover:not(.uds-edit-selected){outline:1px dashed #4d7cff88!important;outline-offset:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote{user-select:none;-webkit-user-select:none}[contenteditable="true"]{outline:2px solid #4d7cff!important;outline-offset:3px;user-select:text!important;-webkit-user-select:text!important;cursor:text}';document.head.append(editCss);const send=(type,data={})=>parent.postMessage({type,...data},'*');const pathKey=n=>{const a=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';a.unshift([...p.children].filter(x=>!x.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return a.join('.')};const key=n=>n.dataset.udsEditKey||pathKey(n);const candidates=()=>[...document.querySelectorAll('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const assignKeys=()=>{const list=candidates(),counts=new Map(),used=new Set(),keep=new Set();for(const n of list){const key=n.dataset.udsEditKey,match=String(key||'').match(/^u:([\\w-]+):(\\d+)$/);if(match&&!used.has(key)){used.add(key);keep.add(n);counts.set(match[1],Math.max(counts.get(match[1])||0,Number(match[2])))}}for(const n of list){if(keep.has(n))continue;const itemScope=n.closest('[data-uds-edit-scope]')?.dataset.udsEditScope;const section=n.closest('[data-uds-block]')||n.closest('section');const namedSection=itemScope||section?.id||[...(section?.classList||[])].find(c=>c.startsWith('sec--'))?.slice(5)||(n.closest('.hero')?'hero':'main');const prefix=n.matches('img,figure,svg')?'media-':n.matches('span,strong,em')?'inline-':n.matches('dialog,[role=dialog]')?'dialog-':n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')?'layout-':'';const scope=prefix+(n.id?'id-'+n.id:namedSection).replace(/[^\\w-]/g,'-').slice(0,48);let value=counts.get(scope)||0;do{value++}while(used.has('u:'+scope+':'+value));const key='u:'+scope+':'+value;n.dataset.udsEditKey=key;used.add(key);counts.set(scope,value)}};assignKeys();const label=n=>(n.tagName.toLowerCase()+': '+n.textContent.trim()).slice(0,90);const pick=n=>{if(!n)return;document.querySelectorAll('.uds-edit-selected').forEach(x=>x.classList.remove('uds-edit-selected'));n.classList.add('uds-edit-selected');const r=n.getBoundingClientRect();send('uds-canvas-select',{key:key(n),tag:n.tagName.toLowerCase(),button:n.matches('button,a.ds-button'),layout:n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element,dialog,[role=dialog]'),text:n.textContent.trim(),alt:n.matches('img')?n.alt:'',label:label(n),color:getComputedStyle(n).color,background:getComputedStyle(n).backgroundColor,fontSize:parseFloat(getComputedStyle(n).fontSize)||24,opacity:parseFloat(getComputedStyle(n).opacity)||0,align:getComputedStyle(n).textAlign,blockId:n.closest('[data-uds-block]')?.dataset.udsBlock||'',sectionId:n.closest('section')?.id||(n.closest('.hero')?'hero':''),elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',rect:{center:r.left+r.width/2,viewport:innerWidth,width:n.offsetWidth,height:n.offsetHeight}})};const refresh=()=>send('uds-canvas-layers',{layers:candidates().map(n=>({key:key(n),label:label(n)}))});const editable=e=>{const n=e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element');return n&&(n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')||!n.children.length||/^H[1-4]$/.test(n.tagName))?n:null};document.addEventListener('dblclick',e=>{const n=editable(e);if(!n||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))return;e.preventDefault();e.stopPropagation();n.dataset.udsBeforeInline=n.textContent;n.contentEditable='true';n.focus()});document.addEventListener('keydown',e=>{const n=e.target.closest('[contenteditable="true"]');if(!n)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();n.blur()}if(e.key==='Escape'){e.preventDefault();n.textContent=n.dataset.udsBeforeInline||'';n.dataset.udsCancelInline='1';n.blur()}});document.addEventListener('blur',e=>{const n=e.target.closest?.('[contenteditable="true"]');if(!n)return;n.contentEditable='false';if(n.dataset.udsCancelInline){delete n.dataset.udsCancelInline;return}send('uds-canvas-inline-commit',{key:key(n),text:n.textContent.slice(0,2000)})},true);document.addEventListener('keydown',e=>{const editing=e.target.closest?.('[contenteditable="true"]'),key=e.key.toLowerCase(),modifier=e.ctrlKey||e.metaKey;if(!editing&&(key==='contextmenu'||(key==='f10'&&e.shiftKey))){e.preventDefault();const selected=document.querySelector('.uds-edit-selected');send('uds-canvas-menu',{key:selected?key(selected):''});return}if(editing){if(modifier&&key==='d')e.preventDefault();return}if((modifier&&['z','y','d'].includes(key))||key==='delete'||(['arrowleft','arrowright','arrowup','arrowdown'].includes(key)&&document.querySelector('.uds-edit-selected'))){e.preventDefault();send('uds-canvas-shortcut',{key,modifier,shift:e.shiftKey})}},true);document.addEventListener('click',e=>{if(document.documentElement.dataset.udsCanvasDragged){e.preventDefault();e.stopPropagation();return}if(e.target.closest('[contenteditable="true"]'))return;if(e.target.closest('.uds-arrange-tag'))return;e.preventDefault();e.stopPropagation();const n=editable(e);if(n)pick(n);else send('uds-canvas-menu',{key:''})},true);document.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();const n=editable(e);if(n)pick(n);send('uds-canvas-menu',{key:n?key(n):''})},true);let pressTimer=null;document.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const n=editable(e);if(!n)return;pressTimer=setTimeout(()=>{pick(n);send('uds-canvas-menu',{key:key(n)});pressTimer=null},560)},{passive:false});for(const ev of ['pointerup','pointercancel','pointermove'])document.addEventListener(ev,()=>{clearTimeout(pressTimer);pressTimer=null},{passive:true});addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data||{};if(m.type==='uds-canvas-select-element'){const n=[...document.querySelectorAll('[data-uds-element]')].find(x=>x.dataset.udsElement===m.elementId);if(n)pick(n)}if(m.type==='uds-canvas-select-key'){const n=candidates().find(x=>key(x)===m.key);if(n)pick(n)}if(m.type==='uds-canvas-select-block'){const block=[...document.querySelectorAll('[data-uds-block]')].find(x=>x.dataset.udsBlock===m.blockId);const n=block?.querySelector('h2,h3,p');if(n)pick(n)}if(m.type==='uds-canvas-select-duplicate'){const original=candidates().find(n=>key(n)===m.key);const duplicate=original?.nextElementSibling;if(duplicate&&candidates().includes(duplicate))pick(duplicate)}if(m.type==='uds-canvas-preview'){const n=candidates().find(x=>key(x)===m.key);if(!n)return;const p=m.patch||{};if(typeof p.text==='string')n.textContent=p.text;if(typeof p.alt==='string'&&n.tagName==='IMG')n.alt=p.alt.slice(0,240);if(/^#[\\da-f]{6}$/i.test(p.color||''))n.style.color=p.color;if(/^#[\da-f]{6}$/i.test(p.background||''))n.style.backgroundColor=p.background;if(Number.isFinite(+p.translateX)||Number.isFinite(+p.translateY))n.style.translate=Math.max(-1600,Math.min(1600,Number(p.translateX)||0))+'px '+Math.max(-1200,Math.min(1200,Number(p.translateY)||0))+'px';if(Number.isFinite(+p.rotation))n.style.rotate=Math.max(-45,Math.min(45,+p.rotation))+'deg';if(Number.isFinite(+p.fontSize))n.style.fontSize=Math.max(12,Math.min(96,+p.fontSize))+'px';if(Number.isFinite(+p.opacity))n.style.opacity=Math.max(0,Math.min(1,+p.opacity));if(p.width===null)n.style.width='';else if(Number.isFinite(+p.width))n.style.width=Math.max(0,Math.min(1600,+p.width))+'px';if(p.height===null)n.style.height='';else if(Number.isFinite(+p.height))n.style.height=Math.max(0,Math.min(1200,+p.height))+'px';if(['left','center','right'].includes(p.align))n.style.textAlign=p.align;if(p.tag&&['h2','h3','p','a','button'].includes(p.tag)){const r=document.createElement(p.tag);for(const a of [...n.attributes])r.setAttribute(a.name,a.value);r.textContent=n.textContent;n.replaceWith(r);pick(r)}}});refresh()})();<\/script>`;
+const CANVAS_DRAG_SCRIPT = `<script>(()=>{const selector='h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element';const nodes=()=>[...document.querySelectorAll(selector)].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const path=n=>{const parts=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';parts.unshift([...p.children].filter(c=>!c.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return parts.join('.')};const send=(payload,keys)=>parent.postMessage(typeof payload==='string'?{type:'uds-arrange',kind:'canvas-order',group:payload,keys}:payload,'*');let drag=null;const candidate=e=>e.target.closest?.('.uds-added-element,.item,.ds-card,.spotlight,.tool,.bento__cell,[data-uds-element]')||e.target.closest?.(selector);const atPoint=(x,y)=>document.elementsFromPoint(x,y).map(el=>el.closest?.(selector)).find(n=>n&&nodes().includes(n));const translation=n=>{const value=getComputedStyle(n).translate;if(!value||value==='none')return[0,0];const parts=value.split(/\\s+/).map(parseFloat);return[Number.isFinite(parts[0])?parts[0]:0,Number.isFinite(parts[1])?parts[1]:0]};const dragDelta=(state,e)=>{let x=e.clientX-state.x,y=e.clientY-state.y;if(state.bounds){const minX=state.bounds.left-state.rect.left,maxX=state.bounds.right-state.rect.right,minY=state.bounds.top-state.rect.top,maxY=state.bounds.bottom-state.rect.bottom;x=maxX>=minX?Math.max(minX,Math.min(maxX,x)):0;y=maxY>=minY?Math.max(minY,Math.min(maxY,y)):0}return[x,y]};document.addEventListener('dragstart',e=>{if(drag){e.preventDefault();e.stopImmediatePropagation()}},true);nodes().forEach(n=>n.classList.add('uds-canvas-draggable'));document.addEventListener('pointerdown',e=>{const n=candidate(e);if(!n||!nodes().includes(n)||e.target.closest('.uds-arrange-tag,[contenteditable=true]')||n.matches('dialog,[role=dialog]'))return;const [baseX,baseY]=translation(n),rect=n.getBoundingClientRect(),container=n.parentElement?.closest('section,.hero,.site-head,nav,footer,.foot,main'),bounds=container?.getBoundingClientRect(),freeCanvas=n.closest('[data-uds-free-canvas]');drag={node:n,id:e.pointerId,x:e.clientX,y:e.clientY,baseX,baseY,rect,bounds:null,freeCanvas,freeSection:freeCanvas?.closest('section'),active:false};},{capture:true,passive:true});document.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;if(!drag.active&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;const n=drag.node;if(!drag.active){drag.active=true;n.classList.add('uds-canvas-dragging')}e.preventDefault();const [dx,dy]=dragDelta(drag,e);if(drag.freeCanvas&&drag.freeSection){const r=drag.freeSection.getBoundingClientRect();n.style.left=Math.max(0,Math.min(100,(e.clientX-r.left)/Math.max(1,r.width)*100))+'%';n.style.top=Math.max(0,Math.min(100,(e.clientY-r.top)/Math.max(1,r.height)*100))+'%'}else n.style.translate=Math.max(-1600,Math.min(1600,drag.baseX+dx))+'px '+Math.max(-1200,Math.min(1200,drag.baseY+dy))+'px';const target=atPoint(e.clientX,e.clientY);document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));if(target&&target!==n&&nodes().includes(target)&&target.parentElement===n.parentElement)target.classList.add('uds-canvas-drop');},{capture:true,passive:false});document.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;if(!state.active)return;document.documentElement.dataset.udsCanvasDragged='1';setTimeout(()=>delete document.documentElement.dataset.udsCanvasDragged,500);const n=state.node;let target=atPoint(e.clientX,e.clientY);if(n.matches('li.item')){const sibling=nodes().find(x=>x!==n&&x.matches('li.item')&&x.parentElement===n.parentElement&&(()=>{const r=x.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom})());if(sibling)target=sibling}n.classList.remove('uds-canvas-dragging');document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));const fromSection=n.closest('section'),toSection=target?.closest('section');if(target&&fromSection&&toSection&&fromSection!==toSection&&!n.matches('section,.hero')){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:toSection.classList.contains('hero')?'hero':toSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(state.freeCanvas&&state.freeSection&&toSection===fromSection){const rect=state.freeSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(!target||target===n||!nodes().includes(target)||target.parentElement!==n.parentElement){send({type:'uds-canvas-position',key:n.dataset.udsEditKey,translateX:Math.max(-1600,Math.min(1600,state.baseX+dragDelta(state,e)[0])),translateY:Math.max(-1200,Math.min(1200,state.baseY+dragDelta(state,e)[1]))});return}if(n.matches('li.item')&&target?.matches('li.item')&&target.parentElement===n.parentElement){const from=Number(n.id.slice(5)),to=Number(target.id.slice(5));if(Number.isInteger(from)&&Number.isInteger(to))send({type:'uds-arrange',kind:'item',from,to});return}const siblings=nodes().filter(x=>x.parentElement===n.parentElement),rect=target.getBoundingClientRect(),layout=getComputedStyle(n.parentElement),horizontal=(layout.display==='flex'&&layout.flexDirection.startsWith('row'))||(layout.display==='grid'&&layout.gridTemplateColumns.split(' ').length>1),after=horizontal?e.clientX>rect.left+rect.width/2:e.clientY>rect.top+rect.height/2;const ordered=siblings.filter(x=>x!==n);ordered.splice(ordered.indexOf(target)+(after?1:0),0,n);const keys=ordered.map(x=>x.dataset.udsEditKey);if(keys.length<2||keys.some(k=>!/^u:[\\w-]+:\\d+$/.test(k||'')))return;send('path:'+path(n.parentElement),keys);},{capture:true,passive:true});document.addEventListener('pointercancel',()=>{if(drag?.active){drag.node.classList.remove('uds-canvas-dragging');drag.node.style.translate=drag.baseX||drag.baseY?drag.baseX+'px '+drag.baseY+'px':''}drag=null;document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));});const style=document.createElement('style');style.textContent='.uds-canvas-draggable{cursor:grab!important;touch-action:none}.uds-canvas-dragging{opacity:.45!important;cursor:grabbing!important}.uds-canvas-drop{outline:3px solid #3b6cff!important;outline-offset:3px!important}';document.head.append(style)})();<\/script>`;
 function previewHtml(html) {
-  return arrangeMode ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, ARRANGE_SCRIPT + '</body>') : html;
+  return arrangeMode ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, ARRANGE_SCRIPT + CANVAS_DRAG_SCRIPT + CANVAS_SCRIPT + '</body>') : html;
 }
+let canvasAspectRatio = 0;
+let selectedCanvasKey = '';
+let canvasInspectorOpen = false;
+let canvasStyleClipboard = null;
+let canvasPositionClipboard = null;
+let pendingCanvasBlockId = '';
+let pendingCanvasDuplicateKey = '';
+let pendingCanvasElementId = '';
+let pendingCanvasImageTarget = null;
+let selectedCanvasMeta = null;
+const canvasUndo = [], canvasRedo = [];
+const canvasSnapshot = () => JSON.stringify(state.raw);
+let canvasFormBefore = null;
+$('#form').addEventListener('focusin', e => { if (e.target.matches('input,select,textarea')) canvasFormBefore = canvasSnapshot(); });
+$('#form').addEventListener('focusout', e => {
+  if (!e.target.matches('input,select,textarea') || (e.relatedTarget && $('#form').contains(e.relatedTarget))) return;
+  const before = canvasFormBefore; canvasFormBefore = null;
+  setTimeout(() => { if (before && before !== canvasSnapshot()) { canvasUndo.push(before); if (canvasUndo.length > 60) canvasUndo.shift(); canvasRedo.length = 0; refreshCanvasHistory(); } }, 0);
+});
+function refreshCanvasHistory() {
+  $('#canvas-undo').disabled = !canvasUndo.length;
+  $('#canvas-redo').disabled = !canvasRedo.length;
+}
+function canvasColorHex(value, fallback) {
+  if (/^#[\da-f]{6}$/i.test(value || '')) return value;
+  const match = String(value || '').match(/^rgba?\(\s*(\d+)\D+(\d+)\D+(\d+)(?:\D+([\d.]+))?/i);
+  if (!match || (match[4] !== undefined && Number(match[4]) < .15)) return fallback;
+  return '#' + match.slice(1, 4).map(channel => Math.max(0, Math.min(255, Number(channel))).toString(16).padStart(2, '0')).join('');
+}
+function rememberCanvasChange() {
+  canvasUndo.push(canvasSnapshot()); if (canvasUndo.length > 60) canvasUndo.shift();
+  canvasRedo.length = 0; refreshCanvasHistory();
+}
+function setCanvasSelection(info) {
+  if (!info || !/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(info.key || '')) return;
+  selectedCanvasKey = info.key; selectedCanvasMeta = info;
+  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  $('#canvas-inspector').hidden = !canvasInspectorOpen;
+  $('#canvas-selected-label').textContent = info.label || info.tag || 'Элемент';
+  $('#canvas-options-trigger').hidden = false;
+  $('#canvas-text').closest('label').hidden = ['img','figure','svg','dialog'].includes(info.tag)||info.layout;
+  $('#canvas-font-size-field').hidden = ['img','figure','svg','dialog'].includes(info.tag)||info.layout;
+  $('#canvas-button-style-field').hidden = !info.button;
+  $('#canvas-shape').value = edit.shape || 'auto';
+  $('#canvas-button-style').value = edit.buttonStyle || 'inherit';
+  $('#canvas-animation').value = edit.animation || 'none';
+  $('#canvas-text').value = edit.text ?? info.text ?? '';
+  $('#canvas-alt-field').hidden = info.tag !== 'img';
+  $('#canvas-alt').value = edit.alt ?? info.alt ?? '';
+  $('#canvas-color').value = canvasColorHex(edit.color || info.color, '#202329');
+  $('#canvas-background').value = canvasColorHex(edit.background || info.background, '#ffffff');
+  const size = Number(edit.fontSize || info.fontSize || 24);
+  $('#canvas-size').value = String(Math.max(12, Math.min(96, size)));
+  $('#canvas-size-out').value = `${$('#canvas-size').value} px`;
+  const opacity = Math.max(0, Math.min(1, Number(edit.opacity ?? info.opacity ?? 1)));
+  $('#canvas-opacity').value = String(Math.round(opacity * 100));
+  $('#canvas-opacity-out').value = `${$('#canvas-opacity').value}%`;
+  $('#canvas-width').value = edit.width ?? Math.round(info.rect?.width || 0);
+  $('#canvas-height').value = edit.height ?? Math.round(info.rect?.height || 0);
+  const currentWidth = Number($('#canvas-width').value), currentHeight = Number($('#canvas-height').value);
+  canvasAspectRatio = currentWidth > 0 && currentHeight > 0 ? currentWidth / currentHeight : 0;
+  const rotation = Math.max(-45, Math.min(45, Number(edit.rotation || 0)));
+  $('#canvas-rotation').value = String(rotation);
+  $('#canvas-rotation-out').value = `${rotation}°`;
+  const offsetX = Number(edit.translateX || 0);
+  const offsetY = Number(edit.translateY || 0);
+  $('#canvas-offset-x').value = String(Math.max(-1600, Math.min(1600, Number.isFinite(offsetX) ? offsetX : 0)));
+  $('#canvas-offset-y').value = String(Math.max(-1200, Math.min(1200, Number.isFinite(offsetY) ? offsetY : 0)));
+  const placementRow = $('#canvas-block-placement-row');
+  placementRow.hidden = !info.blockId;
+  if (info.blockId) {
+    const block = (state.raw.canvasBlocks || []).find(item => item.id === info.blockId);
+    const available = result?.concept?.homepage?.sectionOrder || [];
+    const labels = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', faq: 'Вопросы и ответы' };
+    const positions = [['hero', 'Первый экран'], ...available.filter(id => id !== 'contact').map(id => [id, labels[id] || id]), ['contact', 'Перед контактами']];
+    const select = $('#canvas-block-placement');
+    select.replaceChildren(...positions.map(([value, label]) => new Option(label, value)));
+    select.value = positions.some(([value]) => value === block?.after) ? block.after : 'contact';
+  }
+  const layer = $('#canvas-layers');
+  for (const option of layer.options) option.selected = option.value === selectedCanvasKey;
+  $('#canvas-paste-style').disabled = !canvasStyleClipboard;
+  $('#canvas-paste-position').disabled = !canvasPositionClipboard;
+  $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey];
+  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="tag-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout||info.layout; });
+  $('#canvas-menu').querySelectorAll('[data-canvas-menu^="align-"]').forEach(button => { button.disabled = ['img','figure','svg','dialog'].includes(info.tag)||info.layout||info.layout; });
+}
+function canvasPreview(patch) {
+  $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-preview', key: selectedCanvasKey, patch }, '*');
+}
+function commitCanvasEdit(patch) {
+  if (!selectedCanvasKey) return;
+  if (selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId && (typeof patch.text === 'string' || typeof patch.alt === 'string')) {
+    const sectionId = selectedCanvasMeta.sectionId, elementId = selectedCanvasMeta.elementId;
+    const items = [...(state.raw.canvasElements?.[sectionId] || [])];
+    const index = items.findIndex(item => item.id === elementId);
+    if (index >= 0) {
+      const item = { ...items[index] };
+      if (typeof patch.alt === 'string') item.alt = patch.alt.slice(0, 240);
+      if (typeof patch.text === 'string') {
+        if (item.type === 'button' || item.type === 'image' || selectedCanvasMeta.tag === 'h3' || selectedCanvasMeta.tag === 'figcaption') item.title = patch.text.slice(0, 180);
+        else item.text = patch.text.slice(0, 1200);
+      }
+      items[index] = item; rememberCanvasChange();
+      state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: items };
+      run(); return;
+    }
+  }
+  rememberCanvasChange();
+  state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [selectedCanvasKey]: { ...(state.raw.canvasEdits?.[selectedCanvasKey] || {}), ...patch } };
+  run();
+}
+function addCanvasBlock(type = 'text') {
+  rememberCanvasChange();
+  const names = { text: ['Новый раздел', 'Добавьте содержание этого блока.'], quote: ['Цитата', 'Ваша цитата появится здесь.'], features: ['Преимущества', 'Коротко расскажите, чем вы полезны.'], cta: ['Следующий шаг', 'Подскажите посетителю, что сделать дальше.'] };
+  const [title, text] = names[type] || names.text;
+  const id = `canvas-${Date.now().toString(36)}`;
+  state.raw.canvasBlocks = [...(state.raw.canvasBlocks || []), { id, type, title, text }];
+  pendingCanvasBlockId = id;
+  run(); toast('Блок добавлен перед контактами');
+}
+function addCanvasElement(type, sectionId) {
+  if (!sectionId || !['card', 'button', 'image'].includes(type)) { toast('Сначала выберите секцию, куда добавить элемент'); return; }
+  const id = `element-${Date.now().toString(36)}`;
+  const item = type === 'button'
+    ? { id, type, title: 'Новая кнопка', text: '', href: '#contact' }
+    : type === 'image'
+      ? { id, type, title: 'Новое фото', alt: 'Иллюстрация к секции', src: '' }
+      : { id, type: 'card', title: 'Новая карточка', text: 'Добавьте описание карточки.' };
+  rememberCanvasChange();
+  state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: [...(state.raw.canvasElements?.[sectionId] || []), item] };
+  pendingCanvasElementId = id;
+  if (type === 'image') pendingCanvasImageTarget = { sectionId, id };
+  run();
+  if (type === 'image') $('#canvas-element-image-file').click();
+  toast(type === 'image' ? 'Выберите изображение для секции' : 'Элемент добавлен в выбранную секцию');
+}
+function restoreCanvasSnapshot(snapshot, from, to) {
+  to.push(canvasSnapshot());
+  state.raw = JSON.parse(snapshot);
+  from.pop(); refreshCanvasHistory(); run(); buildForm();
+}
+$('#canvas-text').addEventListener('input', e => canvasPreview({ text: e.target.value }));
+$('#canvas-text').addEventListener('change', e => commitCanvasEdit({ text: e.target.value }));
+$('#canvas-alt').addEventListener('input', e => canvasPreview({ alt: e.target.value }));
+$('#canvas-alt').addEventListener('change', e => commitCanvasEdit({ alt: e.target.value.slice(0, 240) }));
+$('#canvas-color').addEventListener('input', e => canvasPreview({ color: e.target.value }));
+$('#canvas-color').addEventListener('change', e => commitCanvasEdit({ color: e.target.value }));
+$('#canvas-background').addEventListener('input', e => canvasPreview({ background: e.target.value }));
+$('#canvas-background').addEventListener('change', e => commitCanvasEdit({ background: e.target.value }));
+$('#canvas-size').addEventListener('input', e => { $('#canvas-size-out').value = `${e.target.value} px`; canvasPreview({ fontSize: Number(e.target.value) }); });
+$('#canvas-size').addEventListener('change', e => commitCanvasEdit({ fontSize: Number(e.target.value) }));
+$('#canvas-opacity').addEventListener('input', e => { $('#canvas-opacity-out').value = `${e.target.value}%`; canvasPreview({ opacity: Number(e.target.value) / 100 }); });
+$('#canvas-opacity').addEventListener('change', e => commitCanvasEdit({ opacity: Math.max(0, Math.min(1, Number(e.target.value) / 100)) }));
+function canvasDimensionPreview(axis, raw) {
+  const parse = value => value === '' ? null : Math.max(0, Number(value));
+  let width = parse(axis === 'width' ? raw : $('#canvas-width').value);
+  let height = parse(axis === 'height' ? raw : $('#canvas-height').value);
+  if ($('#canvas-lock-ratio').checked && canvasAspectRatio > 0) {
+    if (axis === 'width' && width !== null) { height = Math.min(1200, Math.round(width / canvasAspectRatio)); $('#canvas-height').value = String(height); }
+    if (axis === 'height' && height !== null) { width = Math.min(1600, Math.round(height * canvasAspectRatio)); $('#canvas-width').value = String(width); }
+  }
+  return { width, height };
+}
+$('#canvas-width').addEventListener('input', e => canvasPreview(canvasDimensionPreview('width', e.target.value)));
+$('#canvas-height').addEventListener('input', e => canvasPreview(canvasDimensionPreview('height', e.target.value)));
+$('#canvas-lock-ratio').addEventListener('change', () => {
+  const width = Number($('#canvas-width').value), height = Number($('#canvas-height').value);
+  canvasAspectRatio = width > 0 && height > 0 ? width / height : 0;
+});
+$('#canvas-width').addEventListener('change', e => {
+  const width = e.target.value === '' ? null : Math.max(0, Math.min(1600, Number(e.target.value)));
+  const height = $('#canvas-lock-ratio').checked && canvasAspectRatio > 0 && width !== null ? Math.max(0, Math.min(1200, Math.round(width / canvasAspectRatio))) : ($('#canvas-height').value === '' ? null : Number($('#canvas-height').value));
+  if (height !== null && $('#canvas-lock-ratio').checked) $('#canvas-height').value = String(height);
+  commitCanvasEdit({ width, ...(height !== null && $('#canvas-lock-ratio').checked ? { height } : {}) });
+});
+$('#canvas-height').addEventListener('change', e => {
+  const height = e.target.value === '' ? null : Math.max(0, Math.min(1200, Number(e.target.value)));
+  const width = $('#canvas-lock-ratio').checked && canvasAspectRatio > 0 && height !== null ? Math.max(0, Math.min(1600, Math.round(height * canvasAspectRatio))) : ($('#canvas-width').value === '' ? null : Number($('#canvas-width').value));
+  if (width !== null && $('#canvas-lock-ratio').checked) $('#canvas-width').value = String(width);
+  commitCanvasEdit({ height, ...(width !== null && $('#canvas-lock-ratio').checked ? { width } : {}) });
+});
+$('#canvas-rotation').addEventListener('input', e => { $('#canvas-rotation-out').value = `${e.target.value}°`; canvasPreview({ rotation: Number(e.target.value) }); });
+$('#canvas-rotation').addEventListener('change', e => commitCanvasEdit({ rotation: Math.max(-45, Math.min(45, Number(e.target.value))) }));
+function canvasOffsetValues(axis, value) {
+  const parse = (raw, limit) => Math.max(-limit, Math.min(limit, Number.isFinite(Number(raw)) ? Number(raw) : 0));
+  const x = parse(axis === 'x' ? value : $('#canvas-offset-x').value, 1600);
+  const y = parse(axis === 'y' ? value : $('#canvas-offset-y').value, 1200);
+  return { translateX: x, translateY: y };
+}
+$('#canvas-offset-x').addEventListener('input', e => canvasPreview(canvasOffsetValues('x', e.target.value)));
+$('#canvas-offset-y').addEventListener('input', e => canvasPreview(canvasOffsetValues('y', e.target.value)));
+$('#canvas-offset-x').addEventListener('change', e => commitCanvasEdit(canvasOffsetValues('x', e.target.value)));
+$('#canvas-offset-y').addEventListener('change', e => commitCanvasEdit(canvasOffsetValues('y', e.target.value)));
+$('#canvas-shape').addEventListener('change', e => commitCanvasEdit({ shape: e.target.value }));
+$('#canvas-button-style').addEventListener('change', e => commitCanvasEdit({ buttonStyle: e.target.value }));
+$('#canvas-animation').addEventListener('change', e => commitCanvasEdit({ animation: e.target.value }));
+$('#canvas-options-trigger').addEventListener('click', () => { if (!selectedCanvasKey || !arrangeMode) return; canvasInspectorOpen = true; $('#canvas-inspector').hidden = false; $('#canvas-inspector').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); ($('#canvas-text').closest('label').hidden ? $('#canvas-shape') : $('#canvas-text')).focus({ preventScroll: true }); });
+$('#canvas-copy-position').addEventListener('click', () => {
+  if (!selectedCanvasKey) return;
+  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  canvasPositionClipboard = { translateX: Number(edit.translateX || 0), translateY: Number(edit.translateY || 0) };
+  $('#canvas-paste-position').disabled = false;
+  toast('Положение скопировано');
+});
+$('#canvas-paste-position').addEventListener('click', () => {
+  if (!canvasPositionClipboard || !selectedCanvasKey) return;
+  $('#canvas-offset-x').value = String(canvasPositionClipboard.translateX);
+  $('#canvas-offset-y').value = String(canvasPositionClipboard.translateY);
+  commitCanvasEdit({ ...canvasPositionClipboard });
+  toast('Положение применено');
+});
+$('#canvas-copy-style').addEventListener('click', () => {
+  if (!selectedCanvasKey || !selectedCanvasMeta) return;
+  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  const align = edit.align || selectedCanvasMeta.align;
+  canvasStyleClipboard = {
+    color: edit.color || canvasColorHex(selectedCanvasMeta.color, '#202329'),
+    background: edit.background || canvasColorHex(selectedCanvasMeta.background, '#ffffff'),
+    fontSize: Math.max(12, Math.min(96, Number(edit.fontSize || selectedCanvasMeta.fontSize || 24))),
+    ...( ['left', 'center', 'right'].includes(align) ? { align } : {}),
+  };
+  $('#canvas-paste-style').disabled = false;
+  toast('Стиль скопирован');
+});
+$('#canvas-paste-style').addEventListener('click', () => {
+  if (!canvasStyleClipboard || !selectedCanvasKey) return;
+  commitCanvasEdit({ ...canvasStyleClipboard });
+  toast('Стиль применён');
+});
+$('#canvas-reset-edit').addEventListener('click', () => {
+  if (!selectedCanvasKey || !state.raw.canvasEdits?.[selectedCanvasKey]) return;
+  rememberCanvasChange();
+  const edits = { ...state.raw.canvasEdits };
+  delete edits[selectedCanvasKey];
+  if (Object.keys(edits).length) state.raw.canvasEdits = edits;
+  else delete state.raw.canvasEdits;
+  run();
+  toast('Правки элемента сброшены');
+});
+$('#canvas-block-placement').addEventListener('change', e => {
+  const blockId = selectedCanvasMeta?.blockId;
+  if (!blockId) return;
+  rememberCanvasChange();
+  state.raw.canvasBlocks = (state.raw.canvasBlocks || []).map(block => block.id === blockId ? { ...block, after: e.target.value } : block);
+  pendingCanvasBlockId = blockId;
+  run(); buildForm();
+});
+$('#canvas-inspector-close').addEventListener('click', () => { canvasInspectorOpen = false; $('#canvas-inspector').hidden = true; $('#canvas-options-trigger').hidden = true; selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-paste-style').disabled = !canvasStyleClipboard; });
+$('#canvas-layers').addEventListener('change', e => { selectedCanvasKey = e.target.value; $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'); });
+$('#canvas-add').addEventListener('click', () => $('#canvas-menu').showModal());
+$('#canvas-replace').addEventListener('click', () => $('#canvas-menu').showModal());
+$('#canvas-duplicate').addEventListener('click', () => {
+  if (selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId) {
+    const sectionId = selectedCanvasMeta.sectionId;
+    const original = (state.raw.canvasElements?.[sectionId] || []).find(item => item.id === selectedCanvasMeta.elementId);
+    if (!original) return;
+    rememberCanvasChange();
+    const id = `element-${Date.now().toString(36)}`;
+    state.raw.canvasElements = { ...state.raw.canvasElements, [sectionId]: [...state.raw.canvasElements[sectionId], { ...structuredClone(original), id }] };
+    pendingCanvasElementId = id; run(); toast('Элемент продублирован');
+  } else if (selectedCanvasMeta?.blockId) {
+    const block = (state.raw.canvasBlocks || []).find(item => item.id === selectedCanvasMeta.blockId);
+    if (!block) return;
+    rememberCanvasChange(); const id = `canvas-${Date.now().toString(36)}`; state.raw.canvasBlocks = [...state.raw.canvasBlocks, { ...structuredClone(block), id }]; pendingCanvasBlockId = id; run(); toast('Блок продублирован');
+  } else {
+    pendingCanvasDuplicateKey = selectedCanvasKey;
+    commitCanvasEdit({ duplicate: true });
+  }
+});
+$('#canvas-delete').addEventListener('click', () => {
+  if (selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId) {
+    const { sectionId, elementId } = selectedCanvasMeta;
+    rememberCanvasChange();
+    const elements = { ...(state.raw.canvasElements || {}) };
+    elements[sectionId] = (elements[sectionId] || []).filter(item => item.id !== elementId);
+    if (!elements[sectionId].length) delete elements[sectionId];
+    state.raw.canvasElements = elements; selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-inspector').hidden = true; run(); toast('Элемент удалён');
+  } else if (selectedCanvasMeta?.blockId) {
+    rememberCanvasChange(); state.raw.canvasBlocks = (state.raw.canvasBlocks || []).filter(item => item.id !== selectedCanvasMeta.blockId); selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-inspector').hidden = true; run(); toast('Блок удалён');
+  } else commitCanvasEdit({ deleted: true });
+});
+function canvasAutoAlignment() {
+  const rect = selectedCanvasMeta?.rect;
+  return !rect || Math.abs(rect.center - rect.viewport / 2) < rect.viewport * .12 ? 'center' : rect.center > rect.viewport / 2 ? 'right' : 'left';
+}
+$('#canvas-reset-position').addEventListener('click', () => {
+  if (!selectedCanvasKey) return;
+  $('#canvas-offset-x').value = '0';
+  $('#canvas-offset-y').value = '0';
+  commitCanvasEdit({ translateX: 0, translateY: 0 });
+});
+$('#canvas-align').addEventListener('click', () => {
+  const align = canvasAutoAlignment();
+  commitCanvasEdit({ align, translateX: 0, translateY: 0 }); toast(`Выравнивание: ${align === 'left' ? 'слева' : align === 'right' ? 'справа' : 'по центру'}`);
+});
+$('#canvas-undo').addEventListener('click', () => { if (canvasUndo.length) restoreCanvasSnapshot(canvasUndo.at(-1), canvasUndo, canvasRedo); });
+$('#canvas-redo').addEventListener('click', () => { if (canvasRedo.length) restoreCanvasSnapshot(canvasRedo.at(-1), canvasRedo, canvasUndo); });
+function runCanvasShortcut(key, modifier, shift = false) {
+  if (!arrangeMode) return;
+  if (modifier && key === 'd') { $('#canvas-duplicate').click(); return; }
+  if (['arrowleft','arrowright','arrowup','arrowdown'].includes(key) && selectedCanvasKey) {
+    const current = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+    const step = shift ? 10 : 1;
+    const translateX = Math.max(-1600, Math.min(1600, Number(current.translateX || 0) + (key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0)));
+    const translateY = Math.max(-1200, Math.min(1200, Number(current.translateY || 0) + (key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0)));
+    $('#canvas-offset-x').value = String(translateX);
+    $('#canvas-offset-y').value = String(translateY);
+    commitCanvasEdit({ translateX, translateY });
+    return;
+  }
+  if (key === 'delete' && selectedCanvasKey) { $('#canvas-delete').click(); return; }
+  if (!modifier || !['z', 'y'].includes(key)) return;
+  if (key === 'y' || shift) { if (canvasRedo.length) restoreCanvasSnapshot(canvasRedo.at(-1), canvasRedo, canvasUndo); }
+  else if (canvasUndo.length) restoreCanvasSnapshot(canvasUndo.at(-1), canvasUndo, canvasRedo);
+}
+document.addEventListener('keydown', e => {
+  if (!arrangeMode || e.target.matches('input,textarea,select,[contenteditable="true"]')) return;
+  const key = e.key.toLowerCase();
+  const modifier = e.ctrlKey || e.metaKey;
+  if (!(modifier && ['d', 'z', 'y'].includes(key)) && !(key === 'delete' && selectedCanvasKey) && !(['arrowleft','arrowright','arrowup','arrowdown'].includes(key) && selectedCanvasKey)) return;
+  e.preventDefault();
+  runCanvasShortcut(key, modifier, e.shiftKey);
+});
+$('#canvas-menu').addEventListener('click', e => {
+  const action = e.target.closest('[data-canvas-menu]')?.dataset.canvasMenu;
+  if (!action) return;
+  if (action.startsWith('add-')) {
+    const type = action.slice(4);
+    if (['card', 'button', 'image'].includes(type)) addCanvasElement(type, selectedCanvasMeta?.sectionId);
+    else addCanvasBlock(type);
+    return;
+  }
+  if (action.startsWith('tag-')) { commitCanvasEdit({ tag: action.slice(4) }); return; }
+  if (action.startsWith('align-')) { commitCanvasEdit({ align: action.slice(6) === 'auto' ? canvasAutoAlignment() : action.slice(6) }); return; }
+});
+$('#canvas-menu').addEventListener('close', () => { if (selectedCanvasKey) $('#canvas-text').focus({ preventScroll: true }); });
+$('#canvas-element-image-file').addEventListener('change', async e => {
+  const file = e.target.files?.[0], target = pendingCanvasImageTarget;
+  e.target.value = '';
+  if (!file || !target) return;
+  pendingCanvasImageTarget = null;
+  try {
+    const optimized = await optimizeImage(file, 1600);
+    if (imageDataSize() + optimized.data.length > MAX_IMAGE_DATA) throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ).');
+    rememberCanvasChange();
+    const elements = [...(state.raw.canvasElements?.[target.sectionId] || [])].map(item => item.id === target.id ? { ...item, src: optimized.data, alt: item.alt || file.name.slice(0, 240) } : item);
+    state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [target.sectionId]: elements };
+    pendingCanvasElementId = target.id; run(); toast('Фото добавлено в секцию');
+  } catch (error) { toast(error.message || 'Не удалось добавить изображение'); }
+});
+$('#frame').addEventListener('load', () => {
+  if (arrangeMode && (selectedCanvasKey || pendingCanvasBlockId || pendingCanvasDuplicateKey || pendingCanvasElementId)) setTimeout(() => {
+    const message = pendingCanvasBlockId ? { type: 'uds-canvas-select-block', blockId: pendingCanvasBlockId } : pendingCanvasElementId ? { type: 'uds-canvas-select-element', elementId: pendingCanvasElementId } : pendingCanvasDuplicateKey ? { type: 'uds-canvas-select-duplicate', key: pendingCanvasDuplicateKey } : { type: 'uds-canvas-select-key', key: selectedCanvasKey };
+    $('#frame').contentWindow?.postMessage(message, '*');
+    pendingCanvasBlockId = '';
+    pendingCanvasDuplicateKey = '';
+    pendingCanvasElementId = '';
+  }, 30);
+});
 window.addEventListener('message', e => {
-  if (e.source !== $('#frame').contentWindow || e.data?.type !== 'uds-arrange') return;
+  if (e.source !== $('#frame').contentWindow) return;
+  if (e.data?.type === 'uds-canvas-move') {
+    const { key, sectionId, x, y, elementId, fromSectionId } = e.data;
+    if (!/^u:[\w-]+:\d+$/.test(key || '') || !/^(?:hero|[\w-]{1,64})$/.test(sectionId || '') || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) return;
+    rememberCanvasChange();
+    if (typeof elementId === 'string' && /^[\w-]{1,64}$/.test(elementId) && /^(?:hero|[\w-]{1,64})$/.test(fromSectionId || '') && fromSectionId !== sectionId) {
+      const elements = { ...(state.raw.canvasElements || {}) };
+      const source = (elements[fromSectionId] || []).filter(item => item.id !== elementId);
+      const moving = (elements[fromSectionId] || []).find(item => item.id === elementId);
+      if (moving) {
+        const destination = [...(elements[sectionId] || []).filter(item => item.id !== elementId), moving];
+        elements[fromSectionId] = source; elements[sectionId] = destination;
+        state.raw.canvasElements = elements;
+      }
+    }
+    state.raw.canvasMoves = { ...(state.raw.canvasMoves || {}), [key]: { sectionId, x, y } };
+    run(); toast('Элемент перемещён в другой блок'); return;
+  }
+  if (e.data?.type === 'uds-canvas-position') {
+    const { key, translateX, translateY } = e.data;
+    if (!/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(key || '') || !Number.isFinite(translateX) || !Number.isFinite(translateY)) return;
+    rememberCanvasChange();
+    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: { ...(state.raw.canvasEdits?.[key] || {}), translateX: Math.max(-1600, Math.min(1600, translateX)), translateY: Math.max(-1200, Math.min(1200, translateY)) } };
+    run(); toast('Положение элемента сохранено'); return;
+  }
+  if (e.data?.type === 'uds-canvas-shortcut') {
+    const key = String(e.data.key || '').toLowerCase();
+    if (!['z', 'y', 'd', 'delete', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(key)) return;
+    runCanvasShortcut(key, Boolean(e.data.modifier), Boolean(e.data.shift));
+    return;
+  }
+  if (e.data?.type === 'uds-canvas-select') { setCanvasSelection(e.data); return; }
+  if (e.data?.type === 'uds-canvas-inline-commit') {
+    const { key, text } = e.data;
+    if (!/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(key || '') || typeof text !== 'string' || text.length > 2000) return;
+    if (text === (state.raw.canvasEdits?.[key]?.text ?? selectedCanvasMeta?.text)) return;
+    rememberCanvasChange();
+    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: { ...(state.raw.canvasEdits?.[key] || {}), text } };
+    run();
+    return;
+  }
+  if (e.data?.type === 'uds-canvas-layers') {
+    const select = $('#canvas-layers'), current = selectedCanvasKey;
+    select.replaceChildren(...(e.data.layers || []).map(layer => new Option(layer.label, layer.key, false, layer.key === current)));
+    return;
+  }
+  if (e.data?.type === 'uds-canvas-menu') {
+    if (!e.data.key) {
+      selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-inspector').hidden = true;
+      $('#canvas-menu').querySelectorAll('[data-canvas-menu^="tag-"],[data-canvas-menu^="align-"]').forEach(button => { button.disabled = true; });
+    }
+    if (!$('#canvas-menu').open) $('#canvas-menu').showModal(); return;
+  }
+  if (e.data?.type !== 'uds-arrange') return;
   const { kind, from, to, order } = e.data;
+  if (kind === 'canvas-order') {
+    const group = String(e.data.group || ''), keys = e.data.keys;
+    if (!/^path:(?:\d+(?:\.\d+)*)?$/.test(group) || !Array.isArray(keys) || keys.length < 2 || keys.length > 100 || keys.some(key => !/^u:[\w-]+:\d+$/.test(key)) || new Set(keys).size !== keys.length) return;
+    rememberCanvasChange();
+    state.raw.canvasOrder = { ...(state.raw.canvasOrder || {}), [group]: keys };
+    run(); toast('Порядок элементов сохранён');
+    return;
+  }
+  if (kind === 'custom-place') {
+    const blocks = Array.isArray(state.raw.canvasBlocks) ? [...state.raw.canvasBlocks] : [];
+    const sourceIndex = blocks.findIndex(block => block.id === e.data.blockId);
+    const target = e.data.targetBlockId ? blocks.find(block => block.id === e.data.targetBlockId) : null;
+    if (sourceIndex < 0 || (e.data.targetBlockId && (!target || target.id === e.data.blockId))) return;
+    const allowed = new Set(['hero', ...currentSectionOrder(), 'contact']);
+    const after = target ? (allowed.has(target.after) ? target.after : 'contact') : e.data.after;
+    if (!allowed.has(after)) return;
+    rememberCanvasChange();
+    const [block] = blocks.splice(sourceIndex, 1);
+    block.after = after;
+    let insertAt = target ? blocks.findIndex(item => item.id === target.id) + 1 : -1;
+    if (insertAt < 0) {
+      blocks.forEach((item, index) => { if ((item.after || 'contact') === after) insertAt = index + 1; });
+      if (insertAt < 0) insertAt = blocks.length;
+    }
+    blocks.splice(insertAt, 0, block);
+    state.raw.canvasBlocks = blocks;
+    pendingCanvasBlockId = block.id;
+    run(); buildForm(); toast('Блок перемещён на страницу');
+    return;
+  }
   if (!Number.isInteger(from) || !Number.isInteger(to)) return;
   if (kind === 'section') {
     if (Array.isArray(order) && order.every(id => typeof id === 'string')) {
       const next = [...order]; next.splice(to, 0, next.splice(from, 1)[0]);
-      state.raw.sectionOrder = next; buildForm(); run(); toast('Порядок секций сохранён');
+      rememberCanvasChange(); state.raw.sectionOrder = next; run(); buildForm(); toast('Порядок секций сохранён');
     }
   } else if (kind === 'item') reorderLayout('services', from, to);
+  else if (kind === 'custom-block') reorderLayout('canvasBlocks', from, to);
 });
 $('#arrange-toggle')?.addEventListener('click', e => {
   arrangeMode = !arrangeMode;
+  if (!arrangeMode) { canvasInspectorOpen = false; $('#canvas-options-trigger').hidden = true; $('#canvas-inspector').hidden = true; }
   e.currentTarget.setAttribute('aria-pressed', String(arrangeMode));
   if (result) $('#frame').srcdoc = previewHtml(result.html);
-  toast(arrangeMode ? 'Перетаскивайте секции и карточки каталога прямо на странице. Ссылки в этом режиме отключены.' : 'Режим перетаскивания выключен');
+  toast(arrangeMode ? 'Перетаскивайте текст и изображения в пределах блока. Размер и стиль меняются в панели; ПКМ или долгое нажатие открывает меню.' : 'Режим редактирования на странице выключен');
 });
 
 let draggedGalleryIndex = null;
@@ -3123,42 +3673,10 @@ $('#view-registry').addEventListener('click', async e => {
   } catch (error) { toast('Ошибка истории версий: ' + (error.message || 'не удалось выполнить действие')); }
 });
 
-fetch('../examples/index.json').then(r => (r.ok ? r.json() : [])).then(async list => {
-  const sel = $('#examples');
-  for (const ex of list) sel.append(Object.assign(document.createElement('option'), { value: ex.file, textContent: `${ex.brand} — ${ex.niche}` }));
-  exampleProjects = await Promise.all(list.map(async ex => {
-    try {
-      const response = await fetch('../examples/' + ex.file);
-      if (!response.ok) throw new Error('Не удалось загрузить пример');
-      return { ...ex, raw: await response.json() };
-    } catch { return null; }
-  }));
-  exampleProjects = exampleProjects.filter(Boolean);
-  renderDashboard();
-  sel.addEventListener('change', async () => {
-    if (!sel.value) return;
-    const selected = list.find(ex => ex.file === sel.value);
-    sel.value = '';
-    if (!selected) return;
-    try {
-      const response = await fetch('../examples/' + selected.file);
-      if (!response.ok) throw new Error('Не удалось загрузить пример');
-      const raw = await response.json();
-      load(raw, `Открыт пример: ${raw.brand || raw.niche}`);
-      openWorkspace('create');
-    } catch (error) { toast(error.message || 'Не удалось открыть пример'); }
-  });
-  const restoredBackup = await restoreEmergencyBackupIfNewer();
-  if (restoredBackup) { buildForm(); run(); }
-  if (!userStartedProject && !state.raw.brand && !state.raw.niche && list[0]) {
-    const first = exampleProjects[0];
-    if (first) load(first.raw);
-  }
-}).catch(() => { exampleProjects = []; renderDashboard(); });
-
 await restoreEmergencyBackupIfNewer();
-buildForm();
 run();
+buildForm();
+renderDashboard();
 
 // Меню «Ещё» в шапке: закрываем после выбора действия и по клику вне меню.
 document.querySelector('.top-more')?.addEventListener('click', e => { if (e.target.closest('.top-more__menu button')) e.currentTarget.open = false; });

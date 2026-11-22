@@ -18,7 +18,7 @@ export { analyzePage, buildProfile, stylesheetLinks, headingType } from './site-
 export { runMarketIntelligence, MARKET_INTELLIGENCE_LIMIT } from './market-intelligence.js';
 export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIELDS } from './design-director.js';
 export { prepareContentIntelligence, reviewGeneratedContent, CONTENT_INTELLIGENCE_MODULES } from './content-intelligence.js';
-export { qualityReport, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
+export { qualityReport, qualityStageStatus, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
 export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
 export { GALLERY_FRAMES, imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
 export { createVisualIdentity, listVisualIdentityOptions } from '../visual-identity.js';
@@ -46,3 +46,4 @@ export { CARD_EFFECTS, CARD_EFFECT_IDS, HERO_EFFECTS, HERO_EFFECT_IDS, chooseEff
 export { TYPE_STYLES, TYPE_STYLE_IDS, SECTION_LAYOUTS, SECTION_LAYOUT_IDS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS, BUTTON_ANIMATION_IDS, chooseTypography } from './typography-layout.js';
 export { directScene } from './cinematic/scene-director.js';
 export { SCENE_PROFILES } from './cinematic/scene-profiles.js';
+export { ART_DIRECTION_PRESETS, ART_DIRECTION_PRESET_IDS, applyArtDirectionPreset, validateArtDirectionPresets } from './art-direction-presets.js';

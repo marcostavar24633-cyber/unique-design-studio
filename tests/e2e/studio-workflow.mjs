@@ -30,7 +30,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
+  await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]') !== null);
 
   // Мобильная главная панель: глобальная шапка редактора не должна занимать место над dashboard.
   await page.setViewportSize({ width: 390, height: 844 });
@@ -82,10 +82,10 @@ try {
   }
   await page.setViewportSize({ width: 1280, height: 900 });
 
-  // Главная: примеры — компактными кнопками, состояние студии и хранилище видны сразу.
-  await page.waitForFunction(() => document.querySelectorAll('#dash-example-chips [data-open-example]').length > 0);
+  // Главная: состояние студии и хранилище видны без демо-проектов.
+  check(await page.locator('#examples, #dash-example-chips, [data-open-example]').count() === 0, 'демо-проекты всё ещё доступны в интерфейсе');
   check(await page.locator('#dash-status [data-status="ai"]').count() === 1, 'нет виджета состояния AI');
-  check(/Занято .* из ~5 МБ/.test(await page.textContent('#dash-storage-note')), 'не показано заполнение хранилища');
+  check(/localStorage: .* из ~5 МБ/.test(await page.textContent('#dash-storage-note')), 'не показано заполнение localStorage');
 
   // Быстрый старт с главной создаёт уникальный тестовый проект без обращения к внешнему AI.
   await page.fill('#qs-niche', 'Тестовая студия интерьерного света');
@@ -268,17 +268,14 @@ try {
   check(!await page.evaluate(() => document.body.classList.contains('dashboard-mode')), '«Открыть редактор» не открыл рабочую область');
   await page.click('#dashboard-back');
 
-  // Поиск и фильтры главной панели должны находить проект и переключать набор карточек.
+  // Поиск главной панели должен находить сохранённые проекты без демо-карточек.
   await page.fill('#dash-search', 'LUMEN');
   check((await page.textContent('#dash-projects')).includes('LUMEN E2E'), 'поиск не нашёл сохранённый проект');
   await page.fill('#dash-search', 'несуществующий проект');
   check((await page.textContent('#dash-projects')).includes('Ничего не найдено'), 'пустой результат поиска не показан');
   await page.fill('#dash-search', '');
-  await page.click('#dashboard [data-filter="examples"]');
-  check(await page.locator('#dash-projects [data-open-example]').count() > 0, 'фильтр примеров не показал проекты');
-  await page.click('#dashboard [data-filter="saved"]');
   check(await page.locator('#dash-projects [data-open-project]').count() === 1, 'фильтр реестра показал неверное число проектов');
-  await page.click('#dashboard [data-filter="all"]');
+  check(await page.locator('#dashboard [data-filter], #dash-projects [data-open-example]').count() === 0, 'демо-проекты всё ещё показываются в студии');
 
   // Перезагрузка должна восстановить проект и реестр из localStorage.
   await page.reload({ waitUntil: 'networkidle' });

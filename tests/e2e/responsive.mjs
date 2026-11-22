@@ -3,7 +3,7 @@
 // Запуск: npm run test:e2e (нужен Playwright с Chromium: npm i -D playwright && npx playwright install chromium).
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
-import { ARCHETYPES, ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
+import { ARCHETYPES, ARCHETYPE_IDS, buildConcept, generate } from '../../src/engine/index.js';
 import { examples, full, root } from '../helpers.mjs';
 import { hiddenCheck, runLayoutMatrix, selfCheck } from './layout-matrix.mjs';
 
@@ -15,8 +15,11 @@ const WIDTHS = [320, 768, 1280];
 const pages = [];
 for (const id of ARCHETYPE_IDS) for (const placement of Object.keys(ARCHETYPES[id].placements)) {
   for (let i = 0; i < 80; i++) {
-    const r = generate({ ...full, brand: `Hair ${i}`, id: `e2e-${id}`, architecture: id, images: {}, gallery: [] });
-    if (r.concept.visualSystem.placement === placement) { pages.push({ name: `${id}/${placement}`, html: r.html }); break; }
+    const project = { ...full, brand: `Hair ${i}`, id: `e2e-${id}`, architecture: id, images: {}, gallery: [] };
+    if (buildConcept(project).visualSystem.placement === placement) {
+      pages.push({ name: `${id}/${placement}`, html: generate(project).html });
+      break;
+    }
   }
 }
 let registry = [];
@@ -29,11 +32,12 @@ if (shots) mkdirSync(root + 'tests/e2e/screenshots', { recursive: true });
 const browser = await chromium.launch();
 const failures = [];
 let checks = 0;
+const matrixPage = await browser.newPage({ viewport: { width: WIDTHS[0], height: 800 } });
 for (const { name, html } of pages) {
   for (const width of WIDTHS) {
-    const page = await browser.newPage({ viewport: { width, height: 800 } });
-    await page.setContent(html, { waitUntil: 'load' });
-    const res = await page.evaluate(() => {
+    await matrixPage.setViewportSize({ width, height: 800 });
+    await matrixPage.setContent(html, { waitUntil: 'load' });
+    const res = await matrixPage.evaluate(() => {
       const de = document.documentElement;
       const h1 = document.querySelector('h1').getBoundingClientRect();
       const cta = document.querySelector('[data-cta="primary"]');
@@ -48,17 +52,17 @@ for (const { name, html } of pages) {
     if (res.small) failures.push(`${name} @${width}: интерактивных элементов ниже 40px: ${res.small}`);
     if (width === 320) {
       // Клавиатура: первый Tab — skip-link, дальше фокус должен быть видимым.
-      await page.keyboard.press('Tab');
-      const first = await page.evaluate(() => document.activeElement.className);
+      await matrixPage.keyboard.press('Tab');
+      const first = await matrixPage.evaluate(() => document.activeElement.className);
       if (first !== 'skip') failures.push(`${name}: первый фокус не на skip-link`);
-      await page.keyboard.press('Tab');
-      const outline = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
+      await matrixPage.keyboard.press('Tab');
+      const outline = await matrixPage.evaluate(() => getComputedStyle(document.activeElement).outlineStyle);
       if (outline === 'none') failures.push(`${name}: нет видимого фокуса`);
     }
-    if (shots) await page.screenshot({ path: `${root}tests/e2e/screenshots/${name.replace(/[^\wа-яё-]+/gi, '_')}-${width}.png` });
-    await page.close();
+    if (shots) await matrixPage.screenshot({ path: `${root}tests/e2e/screenshots/${name.replace(/[^\wа-яё-]+/gi, '_')}-${width}.png` });
   }
 }
+await matrixPage.close();
 // Reduced motion: контент остаётся видимым, класс анимации не включается.
 {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

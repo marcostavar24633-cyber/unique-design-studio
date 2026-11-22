@@ -5,9 +5,10 @@ import { motifSvg } from './motif.js';
 import { motionCss, motionScript } from './motion.js';
 import { COMMERCE_CSS, addButton, cartPanel, catalogControls, commerceScript, itemAttrs } from './commerce.js';
 import { normalizeProject } from './project.js';
+import { canvasBlocksHtml, canvasEditScope, canvasEditsRuntime, canvasElementsHtml, canvasMovesRuntime, canvasOrderRuntime } from './canvas.js';
 import { esc } from './util.js';
 import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
-import { dividerHtml, formsCss } from './forms.js';
+import { formsCss } from './forms.js';
 import { fadeWordsHtml, textEffectCss } from './text-effects.js';
 import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
@@ -141,7 +142,7 @@ function heroBackground(c) {
   return `<div class="hero__photo-bg" aria-hidden="true">${media}</div>`;
 }
 
-// ---------- Hero: 10 композиций ----------
+// ---------- Hero: 30 композиций ----------
 const HERO = {
   'product-first'(c) {
     const it = c.p.services[0];
@@ -197,6 +198,91 @@ const HERO = {
     const proof = c.p.advantages.slice(0, 3).filter(a => a.title).map(a => `<li>${esc(a.title)}</li>`).join('');
     return `<div class="ds-container hero__stack">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div>${proof ? `<ul class="proof">${proof}</ul>` : ''}</div>`;
   },
+  'proof-led'(c) {
+    const proof = c.p.advantages.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div></li>`).join('');
+    return `<div class="ds-container proof-led__layout"><div class="proof-led__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${proof ? `<ol class="proof-led__list">${proof}</ol>` : `<div class="proof-led__visual">${visual(c)}</div>`}</div>`;
+  },
+  'service-picker'(c) {
+    const options = c.p.services.slice(0, 5).map((item, i) => `<li><a href="#item-${i}"><span><b>${esc(item.title)}</b>${item.text ? `<small>${esc(item.text)}</small>` : ''}</span>${item.price ? `<strong>${esc(item.price)}</strong>` : '<span aria-hidden="true">→</span>'}</a></li>`).join('');
+    return `<div class="ds-container service-picker__layout"><div>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${options ? `<nav class="service-picker__panel" aria-label="${esc(c.labels.items)}"><ol>${options}</ol></nav>` : `<div class="service-picker__panel">${visual(c)}</div>`}</div>`;
+  },
+  'portfolio-mosaic'(c) {
+    const photos = c.p.gallery.filter(photo => photo.src).slice(0, 4);
+    const mosaic = photos.length ? `<div class="portfolio-mosaic__grid">${photos.map((photo, i) => `<figure class="portfolio-mosaic__photo portfolio-mosaic__photo--${i + 1}"><img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || 'Работа из портфолио')}"${i ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">${photo.caption ? `<figcaption>${esc(photo.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : `<figure class="portfolio-mosaic__fallback">${visual(c)}</figure>`;
+    return `<div class="ds-container portfolio-mosaic__layout"><div class="portfolio-mosaic__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'gallery')}</div></div>${mosaic}</div>`;
+  },
+  'process-roadmap'(c) {
+    const steps = c.p.process.slice(0, 4).map((step, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(step.title)}</h2>${step.text ? `<p>${esc(step.text)}</p>` : ''}</div></li>`).join('');
+    return `<div class="ds-container process-roadmap__layout"><div class="process-roadmap__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${steps ? `<ol class="process-roadmap__steps">${steps}</ol>` : `<div class="process-roadmap__visual">${visual(c)}</div>`}</div>`;
+  },
+  'local-presence'(c) {
+    const k = c.p.contacts, lines = [[k.address && ['Адрес', k.address]], [k.hours && ['Часы работы', k.hours]], [k.phone && ['Телефон', k.phone]], [k.email && ['Почта', k.email]]].flat().filter(Boolean);
+    const details = lines.map(([label, value]) => `<li><span>${label}</span><b>${esc(value)}</b></li>`).join('');
+    return `<div class="ds-container local-presence__layout"><div>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${details ? `<address class="local-presence__card"><ul>${details}</ul>${c.p.contactText ? `<p>${esc(c.p.contactText)}</p>` : ''}</address>` : `<div class="local-presence__visual">${visual(c)}</div>`}</div>`;
+  },
+  'appointment-first'(c) {
+    const links = [c.p.contacts.phone && `<a href="tel:${esc(c.p.contacts.phone.replace(/[^+\d]/g, ''))}">${esc(c.p.contacts.phone)}</a>`, c.p.contacts.email && `<a href="mailto:${esc(c.p.contacts.email)}">${esc(c.p.contacts.email)}</a>`].filter(Boolean).join(' · ');
+    const action = c.form ? leadForm(c, 'appointment') : `<div class="appointment-first__fallback">${cta(c)}${links ? `<p>${links}</p>` : ''}</div>`;
+    return `<div class="ds-container appointment-first__layout"><div>${kicker(c)}${h1(c)}${lede(c)}${c.p.advantages.length ? `<ul class="appointment-first__proof">${c.p.advantages.slice(0, 3).map(item => `<li>${esc(item.title)}</li>`).join('')}</ul>` : ''}</div><div class="appointment-first__form"><h2>${esc(c.cta)}</h2>${action}</div></div>`;
+  },
+  'story-timeline'(c) {
+    const events = c.p.process.slice(0, 4).map((step, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(step.title)}</h2>${step.text ? `<p>${esc(step.text)}</p>` : ''}</div></li>`).join('');
+    return `<div class="ds-container story-timeline__layout"><div class="story-timeline__intro">${kicker(c)}${h1(c)}${lede(c)}${c.p.aboutText ? `<p>${esc(c.p.aboutText)}</p>` : ''}<div class="actions">${cta(c)}</div></div>${events ? `<ol class="story-timeline__events">${events}</ol>` : `<div class="story-timeline__visual">${visual(c)}</div>`}</div>`;
+  },
+  'price-comparison'(c) {
+    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#item-${i}" aria-label="Подробнее: ${esc(item.title)}">→</a></li>`).join('');
+    return `<div class="ds-container price-comparison__layout"><header>${kicker(c)}${h1(c)}${lede(c)}</header>${offers ? `<ol class="price-comparison__offers">${offers}</ol>` : `<div class="price-comparison__visual">${visual(c)}</div>`}<div class="actions">${cta(c)}</div></div>`;
+  },
+  'brand-manifesto'(c) {
+    const statement = c.p.aboutText || c.p.mainOffer || c.p.description;
+    return `<div class="ds-container brand-manifesto__layout"><div class="brand-manifesto__copy">${kicker(c)}<p class="brand-manifesto__label">${esc(c.brand)}</p>${h1(c)}${statement ? `<p class="brand-manifesto__statement">${esc(statement)}</p>` : ''}<div class="actions">${cta(c)}</div></div><figure class="brand-manifesto__visual">${visual(c)}</figure></div>`;
+  },
+  'campaign-landing'(c) {
+    const proof = c.p.advantages.slice(0, 3).map(item => `<li>${esc(item.title)}</li>`).join('');
+    return `<div class="ds-container campaign-landing__layout"><div class="campaign-landing__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div>${proof ? `<ul class="proof">${proof}</ul>` : ''}</div><figure class="campaign-landing__visual">${visual(c)}</figure></div>`;
+  },
+  'cover-story'(c) {
+    const caption = c.p.gallery.find(photo => photo.caption)?.caption || c.p.mainOffer;
+    return `<div class="ds-container cover-story__layout"><div class="cover-story__copy">${kicker(c)}<span class="cover-story__issue">${esc(c.brand)}</span>${h1(c)}${lede(c)}${caption ? `<p class="cover-story__caption">${esc(caption)}</p>` : ''}<div class="actions">${cta(c)}</div></div><figure class="cover-story__visual">${visual(c)}</figure></div>`;
+  },
+  'split-screen'(c) {
+    return `<div class="split-screen__layout"><div class="split-screen__copy">${kicker(c)}<div class="ds-container">${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, c.order[0])}</div></div></div><figure class="split-screen__visual">${visual(c)}</figure></div>`;
+  },
+  'faq-first'(c) {
+    const faqs = c.p.faqs.slice(0, 4).map(item => `<details><summary>${esc(item.title)}</summary><p>${esc(item.text)}</p></details>`).join('');
+    return `<div class="ds-container faq-first__layout"><div class="faq-first__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${faqs ? `<div class="faq-first__list" aria-label="${esc(c.labels.faq)}">${faqs}</div>` : `<div class="faq-first__visual">${visual(c)}</div>`}</div>`;
+  },
+  'feature-grid'(c) {
+    const features = c.p.advantages.slice(0, 4).map((item, i) => `<article class="feature-grid__item"><span class="n">${pad(i + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</article>`).join('');
+    return `<div class="ds-container feature-grid__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${features ? `<div class="feature-grid__items">${features}</div>` : `<div class="feature-grid__visual">${visual(c)}</div>`}</div>`;
+  },
+  'service-directory'(c) {
+    const services = c.p.services.slice(0, 6).map((item, i) => `<li><a href="#item-${i}"><span class="n">${pad(i + 1)}</span><span class="service-directory__name">${esc(item.title)}</span><span class="service-directory__arrow" aria-hidden="true">↗</span></a></li>`).join('');
+    return `<div class="ds-container service-directory__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${services ? `<ol class="service-directory__list">${services}</ol>` : `<div class="service-directory__visual">${visual(c)}</div>`}</div>`;
+  },
+  'pricing-cards'(c) {
+    const offers = c.p.services.slice(0, 3).map((item, i) => `<article class="pricing-cards__item"><span class="n">${pad(i + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#item-${i}">Подробнее <span aria-hidden="true">→</span></a></article>`).join('');
+    return `<div class="ds-container pricing-cards__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${offers ? `<div class="pricing-cards__items">${offers}</div>` : `<div class="pricing-cards__visual">${visual(c)}</div>`}</div>`;
+  },
+  'portfolio-feature'(c) {
+    const photos = c.p.gallery.filter(photo => photo.src).slice(0, 5);
+    const lead = photos[0];
+    const media = lead ? `<figure class="portfolio-feature__lead"><img src="${esc(lead.src)}" alt="${esc(lead.alt || lead.caption || 'Главная работа')}" fetchpriority="high" decoding="async">${lead.caption ? `<figcaption>${esc(lead.caption)}</figcaption>` : ''}</figure>` : `<figure class="portfolio-feature__lead">${visual(c)}</figure>`;
+    const strip = photos.slice(1).map(photo => `<img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || 'Работа из портфолио')}" loading="lazy" decoding="async">`).join('');
+    return `<div class="ds-container portfolio-feature__layout"><div class="portfolio-feature__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'gallery')}</div></div><div class="portfolio-feature__media">${media}${strip ? `<div class="portfolio-feature__strip">${strip}</div>` : ''}</div></div>`;
+  },
+  'contact-hub'(c) {
+    const k = c.p.contacts;
+    const channels = [k.phone && `<a href="tel:${esc(k.phone.replace(/[^+\d]/g, ''))}"><span>Телефон</span><b>${esc(k.phone)}</b></a>`, k.email && `<a href="mailto:${esc(k.email)}"><span>Почта</span><b>${esc(k.email)}</b></a>`, k.address && `<div><span>Адрес</span><b>${esc(k.address)}</b></div>`, k.hours && `<div><span>Часы работы</span><b>${esc(k.hours)}</b></div>`].filter(Boolean).join('');
+    return `<div class="ds-container contact-hub__layout"><div class="contact-hub__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${channels ? `<address class="contact-hub__channels">${channels}</address>` : `<div class="contact-hub__visual">${visual(c)}</div>`}</div>`;
+  },
+  'quick-form'(c) {
+    return `<div class="ds-container quick-form__layout"><div>${kicker(c)}${h1(c)}${lede(c)}${c.p.advantages.length ? `<ul class="quick-form__proof">${c.p.advantages.slice(0, 3).map(item => `<li>${esc(item.title)}</li>`).join('')}</ul>` : ''}</div><div class="quick-form__panel">${c.form ? leadForm(c, 'quick') : cta(c)}</div></div>`;
+  },
+  'type-statement'(c) {
+    const statement = c.p.mainOffer || c.p.brandCharacter || c.p.description;
+    return `<div class="ds-container type-statement__layout"><p class="type-statement__index">${esc(c.brand)} <span>— ${esc(c.p.niche || '01')}</span></p>${kicker(c)}${h1(c)}${statement ? `<p class="type-statement__note">${esc(statement)}</p>` : ''}<div class="actions">${cta(c)}</div><div class="type-statement__shape" aria-hidden="true">${motifSvg(c.vs, 1)}</div></div>`;
+  },
 };
 
 // ---------- Секции ----------
@@ -216,7 +302,8 @@ const SECTION = {
       const flip = mech === 'flip' && media && parts.text;
       // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
       const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
-      return `<li class="item${flip ? ' item--flip' : ''}" id="item-${n}"${shop ? itemAttrs(i) : ''}${attrs} data-reveal>${mechanicBody(mech, parts)}</li>`;
+      const editScope = canvasEditScope('item', [i.title, i.text, i.category, i.price, i.badge, i.alt].join('|'));
+      return `<li class="item${flip ? ' item--flip' : ''}" id="item-${n}" data-uds-edit-scope="${editScope}"${shop ? itemAttrs(i) : ''}${attrs} data-reveal>${mechanicBody(mech, parts)}</li>`;
     }).join('');
     const list = `<ul class="items items--${v}${mech !== 'none' ? ` items--mech-${mech}` : ''}" role="list">${li}</ul>`;
     const body = mech === 'rail'
@@ -225,19 +312,19 @@ const SECTION = {
     return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}${body}`, c.p.servicesIntro);
   },
   advantages(c) {
-    const li = c.p.advantages.map(a => `<li data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
+    const li = c.p.advantages.map(a => `<li data-uds-edit-scope="${canvasEditScope('advantage', [a.title, a.text].join('|'))}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'advantages', `<ul class="adv adv--${c.vs.variants.advantages}" role="list">${li}</ul>`, c.p.advantagesIntro);
   },
   process(c) {
-    const li = c.p.process.map(a => `<li data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
+    const li = c.p.process.map(a => `<li data-uds-edit-scope="${canvasEditScope('process', [a.title, a.text].join('|'))}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
   gallery(c) {
-    const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
+    const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-edit-scope="${canvasEditScope('gallery', [g.caption, g.alt].join('|'))}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
     return wrap(c, 'gallery', `<ul class="gallery" role="list">${li}</ul>`);
   },
   faq(c) {
-    const d = c.p.faqs.map(f => `<details><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
+    const d = c.p.faqs.map(f => `<details data-uds-edit-scope="${canvasEditScope('faq', [f.title, f.text].join('|'))}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
     return wrap(c, 'faq', `<div class="faq">${d}</div>`);
   },
   contact(c) {
@@ -381,8 +468,28 @@ export function renderSite(input, concept) {
   const sceneLayer = sceneMarkup(scene, cinematicLightMarkup(vs.cinematicLayers) + heroEffectMarkup(vs.effects, project));
   const desc = project.seoDescription || project.description || project.mainOffer || '';
   const pageTitle = project.seoTitle || (c.title === c.brand ? c.brand : `${c.title} — ${c.brand}`);
-  // Разделитель секций — декоративная линия формы бренда (aria-hidden), только между секциями.
-  const sections = c.order.map(id => SECTION[id](c)).join('\n' + dividerHtml(c.vs.forms?.divider) + transitionHtml(c.vs.transition) + '\n');
+  // Пользовательские блоки остаются между разделами; визуальные разделители секций отключены.
+  const anchors = ['hero', ...c.order, 'contact'];
+  const availableAnchors = new Set(anchors);
+  const placedBlocks = (project.passthrough.canvasBlocks || []).map(block =>
+    availableAnchors.has(block?.after) ? block : { ...block, after: 'contact' });
+  const canvasElements = project.passthrough.canvasElements || {};
+  const placeElements = (html, sectionId) => {
+    const elements = canvasElementsHtml(canvasElements[sectionId]);
+    if (!elements) return html;
+    const closing = html.lastIndexOf('</section>');
+    if (closing < 0) return html;
+    if (sectionId === 'hero') return html.slice(0, closing) + elements + html.slice(closing);
+    const containerClosing = html.lastIndexOf('</div>', closing);
+    const at = containerClosing >= 0 ? containerClosing : closing;
+    return html.slice(0, at) + elements + html.slice(at);
+  };
+  const blocksAfter = Object.fromEntries(anchors.map(anchor => [anchor, canvasBlocksHtml(placedBlocks, anchor, canvasElements)]));
+  const sectionSequence = [blocksAfter.hero, ...c.order.flatMap(id => id === 'contact'
+    ? [blocksAfter.contact, placeElements(SECTION[id](c), id)]
+    : [placeElements(SECTION[id](c), id), blocksAfter[id]])];
+  if (!c.order.includes('contact')) sectionSequence.push(blocksAfter.contact);
+  const sections = sectionSequence.filter(Boolean).join('\n' + transitionHtml(c.vs.transition) + '\n');
   const foot = [project.contacts.phone, project.contacts.email, project.contacts.address].filter(Boolean).map(esc).join(' · ');
   return `<!doctype html>
 <html lang="${esc(project.lang)}">
@@ -403,12 +510,16 @@ ${jsonLd(c)}
 <a class="skip" href="#main">Перейти к содержимому</a>
 ${nav(c)}
 <main id="main">
-<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>
+${placeElements(`<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>`, 'hero')}
+${transitionHtml(c.vs.transition)}
 ${sections}
 </main>
 <footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>
 ${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
 ${script(c, scene)}
+${canvasEditsRuntime(project.passthrough.canvasEdits)}
+${canvasOrderRuntime(project.passthrough.canvasOrder)}
+${canvasMovesRuntime(project.passthrough.canvasMoves)}
 </body>
 </html>
 `;

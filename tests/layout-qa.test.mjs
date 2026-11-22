@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { generate } from '../src/engine/index.js';
 import { contrast } from '../src/engine/color.js';
 import { MECHANICS, MECHANIC_CSS } from '../src/engine/mechanics.js';
-import { MASKS, DIVIDERS } from '../src/engine/forms.js';
+import { MASKS } from '../src/engine/forms.js';
 import { LAYOUT_QA_SOURCE, layoutQA } from '../src/engine/layout-qa.js';
 import { BROKEN_PAGE, layoutPages } from './e2e/layout-matrix.mjs';
 
@@ -23,14 +23,13 @@ test('колода: карточка с фото компактная — фот
   assert.match(MECHANIC_CSS.stack, /background:var\(--ds-bg\)/);
 });
 
-test('матрица проверки раскладки покрывает все механики, маски, разделители и обе палитры', () => {
+test('матрица проверки раскладки покрывает механики и маски без разделителей секций', () => {
   const pages = layoutPages();
   const names = pages.map(p => p.name).join('\n');
   for (const m of Object.keys(MECHANICS)) assert.match(names, new RegExp(`/${m}/`), m);
   for (const m of Object.keys(MASKS)) assert.match(names, new RegExp(`/${m}$`, 'm'), m);
   assert.ok(pages.some(p => /color-scheme:dark/.test(p.html)), 'есть тёмная палитра');
-  const used = new Set(pages.map(p => (p.html.match(/ds-divider--([a-z]+)/) || [, 'none'])[1]));
-  for (const d of Object.keys(DIVIDERS)) assert.ok(used.has(d), `разделитель ${d}`);
+  for (const page of pages) assert.doesNotMatch(page.html, /ds-divider--|uds-divider/, page.name);
 });
 
 test('проверка раскладки — самодостаточная функция для запуска внутри страницы', () => {

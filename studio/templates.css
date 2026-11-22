@@ -53,6 +53,7 @@ details[open]{padding-bottom:12px}
 .snippet code{display:block;padding:10px;border-radius:8px;background:var(--field);border:1px solid var(--line);font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere;color:#d9d3c7}
 .progress{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:13px;background:#111317}
 .progress__head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}
+.progress__controls{display:flex;align-items:center;gap:10px}.progress__controls button{min-height:34px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;cursor:pointer}.progress__controls button:hover{border-color:var(--gold)}
 .bar{height:8px;border-radius:8px;background:#22252a;overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#a77d35,#d6b46d);transition:width .25s}
 .progress__list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}

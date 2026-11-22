@@ -3,7 +3,6 @@
 // Градиент настраивается: цвета начала и конца, угол, высота и интенсивность. Пустой цвет — «авто»:
 // акцент и его более глубокий оттенок (смесь с цветом текста), поэтому переход всегда согласован с дизайном.
 import { normalizeHex } from '../color.js';
-import { pick, stream } from '../util.js';
 
 export const TRANSITIONS = Object.freeze({
   none: 'Без перехода',
@@ -20,12 +19,6 @@ export const TRANSITION_IDS = Object.keys(TRANSITIONS);
 export const TRANSITION_LIMITS = Object.freeze({ height: [24, 200], intensity: [0, 100], angle: [0, 360] });
 const DEFAULTS = { height: 72, intensity: 40, angle: 180 };
 
-// Пресет фактуры → уместные переходы (первый — основной).
-const BY_LAYERS = {
-  film: ['glow', 'mesh', 'fade'], 'soft-grain': ['mesh', 'glow', 'fade'], paper: ['fade', 'arch'], 'paper-light': ['fade', 'glow'],
-  halftone: ['split', 'diagonal'], blueprint: ['split', 'none'], scanlines: ['diagonal', 'split'], dotgrid: ['fade', 'none'], none: ['none', 'fade'],
-};
-
 const clamp = (v, [a, b], fallback) => { const n = Number(v); return Number.isFinite(n) ? Math.min(b, Math.max(a, Math.round(n))) : fallback; };
 
 /**
@@ -34,19 +27,11 @@ const clamp = (v, [a, b], fallback) => { const n = Number(v); return Number.isFi
  */
 export function chooseTransition(project = {}, visual = {}) {
   const t = project.passthrough || {};
-  let type, rationale;
-  if (TRANSITIONS[t.transitionType]) { type = t.transitionType; rationale = 'Выбрано владельцем проекта'; }
-  else {
-    let pool = BY_LAYERS[visual.cinematicLayers?.id] || ['fade', 'glow'];
-    if (visual.archetype === 'brutalist') pool = ['split', 'diagonal'];
-    if (visual.archetype === 'minimal') pool = ['none', 'fade'];
-    // Секции с заливкой (полосы, панели, карточки): полоса-переход между ними выглядела бы плашкой фона.
-    if (['bands', 'inset-panel', 'stacked-cards'].includes(visual.sectionLayout)) pool = ['none'];
-    if (project.tier === 'luxury') pool = pool.filter(p => ['fade', 'glow', 'arch', 'none'].includes(p)).concat('fade');
-    type = pick(stream(visual.seed || 0, 'section-transition'), [...new Set(pool)]);
-    rationale = 'Подобрано к фактуре и архитектуре страницы';
-  }
-  const calm = project.tier === 'luxury';
+  // Переходы теперь всегда градиентные и одинаково читаются между любыми блоками.
+  // Старые значения transitionType сохраняем в проекте, но не используем при рендере.
+  const type = 'fade';
+  const rationale = 'Постоянный градиентный переход между блоками';
+  const calm = project.tier === 'luxury' && project.passthrough?.motionStyle !== 'cinematic';
   return Object.freeze({
     type,
     from: normalizeHex(t.transitionFrom),
