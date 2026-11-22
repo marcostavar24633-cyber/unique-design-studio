@@ -72,6 +72,18 @@ try {
   await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
   await heroMovedText.click();
   await page.click('#canvas-options-trigger');
+  const resizeHandle = preview.locator('.uds-resize-handle');
+  await resizeHandle.waitFor({ state: 'visible' });
+  const resizeBox = await resizeHandle.boundingBox();
+  const resizeRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.mouse.move(resizeBox.x + 9, resizeBox.y + 9);
+  await page.mouse.down();
+  await page.mouse.move(resizeBox.x + 89, resizeBox.y + 49, { steps: 5 });
+  await page.mouse.up();
+  await resizeRender;
+  await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
+  const dragWidth = Number.parseFloat(await heroMovedText.evaluate(node => getComputedStyle(node).width));
+  check(dragWidth > 100, `изменение размера ручкой не применилось: ${dragWidth}px`);
   const widthRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.fill('#canvas-width', '420');
   await page.locator('#canvas-width').press('Tab');
@@ -89,6 +101,10 @@ try {
   check(movedStyle.width === '420px', `ширина после повторного рендера: ${movedStyle.width}`);
   check(movedStyle.rotate === '15deg', `угол после повторного рендера: ${movedStyle.rotate}`);
   check(await heroMovedText.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
+  const elementStyleRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.selectOption('#canvas-element-style', 'quote');
+  await elementStyleRender;
+  check(await heroMovedText.getAttribute('data-uds-canvas-style') === 'quote', 'стиль элемента не сохранился после повторной отрисовки');
   await heroCta.click();
   await page.click('#canvas-options-trigger');
   check(await page.locator('#canvas-layer-actions').isVisible(), 'для свободно размещённого элемента не показаны действия со слоями');
@@ -116,6 +132,31 @@ try {
   await page.locator('#canvas-text').press('Tab');
   await buttonTextRender;
   check((await preview.locator('#about .uds-added-element--button').innerText()).includes('Записаться на консультацию'), 'новая кнопка не сохранила изменённую подпись');
+
+  // Фото должны открывать собственные стили и применять круглую маску к самому изображению.
+  await preview.locator('#about h2').click();
+  await page.click('#canvas-options-trigger');
+  await page.click('#canvas-add');
+  await page.click('#canvas-menu [data-canvas-menu="add-image"]');
+  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p2cAAAAASUVORK5CYII=', 'base64');
+  await page.locator('#canvas-element-image-file').setInputFiles({ name: 'editor-photo.png', mimeType: 'image/png', buffer: tinyPng });
+  const addedImage = preview.locator('#about .uds-added-element--image').last();
+  await addedImage.waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForFunction(() => [...document.querySelector('#canvas-element-style')?.options || []].some(option => option.value === 'polaroid'));
+  const captionRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.fill('#canvas-text', 'Портрет для обложки');
+  await page.locator('#canvas-text').press('Tab');
+  await captionRender;
+  check((await addedImage.locator('figcaption').innerText()).includes('Портрет для обложки'), 'подпись фотографии не редактируется в инспекторе');
+  const photoStyleRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.selectOption('#canvas-element-style', 'polaroid');
+  await photoStyleRender;
+  check(await addedImage.getAttribute('data-uds-canvas-style') === 'polaroid', 'стиль фото «Полароид» не сохранился');
+  const circleRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.selectOption('#canvas-shape', 'circle');
+  await circleRender;
+  const circleImageStyle = await addedImage.locator('img').evaluate(node => ({ radius: getComputedStyle(node).borderRadius, fit: getComputedStyle(node).objectFit, ratio: getComputedStyle(node).aspectRatio }));
+  check(circleImageStyle.radius === '50%' && circleImageStyle.fit === 'cover' && circleImageStyle.ratio === '1 / 1', `круглая маска фото неполная: ${JSON.stringify(circleImageStyle)}`);
   await page.click('#arrange-toggle');
 
   await page.click('#save');
