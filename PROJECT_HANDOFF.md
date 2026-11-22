@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-21T20:33:12.006Z
+Время обновления: 2026-11-22T10:39:19.235Z
 Ветка: main
-Последний commit: d8db28450a0a7a0ed7debc0e443a2009286c2a13
-Дата коммита: 2026-11-22T00:33:00+04:00
-Сообщение: Merge pull request #220 from marcostavar24633-cyber/fix/health-monitor-diagnostics
+Последний commit: 5fad5d0bc8009929c9c4b2e0ac8988992897fa35
+Дата коммита: 2026-11-22T14:39:06+04:00
+Сообщение: ci: avoid duplicate health checks during daily AI probe (#215)
 
 Последние коммиты:
+- 5fad5d0 · 2026-11-22 · ci: avoid duplicate health checks during daily AI probe (#215)
+- 8a83abd · 2026-11-21 · docs: refresh project handoff
 - d8db284 · 2026-11-22 · Merge pull request #220 from marcostavar24633-cyber/fix/health-monitor-diagnostics
 - 5a304e2 · 2026-11-22 · test(monitor): cover safe incident triage and inference contract
 - 4eb7cf3 · 2026-11-22 · fix(monitor): redact diagnostic errors consistently and expose testable helpers
 - b29bdf8 · 2026-11-21 · feat: link incidents to monitor runs
 - 431fd9c · 2026-11-21 · docs: clarify current repair agent scope
 - c8ed4bd · 2026-11-21 · feat: add safe repair hints to monitor issues
-- 286b89e · 2026-11-21 · fix: preserve safe diagnostics for AI monitor failures
-- a51d249 · 2026-11-21 · test: protect private staging Worker configuration (#218)
 <!-- HANDOFF:AUTO:END -->
