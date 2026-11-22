@@ -109,9 +109,12 @@ function renderWorker() {
 }
 document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', renderMode));
 
-async function workerCall(path, timeout = 20000) {
+async function workerCall(path, timeout = 20000, signal) {
   const ep = getEndpoint().replace(/\/+$/, '');
   const ctrl = new AbortController();
+  const abortFromCaller = () => ctrl.abort(signal?.reason);
+  if (signal?.aborted) ctrl.abort(signal.reason);
+  else signal?.addEventListener('abort', abortFromCaller, { once: true });
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
     const res = await fetch(ep + path, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
@@ -119,8 +122,8 @@ async function workerCall(path, timeout = 20000) {
     if (!body) return { ok: false, message: `Сервер ответил ${res.status} без данных` };
     return body;
   } catch (err) {
-    return { ok: false, message: err.name === 'AbortError' ? 'Сервер не ответил вовремя' : 'Сервер недоступен или не разрешает запросы с этого сайта' };
-  } finally { clearTimeout(timer); }
+    return { ok: false, message: signal?.aborted ? 'Анализ остановлен пользователем' : err.name === 'AbortError' ? 'Сервер не ответил вовремя' : 'Сервер недоступен или не разрешает запросы с этого сайта' };
+  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abortFromCaller); }
 }
 $('#worker-save').addEventListener('click', async () => {
   const raw = $('#worker-endpoint').value.trim();
@@ -156,6 +159,13 @@ $('#upload-files').addEventListener('change', async e => {
 
 // ---------- Анализ ----------
 let reanalyzeId = '';
+let activeAnalysisController = null;
+$('#analysis-cancel').addEventListener('click', () => {
+  if (!activeAnalysisController) return;
+  $('#analysis-cancel').disabled = true;
+  $('#analysis-cancel').textContent = 'Останавливаем…';
+  activeAnalysisController.abort();
+});
 const ICON = { wait: ['•', ''], run: ['◠', 'st--run'], ok: ['✓', 'st--ok'], err: ['!', 'st--err'], skip: ['–', 'st--skip'] };
 function renderProgress(rows, done, title) {
   $('#progress').hidden = false;
@@ -168,29 +178,41 @@ function renderProgress(rows, done, title) {
 const tick = () => new Promise(r => setTimeout(r, 30));
 
 async function runAnalysis(src, how) {
+  const controller = new AbortController();
+  activeAnalysisController = controller;
   const urls = [src.url, ...src.pages];
   const rows = urls.map(url => ({ url, state: 'wait', note: 'ожидает' }));
   const analyses = [];
   let done = 0;
   $('#progress-result').innerHTML = '';
   $('#start').disabled = true;
+  $('#analysis-cancel').hidden = false;
+  $('#analysis-cancel').disabled = false;
+  $('#analysis-cancel').textContent = 'Отменить';
   const css = $('#css-input').value;
   for (const [i, url] of urls.entries()) {
     const row = rows[i];
-    let html = '', sheetCss = '', loaded = 0, truncated = false;
+    let html = '', sheetCss = '', loaded = 0, failedStylesheets = 0, stylesheetCount = 0, truncated = false, finalUrl = url;
+    if (controller.signal.aborted) { row.state = 'skip'; row.note = 'отменено пользователем'; done++; renderProgress(rows, done, 'Останавливаем анализ'); continue; }
     row.state = 'run';
     if (how === 'worker') {
       row.note = 'загрузка страницы через анализатор-сервер…'; renderProgress(rows, done, 'Идёт анализ');
-      const r = await workerCall(`/fetch?kind=html&url=${encodeURIComponent(url)}`);
+      const r = await workerCall(`/fetch?kind=html&url=${encodeURIComponent(url)}`, 20000, controller.signal);
+      if (controller.signal.aborted) { row.state = 'skip'; row.note = 'отменено пользователем'; done++; renderProgress(rows, done, 'Останавливаем анализ'); break; }
       if (!r.ok) { row.state = 'err'; row.note = `Не получено: ${r.message || 'ошибка сервера'}`; done++; renderProgress(rows, done, 'Идёт анализ'); continue; }
       html = r.text;
+      finalUrl = r.finalUrl || url;
       truncated = Boolean(r.truncated);
-      const sheets = stylesheetLinks(html, r.finalUrl || url).slice(0, MAX_STYLESHEETS);
+      const sheets = stylesheetLinks(html, finalUrl).slice(0, MAX_STYLESHEETS);
+      stylesheetCount = sheets.length;
       for (const [k, sheet] of sheets.entries()) {
         row.note = `загрузка стилей: ${k + 1} из ${sheets.length}…`; renderProgress(rows, done, 'Идёт анализ');
-        const c = await workerCall(`/fetch?kind=css&url=${encodeURIComponent(sheet)}`);
+        const c = await workerCall(`/fetch?kind=css&url=${encodeURIComponent(sheet)}`, 20000, controller.signal);
+        if (controller.signal.aborted) { row.state = 'skip'; row.note = 'отменено пользователем'; break; }
         if (c.ok) { sheetCss += '\n' + c.text; loaded++; }
+        else failedStylesheets++;
       }
+      if (controller.signal.aborted) { done++; renderProgress(rows, done, 'Останавливаем анализ'); break; }
     } else {
       html = pasted.get(url) || '';
       if (!html.trim()) { row.state = 'skip'; row.note = 'HTML не добавлен — страница пропущена'; done++; renderProgress(rows, done, 'Идёт анализ'); continue; }
@@ -198,30 +220,41 @@ async function runAnalysis(src, how) {
     row.note = 'разбор разметки и стилей…'; renderProgress(rows, done, 'Идёт анализ');
     await tick();
     try {
-      const a = analyzePage({ url, html, css: how === 'worker' ? sheetCss : css, cssLoaded: loaded });
+      const a = analyzePage({ url: finalUrl, html, css: how === 'worker' ? sheetCss : css, cssLoaded: loaded });
       // Сервер отдаёт не больше 1,5 МБ разметки: неполная страница должна быть явно помечена в профиле.
       if (truncated) a.warnings.push(`Страница ${url} больше 1,5 МБ и получена не целиком — блоки в конце страницы могли не попасть в анализ. Проверьте структуру вручную.`);
+      if (failedStylesheets) a.warnings.push(`Не удалось получить ${failedStylesheets} из ${stylesheetCount} файлов CSS. Визуальные признаки в профиле могут быть неполными.`);
       const blocks = a.structure.order.length;
       if (!blocks && a.stats.textLength < 200) { row.state = 'err'; row.note = a.warnings[0] || 'В разметке нет содержимого для анализа'; }
-      else { analyses.push(a); row.state = 'ok'; row.note = `Блоков: ${blocks}; элементов: ${a.stats.elements}; стили: ${a.visual.available ? 'получены' : 'недостаточно данных'}${truncated ? '; страница получена не целиком' : ''}`; }
+      else { analyses.push(a); row.state = 'ok'; row.note = `Блоков: ${blocks}; элементов: ${a.stats.elements}; стили: ${a.visual.available ? `получены ${loaded}${stylesheetCount ? ` из ${stylesheetCount}` : ''}` : 'недостаточно данных'}${truncated ? '; страница получена не целиком' : ''}${failedStylesheets ? `; CSS с ошибкой: ${failedStylesheets}` : ''}`; }
     } catch (err) { row.state = 'err'; row.note = `Ошибка разбора: ${err.message}`; }
     done++; renderProgress(rows, done, 'Идёт анализ');
   }
+  if (controller.signal.aborted) {
+    for (const row of rows) if (row.state === 'wait') { row.state = 'skip'; row.note = 'отменено пользователем'; done++; }
+    renderProgress(rows, done, 'Анализ остановлен');
+  }
   $('#start').disabled = false;
+  $('#analysis-cancel').hidden = true;
+  $('#analysis-cancel').disabled = false;
+  $('#analysis-cancel').textContent = 'Отменить';
+  activeAnalysisController = null;
   if (!analyses.length) {
-    renderProgress(rows, done, 'Анализ не выполнен');
-    $('#progress-result').innerHTML = `<p class="notice notice--err">Ни одну страницу не удалось проанализировать, поэтому профиль не создан — выдуманных данных студия не показывает. ${how === 'worker' ? 'Попробуйте вставить HTML-код страницы или заполните профиль вручную.' : 'Проверьте, что вставлен код страницы целиком, или заполните профиль вручную.'}</p><div class="actions"><button type="button" data-fallback="html">Вставить HTML-код</button><button type="button" data-fallback="manual">Заполнить вручную</button></div>`;
-    setStatus('Анализ не выполнен: данные страниц не получены.', true);
+    renderProgress(rows, done, controller.signal.aborted ? 'Анализ остановлен' : 'Анализ не выполнен');
+    $('#progress-result').innerHTML = `<p class="notice${controller.signal.aborted ? '' : ' notice--err'}">${controller.signal.aborted ? 'Анализ остановлен до получения страниц. Профиль не создан.' : `Ни одну страницу не удалось проанализировать, поэтому профиль не создан — выдуманных данных студия не показывает. ${how === 'worker' ? 'Попробуйте вставить HTML-код страницы или заполните профиль вручную.' : 'Проверьте, что вставлен код страницы целиком, или заполните профиль вручную.'}`}</p><div class="actions"><button type="button" data-fallback="html">Вставить HTML-код</button><button type="button" data-fallback="manual">Заполнить вручную</button></div>`;
+    setStatus(controller.signal.aborted ? 'Анализ отменён.' : 'Анализ не выполнен: данные страниц не получены.', false);
     return;
   }
-  renderProgress(rows, done, 'Анализ завершён');
-  const { profile, traits, warnings } = buildProfile(analyses);
+  renderProgress(rows, done, controller.signal.aborted ? 'Собран частичный анализ' : 'Анализ завершён');
+  const { profile, traits, warnings: profileWarnings } = buildProfile(analyses);
+  const warnings = [...profileWarnings];
+  if (controller.signal.aborted) warnings.push(`Анализ остановлен пользователем: профиль построен по ${analyses.length} из ${urls.length} страниц.`);
   const draft = normalizeTemplate({
     ...src, profile, traits,
     analysis: { source: how, analyzedAt: new Date().toISOString(), warnings, pages: rows.map(r => ({ url: r.url, status: r.state === 'ok' ? 'ok' : 'error', note: r.note })) },
     provenance: Object.fromEntries(PROFILE_FIELDS.map(f => [f.key, 'auto'])),
   });
-  setStatus(`Проанализировано страниц: ${analyses.length} из ${urls.length}. Проверьте профиль и сохраните его.`);
+  setStatus(`${controller.signal.aborted ? 'Анализ остановлен. Частичный профиль:' : 'Проанализировано страниц:'} ${analyses.length} из ${urls.length}. Проверьте профиль и сохраните его.`);
   openEditor(draft, { isNew: true });
 }
 $('#progress-result').addEventListener('click', e => {
@@ -238,7 +271,16 @@ $('#template-form').addEventListener('submit', async e => {
   const m = mode();
   if (m === 'manual') return openEditor(normalizeTemplate({ ...src, analysis: { source: 'manual' } }), { isNew: true, manual: true });
   if (m === 'worker' && !getEndpoint()) { setStatus('Анализатор-сервер не подключён. Укажите адрес Worker в настройках или выберите другой способ.', true); $('#worker-settings').open = true; $('#worker-endpoint').focus(); return; }
-  if (m === 'html' && ![src.url, ...src.pages].some(u => (pasted.get(u) || '').trim())) { setStatus('Вставьте HTML-код хотя бы одной страницы или загрузите файл.', true); const t = $('#html-inputs textarea'); if (t) t.focus(); return; }
+  if (m === 'html' && ![src.url, ...src.pages].some(u => (pasted.get(u) || '').trim())) {
+    const workerMode = document.querySelector('input[name=mode][value="worker"]');
+    workerMode.checked = true; renderMode();
+    if (!getEndpoint()) {
+      setStatus('Чтобы анализировать по адресу, нужен Worker-анализатор. Он не подключён; браузер не может сам читать чужой сайт из-за CORS. Настройте Worker ниже или вставьте HTML-код страницы.', true);
+      $('#worker-settings').open = true; $('#worker-endpoint').focus();
+      return;
+    }
+    await runAnalysis(src, 'worker'); return;
+  }
   await runAnalysis(src, m);
 });
 $('#save-link').addEventListener('click', () => {

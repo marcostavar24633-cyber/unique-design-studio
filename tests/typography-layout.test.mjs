@@ -39,14 +39,14 @@ test('ручной выбор главнее, «без» поддержан; а�
   assert.deepEqual(chooseTypography({}, { seed: 3 }), chooseTypography({}, { seed: 3 }));
 });
 
-test('каждая раскладка секций даёт свой CSS и композицию галереи; на заливных раскладках авто-переход отключён', () => {
+test('каждая раскладка секций даёт свой CSS и композицию галереи; переход остаётся градиентным', () => {
   for (const id of SECTION_LAYOUT_IDS) {
     const r = generate({ ...base, id: 'l-' + id, sectionLayout: id });
     assert.equal(r.concept.visualSystem.sectionLayout, id);
     assert.ok(r.html.includes(`section-layout--${id}`), id);
     assert.ok(r.html.includes(`.sec--gallery.section-layout--${id}`), `${id}: композиция галереи`);
     assert.deepEqual(r.audit.errors, [], id);
-    if (FILLED_LAYOUTS.has(id) && id !== 'framed') assert.equal(r.concept.visualSystem.transition.type, 'none', `${id}: без полосы-перехода`);
+    assert.equal(r.concept.visualSystem.transition.type, 'fade', `${id}: общий градиентный переход между блоками`);
   }
   assert.equal(Object.keys(EXTRA_LAYOUT_CSS).length, 11);
 });

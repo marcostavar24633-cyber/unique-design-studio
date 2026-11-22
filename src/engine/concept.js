@@ -17,6 +17,7 @@ import { chooseTransition } from './cinematic/transitions.js';
 import { chooseVariety } from './variety.js';
 import { chooseEffects } from './effects.js';
 import { chooseTypography, LAYOUT_ORDER_FAMILY, SECTION_LAYOUTS, SECTION_LAYOUT_IDS } from './typography-layout.js';
+import { ART_DIRECTION_PRESETS, applyArtDirectionPreset } from './art-direction-presets.js';
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -61,6 +62,26 @@ function rankArchetypes(project, profile, s, refs = []) {
   if (s.form) add('split-utility', 3, 'настроен приём заявок — инструмент действия можно вынести на первый экран');
   if (s.process >= 4 && s.about) add('storytelling', 2, 'есть история и этапы — материал для последовательного рассказа');
   if (!s.items && !s.gallery) add('minimal', 4, 'контента немного — лишние блоки только отвлекут от действия');
+  if (s.advantages >= 2) add('proof-led', 4, 'есть конкретные преимущества — можно начать с проверяемых доказательств');
+  if (s.items >= 2) add('service-picker', 3, 'несколько услуг можно сразу превратить в понятный выбор');
+  if (s.gallery >= 2 || s.heroImage) add('portfolio-mosaic', 4, 'в проекте есть реальные изображения для портфолио-мозаики');
+  if (s.process >= 2) add('process-roadmap', 4, 'описаны этапы работы для наглядного маршрута');
+  if (s.contacts) add('local-presence', 4, 'указаны реальные контакты для локального первого экрана');
+  if (s.form) add('appointment-first', 4, 'настроен приём обращений для записи с первого экрана');
+  if (s.process >= 3 && s.about) add('story-timeline', 4, 'есть и история компании, и несколько этапов для временной шкалы');
+  if (s.prices && s.items >= 2) add('price-comparison', 5, 'несколько позиций с реальными ценами подходят для сравнения');
+  if (s.about && project.brandCharacter) add('brand-manifesto', 3, 'описаны история и характер бренда для авторского манифеста');
+  if (s.items && project.cta) add('campaign-landing', 3, 'заданы предложение и действие для целевой кампании');
+  if (s.faqs >= 2) add('faq-first', 5, 'есть реальные ответы на частые вопросы для первого экрана');
+  if (s.advantages >= 3) add('feature-grid', 4, 'несколько преимуществ можно раскрыть сеткой без добавления вымышленных фактов');
+  if (s.items >= 4) add('service-directory', 3, 'несколько услуг можно собрать в быстрый нумерованный указатель');
+  if (s.prices && s.items >= 3) add('pricing-cards', 4, 'есть несколько реальных цен для самостоятельных карточек предложения');
+  if (s.gallery >= 1) add('portfolio-feature', 2, 'есть изображения для выделения одной главной работы');
+  if (s.contacts) add('contact-hub', 2, 'контакты можно показать как отдельные способы связи');
+  if (s.form) add('quick-form', 3, 'настроена реальная форма, подходящая для короткой заявки на первом экране');
+  if (s.heroImage) add('cover-story', 2, 'главное изображение подходит для обложечной подачи');
+  if (s.heroImage) add('split-screen', 2, 'главное изображение можно выделить в отдельную половину экрана');
+  if (project.brandCharacter || project.mainOffer) add('type-statement', 2, 'есть содержательная фраза для крупного типографического заявления');
   // Класс проекта: премиум и люкс тяготеют к журнальной подаче, крупному визуалу и тишине вокруг предложения.
   if (project.tier === 'premium') { add('editorial', 3, 'премиум-класс — авторская журнальная подача'); add('immersive', 2); add('minimal', 1); }
   if (project.tier === 'luxury') {
@@ -70,6 +91,10 @@ function rankArchetypes(project, profile, s, refs = []) {
   }
   // Контекст: характер бренда, аудитория и задача страницы — небольшие поправки к нишевой оценке.
   for (const sig of contextSignals(project)) add(sig.id, sig.n, sig.why);
+  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
+  for (const [index, id] of (artDirection?.archetypes || []).entries()) {
+    add(id, index === 0 ? 18 : 6, `сценарий «${artDirection.label}» задаёт такую композицию первого экрана`);
+  }
   // Изученные сайты из библиотеки — это конкурентная среда: композицию их первого экрана не повторяем.
   for (const ref of refs) if (ref.traits.archetypes[0]) add(ref.traits.archetypes[0], -4);
   const arch = project.architecture;
@@ -137,17 +162,22 @@ function compose(project, profile, ranked, seed, avoid) {
   const secondaryPick = project.secondaryArchitecture && project.secondaryArchitecture !== primary
     ? project.secondaryArchitecture
     : (avoid.secondaryHint && avoid.secondaryHint !== primary ? avoid.secondaryHint : (ranked.find(r => r.id !== primary && r.score > 0) || {}).id) || '';
-  const placement = pick(stream(seed, 'placement'), Object.keys(arch.placements), avoid.placements);
+  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
+  const preferredPlacement = project.passthrough?.heroPlacement || artDirection?.placements?.[primary];
+  const placement = preferredPlacement && !avoid.placements.includes(preferredPlacement)
+    ? preferredPlacement
+    : pick(stream(seed, 'placement'), Object.keys(arch.placements), avoid.placements);
   // Премиум и люкс: контрастная дидона и старостильная антиква впереди нишевых характеров.
   const tierTypes = { premium: ['serif-editorial', 'didone-contrast', 'geometric-clean'], luxury: ['didone-contrast', 'serif-editorial'] }[project.tier];
   const tierPool = tierTypes ? tierTypes.filter(t => arch.types.includes(t)) : [];
   const typePool = tierPool.length ? tierPool : profile.types.filter(t => arch.types.includes(t));
   const typeCharacter = pick(stream(seed, 'type'), typePool.length ? typePool : arch.types, avoid.types);
-  const nav = pick(stream(seed, 'nav'), arch.navs, avoid.navs);
-  let dirPool = profile.directions;
+  const presetNav = project.passthrough?.navStyle;
+  const nav = arch.navs.includes(presetNav) && !avoid.navs.includes(presetNav) ? presetNav : pick(stream(seed, 'nav'), arch.navs, avoid.navs);
+  let dirPool = artDirection?.directions?.length ? artDirection.directions : profile.directions;
   // Люкс: сдержанные «галерейные» и глубокие направления; тёмный фон с золотом по-прежнему не по умолчанию.
-  if (project.tier === 'luxury') dirPool = ['gallery-white', 'gallery-black', 'aubergine', 'night-sky', 'warm-paper', 'chestnut'];
-  if (project.tier === 'premium') dirPool = [...new Set([...profile.directions, 'gallery-white', 'aubergine', 'warm-paper'])];
+  if (!artDirection && project.tier === 'luxury') dirPool = ['gallery-white', 'gallery-black', 'aubergine', 'night-sky', 'warm-paper', 'chestnut'];
+  if (!artDirection && project.tier === 'premium') dirPool = [...new Set([...profile.directions, 'gallery-white', 'aubergine', 'warm-paper'])];
   if (project.palette !== 'auto') {
     const byMode = dirPool.filter(d => DIRECTIONS[d].mode === project.palette);
     dirPool = byMode.length ? byMode : Object.keys(DIRECTIONS).filter(d => DIRECTIONS[d].mode === project.palette);
@@ -261,7 +291,7 @@ export function applyManualOrder(order, manual) {
 
 // ---------- Главная функция ----------
 export function buildConcept(input, { registry = [], neighbors = 2, references } = {}) {
-  const project = normalizeProject(input);
+  const project = applyArtDirectionPreset(normalizeProject(input));
   const profile = detectNiche(project);
   const s = contentSignals(project);
   // Профили библиотеки шаблонов: из опции или из поля проекта designReferences (сохраняется в экспорте).
@@ -421,8 +451,10 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const cta = project.cta || profile.goal;
 
   const top = ranked.find(r => r.id === design.primary);
+  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
   const rationale = [
     `Ниша определена как «${profile.label}». Основное действие — ${primaryGoal.toLowerCase()}.`,
+    artDirection ? `Применён сценарий «${artDirection.label}»: связаны шапка, композиция заголовка, кнопки, свет, фактура и переходы.` : '',
     project.architecture.mode === 'exact'
       ? `Архитектура ${arch.name} задана в проекте вручную: ${arch.summary}.`
       : `Выбрана архитектура ${arch.name}: ${arch.summary}. ${capitalize(profile.why)}.`,
@@ -515,7 +547,10 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },
-      motion: arch.motion, motionPlan, motif: design.motif,
+      motion: motionPlan.mode, motionPlan, motif: design.motif,
+      artDirection: ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset]
+        ? { id: project.passthrough.artDirectionPreset, ...ART_DIRECTION_PRESETS[project.passthrough.artDirectionPreset] }
+        : null,
       commerce: commerceEnabled(project, profile.id),
       textEffect: chooseTextEffect(project, { archetype: design.primary, intensity: motionPlan.intensity }, seed),
       // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.

@@ -20,7 +20,7 @@ export function directScene(concept, project = {}) {
   else type = 'immersive-environment';
 
   const profile = SCENE_PROFILES[type];
-  const reduced = vs.motionPlan?.intensity === 'calm' || tier === 'luxury';
+  const reduced = vs.motionPlan?.intensity === 'calm';
   return Object.freeze({
     type, label: profile.label, layers: profile.layers,
     intensity: reduced ? 'calm' : (vs.motionPlan?.intensity || 'balanced'),

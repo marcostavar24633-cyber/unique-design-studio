@@ -73,7 +73,7 @@ const TEXTURE_LABELS = { grain: 'зерно', paper: 'волокна бумаг�
 export function chooseCinematicLayers(project = {}, visual = {}) {
   const forced = project.passthrough?.cinematicLayers;
   const mode = visual.palette?.mode === 'dark' ? 'dark' : 'light';
-  const calm = project.tier === 'luxury' || visual.motionPlan?.intensity === 'calm';
+  const calm = project.passthrough?.motionStyle !== 'cinematic' && (project.tier === 'luxury' || visual.motionPlan?.intensity === 'calm');
   let id, rationale;
   if (CINEMATIC_PRESETS[forced]) { id = forced; rationale = 'Выбрано владельцем проекта'; }
   else {

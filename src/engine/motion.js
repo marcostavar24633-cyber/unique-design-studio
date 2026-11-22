@@ -38,26 +38,30 @@ const LOUD_WORDS = /дерзк|ярк|энерги|смел|живой|игри�
  * @param {{archetype:string, motion:string, nicheId:string, seed:number}} ctx
  */
 export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
+  const requestedStyle = project.passthrough?.motionStyle;
+  const mode = requestedStyle === 'cinematic' ? (motion === 'static' ? 'reveal' : motion) : requestedStyle === 'static' ? 'static' : motion;
   const character = `${project.brandCharacter || ''} ${project.visualDirection || ''}`;
   const why = [];
   let intensity = 'balanced';
-  if (project.tier === 'luxury') { intensity = 'calm'; why.push('люкс — сдержанное, медленное движение'); }
+  if (requestedStyle === 'cinematic') { intensity = 'expressive'; why.push('владелец выбрал кинематографичное движение'); }
+  else if (requestedStyle === 'static') { intensity = 'calm'; why.push('владелец выбрал минимальное движение'); }
+  else if (project.tier === 'luxury') { intensity = 'calm'; why.push('люкс — сдержанное, медленное движение'); }
   else if (CALM_NICHES.has(nicheId) || CALM_WORDS.test(character)) { intensity = 'calm'; why.push('ниша и характер требуют спокойной подачи'); }
   else if (EXPRESSIVE_NICHES.has(nicheId) || LOUD_WORDS.test(character)) { intensity = 'expressive'; why.push('характер бренда допускает выразительное движение'); }
   else why.push('нейтральный характер — умеренное движение');
-  if (archetype === 'minimal' || archetype === 'brutalist') { intensity = 'calm'; why.push(`архитектура «${archetype}» не терпит лишнего движения`); }
+  if ((archetype === 'minimal' || archetype === 'brutalist') && requestedStyle !== 'cinematic') { intensity = 'calm'; why.push(`архитектура «${archetype}» не терпит лишнего движения`); }
 
   const r = stream(seed, 'motion');
   const candidates = [];
   const want = (id, weight, reason) => candidates.push({ id, weight: weight + r() * 0.5, reason });
 
-  if (motion === 'static') why.push('архитектура задаёт статичную подачу — только микровзаимодействия');
+  if (mode === 'static') why.push('выбрана статичная подача — только микровзаимодействия');
   else want('scroll-reveal', 5, 'появление блоков по мере чтения');
-  if (motion === 'parallax' || (['immersive', 'editorial'].includes(archetype) && intensity !== 'calm')) want('parallax', 3.5, 'глубина первого экрана соответствует визуальной концепции');
+  if (mode === 'parallax' || (['immersive', 'editorial'].includes(archetype) && intensity !== 'calm')) want('parallax', 3.5, 'глубина первого экрана соответствует визуальной концепции');
   if (['luxury', 'premium'].includes(project.tier) || (['immersive', 'editorial'].includes(archetype) && intensity !== 'calm')) want('glass-cards', 3.8, 'стеклянные поверхности поддерживают выбранную визуальную систему');
 
   want('microinteractions', 3, 'понятный отклик интерфейса');
-  if (motion !== 'static') {
+  if (mode !== 'static') {
     if (project.tier === 'luxury' || project.tier === 'premium' || archetype === 'editorial' || archetype === 'immersive') want('cinematic-reveal', 4, 'первый экран раскрывается как сцена');
     if (intensity !== 'calm') want('kinetic-type', archetype === 'brutalist' || archetype === 'asymmetric' ? 4 : 2, 'заголовок как главный визуальный приём');
     if (archetype === 'storytelling') want('scroll-progress', 4, 'длинная история — виден прогресс чтения');
@@ -66,7 +70,7 @@ export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
   // Отклик на курсор — не анимация появления, поэтому допустим и в статичных архитектурах.
   if (intensity === 'expressive') want('magnetic-buttons', 3, 'игровой отклик главного действия');
   if (SHOP_NICHES.has(nicheId) && intensity !== 'calm' && (archetype === 'catalog' || archetype === 'product-first' || archetype === 'modular-grid')) want('tilt-cards', 3, 'карточки товаров откликаются на курсор');
-  else if (motion !== 'static' && intensity !== 'calm' && ['immersive', 'editorial', 'asymmetric', 'modular-grid'].includes(archetype)) want('tilt-cards', 2.8, 'объёмная глубина карточек поддерживает выразительную композицию');
+  else if (mode !== 'static' && intensity !== 'calm' && ['immersive', 'editorial', 'asymmetric', 'modular-grid'].includes(archetype)) want('tilt-cards', 2.8, 'объёмная глубина карточек поддерживает выразительную композицию');
   if (project.tier !== 'luxury' && intensity !== 'calm') want('nav-underline', 1, 'навигация подсказывает текущий выбор');
 
   // Бюджет: не больше N механик; кинематографичное появление и кинетика заголовка — взаимоисключающие.
@@ -80,7 +84,7 @@ export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
   }
   const mechanics = chosen.map(c => c.id);
   return {
-    intensity, mechanics,
+    intensity, mechanics, mode,
     duration: INTENSITY[intensity].duration, distance: INTENSITY[intensity].distance,
     rationale: [...why, ...chosen.map(c => `${MECHANICS[c.id]} — ${c.reason}`)],
     label: `${capitalize(INTENSITY[intensity].label)} анимация: ${mechanics.map(m => MECHANICS[m].toLowerCase()).join('; ')}. Всё отключается при prefers-reduced-motion.`,

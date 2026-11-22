@@ -59,8 +59,9 @@ const PHOTO_HERO = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duoto
 /** Выбор эффектов. Ручной выбор владельца (passthrough.cardEffect / heroEffect) главнее; 'none' — без эффекта. */
 export function chooseEffects(project = {}, { archetype = '', tier = 'standard', intensity = 'balanced', seed = 0 } = {}) {
   const f = project.passthrough || {};
+  const requestedStyle = f.motionStyle;
   const photos = [project.images?.hero, ...(project.gallery || []).map(g => g.src)].filter(Boolean);
-  const calm = tier === 'luxury' || intensity === 'calm';
+  const calm = requestedStyle === 'static' || (requestedStyle !== 'cinematic' && (tier === 'luxury' || intensity === 'calm'));
   let card;
   if (f.cardEffect === 'none' || CARD_EFFECTS[f.cardEffect]) card = f.cardEffect;
   else {
@@ -72,6 +73,14 @@ export function chooseEffects(project = {}, { archetype = '', tier = 'standard',
   }
   let hero;
   if (f.heroEffect === 'none' || HERO_EFFECTS[f.heroEffect]) hero = f.heroEffect;
+  else if (requestedStyle === 'cinematic') {
+    const cinematicPool = photos.length >= 2
+      ? ['slideshow', 'double-exposure', 'photo-wipe', 'ken-burns', 'duotone']
+      : photos.length
+        ? ['photo-wipe', 'ken-burns', 'duotone', 'double-exposure']
+        : ['aurora', 'grid', 'morph', 'wave-lines', 'starfield'];
+    hero = pick(stream(seed, 'hero-effect-cinematic'), cinematicPool);
+  }
   else {
     let pool = calm ? ['fog', 'aurora', 'line-split', 'outline-fill', 'typewriter'] : ['aurora', 'grid', 'bokeh', 'starfield', 'wave-lines', 'morph', 'text-mask', 'marquee', 'line-split', 'depth-parallax', 'hero-spotlight', 'magnetic-cta'];
     if (photos.length) pool = pool.concat(calm ? ['ken-burns', 'duotone'] : ['ken-burns', 'photo-wipe', 'duotone', 'double-exposure']);

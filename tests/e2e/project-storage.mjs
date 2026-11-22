@@ -36,7 +36,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
+  await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]') !== null);
   await page.fill('#qs-niche', 'Студия резервного сохранения');
   await page.fill('#qs-brand', 'BACKUP E2E');
   await page.click('#quick-start [type="submit"]');

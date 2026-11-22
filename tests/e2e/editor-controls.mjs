@@ -21,7 +21,9 @@ const server = createServer((req, res) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+  : {});
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 const appErrors = [];
@@ -33,13 +35,53 @@ try {
     if (/\/studio\/(?:studio|ai-diagnostics)\.js|\/studio\/index\.html/.test(stack)) appErrors.push(stack);
   });
   await page.goto(`${base}/studio/index.html`, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => document.querySelectorAll('#examples option').length > 1);
+  await page.waitForFunction(() => document.querySelector('#form [data-path="brand"]') !== null);
 
   // Генерируем локальный проект и проверяем действие «Новый» без потери реестра.
   await page.fill('#qs-niche', 'Студия тестирования редактора');
   await page.fill('#qs-brand', 'EDITOR CONTROLS E2E');
   await page.click('#quick-start [type="submit"]');
   await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'), null, { timeout: 20000 });
+
+  // Свободное размещение: перетаскиваем живой элемент в другой раздел,
+  // затем проверяем сохранение размера и поворота после повторного рендера.
+  await page.click('#tab-preview');
+  await page.click('#arrange-toggle');
+  const preview = page.frameLocator('#frame');
+  const sourceElement = preview.locator('#about .about__text');
+  const targetSection = preview.locator('#contact');
+  await sourceElement.waitFor({ state: 'visible' });
+  await sourceElement.dragTo(targetSection, { targetPosition: { x: 24, y: 24 } });
+  const movedElement = preview.locator('#contact [data-uds-free-canvas] .about__text');
+  await movedElement.waitFor({ state: 'visible', timeout: 10000 });
+  const sourceCard = preview.locator('#items li.item').first();
+  await sourceCard.waitFor({ state: 'visible' });
+  const cardTargetSection = preview.locator('#about');
+  await sourceCard.dragTo(cardTargetSection, { targetPosition: { x: 24, y: 24 } });
+  const movedCard = preview.locator('#about [data-uds-free-canvas] li.item');
+  await movedCard.waitFor({ state: 'visible', timeout: 10000 });
+  check(await movedCard.count() === 1, 'карточка каталога не переместилась в другой раздел');
+  await movedElement.click();
+  await page.click('#canvas-options-trigger');
+  const widthRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.fill('#canvas-width', '420');
+  await page.locator('#canvas-width').press('Tab');
+  await widthRender;
+  const rotationRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.locator('#canvas-rotation').evaluate(node => {
+    node.value = '15';
+    node.dispatchEvent(new Event('input', { bubbles: true }));
+    node.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelector('#canvas-rotation-out')?.textContent === '15°');
+  await rotationRender;
+  await movedElement.waitFor({ state: 'visible', timeout: 10000 });
+  const movedStyle = await movedElement.evaluate(node => ({ width: getComputedStyle(node).width, rotate: getComputedStyle(node).rotate }));
+  check(movedStyle.width === '420px', `ширина после повторного рендера: ${movedStyle.width}`);
+  check(movedStyle.rotate === '15deg', `угол после повторного рендера: ${movedStyle.rotate}`);
+  check(await movedElement.count() === 1, 'перетащенный элемент потерялся после изменения размера и поворота');
+  await page.click('#arrange-toggle');
+
   await page.click('#save');
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('uds:studio:v1') || '{}').library?.length === 1);
   await page.click('#new');

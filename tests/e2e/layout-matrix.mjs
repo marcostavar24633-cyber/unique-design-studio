@@ -3,7 +3,7 @@
 // Ищет перекрытый, обрезанный и выходящий за экран текст и слабый контраст на фактическом фоне.
 import { ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { MECHANICS } from '../../src/engine/mechanics.js';
-import { MASKS, DIVIDERS } from '../../src/engine/forms.js';
+import { MASKS } from '../../src/engine/forms.js';
 import { LAYOUT_QA_SOURCE } from '../../src/engine/layout-qa.js';
 import { CARD_SHAPE_IDS, REVEAL_IDS } from '../../src/engine/variety.js';
 import { BUTTONS } from '../../src/engine/data.js';
@@ -32,10 +32,10 @@ const base = {
 
 export function layoutPages() {
   const pages = [];
-  const mechs = Object.keys(MECHANICS), masks = Object.keys(MASKS), divs = Object.keys(DIVIDERS);
+  const mechs = Object.keys(MECHANICS), masks = Object.keys(MASKS);
   ARCHETYPE_IDS.forEach((arch, i) => {
     const raw = { ...base, id: `qa-${arch}`, architecture: arch, designArchitecture: arch, architectureMode: 'manual',
-      itemsMechanic: mechs[i % mechs.length], imageMask: masks[i % masks.length], sectionDivider: divs[(i + 2) % divs.length],
+      itemsMechanic: mechs[i % mechs.length], imageMask: masks[i % masks.length],
       textEffect: i % 2 ? 'fade-words' : 'scroll-fade', fonts: 'system',
       // Фактура и свет (D03): каждая архитектура проверяется со своим пресетом слоёв.
       cinematicLayers: CINEMATIC_PRESET_IDS[i % CINEMATIC_PRESET_IDS.length],
@@ -45,7 +45,7 @@ export function layoutPages() {
     pages.push({ name: `${arch}/${raw.itemsMechanic}/${raw.imageMask}`, html: g.html });
     // Второй проход: тёмная палитра, Google Fonts и другие сочетания механик и форм.
     const dark = { ...raw, id: `qa-dark-${arch}`, brand: 'Ночной Сайгон', niche: 'бар вьетнамской кухни', palette: 'dark',
-      itemsMechanic: mechs[(i + 3) % mechs.length], imageMask: masks[(i + 2) % masks.length], sectionDivider: divs[i % divs.length],
+      itemsMechanic: mechs[(i + 3) % mechs.length], imageMask: masks[(i + 2) % masks.length],
       textEffect: i % 2 ? 'scroll-fade' : 'fade-words', fonts: 'web' };
     pages.push({ name: `тёмная/${arch}/${dark.itemsMechanic}/${dark.imageMask}`, html: generate(dark).html });
   });
@@ -73,31 +73,32 @@ export async function selfCheck(browser) {
 /** Прогоняет матрицу и добавляет замечания в failures. Возвращает число прогонов. */
 export async function runLayoutMatrix(browser, failures, widths = [390, 768, 1280]) {
   let runs = 0;
+  const page = await browser.newPage({ viewport: { width: widths[0], height: 820 } });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const { name, html } of layoutPages()) {
     for (const width of widths) {
-      const page = await browser.newPage({ viewport: { width, height: 820 } });
-      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 820 });
       await page.setContent(html, { waitUntil: 'load' });
       await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
       const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
       for (const f of found) failures.push(`раскладка ${name} @${width}: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
       runs++;
-      await page.close();
     }
   }
+  await page.close();
   // Второй проход — с включённым движением: стеклянные поверхности, наклон, параллакс, эффекты текста
   // действуют только без reduced-motion, и именно они могут ухудшить контраст или наложить блоки.
+  const motionPage = await browser.newPage({ viewport: { width: 1280, height: 820 } });
+  await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
   for (const { name, html } of layoutPages()) {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 820 } });
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.setContent(html, { waitUntil: 'load' });
-    await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
-    await page.waitForTimeout(1600); // появление первого экрана и блоков завершилось
-    const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
+    await motionPage.setContent(html, { waitUntil: 'load' });
+    await motionPage.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
+    await motionPage.waitForTimeout(1600); // появление первого экрана и блоков завершилось
+    const found = await motionPage.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
     for (const f of found) failures.push(`раскладка ${name} @1280 с движением: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
     runs++;
-    await page.close();
   }
+  await motionPage.close();
   return runs;
 }
 

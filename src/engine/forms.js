@@ -1,7 +1,4 @@
-// Формы страницы: маски фотографий и разделители секций. Второй слой «нестандартных» страниц
-// после механик карточек. Форма выводится из характера бренда (форма углов, мотив, архитектура), а не случайна.
-// Безопасность: маски применяются только к фото (не к карточкам и кнопкам — иначе обрезалась бы рамка фокуса),
-// разделители — декоративные линии (aria-hidden), которые не перекрывают содержимое.
+// Формы фотографий выводятся из характера бренда; элементы управления не обрезаются масками.
 import { pick, stream } from './util.js';
 
 export const MASKS = {
@@ -11,39 +8,44 @@ export const MASKS = {
   slant: 'диагональ: нижний край фото скошен',
   blob: 'капля: органичная форма фото',
   pill: 'пилюля: сильно скруглённые фото',
+  circle: 'круг: круглая фотография',
+  ellipse: 'овал: вытянутая фотография',
+  diamond: 'ромб: диагональный портрет',
+  hexagon: 'шестиугольник: огранённая форма',
+  octagon: 'восьмиугольник: мягкая геометрическая рамка',
+  chevron: 'шеврон: срезы по бокам',
+  parallelogram: 'параллелограмм: наклонные края',
+  'wave-edge': 'волна: мягкая волнистая кромка',
+  scallop: 'фестоны: округлённые выемки по краю',
+  frame: 'рамка: фото с контуром и полем',
 };
-export const DIVIDERS = {
-  none: 'без разделителей',
-  line: 'тонкая линия между секциями',
-  wave: 'волна между секциями',
-  zigzag: 'зигзаг между секциями',
-  steps: 'ступени между секциями',
-  dots: 'пунктир из точек между секциями',
-};
+// Оставлено как совместимый sentinel для старых интеграций; разделители больше не генерируются.
+export const DIVIDERS = Object.freeze({ none: 'без разделителей' });
 
-const MASK_BY_SHAPE = { sharp: ['notch', 'slant', 'none'], soft: ['arch', 'pill', 'slant'], round: ['blob', 'arch', 'pill'] };
-const DIVIDER_BY_MOTIF = {
-  waves: ['wave', 'line'], blobs: ['wave', 'dots'], dots: ['dots', 'line'], orbits: ['dots', 'wave'], rings: ['dots', 'line'],
-  arcs: ['wave', 'line'], blocks: ['steps', 'zigzag'], bands: ['zigzag', 'steps'], horizon: ['line', 'wave'],
+const MASK_BY_SHAPE = {
+  sharp: ['notch', 'slant', 'diamond', 'hexagon', 'octagon', 'chevron', 'parallelogram'],
+  soft: ['arch', 'pill', 'wave-edge', 'scallop', 'frame'],
+  round: ['blob', 'arch', 'pill', 'circle', 'ellipse', 'scallop', 'frame'],
 };
-
-/** Маска фото и разделитель секций. Ручной выбор владельца (passthrough.imageMask / sectionDivider) главнее. */
+/** Маска фото; прежнее поле sectionDivider намеренно игнорируется. */
 export function chooseForms(project, { shape, motif, archetype }, seed) {
   const forced = project.passthrough || {};
   let maskPool = MASK_BY_SHAPE[shape] || ['none'];
   if (archetype === 'brutalist') maskPool = ['none', 'notch'];
   if (project.tier === 'luxury') maskPool = maskPool.filter(m => m !== 'blob' && m !== 'pill').concat('arch');
-  let dividerPool = DIVIDER_BY_MOTIF[motif] || ['line', 'none'];
-  if (archetype === 'minimal') dividerPool = ['line', 'none'];
-  if (archetype === 'brutalist') dividerPool = ['zigzag', 'steps', 'line'];
   return {
     mask: MASKS[forced.imageMask] ? forced.imageMask : pick(stream(seed, 'forms-mask'), maskPool),
-    divider: DIVIDERS[forced.sectionDivider] ? forced.sectionDivider : pick(stream(seed, 'forms-divider'), dividerPool),
+    divider: 'none',
   };
 }
 
 // Фото, к которым применяется маска. Фон первого экрана (.hero__photo-bg) и мотивы-SVG не трогаем.
-const MEDIA = ['.item__media img', '.gallery img', '.spotlight__media img', '.hero__figure img', '.bento__visual img', '.hero--asymmetric .visual img'];
+const MEDIA = [
+  '.item__media img', '.gallery img', '.spotlight__media img', '.hero__figure img', '.bento__visual img', '.hero--asymmetric .visual img',
+  '.proof-led__visual img', '.service-picker__panel img', '.portfolio-mosaic__photo img', '.portfolio-mosaic__fallback img',
+  '.process-roadmap__visual img', '.local-presence__visual img', '.story-timeline__visual img', '.price-comparison__visual img',
+  '.brand-manifesto__visual img', '.campaign-landing__visual img',
+];
 const sel = MEDIA.join(',');
 const MASK_RULES = {
   none: '',
@@ -52,33 +54,17 @@ const MASK_RULES = {
   slant: `${sel}{clip-path:polygon(0 0,100% 0,100% 88%,0 100%)}`,
   blob: `${sel}{border-radius:42% 58% 55% 45%/48% 40% 60% 52%}`,
   pill: `${sel}{border-radius:clamp(24px,6vw,48px)}`,
+  circle: `${sel}{aspect-ratio:1/1;object-fit:cover;border-radius:50%}`,
+  ellipse: `${sel}{border-radius:50%/38%;object-fit:cover}`,
+  diamond: `${sel}{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}`,
+  hexagon: `${sel}{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}`,
+  octagon: `${sel}{clip-path:polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%)}`,
+  chevron: `${sel}{clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)}`,
+  parallelogram: `${sel}{clip-path:polygon(16% 0,100% 0,84% 100%,0 100%)}`,
+  'wave-edge': `${sel}{clip-path:polygon(0 7%,10% 0,20% 7%,30% 0,40% 7%,50% 0,60% 7%,70% 0,80% 7%,90% 0,100% 7%,100% 100%,0 100%)}`,
+  scallop: `${sel}{clip-path:polygon(0 12%,5% 4%,10% 12%,15% 4%,20% 12%,25% 4%,30% 12%,35% 4%,40% 12%,45% 4%,50% 12%,55% 4%,60% 12%,65% 4%,70% 12%,75% 4%,80% 12%,85% 4%,90% 12%,95% 4%,100% 12%,100% 88%,95% 96%,90% 88%,85% 96%,80% 88%,75% 96%,70% 88%,65% 96%,60% 88%,55% 96%,50% 88%,45% 96%,40% 88%,35% 96%,30% 88%,25% 96%,20% 88%,15% 96%,10% 88%,5% 96%,0 88%)}`,
+  frame: `${sel}{border:10px solid var(--ds-surface);box-shadow:0 0 0 1px var(--ds-border),0 10px 24px color-mix(in srgb,var(--ds-text) 14%,transparent);box-sizing:border-box}`,
 };
 
-// Разделители: SVG с vector-effect, чтобы толщина линии не растягивалась вместе с шириной.
-const wavePath = () => { let d = 'M0 12'; for (let x = 0; x < 1200; x += 60) d += ` Q${x + 30} ${x / 60 % 2 ? 22 : 2} ${x + 60} 12`; return d; };
-const zigzagPoints = () => Array.from({ length: 41 }, (_, i) => `${i * 30},${i % 2 ? 4 : 20}`).join(' ');
-const stepsPath = () => { let d = 'M0 20'; for (let x = 0; x < 1200; x += 120) d += ` H${x + 60} V6 H${x + 120} V20`; return d; };
-const svg = inner => `<svg viewBox="0 0 1200 24" preserveAspectRatio="none" focusable="false">${inner}</svg>`;
-const DIVIDER_SVG = {
-  wave: () => svg(`<path d="${wavePath()}" fill="none" vector-effect="non-scaling-stroke"/>`),
-  zigzag: () => svg(`<polyline points="${zigzagPoints()}" fill="none" vector-effect="non-scaling-stroke"/>`),
-  steps: () => svg(`<path d="${stepsPath()}" fill="none" vector-effect="non-scaling-stroke"/>`),
-};
-
-/** Разметка разделителя между секциями ('' — без разделителя). */
-export function dividerHtml(divider) {
-  if (!divider || divider === 'none') return '';
-  const inner = DIVIDER_SVG[divider] ? DIVIDER_SVG[divider]() : '';
-  return `<div class="ds-container ds-divider ds-divider--${divider}" aria-hidden="true">${inner}</div>`;
-}
-
-export function formsCss({ mask, divider }) {
-  const out = [MASK_RULES[mask] || ''];
-  if (divider && divider !== 'none') {
-    out.push('.ds-divider{display:block;height:24px;margin-block:0;color:var(--ds-accent);opacity:.55;pointer-events:none}');
-    out.push('.ds-divider svg{display:block;width:100%;height:100%;overflow:visible}.ds-divider path,.ds-divider polyline{stroke:currentColor;stroke-width:1.5}');
-    if (divider === 'line') out.push('.ds-divider--line{height:1px;background:currentColor;opacity:.35}');
-    if (divider === 'dots') out.push('.ds-divider--dots{height:8px;background:radial-gradient(circle,currentColor 1.6px,transparent 2.2px) 0 50%/18px 8px repeat-x}');
-  }
-  return out.filter(Boolean).join('\n');
-}
+export function dividerHtml() { return ''; }
+export function formsCss({ mask }) { return MASK_RULES[mask] || ''; }
