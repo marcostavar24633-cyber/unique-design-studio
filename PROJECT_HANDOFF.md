@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T15:03:05.964Z
+Время обновления: 2026-11-22T15:17:11.302Z
 Ветка: main
-Последний commit: a1feecdfcd1f05e7f3ff8cb94b8a48c2071f4c13
-Дата коммита: 2026-11-22T19:02:53+04:00
-Сообщение: Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
+Последний commit: d8e496ae8d22a03b62168ec74097e8573198e690
+Дата коммита: 2026-11-22T19:16:59+04:00
+Сообщение: Merge pull request #229 from marcostavar24633-cyber/fix/editor-link-targets
 
 Последние коммиты:
+- d8e496a · 2026-11-22 · Merge pull request #229 from marcostavar24633-cyber/fix/editor-link-targets
+- 2caf243 · 2026-11-22 · feat(editor): edit selected link destinations
+- 582daca · 2026-11-22 · docs: refresh project handoff
 - a1feecd · 2026-11-22 · Merge pull request #228 from marcostavar24633-cyber/fix/editor-component-replacement
 - ace0634 · 2026-11-22 · fix(editor): replace selected elements with components
 - 24727b9 · 2026-11-22 · fix(editor): replace selected elements with components
 - 6d297da · 2026-11-22 · docs: refresh project handoff
 - 250ef88 · 2026-11-22 · Merge pull request #227 from marcostavar24633-cyber/fix/editor-element-resize-and-styles
-- 651e295 · 2026-11-22 · fix(editor): add direct element resizing and styles
-- 61ef693 · 2026-11-22 · docs: refresh project handoff
-- ba32a5d · 2026-11-22 · feat(editor): show overlapping elements by layer
 <!-- HANDOFF:AUTO:END -->
