@@ -132,6 +132,12 @@ try {
   await page.locator('#canvas-text').press('Tab');
   await buttonTextRender;
   check((await preview.locator('#about .uds-added-element--button').innerText()).includes('Записаться на консультацию'), 'новая кнопка не сохранила изменённую подпись');
+  check(await page.locator('#canvas-href-field').isVisible(), 'для кнопки не показано поле ссылки');
+  const buttonLinkRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  await page.fill('#canvas-href', 'https://example.com/consultation');
+  await page.locator('#canvas-href').press('Tab');
+  await buttonLinkRender;
+  check(await addedButton.getAttribute('href') === 'https://example.com/consultation', 'адрес добавленной кнопки не сохранился');
   await preview.locator('#about .uds-added-element--button').click();
   await page.click('#canvas-options-trigger');
   await page.click('#canvas-replace');

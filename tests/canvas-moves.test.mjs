@@ -27,6 +27,15 @@ test('free-canvas stacking order is bounded and persisted as z-index', () => {
   assert.doesNotThrow(() => new Function(script), 'edit runtime script parses');
 });
 
+test('canvas link edits are limited to safe navigation protocols', () => {
+  const html = canvasEditsRuntime({ 'u:links:1': { href: 'javascript:alert(1)' } });
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script, 'edit runtime script is present');
+  assert.match(script, /mailto:.*tel:/);
+  assert.match(script, /startsWith\('\/\/'\)/);
+  assert.doesNotThrow(() => new Function(script), 'href sanitizer runtime parses');
+});
+
 test('five photos receive a centered fan with alternating angles and stable layers', () => {
   const keys = Array.from({ length: 5 }, (_, i) => `u:media-gallery:${i + 1}`);
   assert.deepEqual(canvasFanPlacements(keys), [
