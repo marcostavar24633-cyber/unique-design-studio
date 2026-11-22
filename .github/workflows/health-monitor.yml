@@ -28,7 +28,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      # --ai already runs the baseline health checks; avoid duplicate requests.
       - name: Проверка сайта, Worker и AI binding
+        if: github.event.schedule != '17 6 * * *' && github.event.inputs.ai_probe != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ops/health-check.mjs
