@@ -48,7 +48,9 @@ const workerServer = createServer(async (req, res) => {
 await new Promise(r => workerServer.listen(0, '127.0.0.1', r));
 const workerUrl = `http://127.0.0.1:${workerServer.address().port}`;
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+  ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+  : {});
 const failures = [];
 let checks = 0;
 const check = (ok, msg) => { checks++; if (!ok) failures.push(msg); };
@@ -79,6 +81,39 @@ try {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`${base}/studio/templates.html`);
+
+  // GitHub-импорт: выбранная страница должна загружаться вместе с нажатием «Начать анализ».
+  const githubPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await githubPage.route('https://api.github.com/**', async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/repos/example/site') { await route.fulfill({ json: { private: false, default_branch: 'main' } }); return; }
+    if (url.pathname === '/repos/example/site/git/trees/main') {
+      await route.fulfill({ json: { truncated: false, tree: [
+        { type: 'blob', path: 'index.html', size: Buffer.byteLength(fixture), sha: 'html-blob' },
+        { type: 'blob', path: 'assets/main.css', size: 40, sha: 'css-blob' },
+      ] } }); return;
+    }
+    if (url.pathname === '/repos/example/site/git/blobs/html-blob') {
+      const html = fixture.replace('</head>', '<link rel="stylesheet" href="assets/main.css"></head>');
+      await route.fulfill({ json: { encoding: 'base64', content: Buffer.from(html).toString('base64') } }); return;
+    }
+    if (url.pathname === '/repos/example/site/git/blobs/css-blob') {
+      await route.fulfill({ json: { encoding: 'base64', content: Buffer.from('.github-import{color:#123456}').toString('base64') } }); return;
+    }
+    await route.fulfill({ status: 404, json: { message: 'not found' } });
+  });
+  await githubPage.goto(`${base}/studio/templates.html`);
+  await githubPage.check('input[name=mode][value=github]');
+  await githubPage.fill('#github-repo-url', 'https://github.com/example/site');
+  await githubPage.click('#github-connect');
+  await githubPage.waitForSelector('#github-files:not([hidden])');
+  check((await githubPage.inputValue('#source-url')).includes('github.com/example/site'), 'GitHub-импорт не подставил адрес проекта');
+  await githubPage.click('#start'); // Отдельная кнопка загрузки не нажимается.
+  await githubPage.waitForSelector('#editor[open]');
+  check((await githubPage.inputValue('#html-0')).includes('<!doctype html>'), 'кнопка анализа не загрузила выбранный HTML из GitHub');
+  check((await githubPage.inputValue('#css-input')).includes('.github-import'), 'GitHub-импорт не загрузил связанный CSS');
+  check((await githubPage.textContent('#github-import-status')).includes('Запускаю анализ'), 'статус не сообщает о запуске анализа');
+  await githubPage.close();
 
   // --- Проверки формы ---
   await page.click('#start');
