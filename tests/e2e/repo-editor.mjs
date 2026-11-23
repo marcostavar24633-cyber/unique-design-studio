@@ -64,15 +64,6 @@ try {
   await page.waitForSelector('#editor-workspace:not([hidden])');
   await page.waitForFunction(() => Number.parseInt(document.querySelector('#repo-structure-count')?.textContent, 10) > 0);
   const frame = page.frameLocator('#repo-frame');
-  await frame.locator('body').evaluate(() => { window.__udsInboundEditTrace = []; window.addEventListener('message', event => { if (event.data?.type === 'uds-repo-edit') { window.__udsInboundEditTrace.push(event.data); parent.postMessage({ type: 'uds-test-edit-received', patch: event.data.patch }, '*'); } }); });
-  await page.evaluate(() => {
-    window.__udsParentPointerTrace = [];
-    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsParentPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, x: event.clientX, y: event.clientY }), true);
-  });
-  await frame.locator('body').evaluate(() => {
-    window.__udsPointerTrace = [];
-    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, pointerId: event.pointerId, x: event.clientX, y: event.clientY }), true);
-  });
   await page.click('#repo-structure summary');
   await page.fill('#repo-node-filter', 'Старая надпись');
   const treeItem = page.locator('#repo-node-tree [data-node-key]').filter({ hasText: 'Старая надпись' });
@@ -131,11 +122,9 @@ try {
   await page.mouse.down(); await page.mouse.move(resizeHandle.x + resizeHandle.width / 2 + 28, resizeHandle.y + resizeHandle.height / 2 + 18, { steps: 4 }); await page.mouse.up();
   try { await page.waitForFunction(value => Number(document.querySelector('#repo-width')?.value) > value, widthBeforeResize); }
   catch (error) {
-    const trace = await frame.locator('body').evaluate(() => window.__udsPointerTrace);
-    const parentTrace = await page.evaluate(() => window.__udsParentPointerTrace);
     const boxes = { handle: resizeHandle, iframe: await page.locator('#repo-frame').boundingBox() };
     const style = await frame.locator('#headline').evaluate(node => ({ width: node.style.width, height: node.style.height, overlay: (() => { const r = document.querySelector('#uds-repo-overlay').getBoundingClientRect(); return { left:r.left,top:r.top,width:r.width,height:r.height }; })() }));
-    console.error('Repo editor resize diagnostic:', JSON.stringify({ widthBeforeResize, widthAfter: await page.inputValue('#repo-width'), trace, parentTrace, boxes, style, pageErrors: errors }));
+    console.error('Repo editor resize diagnostic:', JSON.stringify({ widthBeforeResize, widthAfter: await page.inputValue('#repo-width'), boxes, style, pageErrors: errors }));
     throw error;
   }
   check(Number(await page.inputValue('#repo-height')) > 0, 'маркер изменения размера не обновил высоту');
@@ -153,7 +142,7 @@ try {
   catch (error) {
     const trace = await frame.locator('body').evaluate(() => window.__udsPointerTrace);
     const parentTrace = await page.evaluate(() => window.__udsParentPointerTrace);
-    console.error('Repo editor rotation diagnostic:', JSON.stringify({ rotateHitTarget, trace, parentTrace, rotateHandle, afterResize, rotation: await page.inputValue('#repo-rotation'), pageErrors: errors }));
+    console.error('Repo editor rotation diagnostic:', JSON.stringify({ rotateHitTarget, rotateHandle, afterResize, rotation: await page.inputValue('#repo-rotation'), pageErrors: errors }));
     throw error;
   }
   check(Math.abs(Number(await page.inputValue('#repo-rotation'))) > 0, 'маркер наклона не обновил угол элемента');
@@ -169,8 +158,6 @@ try {
   await page.fill('#repo-x', '18');
   await page.fill('#repo-y', '-9');
   await page.click('#repo-apply');
-  await page.waitForTimeout(50);
-  console.error('Repo editor edit diagnostic:', JSON.stringify({ selection: await page.locator('#repo-selection').textContent(), inputs: { text: await page.inputValue('#repo-text'), color: await page.inputValue('#repo-color'), rotation: await page.inputValue('#repo-rotation'), x: await page.inputValue('#repo-x') }, editMessages: messages.filter(item => item?.type === 'uds-test-edit-received' || item?.type === 'uds-repo-transform').slice(-8), pointerTrace: await frame.locator('body').evaluate(() => window.__udsPointerTrace), parentTrace: await page.evaluate(() => window.__udsParentPointerTrace), inbound: await frame.locator('body').evaluate(() => window.__udsInboundEditTrace) }));
   const textUpdated = await frame.locator('#headline').evaluate(node => new Promise(resolve => {
     if (node.textContent === 'Новый заголовок') return resolve(true);
     const observer = new MutationObserver(() => {
