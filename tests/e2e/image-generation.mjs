@@ -44,6 +44,7 @@ const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8
 let textRequests = 0;
 let hintRequests = 0;
 const imageRequests = [];
+let transientImageFailures = 0;
 const appErrors = [];
 try {
   const context = await browser.newContext();
@@ -71,6 +72,12 @@ try {
     }
     if (url.pathname.endsWith('/api/generate-image')) {
       const payload = JSON.parse(request.postData() || '{}');
+      // A transient 503 must be retried without losing the project or
+      // recording a second logical image operation in the AI journal.
+      if (transientImageFailures === 0) {
+        transientImageFailures++;
+        return route.fulfill({ status: 503, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: 'temporary image outage' }) });
+      }
       imageRequests.push(payload);
       return route.fulfill({
         status: 200,
@@ -125,6 +132,7 @@ try {
 
   check(textRequests >= 1, 'локальный fallback не подтвердился: не было неудачных запросов текста');
   check(hintRequests === 1, 'visual-hints вызван ' + hintRequests + ' раз вместо одного');
+  check(transientImageFailures === 1, 'временный HTTP 503 не был смоделирован');
   check(imageRequests.length > 0 && imageRequests.length <= 15, 'неверное число запросов изображений: ' + imageRequests.length);
   check(imageRequests.every(item => typeof item.prompt === 'string' && item.prompt.length > 0 && item.aspect), 'запрос изображения не содержит prompt или aspect');
   check(snapshot.hero.startsWith('data:image/'), 'сгенерированное главное фото не сохранено в images.hero');
