@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-23T18:14:17.388Z
+Время обновления: 2026-11-23T20:18:04.387Z
 Ветка: main
-Последний commit: 3cc96dd4d6ba643001c3f113a142233729b8d136
-Дата коммита: 2026-11-23T22:14:03+04:00
-Сообщение: Verify the live staging image response in the studio (#241)
+Последний commit: 4583f80b332a7fa80b4d90e7fddb7cbb0dd8f88e
+Дата коммита: 2026-11-24T00:17:51+04:00
+Сообщение: Verify staging AI diagnostics and image response CORS (#244)
 
 Последние коммиты:
+- 4583f80 · 2026-11-24 · Verify staging AI diagnostics and image response CORS (#244)
+- 977712b · 2026-11-23 · Cover image retries after 429, 503 and network timeouts (#243)
+- 24a4445 · 2026-11-23 · Stabilize preview card drag in layout E2E (#242)
+- f16b31f · 2026-11-23 · docs: refresh project handoff
 - 3cc96dd · 2026-11-23 · Verify the live staging image response in the studio (#241)
 - 9e77f59 · 2026-11-23 · test: cover image persistence and AI journal after reload (#214) (#239)
 - 42b8066 · 2026-11-23 · docs: refresh project handoff
 - 207bb48 · 2026-11-23 · fix: explain blank previews for JavaScript-driven pages (#238)
-- 67a74ab · 2026-11-23 · docs: refresh project handoff
-- 395b1cb · 2026-11-23 · feat: drag, resize and rotate imported page elements (#236)
-- 0bdb0db · 2026-11-23 · docs: refresh project handoff
-- e701adb · 2026-11-23 · fix: auto-load GitHub page before template analysis (#237)
 <!-- HANDOFF:AUTO:END -->
