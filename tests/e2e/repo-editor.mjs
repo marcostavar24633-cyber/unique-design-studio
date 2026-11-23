@@ -65,6 +65,14 @@ try {
   await page.waitForFunction(() => Number.parseInt(document.querySelector('#repo-structure-count')?.textContent, 10) > 0);
   const frame = page.frameLocator('#repo-frame');
   await frame.locator('body').evaluate(() => { window.__udsInboundEditTrace = []; window.addEventListener('message', event => { if (event.data?.type === 'uds-repo-edit') { window.__udsInboundEditTrace.push(event.data); parent.postMessage({ type: 'uds-test-edit-received', patch: event.data.patch }, '*'); } }); });
+  await page.evaluate(() => {
+    window.__udsParentPointerTrace = [];
+    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsParentPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, x: event.clientX, y: event.clientY }), true);
+  });
+  await frame.locator('body').evaluate(() => {
+    window.__udsPointerTrace = [];
+    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, pointerId: event.pointerId, x: event.clientX, y: event.clientY }), true);
+  });
   await page.click('#repo-structure summary');
   await page.fill('#repo-node-filter', 'Старая надпись');
   const treeItem = page.locator('#repo-node-tree [data-node-key]').filter({ hasText: 'Старая надпись' });
@@ -75,9 +83,11 @@ try {
   await page.fill('#repo-node-filter', '');
   await frame.locator('#headline').click();
   await page.waitForFunction(() => document.querySelector('#repo-selection')?.textContent?.startsWith('Элемент №'));
-  const beforeMove = await frame.locator('#headline').boundingBox();
-  await page.mouse.move(beforeMove.x + beforeMove.width / 2, beforeMove.y + beforeMove.height / 2);
-  await page.mouse.down(); await page.mouse.move(beforeMove.x + beforeMove.width / 2 + 34, beforeMove.y + beforeMove.height / 2 + 18, { steps: 4 }); await page.mouse.up();
+  const textPoint = await frame.locator('#headline').evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); const r = range.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const iframeBox = await page.locator('#repo-frame').boundingBox();
+  const startX = iframeBox.x + 1 + textPoint.x, startY = iframeBox.y + 1 + textPoint.y;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down(); await page.mouse.move(startX + 34, startY + 18, { steps: 4 }); await page.mouse.up();
   try {
     await page.waitForFunction(() => Number(document.querySelector('#repo-x')?.value) >= 30);
   } catch (error) {
@@ -103,14 +113,6 @@ try {
     return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === handle;
   });
   check(resizeHitTarget, 'маркер размера не попадает в область hit-testing iframe');
-  await page.evaluate(() => {
-    window.__udsParentPointerTrace = [];
-    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsParentPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, x: event.clientX, y: event.clientY }), true);
-  });
-  await frame.locator('body').evaluate(() => {
-    window.__udsPointerTrace = [];
-    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, pointerId: event.pointerId, x: event.clientX, y: event.clientY }), true);
-  });
   const widthBeforeResize = Number(await page.inputValue('#repo-width'));
   await page.mouse.move(resizeHandle.x + resizeHandle.width / 2, resizeHandle.y + resizeHandle.height / 2);
   await page.mouse.down(); await page.mouse.move(resizeHandle.x + resizeHandle.width / 2 + 28, resizeHandle.y + resizeHandle.height / 2 + 18, { steps: 4 }); await page.mouse.up();
