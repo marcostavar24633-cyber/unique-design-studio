@@ -99,6 +99,7 @@ function renderMode() {
 
 // Импорт публичного GitHub-репозитория: читаем только git blobs и не выполняем код источника.
 let githubRepo = null;
+let githubLoadedKey = '';
 const githubApi = 'https://api.github.com';
 const githubHeaders = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
 function parseGitHubRepo(value) {
@@ -143,21 +144,28 @@ $('#github-connect').addEventListener('click', async () => {
     const rank = path => /(^|\/)index\.html?$/i.test(path) ? (path === 'index.html' ? 0 : /^(public|dist|build)\//i.test(path) ? 1 : 2) : 3;
     pages.sort((a, b) => rank(a.path) - rank(b.path) || a.path.localeCompare(b.path));
     githubRepo = { ...parsed, branch, base, files: tree.tree || [], pages };
+    githubLoadedKey = '';
     const select = $('#github-html-file'); select.replaceChildren(...pages.slice(0, 100).map(file => new Option(file.path, file.path)));
     $('#github-files').hidden = false;
-    $('#github-import-status').textContent = `Найдено HTML-страниц: ${pages.length}. Ветка по умолчанию: ${branch}. Выберите страницу для загрузки.`;
+    $('#source-url').value = `https://github.com/${parsed.owner}/${parsed.name}`;
+    if (!$('#template-name').value.trim()) $('#template-name').value = `${parsed.name} — копия сайта`.slice(0, 120);
+    $('#github-import-status').textContent = `Найдено HTML-страниц: ${pages.length}. Ветка: ${branch}. Выбранная страница загрузится автоматически при начале анализа.`;
   } catch (error) {
     githubRepo = null; $('#github-files').hidden = true;
     $('#github-import-status').textContent = error.message || 'Не удалось прочитать репозиторий.';
   } finally { button.disabled = false; }
 });
-$('#github-load-page').addEventListener('click', async () => {
-  if (!githubRepo) return;
+$('#github-html-file').addEventListener('change', () => { githubLoadedKey = ''; });
+async function loadGitHubPage() {
+  if (!githubRepo) return false;
   const button = $('#github-load-page'); button.disabled = true;
   try {
     const path = $('#github-html-file').value;
     const file = githubRepo.pages.find(item => item.path === path);
     if (!file) throw new Error('Выберите HTML-страницу из списка.');
+    const loadedKey = `${githubRepo.owner}/${githubRepo.name}@${githubRepo.branch}:${path}`;
+    if (githubLoadedKey === loadedKey && (pasted.get(validUrl($('#source-url').value)) || '').trim()) return true;
+    githubLoadedKey = '';
     $('#github-import-status').textContent = `Загружаю ${path} и связанные таблицы стилей…`;
     const htmlBlob = await githubJson(`${githubRepo.base}/git/blobs/${file.sha}`);
     const html = decodeGitHubBlob(htmlBlob, 4_000_000);
@@ -192,11 +200,16 @@ $('#github-load-page').addEventListener('click', async () => {
     pasted.set(canonicalUrl, html);
     const textarea = $('#html-inputs textarea'); if (textarea) textarea.value = html;
     $('#css-input').value = cssParts.join('\n\n');
-    $('#github-import-status').textContent = `Загружена копия ${path}; CSS-файлов: ${cssParts.length}. Код сайта не запускался и репозиторий не менялся. Теперь нажмите «Начать анализ».`;
+    githubLoadedKey = loadedKey;
+    $('#github-import-status').textContent = `Загружена копия ${path}; CSS-файлов: ${cssParts.length}. Код сайта не запускался. Запускаю анализ…`;
+    return true;
   } catch (error) {
     $('#github-import-status').textContent = error.message || 'Не удалось загрузить файлы репозитория.';
+    setStatus(error.message || 'Не удалось загрузить файлы GitHub.', true);
+    return false;
   } finally { button.disabled = false; }
-});
+}
+$('#github-load-page').addEventListener('click', loadGitHubPage);
 function renderWorker() {
   const ep = getEndpoint();
   const chip = $('#worker-chip');
@@ -371,6 +384,11 @@ $('#template-form').addEventListener('submit', async e => {
   if (!src) return;
   const m = mode();
   if (m === 'manual') return openEditor(normalizeTemplate({ ...src, analysis: { source: 'manual' } }), { isNew: true, manual: true });
+  if (m === 'github') {
+    if (!githubRepo) { setStatus('Сначала найдите публичный GitHub-репозиторий и выберите HTML-страницу.', true); return; }
+    if (!await loadGitHubPage()) return;
+    await runAnalysis(src, 'github'); return;
+  }
   if (m === 'worker' && !getEndpoint()) { setStatus('Анализатор-сервер не подключён. Укажите адрес Worker в настройках или выберите другой способ.', true); $('#worker-settings').open = true; $('#worker-endpoint').focus(); return; }
   if (m === 'html' && ![src.url, ...src.pages].some(u => (pasted.get(u) || '').trim())) {
     const workerMode = document.querySelector('input[name=mode][value="worker"]');
