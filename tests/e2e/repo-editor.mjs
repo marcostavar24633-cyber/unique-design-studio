@@ -64,6 +64,7 @@ try {
   await page.waitForSelector('#editor-workspace:not([hidden])');
   await page.waitForFunction(() => Number.parseInt(document.querySelector('#repo-structure-count')?.textContent, 10) > 0);
   const frame = page.frameLocator('#repo-frame');
+  await frame.locator('body').evaluate(() => { window.__udsInboundEditTrace = []; window.addEventListener('message', event => { if (event.data?.type === 'uds-repo-edit') { window.__udsInboundEditTrace.push(event.data); parent.postMessage({ type: 'uds-test-edit-received', patch: event.data.patch }, '*'); } }); });
   await page.click('#repo-structure summary');
   await page.fill('#repo-node-filter', 'Старая надпись');
   const treeItem = page.locator('#repo-node-tree [data-node-key]').filter({ hasText: 'Старая надпись' });
@@ -153,6 +154,8 @@ try {
   await page.fill('#repo-x', '18');
   await page.fill('#repo-y', '-9');
   await page.click('#repo-apply');
+  await page.waitForTimeout(50);
+  console.error('Repo editor edit diagnostic:', JSON.stringify({ selection: await page.locator('#repo-selection').textContent(), inputs: { text: await page.inputValue('#repo-text'), color: await page.inputValue('#repo-color'), rotation: await page.inputValue('#repo-rotation'), x: await page.inputValue('#repo-x') }, editMessages: messages.filter(item => item?.type === 'uds-test-edit-received' || item?.type === 'uds-repo-transform').slice(-8), inbound: await frame.locator('body').evaluate(() => window.__udsInboundEditTrace) }));
   const textUpdated = await frame.locator('#headline').evaluate(node => new Promise(resolve => {
     if (node.textContent === 'Новый заголовок') return resolve(true);
     const observer = new MutationObserver(() => {
