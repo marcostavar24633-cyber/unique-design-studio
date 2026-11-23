@@ -30,7 +30,7 @@
   <section id="editor-workspace" class="repo-workspace" hidden>
     <div class="repo-toolbar"><div><b id="repo-current-file"></b><small>Предпросмотр без JavaScript исходного сайта</small></div><div class="actions"><button id="repo-download" class="primary" type="button">Скачать изменённый HTML</button><button id="repo-reset" type="button">Сбросить все правки</button></div></div>
     <div class="repo-layout">
-      <div class="repo-preview"><iframe id="repo-frame" title="Безопасный предпросмотр сайта" sandbox="allow-scripts"></iframe><p class="hint">Нажмите элемент, чтобы выбрать его; перетащите выбранный, чтобы переместить. Круглый маркер сверху меняет наклон; квадратный внизу справа — размер. Ссылки и формы отключены.</p></div>
+      <div class="repo-preview"><iframe id="repo-frame" title="Безопасный предпросмотр сайта" sandbox="allow-scripts"></iframe><p id="repo-preview-warning" class="repo-preview-warning" role="status" aria-live="polite" hidden></p><p class="hint">Нажмите элемент, чтобы выбрать его; перетащите выбранный, чтобы переместить. Круглый маркер сверху меняет наклон; квадратный внизу справа — размер. Ссылки и формы отключены.</p></div>
       <aside class="repo-inspector" aria-label="Настройки выбранного элемента">
         <details id="repo-structure" class="repo-structure">
           <summary>Структура страницы <span id="repo-structure-count">—</span></summary>
