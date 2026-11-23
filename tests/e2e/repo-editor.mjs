@@ -14,6 +14,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="styles
 <script>parent.postMessage({type:'source-script-ran'}, '*')</script><button id="unsafe" onclick="parent.postMessage({type:'source-handler-ran'}, '*')">Не запускать</button>
 </body></html>`;
 const css = 'body{background:#fafafa;color:#202329}#headline{font-size:28px;color:#123456}';
+const clientHtml = `<!doctype html><html><head><meta charset="utf-8"></head><body><div id="app"></div><script>parent.postMessage({type:'client-script-ran'}, '*')</script></body></html>`;
 const blob = content => ({ encoding: 'base64', content: Buffer.from(content).toString('base64') });
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
@@ -47,10 +48,12 @@ try {
     if (url.pathname === '/repos/example/site/git/trees/main') {
       await route.fulfill({ json: { truncated: false, tree: [
         { type: 'blob', path: 'index.html', size: Buffer.byteLength(html), sha: 'html-blob' },
+        { type: 'blob', path: 'client.html', size: Buffer.byteLength(clientHtml), sha: 'client-blob' },
         { type: 'blob', path: 'styles.css', size: Buffer.byteLength(css), sha: 'css-blob' },
       ] } }); return;
     }
     if (url.pathname === '/repos/example/site/git/blobs/html-blob') { await route.fulfill({ json: blob(html) }); return; }
+    if (url.pathname === '/repos/example/site/git/blobs/client-blob') { await route.fulfill({ json: blob(clientHtml) }); return; }
     if (url.pathname === '/repos/example/site/git/blobs/css-blob') { await route.fulfill({ json: blob(css) }); return; }
     await route.fulfill({ status: 404, json: { message: 'not found' } });
   });
@@ -59,7 +62,7 @@ try {
   await page.fill('#repo-url', 'https://github.com/example/site');
   await page.click('#repo-connect');
   await page.waitForSelector('#repo-pages-row:not([hidden])');
-  check(await page.locator('#repo-page option').count() === 1, 'HTML-страница не найдена в списке репозитория');
+  check(await page.locator('#repo-page option').count() === 2, 'HTML-страницы не найдены в списке репозитория');
   await page.click('#repo-load');
   await page.waitForSelector('#editor-workspace:not([hidden])');
   await page.waitForFunction(() => Number.parseInt(document.querySelector('#repo-structure-count')?.textContent, 10) > 0);
@@ -181,6 +184,11 @@ try {
   await page.click('#repo-reset');
   await frame.locator('#headline').click();
   check((await frame.locator('#headline').textContent()) === 'Старая надпись', 'сброс не вернул исходную страницу');
+  await page.selectOption('#repo-page', 'client.html');
+  await page.click('#repo-load');
+  await page.waitForFunction(() => document.querySelector('#repo-preview-warning')?.hidden === false);
+  check((await page.textContent('#repo-preview-warning')).includes('не запускает скрипты'), 'пустой JavaScript-сайт не объясняет причину отсутствия предпросмотра');
+  check(!messages.some(item => item?.type === 'client-script-ran'), 'скрипт JS-страницы выполнился в безопасном предпросмотре');
   check(errors.length === 0, `ошибки браузера: ${errors.join('; ')}`);
   await page.close();
 } finally {

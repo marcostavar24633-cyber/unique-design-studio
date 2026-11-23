@@ -62,6 +62,18 @@ function rewriteCssUrls(css, stylesheetUrl, repoRootUrl) {
   });
 }
 
+function emptyScriptShellWarning(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const hasExecutableScript = [...doc.querySelectorAll('script')].some(script => script.src || script.textContent.trim());
+  if (!hasExecutableScript) return '';
+  const body = doc.body.cloneNode(true);
+  body.querySelectorAll('script,style,template,noscript,meta,link').forEach(node => node.remove());
+  const hasText = Boolean(body.textContent.replace(/\s+/g, '').trim());
+  const hasVisualContent = Boolean(body.querySelector('img[src],svg,canvas,video[poster],audio[src],table,button,input,select,textarea'));
+  if (hasText || hasVisualContent) return '';
+  return 'Похоже, эта страница создаёт содержимое с помощью JavaScript. Редактор намеренно не запускает скрипты из репозитория, поэтому предпросмотр может быть пустым. Выберите готовый HTML из dist/, build/ или docs/, если он есть.';
+}
+
 function buildPreview(html, baseUrl, cssParts, repoRootUrl) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   for (const meta of [...doc.querySelectorAll('meta[http-equiv]')]) {
@@ -172,6 +184,10 @@ $('#repo-load').addEventListener('click', async () => {
     originalHtml = html; importedCss = cssParts; edits = Object.create(null); changed.clear(); selectedKey = '';
     const rawPage = toRawUrl(path); const rawBase = rawPage.slice(0, rawPage.lastIndexOf('/') + 1);
     $('#repo-frame').srcdoc = buildPreview(html, rawBase, cssParts, toRawUrl(''));
+    const previewWarning = emptyScriptShellWarning(html);
+    const warningElement = $('#repo-preview-warning');
+    warningElement.textContent = previewWarning;
+    warningElement.hidden = !previewWarning;
     $('#repo-current-file').textContent = path;
     $('#editor-workspace').hidden = false;
     $('#repo-apply').disabled = false;
