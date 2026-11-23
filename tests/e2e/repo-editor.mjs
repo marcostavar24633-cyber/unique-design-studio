@@ -83,6 +83,19 @@ try {
   await page.fill('#repo-node-filter', '');
   await frame.locator('#headline').click();
   await page.waitForFunction(() => document.querySelector('#repo-selection')?.textContent?.startsWith('Элемент №'));
+  await frame.locator('#headline').evaluate(node => new Promise(resolve => {
+    let previous = '';
+    let stable = 0;
+    const started = performance.now();
+    const check = () => {
+      const rect = node.getBoundingClientRect();
+      const current = `${rect.left.toFixed(2)}:${rect.top.toFixed(2)}:${rect.width.toFixed(2)}:${rect.height.toFixed(2)}:${scrollX}:${scrollY}`;
+      stable = current === previous ? stable + 1 : 0; previous = current;
+      if (stable >= 4 || performance.now() - started > 2200) resolve();
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
   const textPoint = await frame.locator('#headline').evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); const r = range.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
   const iframeBox = await page.locator('#repo-frame').boundingBox();
   const startX = iframeBox.x + 1 + textPoint.x, startY = iframeBox.y + 1 + textPoint.y;
