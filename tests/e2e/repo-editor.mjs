@@ -77,7 +77,24 @@ try {
   const beforeMove = await frame.locator('#headline').boundingBox();
   await page.mouse.move(beforeMove.x + beforeMove.width / 2, beforeMove.y + beforeMove.height / 2);
   await page.mouse.down(); await page.mouse.move(beforeMove.x + beforeMove.width / 2 + 34, beforeMove.y + beforeMove.height / 2 + 18, { steps: 4 }); await page.mouse.up();
-  await page.waitForFunction(() => Number(document.querySelector('#repo-x')?.value) >= 30);
+  try {
+    await page.waitForFunction(() => Number(document.querySelector('#repo-x')?.value) >= 30);
+  } catch (error) {
+    const inspector = await page.locator('#repo-x').inputValue();
+    const frameState = await frame.locator('#headline').evaluate(node => ({
+      translate: getComputedStyle(node).translate,
+      selected: node.classList.contains('uds-repo-selected'),
+      rect: (() => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })(),
+      centerHit: (() => { const r = node.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { tag: hit?.tagName, id: hit?.id, key: hit?.dataset?.udsRepoKey }; })(),
+    }));
+    console.error('Repo editor drag diagnostic:', JSON.stringify({
+      inspectorX: inspector,
+      frameState,
+      recentMessages: messages.filter(item => item?.type?.startsWith('uds-repo-')).slice(-8),
+      pageErrors: errors,
+    }));
+    throw error;
+  }
   check(Number(await page.inputValue('#repo-y')) >= 15, 'перетаскивание не обновило вертикальное смещение');
   const resizeHandle = await frame.locator('#uds-repo-resize').boundingBox();
   const resizeHitTarget = await frame.locator('#uds-repo-resize').evaluate(handle => {
