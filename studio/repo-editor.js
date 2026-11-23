@@ -68,7 +68,7 @@ function emptyScriptShellWarning(html) {
   if (!hasExecutableScript) return '';
   const body = doc.body.cloneNode(true);
   body.querySelectorAll('script,style,template,noscript,meta,link').forEach(node => node.remove());
-  const hasText = Boolean(body.textContent.replace(/\\s+/g, '').trim());
+  const hasText = Boolean(body.textContent.replace(/\s+/g, '').trim());
   const hasVisualContent = Boolean(body.querySelector('img[src],svg,canvas,video[poster],audio[src],table,button,input,select,textarea'));
   if (hasText || hasVisualContent) return '';
   return 'Похоже, эта страница создаёт содержимое с помощью JavaScript. Редактор намеренно не запускает скрипты из репозитория, поэтому предпросмотр может быть пустым. Выберите готовый HTML из dist/, build/ или docs/, если он есть.';
