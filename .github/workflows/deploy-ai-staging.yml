@@ -79,12 +79,24 @@ jobs:
             echo "Temporary remote Worker did not become ready."
             exit 1
           fi
+          studio_origin='https://marcostavar24633-cyber.github.io'
+          image_url='http://127.0.0.1:8787/api/generate-image'
+          preflight="$(curl --silent --show-error --fail --max-time 15 \
+            -X OPTIONS -D - -o /dev/null \
+            -H "Origin: $studio_origin" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type' \
+            "$image_url")"
+          if ! printf '%s\n' "$preflight" | tr -d '\r' | grep -Fxi "access-control-allow-origin: $studio_origin"; then
+            echo "Image preflight did not allow the studio origin."
+            exit 1
+          fi
           status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
             --max-time 120 \
-            -H 'Origin: https://marcostavar24633-cyber.github.io' \
+            -H "Origin: $studio_origin" \
             -H 'Content-Type: application/json' \
             --data '{"prompt":"Photorealistic editorial image of a small independent coffee shop interior, warm natural window light, oak counter, a single ceramic cup, no text or logos","aspect":"4:3","model":"flux-2-klein-4b"}' \
-            http://127.0.0.1:8787/api/generate-image)"
+            "$image_url")"
           STATUS="$status" RESPONSE_FILE="$response_file" node --input-type=module -e '
             import { readFileSync } from "node:fs";
             const status = Number(process.env.STATUS);
