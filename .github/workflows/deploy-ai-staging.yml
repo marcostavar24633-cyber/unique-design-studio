@@ -54,13 +54,13 @@ jobs:
           : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
           : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
           log_file="$(mktemp)"
-          response_file="$(mktemp)"
+          response_file="$RUNNER_TEMP/uds-staging-image-response.json"
           npx --yes wrangler@4 dev --remote --config config/wrangler.ai-staging.json --ip 127.0.0.1 --port 8787 >"$log_file" 2>&1 &
           wrangler_pid=$!
           cleanup() {
             kill "$wrangler_pid" 2>/dev/null || true
             wait "$wrangler_pid" 2>/dev/null || true
-            rm -f "$log_file" "$response_file"
+            rm -f "$log_file"
           }
           trap cleanup EXIT
           ready=0
@@ -98,3 +98,12 @@ jobs:
             if (bytes < 1024 || bytes > 12 * 1024 * 1024) throw new Error("Image payload size is outside safe bounds");
             console.log(`Workers AI image probe passed: model=${result.model}, ${result.width}x${result.height}, ${bytes} bytes`);
           '
+      - name: Verify studio with the staging image response
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.operation == 'probe') || (github.event_name == 'issue_comment' && github.event.issue.number == 214 && github.event.comment.body == '/run-staging-probe' && github.actor == 'marcostavar24633-cyber') }}
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+          UDS_IMAGE_RESPONSE_FILE="$RUNNER_TEMP/uds-staging-image-response.json" node tests/e2e/image-generation.mjs
+      - name: Remove the staging image response
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/uds-staging-image-response.json"

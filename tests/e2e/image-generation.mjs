@@ -1,6 +1,6 @@
 // Проверка реального клиентского потока генерации изображений через mock Worker.
-// Внешний AI/Cloudflare не вызывается: текстовый endpoint намеренно недоступен,
-// локальный автопилот продолжает работу, а image endpoint возвращает тестовый PNG.
+// Текстовый endpoint имитируется. Ответ для фото — тестовый PNG или JSON,
+// полученный отдельным живым staging probe и переданный через UDS_IMAGE_RESPONSE_FILE.
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
@@ -10,6 +10,21 @@ import { root } from '../helpers.mjs';
 let chromium;
 try { ({ chromium } = createRequire(import.meta.url)('playwright')); }
 catch { console.error('Playwright не найден. Установите его перед запуском E2E.'); process.exit(1); }
+
+const imageResponseFile = process.env.UDS_IMAGE_RESPONSE_FILE;
+const imageResponse = imageResponseFile ? JSON.parse(readFileSync(imageResponseFile, 'utf8')) : {
+  image: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=',
+  mimeType: 'image/png',
+  model: 'mock-flux',
+  usage: { totalTokens: 7 },
+  route: 'direct',
+  provider: 'cloudflare'
+};
+const matchesImageJournal = entry => entry.status === 'ok'
+  && entry.model === imageResponse.model
+  && entry.route === (imageResponse.route || '')
+  && entry.provider === (imageResponse.provider || '')
+  && (entry.tokens ?? null) === (imageResponse.usage?.totalTokens ?? null);
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
 const servingRoot = realpathSync(root);
@@ -40,7 +55,6 @@ const base = 'http://127.0.0.1:' + server.address().port;
 const browser = await chromium.launch();
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
-const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=';
 let textRequests = 0;
 let hintRequests = 0;
 const imageRequests = [];
@@ -83,14 +97,7 @@ try {
         status: 200,
         headers: cors,
         contentType: 'application/json',
-        body: JSON.stringify({
-          image: tinyPng,
-          mimeType: 'image/png',
-          model: 'mock-flux',
-          usage: { totalTokens: 7 },
-          route: 'direct',
-          provider: 'cloudflare'
-        })
+        body: JSON.stringify(imageResponse)
       });
     }
     return route.fulfill({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: 'unexpected mock route' }) });
@@ -139,7 +146,7 @@ try {
   check(snapshot.gallery > 0, 'сгенерированные изображения не добавлены в галерею');
   check([...snapshot.gallerySources, ...snapshot.serviceSources].every(src => typeof src === 'string' && src.startsWith('data:image/')), 'галерея или услуги содержат не встроенный image data URI');
   check(snapshot.imageJournal.length === imageRequests.length, 'журнал AI содержит ' + snapshot.imageJournal.length + ' image-записей при ' + imageRequests.length + ' запросах');
-  check(snapshot.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'журнал не сохранил реальные route/provider/usage-поля mock Worker');
+  check(snapshot.imageJournal.every(matchesImageJournal), 'журнал не сохранил model/route/provider/usage из ответа Worker');
   check(await page.locator('#form .media-preview img').count() > 0, 'главное изображение не отображается в редакторе');
   check(await page.locator('#form [data-gallery-item]').count() > 0, 'галерея не отрисовала сгенерированные изображения');
   check(snapshot.services > 0, 'сгенерированные изображения не сохранены в карточках услуг');
@@ -167,7 +174,7 @@ try {
   check(JSON.stringify(restored.serviceSources) === JSON.stringify(snapshot.serviceSources), 'источники изображений услуг изменились после перезагрузки');
   check(imageRequests.length === snapshot.imageJournal.length, 'перезагрузка неожиданно вызвала повторную генерацию изображений');
   check(restored.imageJournal.length === snapshot.imageJournal.length, 'AI journal потерял записи после перезагрузки');
-  check(restored.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'AI journal потерял provider/route/usage после перезагрузки');
+  check(restored.imageJournal.every(matchesImageJournal), 'AI journal потерял model/route/provider/usage после перезагрузки');
   check(appErrors.length === 0, 'ошибки JavaScript студии: ' + appErrors.join('; '));
 
   await context.close();
@@ -176,4 +183,6 @@ try {
   server.close();
 }
 if (failures.length) { console.error('Image generation E2E: ' + failures.join('\n- ')); process.exit(1); }
-console.log('Image generation E2E пройден: fallback на локальный автопилот, visual hints, Worker image mock, оптимизация, вставка фото и AI journal.');
+console.log(imageResponseFile
+  ? 'Staging image E2E пройден: вставка изображения Cloudflare, сохранение, перезагрузка и AI journal.'
+  : 'Image generation E2E пройден: mock Worker, вставка, сохранение и AI journal.');
