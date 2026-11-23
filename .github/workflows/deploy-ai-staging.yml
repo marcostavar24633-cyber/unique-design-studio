@@ -54,13 +54,14 @@ jobs:
           : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
           : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
           log_file="$(mktemp)"
+          response_headers="$(mktemp)"
           response_file="$RUNNER_TEMP/uds-staging-image-response.json"
           npx --yes wrangler@4 dev --remote --config config/wrangler.ai-staging.json --ip 127.0.0.1 --port 8787 >"$log_file" 2>&1 &
           wrangler_pid=$!
           cleanup() {
             kill "$wrangler_pid" 2>/dev/null || true
             wait "$wrangler_pid" 2>/dev/null || true
-            rm -f "$log_file"
+            rm -f "$log_file" "$response_headers"
           }
           trap cleanup EXIT
           ready=0
@@ -80,7 +81,17 @@ jobs:
             exit 1
           fi
           studio_origin='https://marcostavar24633-cyber.github.io'
-          image_url='http://127.0.0.1:8787/api/generate-image'
+          worker_url='http://127.0.0.1:8787'
+          image_url="$worker_url/api/generate-image"
+          curl --silent --show-error --fail --max-time 15 -H "Origin: $studio_origin" "$worker_url/api/diagnostics" \
+            | node -e '
+              const diagnostics = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+              if (diagnostics.ok !== true || diagnostics.service !== "unique-design-studio-ai" ||
+                  diagnostics.runtime?.workersAiBindingConfigured !== true) {
+                throw new Error("Staging diagnostics did not confirm the Workers AI binding");
+              }
+              console.log("Staging diagnostics confirmed the Workers AI binding.");
+            '
           preflight="$(curl --silent --show-error --fail --max-time 15 \
             -X OPTIONS -D - -o /dev/null \
             -H "Origin: $studio_origin" \
@@ -91,12 +102,16 @@ jobs:
             echo "Image preflight did not allow the studio origin."
             exit 1
           fi
-          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+          status="$(curl --silent --show-error --output "$response_file" --dump-header "$response_headers" --write-out '%{http_code}' \
             --max-time 120 \
             -H "Origin: $studio_origin" \
             -H 'Content-Type: application/json' \
             --data '{"prompt":"Photorealistic editorial image of a small independent coffee shop interior, warm natural window light, oak counter, a single ceramic cup, no text or logos","aspect":"4:3","model":"flux-2-klein-4b"}' \
             "$image_url")"
+          if ! tr -d '\r' <"$response_headers" | grep -Fxi "access-control-allow-origin: $studio_origin"; then
+            echo "Image response did not allow the studio origin."
+            exit 1
+          fi
           STATUS="$status" RESPONSE_FILE="$response_file" node --input-type=module -e '
             import { readFileSync } from "node:fs";
             const status = Number(process.env.STATUS);
