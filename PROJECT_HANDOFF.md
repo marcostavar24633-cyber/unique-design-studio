@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-22T19:34:16.585Z
+Время обновления: 2026-11-23T02:35:23.891Z
 Ветка: main
-Последний commit: 6c2a7e4029effa50b435e2b47bf77782524bd93a
-Дата коммита: 2026-11-22T23:34:05+04:00
-Сообщение: feat: add searchable HTML structure panel
+Последний commit: e701adbbbb1357e631e57912df0fa8c14b360148
+Дата коммита: 2026-11-23T06:35:10+04:00
+Сообщение: fix: auto-load GitHub page before template analysis (#237)
 
 Последние коммиты:
+- e701adb · 2026-11-23 · fix: auto-load GitHub page before template analysis (#237)
+- b24a6df · 2026-11-22 · docs: refresh project handoff
 - 6c2a7e4 · 2026-11-22 · feat: add searchable HTML structure panel
 - e3549d6 · 2026-11-22 · docs: refresh project handoff
 - 6fcc88c · 2026-11-22 · test: cover repository page editor in Playwright
 - 9835aa5 · 2026-11-22 · docs: refresh project handoff
 - 0d62973 · 2026-11-22 · feat: add safe static repository page editor
 - c82f17b · 2026-11-22 · docs: refresh project handoff
-- 3274023 · 2026-11-22 · feat: import public GitHub site sources for analysis (#232)
-- fc2ce29 · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
