@@ -58,7 +58,9 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 let textRequests = 0;
 let hintRequests = 0;
 const imageRequests = [];
-let transientImageFailures = 0;
+const transientFailures = ['server outage', 'rate limit', 'network timeout'];
+const failedImageRequests = new Map();
+const recoveredImageFailures = new Set();
 const appErrors = [];
 try {
   const context = await browser.newContext();
@@ -86,12 +88,24 @@ try {
     }
     if (url.pathname.endsWith('/api/generate-image')) {
       const payload = JSON.parse(request.postData() || '{}');
-      // A transient 503 must be retried without losing the project or
-      // recording a second logical image operation in the AI journal.
-      if (transientImageFailures === 0) {
-        transientImageFailures++;
-        return route.fulfill({ status: 503, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: 'temporary image outage' }) });
+      // Fail one attempt for each of three different image requests.
+      const key = JSON.stringify(payload);
+      const previousFailure = failedImageRequests.get(key);
+      if (!previousFailure && failedImageRequests.size < transientFailures.length) {
+        const failure = transientFailures[failedImageRequests.size];
+        failedImageRequests.set(key, failure);
+        if (failure === 'network timeout') return route.abort('timedout');
+        const headers = failure === 'rate limit'
+          ? { ...cors, 'retry-after': '1', 'access-control-expose-headers': 'retry-after' }
+          : cors;
+        return route.fulfill({
+          status: failure === 'rate limit' ? 429 : 503,
+          headers,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: failure })
+        });
       }
+      if (previousFailure) recoveredImageFailures.add(previousFailure);
       imageRequests.push(payload);
       return route.fulfill({
         status: 200,
@@ -139,7 +153,9 @@ try {
 
   check(textRequests >= 1, 'локальный fallback не подтвердился: не было неудачных запросов текста');
   check(hintRequests === 1, 'visual-hints вызван ' + hintRequests + ' раз вместо одного');
-  check(transientImageFailures === 1, 'временный HTTP 503 не был смоделирован');
+  for (const failure of transientFailures) {
+    check(recoveredImageFailures.has(failure), 'не подтверждён успешный повтор запроса: ' + failure);
+  }
   check(imageRequests.length > 0 && imageRequests.length <= 15, 'неверное число запросов изображений: ' + imageRequests.length);
   check(imageRequests.every(item => typeof item.prompt === 'string' && item.prompt.length > 0 && item.aspect), 'запрос изображения не содержит prompt или aspect');
   check(snapshot.hero.startsWith('data:image/'), 'сгенерированное главное фото не сохранено в images.hero');
