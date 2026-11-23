@@ -102,10 +102,20 @@ try {
     return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === handle;
   });
   check(resizeHitTarget, 'маркер размера не попадает в область hit-testing iframe');
+  await frame.locator('body').evaluate(() => {
+    window.__udsPointerTrace = [];
+    for (const type of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(type, event => window.__udsPointerTrace.push({ type, target: event.target.id || event.target.tagName, button: event.button, pointerId: event.pointerId, x: event.clientX, y: event.clientY }), true);
+  });
   const widthBeforeResize = Number(await page.inputValue('#repo-width'));
   await page.mouse.move(resizeHandle.x + resizeHandle.width / 2, resizeHandle.y + resizeHandle.height / 2);
   await page.mouse.down(); await page.mouse.move(resizeHandle.x + resizeHandle.width / 2 + 28, resizeHandle.y + resizeHandle.height / 2 + 18, { steps: 4 }); await page.mouse.up();
-  await page.waitForFunction(value => Number(document.querySelector('#repo-width')?.value) > value, widthBeforeResize);
+  try { await page.waitForFunction(value => Number(document.querySelector('#repo-width')?.value) > value, widthBeforeResize); }
+  catch (error) {
+    const trace = await frame.locator('body').evaluate(() => window.__udsPointerTrace);
+    const style = await frame.locator('#headline').evaluate(node => ({ width: node.style.width, height: node.style.height, overlay: (() => { const r = document.querySelector('#uds-repo-overlay').getBoundingClientRect(); return { left:r.left,top:r.top,width:r.width,height:r.height }; })() }));
+    console.error('Repo editor resize diagnostic:', JSON.stringify({ widthBeforeResize, widthAfter: await page.inputValue('#repo-width'), trace, style, pageErrors: errors }));
+    throw error;
+  }
   check(Number(await page.inputValue('#repo-height')) > 0, 'маркер изменения размера не обновил высоту');
   const rotateHandle = await frame.locator('#uds-repo-rotate').boundingBox();
   const afterResize = await frame.locator('#headline').boundingBox();
