@@ -74,6 +74,78 @@ try {
   await page.fill('#repo-node-filter', '');
   await frame.locator('#headline').click();
   await page.waitForFunction(() => document.querySelector('#repo-selection')?.textContent?.startsWith('Элемент №'));
+  await frame.locator('#headline').evaluate(node => new Promise(resolve => {
+    let previous = '';
+    let stable = 0;
+    const started = performance.now();
+    const check = () => {
+      const rect = node.getBoundingClientRect();
+      const current = `${rect.left.toFixed(2)}:${rect.top.toFixed(2)}:${rect.width.toFixed(2)}:${rect.height.toFixed(2)}:${scrollX}:${scrollY}`;
+      stable = current === previous ? stable + 1 : 0; previous = current;
+      if (stable >= 4 || performance.now() - started > 2200) resolve();
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
+  const textPoint = await frame.locator('#headline').evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); const r = range.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  const iframeBox = await page.locator('#repo-frame').boundingBox();
+  const startX = iframeBox.x + 1 + textPoint.x, startY = iframeBox.y + 1 + textPoint.y;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down(); await page.mouse.move(startX + 34, startY + 18, { steps: 4 }); await page.mouse.up();
+  try {
+    await page.waitForFunction(() => Number(document.querySelector('#repo-x')?.value) >= 30);
+  } catch (error) {
+    const inspector = await page.locator('#repo-x').inputValue();
+    const frameState = await frame.locator('#headline').evaluate(node => ({
+      translate: getComputedStyle(node).translate,
+      selected: node.classList.contains('uds-repo-selected'),
+      rect: (() => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })(),
+      centerHit: (() => { const r = node.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { tag: hit?.tagName, id: hit?.id, key: hit?.dataset?.udsRepoKey }; })(),
+    }));
+    console.error('Repo editor drag diagnostic:', JSON.stringify({
+      inspectorX: inspector,
+      frameState,
+      recentMessages: messages.filter(item => item?.type?.startsWith('uds-repo-')).slice(-8),
+      pageErrors: errors,
+    }));
+    throw error;
+  }
+  check(Number(await page.inputValue('#repo-y')) >= 15, 'перетаскивание не обновило вертикальное смещение');
+  const resizeHandle = await frame.locator('#uds-repo-resize').boundingBox();
+  const resizeHitTarget = await frame.locator('#uds-repo-resize').evaluate(handle => {
+    const rect = handle.getBoundingClientRect();
+    return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === handle;
+  });
+  check(resizeHitTarget, 'маркер размера не попадает в область hit-testing iframe');
+  const widthBeforeResize = Number(await page.inputValue('#repo-width'));
+  await page.mouse.move(resizeHandle.x + resizeHandle.width / 2, resizeHandle.y + resizeHandle.height / 2);
+  await page.mouse.down(); await page.mouse.move(resizeHandle.x + resizeHandle.width / 2 + 28, resizeHandle.y + resizeHandle.height / 2 + 18, { steps: 4 }); await page.mouse.up();
+  try { await page.waitForFunction(value => Number(document.querySelector('#repo-width')?.value) > value, widthBeforeResize); }
+  catch (error) {
+    const boxes = { handle: resizeHandle, iframe: await page.locator('#repo-frame').boundingBox() };
+    const style = await frame.locator('#headline').evaluate(node => ({ width: node.style.width, height: node.style.height, overlay: (() => { const r = document.querySelector('#uds-repo-overlay').getBoundingClientRect(); return { left:r.left,top:r.top,width:r.width,height:r.height }; })() }));
+    console.error('Repo editor resize diagnostic:', JSON.stringify({ widthBeforeResize, widthAfter: await page.inputValue('#repo-width'), boxes, style, pageErrors: errors }));
+    throw error;
+  }
+  check(Number(await page.inputValue('#repo-height')) > 0, 'маркер изменения размера не обновил высоту');
+  const rotateHandle = await frame.locator('#uds-repo-rotate').boundingBox();
+  const afterResize = await frame.locator('#headline').boundingBox();
+  const centerX = afterResize.x + afterResize.width / 2, centerY = afterResize.y + afterResize.height / 2;
+  const rotateX = rotateHandle.x + rotateHandle.width / 2, rotateY = rotateHandle.y + rotateHandle.height / 2;
+  const radius = Math.hypot(rotateX - centerX, rotateY - centerY);
+  const rotateHitTarget = await frame.locator('#uds-repo-rotate').evaluate(handle => { const r = handle.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === handle; });
+  check(rotateHitTarget, 'маркер наклона не попадает в область hit-testing iframe');
+  const angle = Math.atan2(rotateY - centerY, rotateX - centerX) + 0.35;
+  await page.mouse.move(rotateX, rotateY); await page.mouse.down();
+  await page.mouse.move(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius, { steps: 4 }); await page.mouse.up();
+  try { await page.waitForFunction(() => Math.abs(Number(document.querySelector('#repo-rotation')?.value)) > 0); }
+  catch (error) {
+    const trace = await frame.locator('body').evaluate(() => window.__udsPointerTrace);
+    const parentTrace = await page.evaluate(() => window.__udsParentPointerTrace);
+    console.error('Repo editor rotation diagnostic:', JSON.stringify({ rotateHitTarget, rotateHandle, afterResize, rotation: await page.inputValue('#repo-rotation'), pageErrors: errors }));
+    throw error;
+  }
+  check(Math.abs(Number(await page.inputValue('#repo-rotation'))) > 0, 'маркер наклона не обновил угол элемента');
   check((await frame.locator('h1').evaluate(node => getComputedStyle(node).fontSize)) === '28px', 'импортированный CSS не применился');
   check((await frame.locator('#asset').getAttribute('src')).includes('raw.githubusercontent.com/example/site/main/assets/cover.png'), 'корневой путь ресурса не преобразован к GitHub raw');
   check(!messages.some(item => ['source-script-ran', 'source-handler-ran'].includes(item?.type)), 'исходный скрипт или обработчик события запустился');
