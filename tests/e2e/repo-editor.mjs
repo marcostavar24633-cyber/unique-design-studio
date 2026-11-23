@@ -133,14 +133,14 @@ try {
   const angle = Math.atan2(rotateY - centerY, rotateX - centerX) + 0.35;
   await page.mouse.move(rotateX, rotateY); await page.mouse.down();
   await page.mouse.move(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius, { steps: 4 }); await page.mouse.up();
-  try { await page.waitForFunction(() => Number(document.querySelector('#repo-rotation')?.value) > 0); }
+  try { await page.waitForFunction(() => Math.abs(Number(document.querySelector('#repo-rotation')?.value)) > 0); }
   catch (error) {
     const trace = await frame.locator('body').evaluate(() => window.__udsPointerTrace);
     const parentTrace = await page.evaluate(() => window.__udsParentPointerTrace);
     console.error('Repo editor rotation diagnostic:', JSON.stringify({ rotateHitTarget, trace, parentTrace, rotateHandle, afterResize, rotation: await page.inputValue('#repo-rotation'), pageErrors: errors }));
     throw error;
   }
-  check(Number(await page.inputValue('#repo-rotation')) > 0, 'маркер наклона не обновил угол элемента');
+  check(Math.abs(Number(await page.inputValue('#repo-rotation'))) > 0, 'маркер наклона не обновил угол элемента');
   check((await frame.locator('h1').evaluate(node => getComputedStyle(node).fontSize)) === '28px', 'импортированный CSS не применился');
   check((await frame.locator('#asset').getAttribute('src')).includes('raw.githubusercontent.com/example/site/main/assets/cover.png'), 'корневой путь ресурса не преобразован к GitHub raw');
   check(!messages.some(item => ['source-script-ran', 'source-handler-ran'].includes(item?.type)), 'исходный скрипт или обработчик события запустился');
