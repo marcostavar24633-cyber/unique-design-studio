@@ -44,6 +44,7 @@ const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8
 let textRequests = 0;
 let hintRequests = 0;
 const imageRequests = [];
+let transientImageFailures = 0;
 const appErrors = [];
 try {
   const context = await browser.newContext();
@@ -71,6 +72,12 @@ try {
     }
     if (url.pathname.endsWith('/api/generate-image')) {
       const payload = JSON.parse(request.postData() || '{}');
+      // A transient 503 must be retried without losing the project or
+      // recording a second logical image operation in the AI journal.
+      if (transientImageFailures === 0) {
+        transientImageFailures++;
+        return route.fulfill({ status: 503, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: 'temporary image outage' }) });
+      }
       imageRequests.push(payload);
       return route.fulfill({
         status: 200,
@@ -116,21 +123,51 @@ try {
     return {
       hero: raw.images?.hero || '',
       gallery: (raw.gallery || []).filter(item => item?.src).length,
+      gallerySources: (raw.gallery || []).map(item => item?.src).filter(Boolean),
       services: services.filter(item => Array.isArray(item) ? Boolean(item[3]) : Boolean(item?.image)).length,
+      serviceSources: services.map(item => Array.isArray(item) ? item[3] : item?.image).filter(Boolean),
       imageJournal: journal.filter(entry => entry.kind === 'image')
     };
   });
 
   check(textRequests >= 1, 'локальный fallback не подтвердился: не было неудачных запросов текста');
   check(hintRequests === 1, 'visual-hints вызван ' + hintRequests + ' раз вместо одного');
+  check(transientImageFailures === 1, 'временный HTTP 503 не был смоделирован');
   check(imageRequests.length > 0 && imageRequests.length <= 15, 'неверное число запросов изображений: ' + imageRequests.length);
   check(imageRequests.every(item => typeof item.prompt === 'string' && item.prompt.length > 0 && item.aspect), 'запрос изображения не содержит prompt или aspect');
   check(snapshot.hero.startsWith('data:image/'), 'сгенерированное главное фото не сохранено в images.hero');
   check(snapshot.gallery > 0, 'сгенерированные изображения не добавлены в галерею');
+  check([...snapshot.gallerySources, ...snapshot.serviceSources].every(src => typeof src === 'string' && src.startsWith('data:image/')), 'галерея или услуги содержат не встроенный image data URI');
   check(snapshot.imageJournal.length === imageRequests.length, 'журнал AI содержит ' + snapshot.imageJournal.length + ' image-записей при ' + imageRequests.length + ' запросах');
   check(snapshot.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'журнал не сохранил реальные route/provider/usage-поля mock Worker');
   check(await page.locator('#form .media-preview img').count() > 0, 'главное изображение не отображается в редакторе');
   check(await page.locator('#form [data-gallery-item]').count() > 0, 'галерея не отрисовала сгенерированные изображения');
+  check(snapshot.services > 0, 'сгенерированные изображения не сохранены в карточках услуг');
+
+  // A successful in-memory render is not enough: verify that generated image
+  // references and usage metadata survive a full studio reload.
+  await page.reload({ waitUntil: 'networkidle' });
+  const restored = await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('uds:studio:v1') || 'null');
+    const raw = saved?.raw || {};
+    const journal = JSON.parse(localStorage.getItem('uds:ai-journal:v1') || '[]');
+    return {
+      hero: raw.images?.hero || '',
+      gallery: (raw.gallery || []).filter(item => item?.src).length,
+      gallerySources: (raw.gallery || []).map(item => item?.src).filter(Boolean),
+      services: (raw.services || []).filter(item => Array.isArray(item) ? Boolean(item[3]) : Boolean(item?.image)).length,
+      serviceSources: (raw.services || []).map(item => Array.isArray(item) ? item[3] : item?.image).filter(Boolean),
+      imageJournal: journal.filter(entry => entry.kind === 'image')
+    };
+  });
+  check(restored.hero === snapshot.hero, 'главное изображение потеряно после перезагрузки');
+  check(restored.gallery === snapshot.gallery, 'изображения галереи потеряны после перезагрузки');
+  check(JSON.stringify(restored.gallerySources) === JSON.stringify(snapshot.gallerySources), 'источники изображений галереи изменились после перезагрузки');
+  check(restored.services === snapshot.services, 'изображения услуг потеряны после перезагрузки');
+  check(JSON.stringify(restored.serviceSources) === JSON.stringify(snapshot.serviceSources), 'источники изображений услуг изменились после перезагрузки');
+  check(imageRequests.length === snapshot.imageJournal.length, 'перезагрузка неожиданно вызвала повторную генерацию изображений');
+  check(restored.imageJournal.length === snapshot.imageJournal.length, 'AI journal потерял записи после перезагрузки');
+  check(restored.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'AI journal потерял provider/route/usage после перезагрузки');
   check(appErrors.length === 0, 'ошибки JavaScript студии: ' + appErrors.join('; '));
 
   await context.close();
