@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-23T03:41:55.409Z
+Время обновления: 2026-11-23T18:14:17.388Z
 Ветка: main
-Последний commit: 207bb48a479c607e36d1ed4ebe9022a449b90b27
-Дата коммита: 2026-11-23T07:41:41+04:00
-Сообщение: fix: explain blank previews for JavaScript-driven pages (#238)
+Последний commit: 3cc96dd4d6ba643001c3f113a142233729b8d136
+Дата коммита: 2026-11-23T22:14:03+04:00
+Сообщение: Verify the live staging image response in the studio (#241)
 
 Последние коммиты:
+- 3cc96dd · 2026-11-23 · Verify the live staging image response in the studio (#241)
+- 9e77f59 · 2026-11-23 · test: cover image persistence and AI journal after reload (#214) (#239)
+- 42b8066 · 2026-11-23 · docs: refresh project handoff
 - 207bb48 · 2026-11-23 · fix: explain blank previews for JavaScript-driven pages (#238)
 - 67a74ab · 2026-11-23 · docs: refresh project handoff
 - 395b1cb · 2026-11-23 · feat: drag, resize and rotate imported page elements (#236)
 - 0bdb0db · 2026-11-23 · docs: refresh project handoff
 - e701adb · 2026-11-23 · fix: auto-load GitHub page before template analysis (#237)
-- b24a6df · 2026-11-22 · docs: refresh project handoff
-- 6c2a7e4 · 2026-11-22 · feat: add searchable HTML structure panel
-- e3549d6 · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
