@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-23T02:35:23.891Z
+Время обновления: 2026-11-23T03:26:53.263Z
 Ветка: main
-Последний commit: e701adbbbb1357e631e57912df0fa8c14b360148
-Дата коммита: 2026-11-23T06:35:10+04:00
-Сообщение: fix: auto-load GitHub page before template analysis (#237)
+Последний commit: 395b1cb48c146a96f4b3e337dea47c7d9bc0b872
+Дата коммита: 2026-11-23T07:26:39+04:00
+Сообщение: feat: drag, resize and rotate imported page elements (#236)
 
 Последние коммиты:
+- 395b1cb · 2026-11-23 · feat: drag, resize and rotate imported page elements (#236)
+- 0bdb0db · 2026-11-23 · docs: refresh project handoff
 - e701adb · 2026-11-23 · fix: auto-load GitHub page before template analysis (#237)
 - b24a6df · 2026-11-22 · docs: refresh project handoff
 - 6c2a7e4 · 2026-11-22 · feat: add searchable HTML structure panel
 - e3549d6 · 2026-11-22 · docs: refresh project handoff
 - 6fcc88c · 2026-11-22 · test: cover repository page editor in Playwright
 - 9835aa5 · 2026-11-22 · docs: refresh project handoff
-- 0d62973 · 2026-11-22 · feat: add safe static repository page editor
-- c82f17b · 2026-11-22 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
