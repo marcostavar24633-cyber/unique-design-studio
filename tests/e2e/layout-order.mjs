@@ -26,7 +26,7 @@ const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 const appErrors = [];
 try {
-  const context = await browser.newContext({ acceptDownloads: true });
+  const context = await browser.newContext({ acceptDownloads: true, reducedMotion: 'reduce' });
   const page = await context.newPage();
   const seed = { ...full, id: 'layout-order-e2e', brand: 'LAYOUT ORDER E2E', niche: 'салон красоты', architecture: 'editorial', architectureMode: 'manual', sectionOrder: ['about', 'process', 'faq', 'advantages', 'items', 'gallery', 'contact'] };
   await page.addInitScript(raw => localStorage.setItem('uds:studio:v1', JSON.stringify({ raw, library: [] })), seed);
@@ -75,8 +75,10 @@ try {
   // Перетаскивание карточек каталога в предпросмотре (соседние карточки).
   const firstTitle = (await page.locator('#form [data-list="services"]').inputValue()).split('|')[0].trim();
   const cards = frame.locator('[data-arrange="item"]');
-  await cards.first().waitFor();
-  await cards.nth(1).dragTo(cards.nth(0));
+  await cards.nth(1).waitFor();
+  // Начинаем и заканчиваем на краю карточки, вне её интерактивного содержимого.
+  const cardEdge = { x: 6, y: 6 };
+  await cards.nth(1).dragTo(cards.nth(0), { sourcePosition: cardEdge, targetPosition: cardEdge });
   await page.waitForFunction(t => !document.querySelector('#form [data-list="services"]').value.startsWith(t), firstTitle, { timeout: 10000 });
   check(await page.locator('#arrange-toggle').getAttribute('aria-pressed') === 'true', 'кнопка режима не отражает состояние');
 
