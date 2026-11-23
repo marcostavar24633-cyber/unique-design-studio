@@ -155,7 +155,7 @@ try {
   await page.fill('#repo-y', '-9');
   await page.click('#repo-apply');
   await page.waitForTimeout(50);
-  console.error('Repo editor edit diagnostic:', JSON.stringify({ selection: await page.locator('#repo-selection').textContent(), inputs: { text: await page.inputValue('#repo-text'), color: await page.inputValue('#repo-color'), rotation: await page.inputValue('#repo-rotation'), x: await page.inputValue('#repo-x') }, editMessages: messages.filter(item => item?.type === 'uds-test-edit-received' || item?.type === 'uds-repo-transform').slice(-8), inbound: await frame.locator('body').evaluate(() => window.__udsInboundEditTrace) }));
+  console.error('Repo editor edit diagnostic:', JSON.stringify({ selection: await page.locator('#repo-selection').textContent(), inputs: { text: await page.inputValue('#repo-text'), color: await page.inputValue('#repo-color'), rotation: await page.inputValue('#repo-rotation'), x: await page.inputValue('#repo-x') }, editMessages: messages.filter(item => item?.type === 'uds-test-edit-received' || item?.type === 'uds-repo-transform').slice(-8), pointerTrace: await frame.locator('body').evaluate(() => window.__udsPointerTrace), parentTrace: await page.evaluate(() => window.__udsParentPointerTrace), inbound: await frame.locator('body').evaluate(() => window.__udsInboundEditTrace) }));
   const textUpdated = await frame.locator('#headline').evaluate(node => new Promise(resolve => {
     if (node.textContent === 'Новый заголовок') return resolve(true);
     const observer = new MutationObserver(() => {
