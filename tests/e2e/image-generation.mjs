@@ -131,6 +131,27 @@ try {
   check(snapshot.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'журнал не сохранил реальные route/provider/usage-поля mock Worker');
   check(await page.locator('#form .media-preview img').count() > 0, 'главное изображение не отображается в редакторе');
   check(await page.locator('#form [data-gallery-item]').count() > 0, 'галерея не отрисовала сгенерированные изображения');
+  check(snapshot.services > 0, 'сгенерированные изображения не сохранены в карточках услуг');
+
+  // A successful in-memory render is not enough: verify that generated image
+  // references and usage metadata survive a full studio reload.
+  await page.reload({ waitUntil: 'networkidle' });
+  const restored = await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('uds:studio:v1') || 'null');
+    const raw = saved?.raw || {};
+    const journal = JSON.parse(localStorage.getItem('uds:ai-journal:v1') || '[]');
+    return {
+      hero: raw.images?.hero || '',
+      gallery: (raw.gallery || []).filter(item => item?.src).length,
+      services: (raw.services || []).filter(item => Array.isArray(item) ? Boolean(item[3]) : Boolean(item?.image)).length,
+      imageJournal: journal.filter(entry => entry.kind === 'image')
+    };
+  });
+  check(restored.hero === snapshot.hero, 'главное изображение потеряно после перезагрузки');
+  check(restored.gallery === snapshot.gallery, 'изображения галереи потеряны после перезагрузки');
+  check(restored.services === snapshot.services, 'изображения услуг потеряны после перезагрузки');
+  check(restored.imageJournal.length === snapshot.imageJournal.length, 'AI journal потерял записи после перезагрузки');
+  check(restored.imageJournal.some(entry => entry.status === 'ok' && entry.route === 'direct' && entry.provider === 'cloudflare' && entry.tokens === 7), 'AI journal потерял provider/route/usage после перезагрузки');
   check(appErrors.length === 0, 'ошибки JavaScript студии: ' + appErrors.join('; '));
 
   await context.close();
