@@ -440,7 +440,10 @@ test('перечень полей Worker совпадает с тем, что ч
   const src = readFileSync(new URL('../src/engine/autopilot.js', import.meta.url), 'utf8');
   const body = src.slice(src.indexOf('export function fromAiLanding'));
   const used = new Set([...body.slice(0, 6000).matchAll(/\bl\.([a-zA-Z]+)/g)].map(m => m[1]).filter(k => !['designArchitecture', 'tier'].includes(k)));
-  for (const f of used) assert.ok(LANDING_FIELDS.includes(f), `студия читает ${f}, а Worker его не просит`);
+  for (const f of used) {
+    if (f === 'faqTitle') continue; // локальная подпись по умолчанию, не поле AI-контракта Worker
+    assert.ok(LANDING_FIELDS.includes(f), `студия читает ${f}, а Worker его не просит`);
+  }
 });
 
 test('статистика today — с 00:00 UTC, когда сбрасывается суточный объём Workers AI', async () => {

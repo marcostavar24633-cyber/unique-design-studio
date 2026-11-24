@@ -71,9 +71,9 @@ export const paletteToText = palette => (palette || []).map(p => `${p.hex}${p.ro
 export function normalizeTraits(raw) {
   const t = raw && typeof raw === 'object' ? raw : {};
   const list = (v, ok) => [...new Set((Array.isArray(v) ? v : []).map(x => str(x).toLowerCase()).filter(ok))];
-  const one = (v, dict) => (dict[str(v).toLowerCase()] ? str(v).toLowerCase() : '');
+  const one = (v, dict) => (Object.hasOwn(dict, str(v).toLowerCase()) ? str(v).toLowerCase() : '');
   return {
-    archetypes: list(t.archetypes, id => Boolean(ARCHETYPES[id])).slice(0, 3),
+    archetypes: list(t.archetypes, id => Object.hasOwn(ARCHETYPES, id)).slice(0, 3),
     sectionOrder: list(t.sectionOrder, id => SECTION_IDS.includes(id)),
     nav: one(t.nav, NAV_LABELS), shape: one(t.shape, SHAPES), typeCharacter: one(t.typeCharacter, TYPES),
     mode: ['light', 'dark'].includes(t.mode) ? t.mode : '',

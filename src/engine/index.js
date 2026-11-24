@@ -25,9 +25,11 @@ export { GALLERY_FRAMES, imageSlots, slotBrief, imageTaskPackage, reviewImageSet
 export { createVisualIdentity, listVisualIdentityOptions } from '../visual-identity.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */
-export function generate(input, { registry = [], neighbors = 2 } = {}) {
+export function generate(input, options = {}) {
+  const settings = options && typeof options === 'object' ? options : {};
+  const registry = Array.isArray(settings.registry) ? settings.registry : [];
   const project = normalizeProject(input);
-  const concept = buildConcept(project, { registry, neighbors });
+  const concept = buildConcept(project, { registry, neighbors: settings.neighbors });
   const html = renderSite(project, concept);
   const audit = auditSite(html, concept, project);
   const entry = registryEntry(project, concept);
@@ -43,6 +45,8 @@ export { GRAPHIC_DIRECTIONS, chooseGraphicDirection } from './graphic-art-direct
 export { CINEMATIC_PRESETS, CINEMATIC_PRESET_IDS, chooseCinematicLayers, describeCinematicLayers } from './cinematic/visual-layers.js';
 export { TRANSITIONS, TRANSITION_IDS, TRANSITION_LIMITS, chooseTransition, describeTransition } from './cinematic/transitions.js';
 export { CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, chooseVariety } from './variety.js';
+export { PHOTO_COMPOSITIONS, choosePhotoComposition, photoCompositionCss } from './variety.js';
+export { SECTION_COMPOSITIONS, chooseSectionCompositions, sectionCompositionsCss } from './variety.js';
 export { CARD_EFFECTS, CARD_EFFECT_IDS, HERO_EFFECTS, HERO_EFFECT_IDS, chooseEffects, describeEffects } from './effects.js';
 export { TYPE_STYLES, TYPE_STYLE_IDS, SECTION_LAYOUTS, SECTION_LAYOUT_IDS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS, BUTTON_ANIMATION_IDS, chooseTypography } from './typography-layout.js';
 export { directScene } from './cinematic/scene-director.js';

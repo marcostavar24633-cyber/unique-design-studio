@@ -12,7 +12,13 @@ export const COPYWRITING_MODULES = Object.freeze([
   { id: 'quality-control', title: 'Quality Control', task: 'Проверь достоверность, связность, конкретику, отсутствие повторов, соответствие аудитории, конверсионную логику и готовность данных к сборке.' },
 ]);
 
-const lines = values => (Array.isArray(values) && values.length ? values.map(v => '- ' + v).join('\n') : '- Нет подтверждённых данных — не выдумывать.');
+const dataLine = value => {
+  const readable = value && typeof value === 'object' ? value.text ?? value.label ?? value.name ?? value.title ?? '' : value;
+  return String(readable ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500);
+};
+const lines = values => (Array.isArray(values) && values.length
+  ? values.slice(0, 50).map(value => '- ' + dataLine(value)).join('\n')
+  : '- Нет подтверждённых данных — не выдумывать.');
 
 // Расширенный контракт — только для внешних AI (кнопка «Промт для AI»). Для Worker студии он лишний: студия
 // эти разделы не читает, а вместе с ограничением формата Worker давал противоречие — модель тратила весь
@@ -33,9 +39,23 @@ const EXTENDED_CONTRACT = `## Совместимость результата
 
 export function buildCopywritingSystemBrief(project, concept, analysis = {}, opts = {}) {
   const p = project || {};
+  analysis = analysis && typeof analysis === 'object' ? analysis : {};
+  opts = opts && typeof opts === 'object' ? opts : {};
   const d = concept?.designDNA || concept?.designBrief || {};
   const homepage = concept?.homepage || {};
-  const modules = COPYWRITING_MODULES.map((m, i) => `${i + 1}. ${m.title}: ${m.task}`).join('\n');
+  const sectionIds = Array.isArray(homepage.sections)
+    ? homepage.sections.map(section => section.id).filter(Boolean)
+    : [];
+  const sectionNames = Array.isArray(homepage.sections)
+    ? homepage.sections.map(section => `${section.id} (${section.role || section.id})`)
+    : [];
+  const moduleIds = new Set(['market-intelligence', 'audience-psychology', 'brand-strategy', 'conversion-copy', 'seo-content', 'quality-control']);
+  if (sectionIds.includes('gallery') || sectionIds.includes('hero') || sectionIds.includes('items')) moduleIds.add('visual-direction');
+  if (homepage.motionDirection || concept?.visualSystem?.effects) moduleIds.add('motion-direction');
+  const modules = COPYWRITING_MODULES
+    .filter(module => moduleIds.has(module.id))
+    .map((module, i) => `${i + 1}. ${module.title}: ${module.task}`)
+    .join('\n');
   return `# AUTONOMOUS CONTENT & BRAND SYSTEM — SPECIALIST MODULES
 
 Работай как слаженная команда специализированных направлений. Выполняй этапы последовательно, но без остановки на согласование промежуточных результатов. Не имитируй реальное исследование: если веб-поиск недоступен, явно укажи это и сформируй проверяемые гипотезы.
@@ -51,7 +71,7 @@ ${modules}
 - Класс проекта: ${p.tier || 'standard'}
 - Характер бренда: ${p.brandCharacter || d.brandCharacter || 'определи по нише и предложению'}
 - Визуальное направление: ${p.visualDirection || 'выбери самостоятельно'}
-- Исходные сегменты: ${lines(analysis.segments?.map(s => typeof s === 'string' ? s : `${s.name}: ${s.need}`))}
+    - Исходные сегменты: ${lines((Array.isArray(analysis.segments) ? analysis.segments : []).map(s => typeof s === 'string' ? s : `${dataLine(s?.name)}: ${dataLine(s?.need)}`))}
 - Известные возражения: ${lines(analysis.objections)}
 - Ограничения проекта: ${lines(p.assumptions)}
 
@@ -60,12 +80,16 @@ ${modules}
 2. Определи 2–5 сегментов аудитории. Для каждого укажи контекст покупки, мотивацию, желаемый результат, тревоги, барьеры, критерии выбора, возражения и аргументы, которые могут их снять.
 3. Сформулируй одно ясное позиционирование, основное обещание, 3 потенциальных доказательства и список того, что владелец должен подтвердить.
 4. Создай Brand Voice: тон, словарь, ритм, характер заголовков, CTA, запрещённые клише и примеры корректной формулировки.
-5. Для каждой секции сайта укажи маркетинговую задачу, этап клиентского решения, ключевой вопрос посетителя, снимаемое возражение, заголовок, подзаголовок, полный текст, CTA и визуальное задание.
+5. Работай только с секциями из утверждённого плана ниже. Для каждой укажи её маркетинговую задачу, вопрос посетителя и уместный текст. Не создавай контент для отсутствующих секций и не расширяй план страницы.
 6. Построй путь пользователя от первого экрана до обращения. Убери повторы и конкурирующие CTA.
 7. Создай SEO-метаданные, структуру H1–H3, группы запросов и ALT. Частотность не указывать без фактической проверки.
-8. Подготовь визуальные задания для каждой секции: сюжет, объект, ракурс, свет, фон, настроение, композиция, формат и связь с текстом.
-9. Сформируй Motion Brief: рекомендуемая интенсивность и только те эффекты, которые поддерживают концепцию. Учитывай мобильные устройства и prefers-reduced-motion.
+8. Подготовь визуальные задания только для секций из плана, где изображение помогает смыслу; не создавай задания для отсутствующих секций.
+9. Если концепция предусматривает движение, предложи только уместные эффекты. Иначе укажи низкую интенсивность и не добавляй анимацию ради заполнения Motion Brief. Всегда учитывай мобильные устройства и prefers-reduced-motion.
 10. Проведи финальную проверку и автоматически перепиши слабые фрагменты.
+
+## План секций страницы
+${sectionNames.length ? sectionNames.map(name => `- ${name}`).join('\n') : '- Секции не переданы; не придумывай их.'}
+В sectionContent и visualBrief включай только записи, относящиеся к этому плану; не предлагай новые секции.
 
 ## Правила достоверности
 - Не выдумывай цены, скидки, отзывы, имена клиентов, кейсы, награды, сертификаты, гарантии, адреса, телефоны, сроки, объёмы и характеристики.

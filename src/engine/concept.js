@@ -14,10 +14,16 @@ import { chooseTextEffect } from './text-effects.js';
 import { chooseGraphicDirection, GRAPHIC_DIRECTIONS } from './graphic-art-direction.js';
 import { chooseCinematicLayers } from './cinematic/visual-layers.js';
 import { chooseTransition } from './cinematic/transitions.js';
-import { chooseVariety } from './variety.js';
+import { choosePhotoComposition, chooseSectionCompositions, chooseVariety } from './variety.js';
 import { chooseEffects } from './effects.js';
+import { chooseSectionBackdrops } from './section-backdrops.js';
 import { chooseTypography, LAYOUT_ORDER_FAMILY, SECTION_LAYOUTS, SECTION_LAYOUT_IDS } from './typography-layout.js';
 import { ART_DIRECTION_PRESETS, applyArtDirectionPreset } from './art-direction-presets.js';
+
+const artDirectionFor = project => {
+  const id = project.passthrough?.artDirectionPreset;
+  return Object.hasOwn(ART_DIRECTION_PRESETS, id) ? ART_DIRECTION_PRESETS[id] : null;
+};
 
 // ---------- Ниша ----------
 export function detectNiche(project) {
@@ -91,7 +97,7 @@ function rankArchetypes(project, profile, s, refs = []) {
   }
   // Контекст: характер бренда, аудитория и задача страницы — небольшие поправки к нишевой оценке.
   for (const sig of contextSignals(project)) add(sig.id, sig.n, sig.why);
-  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
+  const artDirection = artDirectionFor(project);
   for (const [index, id] of (artDirection?.archetypes || []).entries()) {
     add(id, index === 0 ? 18 : 6, `сценарий «${artDirection.label}» задаёт такую композицию первого экрана`);
   }
@@ -162,8 +168,11 @@ function compose(project, profile, ranked, seed, avoid) {
   const secondaryPick = project.secondaryArchitecture && project.secondaryArchitecture !== primary
     ? project.secondaryArchitecture
     : (avoid.secondaryHint && avoid.secondaryHint !== primary ? avoid.secondaryHint : (ranked.find(r => r.id !== primary && r.score > 0) || {}).id) || '';
-  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
-  const preferredPlacement = project.passthrough?.heroPlacement || artDirection?.placements?.[primary];
+  const artDirection = artDirectionFor(project);
+  const requestedPlacement = project.passthrough?.heroPlacement;
+  const presetPlacement = artDirection?.placements?.[primary];
+  const preferredPlacement = Object.hasOwn(arch.placements, requestedPlacement) ? requestedPlacement
+    : Object.hasOwn(arch.placements, presetPlacement) ? presetPlacement : '';
   const placement = preferredPlacement && !avoid.placements.includes(preferredPlacement)
     ? preferredPlacement
     : pick(stream(seed, 'placement'), Object.keys(arch.placements), avoid.placements);
@@ -195,7 +204,7 @@ function compose(project, profile, ranked, seed, avoid) {
   const motif = pick(stream(seed, 'motif'), profile.motifs);
   // Ручной стиль кнопок владельца главнее; авто-выбор: брутализм — плакатная, люкс — сдержанные,
   // журнальные архитектуры — контурные и текстовые, остальные — весь спектр активных стилей.
-  const button = BUTTONS[project.passthrough?.buttonStyle] ? project.passthrough.buttonStyle
+  const button = Object.hasOwn(BUTTONS, project.passthrough?.buttonStyle) ? project.passthrough.buttonStyle
     : primary === 'brutalist' ? 'block'
     : project.tier === 'luxury' ? pick(stream(seed, 'button'), ['outline', 'underline'])
     : pick(stream(seed, 'button'), primary === 'editorial' || primary === 'storytelling'
@@ -203,7 +212,7 @@ function compose(project, profile, ranked, seed, avoid) {
       : ['solid', 'outline', 'pill', 'gradient', 'glow', 'press', 'arrow', 'slide', 'glass', 'neon', 'inset', 'ghost']);
   // Вариант подачи секций — отдельная композиционная ось, а не только оформление hero.
   // 15 раскладок секций; ручной выбор владельца главнее (passthrough.sectionLayout).
-  const sectionLayout = SECTION_LAYOUTS[project.passthrough?.sectionLayout] ? project.passthrough.sectionLayout : pick(stream(seed, 'section-layout'), SECTION_LAYOUT_IDS, avoid.sectionLayouts || []);
+  const sectionLayout = Object.hasOwn(SECTION_LAYOUTS, project.passthrough?.sectionLayout) ? project.passthrough.sectionLayout : pick(stream(seed, 'section-layout'), SECTION_LAYOUT_IDS, avoid.sectionLayouts || []);
   return { primary, secondary: secondaryPick, placement, typeCharacter, nav, direction, shape, motif, button, sectionLayout };
 }
 
@@ -290,14 +299,22 @@ export function applyManualOrder(order, manual) {
 }
 
 // ---------- Главная функция ----------
-export function buildConcept(input, { registry = [], neighbors = 2, references } = {}) {
+export function buildConcept(input, options = {}) {
+  const { registry: inputRegistry = [], neighbors: inputNeighbors = 2, references } = options && typeof options === 'object' ? options : {};
+  const registry = Array.isArray(inputRegistry) ? inputRegistry : [];
+  let requestedNeighbors = NaN;
+  try { requestedNeighbors = Number(inputNeighbors); } catch { /* use default registry depth */ }
+  const neighbors = Number.isFinite(requestedNeighbors) ? Math.max(0, Math.min(100, Math.floor(requestedNeighbors))) : 2;
   const project = applyArtDirectionPreset(normalizeProject(input));
   const profile = detectNiche(project);
   const s = contentSignals(project);
   // Профили библиотеки шаблонов: из опции или из поля проекта designReferences (сохраняется в экспорте).
   const refs = normalizeReferences(references ?? project.passthrough.designReferences);
   const ranked = rankArchetypes(project, profile, s, refs);
-  const seed = hash(`${project.brand}|${project.niche}`);
+  // Повторная генерация может осознанно запросить новый дизайн, сохраняя его номер в экспорте.
+  // Без designVariant старые проекты остаются полностью воспроизводимыми.
+  const designVariant = Math.max(0, Math.min(1_000_000, Math.trunc(Number(project.passthrough?.designVariant) || 0)));
+  const seed = hash(`${project.brand}|${project.niche}${designVariant ? `|variant:${designVariant}` : ''}`);
   const others = registry.filter(e => e && e.fingerprint && e.id !== project.id);
   const near = neighbors > 0 ? others.slice(-neighbors) : [];
 
@@ -427,6 +444,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   if (libraryUse) order = libraryUse.order;
   const manualOrder = applyManualOrder(order, project.passthrough?.sectionOrder);
   if (manualOrder) order = manualOrder;
+  const hiddenSections = new Set(Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []);
+  order = order.filter(id => !hiddenSections.has(id) && project.fieldStates?.[`sections.${id}`] !== 'hidden');
   const finalPrint = { ...fingerprintOf(design), sectionOrder: order.join('>'), ...(brand ? { colorDirection: `brand:${project.brandProfile}` } : {}) };
   const palette = brand ? buildBrandPalette(brand, { accent: project.accent }) : buildPalette(design.direction, seed, { accent: project.accent });
   const secondary = design.secondary ? ARCHETYPES[design.secondary] : null;
@@ -434,6 +453,8 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
     : s.prices || s.itemImages ? 'product'
     : arch.items !== 'product' ? arch.items
     : secondary && secondary.items !== 'product' ? secondary.items : 'cards';
+  const projectCommerce = commerceEnabled(project, profile.id);
+  const itemsMechanic = chooseMechanic(project, design.primary, seed, projectCommerce);
 
   // ----- Design Brief (§2) -----
   const assumptions = [...project.assumptions];
@@ -451,7 +472,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   const cta = project.cta || profile.goal;
 
   const top = ranked.find(r => r.id === design.primary);
-  const artDirection = ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset];
+  const artDirection = artDirectionFor(project);
   const rationale = [
     `Ниша определена как «${profile.label}». Основное действие — ${primaryGoal.toLowerCase()}.`,
     artDirection ? `Применён сценарий «${artDirection.label}»: связаны шапка, композиция заголовка, кнопки, свет, фактура и переходы.` : '',
@@ -484,7 +505,7 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
   // Анимация подбирается под характер бренда, класс, нишу и архитектуру; бюджет механик ограничен интенсивностью.
   const motionPlan = chooseMotion(project, { archetype: design.primary, motion: arch.motion, nicheId: profile.id, seed });
   // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
-  const graphicDirection = GRAPHIC_DIRECTIONS[project.passthrough?.graphicDirection]
+  const graphicDirection = Object.hasOwn(GRAPHIC_DIRECTIONS, project.passthrough?.graphicDirection)
         ? { ...chooseGraphicDirection(project, { archetype: design.primary, seed }), ...(() => { const id = project.passthrough.graphicDirection, d = GRAPHIC_DIRECTIONS[id]; return { id, label: d.label, ru: d.ru, techniques: d.techniques, assetBrief: d.asset, rationale: 'Выбрано владельцем проекта' }; })() }
         : chooseGraphicDirection(project, { archetype: design.primary, seed });
   const cinematicLayers = chooseCinematicLayers(project, { palette, graphicDirection, motionPlan, seed });
@@ -542,16 +563,17 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       nicheId: profile.id, itemsLabel: profile.itemsLabel,
       archetype: design.primary, placement: design.placement, nav: design.nav,
       palette, direction: design.direction, sectionLayout: design.sectionLayout,
+      sectionBackdrops: chooseSectionBackdrops(project, { sections: order, archetype: design.primary, nicheId: profile.id, seed }),
       typography: { id: design.typeCharacter, display: fontStack(web && web[0][0], type.display), body: fontStack(web && web[1][0], type.body), webFonts, weight: fontPair?.dw ?? type.weight, tracking: type.tracking, transform: type.transform, h1min, h1max, accent: fontPair?.accent ? fontStack(fontPair.accent[0], 'cursive') : '', pair: fontPair ? fontPair.display[0] + ' + ' + fontPair.body[0] : '' },
       shape: brand ? { id: design.shape, ...SHAPES[design.shape], ...brand.radius, label: `скругления бренда «${brand.name}»` } : { id: design.shape, ...SHAPES[design.shape] },
       brand: brand ? { id: project.brandProfile, name: brand.name, source: brand.source } : null,
       button: { id: design.button, label: BUTTONS[design.button] },
       layout: { container, rhythm: arch.rhythm },
       motion: motionPlan.mode, motionPlan, motif: design.motif,
-      artDirection: ART_DIRECTION_PRESETS[project.passthrough?.artDirectionPreset]
+      artDirection: artDirectionFor(project)
         ? { id: project.passthrough.artDirectionPreset, ...ART_DIRECTION_PRESETS[project.passthrough.artDirectionPreset] }
         : null,
-      commerce: commerceEnabled(project, profile.id),
+      commerce: projectCommerce,
       textEffect: chooseTextEffect(project, { archetype: design.primary, intensity: motionPlan.intensity }, seed),
       // Направление графики (арт-дирекшен #111): задаёт стиль фото и заданий; ручной выбор владельца главнее.
       graphicDirection,
@@ -561,12 +583,14 @@ export function buildConcept(input, { registry = [], neighbors = 2, references }
       transition: chooseTransition(project, { cinematicLayers, archetype: design.primary, sectionLayout: design.sectionLayout, seed }),
       // Форма карточек и эффект появления блоков; ручной выбор владельца главнее.
       variety: chooseVariety(project, { shape: design.shape, archetype: design.primary, intensity: motionPlan.intensity, seed }),
+      photoComposition: choosePhotoComposition(project, { archetype: design.primary, seed }),
+      sectionCompositions: chooseSectionCompositions(project, { archetype: design.primary, seed }),
       // Эффекты карточек и первого экрана; ручной выбор владельца главнее, фотоэффекты — только при наличии фото.
-      effects: chooseEffects(project, { archetype: design.primary, tier: project.tier, intensity: motionPlan.intensity, seed }),
+      effects: chooseEffects(project, { archetype: design.primary, tier: project.tier, intensity: motionPlan.intensity, motionPlan, itemsMechanic, seed }),
       // Оформление заголовков, анимации текста и кнопок; ручной выбор владельца главнее.
       typography2: chooseTypography(project, { archetype: design.primary, typeCharacter: design.typeCharacter, intensity: motionPlan.intensity, seed }),
       forms: chooseForms(project, { shape: design.shape, motif: design.motif, archetype: design.primary }, seed),
-      variants: { items: itemsVariant, itemsMechanic: chooseMechanic(project, design.primary, seed, commerceEnabled(project, profile.id)), advantages: arch.advantages, process: arch.process },
+      variants: { items: itemsVariant, itemsMechanic, advantages: arch.advantages, process: arch.process },
       seed,
     },
   };

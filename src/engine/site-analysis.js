@@ -4,10 +4,12 @@
 import { classOf, closest, elements, find, findAll, parseHtml, textOf, walk } from './html-lite.js';
 import { contrast, hexToHsl, hslToHex, luminance } from './color.js';
 
+const MAX_HTML = 5_000_000;
 const MAX_CSS = 2_000_000;
 // Сервисы шрифтов отдают только @font-face — для анализа стилей они не нужны.
 const FONT_HOST = /^https?:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|use\.typekit\.net|fonts\.bunny\.net)\//i;
 const cut = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+const decodeUrlPart = value => { try { return decodeURIComponent(value); } catch { return value; } };
 const words = s => String(s || '').trim().split(/\s+/).filter(Boolean);
 const top = (map, n) => [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
 const inc = (map, key, by = 1) => map.set(key, (map.get(key) || 0) + by);
@@ -477,7 +479,13 @@ function detectFeatures(root, corpus, scripts, blocks) {
  * @param {{url?:string, html:string, css?:string, cssLoaded?:number}} input
  * @returns объект с измеренными характеристиками страницы
  */
-export function analyzePage({ url = '', html = '', css = '', cssLoaded = 0 } = {}) {
+export function analyzePage(input = {}) {
+  let { url = '', html: sourceHtml = '', css = '', cssLoaded = 0 } = input && typeof input === 'object' ? input : {};
+  let loadedCount = NaN;
+  try { loadedCount = Number(cssLoaded); } catch { /* invalid caller metadata is ignored */ }
+  cssLoaded = Number.isFinite(loadedCount) ? Math.max(0, Math.floor(loadedCount)) : 0;
+  const rawHtml = String(sourceHtml ?? '');
+  const html = rawHtml.slice(0, MAX_HTML);
   const root = parseHtml(html);
   const body = find(root, 'body') || root;
   const head = find(root, 'head') || root;
@@ -489,13 +497,15 @@ export function analyzePage({ url = '', html = '', css = '', cssLoaded = 0 } = {
   const scripts = findAll(root, 'script').map(s => s.attrs.src || '').filter(Boolean);
   const bodyText = textOf(body);
   const warnings = [];
+  if (rawHtml.length > MAX_HTML) warnings.push(`HTML обрезан до безопасного лимита ${MAX_HTML.toLocaleString('ru-RU')} символов.`);
 
   const resolve = href => { try { return new URL(href, url || undefined).href; } catch { return ''; } };
   const stylesheets = findAll(root, n => n.tag === 'link' && /stylesheet/i.test(n.attrs.rel || '') && n.attrs.href).map(n => resolve(n.attrs.href)).filter(u => /^https?:/i.test(u) && !FONT_HOST.test(u));
+  cssLoaded = Math.min(cssLoaded, stylesheets.length);
   const inlineCss = findAll(root, 'style').map(s => (s.children[0] || {}).text || '').join('\n');
   const inlineStyles = all.map(n => n.attrs.style).filter(Boolean);
   const googleFonts = [...new Set(findAll(root, n => n.tag === 'link' && /fonts\.googleapis\.com/i.test(n.attrs.href || ''))
-    .flatMap(n => [...String(n.attrs.href).matchAll(/family=([^&:]+)/g)].map(m => decodeURIComponent(m[1]).replace(/\+/g, ' '))))];
+    .flatMap(n => [...String(n.attrs.href).matchAll(/family=([^&:]+)/g)].map(m => decodeUrlPart(m[1]).replace(/\+/g, ' '))))];
 
   const jsApp = bodyText.length < 200 && scripts.length > 0 && Boolean(find(body, n => /^(root|app|__next|__nuxt|svelte)$/i.test(n.attrs.id || '')));
   if (!html.trim()) warnings.push('HTML страницы пуст — анализировать нечего.');
@@ -542,7 +552,11 @@ export function analyzePage({ url = '', html = '', css = '', cssLoaded = 0 } = {
   visual.sources = { external: stylesheets.length, loaded: cssLoaded, inlineBlocks: findAll(root, 'style').length, inlineAttributes: inlineStyles.length };
   // Разметка, скопированная из браузера сниппетом студии, уже содержит правила доступных таблиц стилей.
   const collected = find(root, n => n.tag === 'style' && 'data-uds-collected' in n.attrs);
-  if (collected) cssLoaded = Math.max(cssLoaded, stylesheets.length - (parseInt(collected.attrs['data-uds-skipped'], 10) || 0));
+  if (collected) {
+    const skipped = Number.parseInt(collected.attrs['data-uds-skipped'], 10);
+    const safeSkipped = Number.isFinite(skipped) ? Math.max(0, Math.min(stylesheets.length, skipped)) : 0;
+    cssLoaded = Math.min(stylesheets.length, Math.max(cssLoaded, stylesheets.length - safeSkipped));
+  }
   visual.sources.loaded = cssLoaded;
   if (stylesheets.length > cssLoaded) {
     warnings.push(visual.available

@@ -22,26 +22,27 @@ test('маска только у фото: не у карточек, кнопо�
     const selectors = css.slice(0, css.indexOf('{')).split(',');
     for (const s of selectors) assert.match(s, / img$/, `${mask}: ${s}`);
     assert.doesNotMatch(css, /hero__photo-bg|\.item\{|ds-button|\.item,/);
+    assert.match(css, /border-radius:var\(--ds-radius-md,18px\)/, `${mask}: все фото остаются прямоугольными со скруглением`);
   }
 });
 
 test('разделители секций полностью отсутствуют из HTML и CSS', () => {
   const g = site({ sectionDivider: 'double-wave' });
   assert.equal(dividerHtml('wave'), '');
-  assert.equal(formsCss({ mask: 'none', divider: 'wave' }), '');
+  assert.match(formsCss({ mask: 'none', divider: 'wave' }), /border-radius:var\(--ds-radius-md,18px\)/);
   assert.doesNotMatch(g.html, /ds-divider|uds-divider/);
   assert.equal(g.concept.visualSystem.forms.divider, 'none');
 });
 
-test('выбор следует характеру: острые углы — срезы, брутализм — без мягких форм, минимализм — тихие разделители', () => {
+test('форма фото во всех стилях остаётся прямоугольной со скруглением; разделители отключены', () => {
   for (let seed = 0; seed < 30; seed++) {
     const p = normalizeProject({ niche: 'кафе' });
     const sharpMask = chooseForms(p, { shape: 'sharp', motif: 'waves', archetype: 'editorial' }, seed).mask;
-    assert.ok(['notch', 'slant', 'diamond', 'hexagon', 'octagon', 'chevron', 'parallelogram'].includes(sharpMask));
-    assert.ok(['none', 'notch'].includes(chooseForms(p, { shape: 'round', motif: 'blobs', archetype: 'brutalist' }, seed).mask));
+    assert.equal(sharpMask, 'rounded-rect');
+    assert.equal(chooseForms(p, { shape: 'round', motif: 'blobs', archetype: 'brutalist' }, seed).mask, 'rounded-rect');
     assert.equal(chooseForms(p, { shape: 'soft', motif: 'waves', archetype: 'minimal' }, seed).divider, 'none');
     const lux = normalizeProject({ niche: 'ювелир', tier: 'luxury' });
-    assert.ok(!['blob', 'pill'].includes(chooseForms(lux, { shape: 'round', motif: 'arcs', archetype: 'editorial' }, seed).mask), 'люкс без «капель»');
+    assert.equal(chooseForms(lux, { shape: 'round', motif: 'arcs', archetype: 'editorial' }, seed).mask, 'rounded-rect');
   }
 });
 

@@ -66,7 +66,7 @@ test('тексты автопилота без канцелярита и без 
 
 test('незаполненные заготовки видны в проверке перед выдачей', () => {
   const a = autopilot({ niche: 'многопрофильный холдинг', email: 'a@example.com' });
-  const r = generate(a.project);
+  const r = generate({ ...a.project, title: 'Добро пожаловать, [название компании]' });
   assert.ok(r.audit.warnings.some(w => w.id === 'placeholders'));
 });
 

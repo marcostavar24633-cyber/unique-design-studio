@@ -1,5 +1,4 @@
-// Переходы между секциями: декоративная полоса на всю ширину между соседними секциями.
-// Полоса занимает собственное место (без отрицательных отступов), поэтому никогда не ложится на текст секций.
+// Переходы между секциями: мягкий градиентный ореол на стыке, без отдельной полосы и дополнительного отступа.
 // Градиент настраивается: цвета начала и конца, угол, высота и интенсивность. Пустой цвет — «авто»:
 // акцент и его более глубокий оттенок (смесь с цветом текста), поэтому переход всегда согласован с дизайном.
 import { normalizeHex } from '../color.js';
@@ -26,6 +25,8 @@ const clamp = (v, [a, b], fallback) => { const n = Number(v); return Number.isFi
  * @returns {{type, from:string, to:string, angle:number, height:number, intensity:number, rationale:string}}
  */
 export function chooseTransition(project = {}, visual = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  visual = visual && typeof visual === 'object' ? visual : {};
   const t = project.passthrough || {};
   // Переходы теперь всегда градиентные и одинаково читаются между любыми блоками.
   // Старые значения transitionType сохраняем в проекте, но не используем при рендере.
@@ -53,22 +54,21 @@ const svgMask = path => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmln
 const WAVE = 'M0 60 C150 20 300 20 450 55 S750 95 900 55 S1100 25 1200 45 V100 H0Z';
 
 /** CSS перехода. Цвета: заданные владельцем или акцент/поверхность палитры.
- *  sectionLayout нужен для раскладки «рамки»: там секции залиты поверхностью и обведены линиями. */
+ *  Слой занимает нулевое место в потоке и мягко перекрывает стык соседних секций. */
 export function transitionCss(tr, sectionLayout = '') {
   if (!tr || tr.type === 'none') return '';
   const k = tr.intensity;
   const from = tr.from ? `color-mix(in srgb,${tr.from} ${k}%,transparent)` : `color-mix(in srgb,var(--ds-accent) ${k}%,transparent)`;
   const to = tr.to ? `color-mix(in srgb,${tr.to} ${Math.min(100, k + 20)}%,transparent)` : `color-mix(in srgb,color-mix(in srgb,var(--ds-accent) 55%,var(--ds-text)) ${Math.round(k * 0.7)}%,transparent)`;
-  // Рисунок — в ::before: маска и обрезка действуют только на градиент, а заливка самой полосы остаётся.
-  const base = `.uds-transition{display:block;position:relative;width:100%;height:${tr.height}px;pointer-events:none;--ut-from:${from};--ut-to:${to}}.uds-transition::before{content:"";position:absolute;inset:0}`;
-  const fadeEdges = '-webkit-mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent);mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)';
+  // Градиент лежит поверх стыка, но переход не добавляет секциям пустую полосу в потоке.
+  const base = `.uds-transition{display:block;position:relative;z-index:1;width:100%;height:0;pointer-events:none;--ut-from:${from};--ut-to:${to}}.uds-transition::before{content:"";position:absolute;inset-inline:0;top:-${tr.height}px;height:${tr.height * 2}px;pointer-events:none}`;
   const looks = {
-    fade: `.uds-transition--fade::before{background:linear-gradient(${tr.angle}deg,var(--ut-from),var(--ut-to));${fadeEdges}}`,
+    fade: `.uds-transition--fade::before{background:radial-gradient(ellipse 72% 90% at 50% 50%,var(--ut-from),transparent 72%),radial-gradient(ellipse 46% 78% at 24% 50%,var(--ut-to),transparent 76%);filter:blur(12px)}`,
     glow: `.uds-transition--glow::before{background:radial-gradient(ellipse 55% 60% at 50% 50%,var(--ut-from),var(--ut-to) 55%,transparent 75%)}`,
     diagonal: `.uds-transition--diagonal::before{background:linear-gradient(${tr.angle}deg,var(--ut-from),var(--ut-to));clip-path:polygon(0 35%,100% 0,100% 65%,0 100%)}`,
     arch: `.uds-transition--arch::before{background:linear-gradient(${tr.angle}deg,var(--ut-from),var(--ut-to));border-radius:0 0 50% 50%/0 0 100% 100%}`,
     wave: `.uds-transition--wave::before{background:linear-gradient(${tr.angle}deg,var(--ut-from),var(--ut-to));-webkit-mask:${svgMask(WAVE)} center/100% 100% no-repeat;mask:${svgMask(WAVE)} center/100% 100% no-repeat}`,
-    split: `.uds-transition--split::before{background:linear-gradient(${tr.angle}deg,var(--ut-from) 0 50%,var(--ut-to) 50% 100%);${fadeEdges}}`,
+    split: `.uds-transition--split::before{background:linear-gradient(${tr.angle}deg,var(--ut-from) 0 50%,var(--ut-to) 50% 100%);-webkit-mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent);mask-image:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)}`,
     mesh: `.uds-transition--mesh::before{background:radial-gradient(ellipse 40% 90% at 22% 50%,var(--ut-from),transparent 70%),radial-gradient(ellipse 45% 90% at 78% 50%,var(--ut-to),transparent 70%)}`,
   };
   // В «рамках» полоса продолжает заливку секций, а линии на стыке с переходом убираются — секции перетекают,

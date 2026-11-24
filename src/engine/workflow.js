@@ -3,7 +3,7 @@
 import { draftFromNiche, buildSpec } from './autopilot.js';
 import { generate } from './index.js';
 import { reviewDesign } from './design-director.js';
-import { fixAndRecheck } from './quality.js';
+import { fixAndRecheck, qualityStageStatus } from './quality.js';
 import { runMarketIntelligence } from './market-intelligence.js';
 
 const isFunction = value => typeof value === 'function';
@@ -20,19 +20,12 @@ function stage(id, status, details = {}) {
  * без него рекомендации остаются на проверке пользователя.
  * Публикация намеренно не имитируется: для неё нужен отдельный deploy adapter.
  */
-export async function runWorkflow(input, {
-  registry = [],
-  draft: suppliedDraft,
-  imageDirector,
-  designDirector,
-  marketSearch,
-  marketFetchPage,
-  marketResearchLimit = 10,
-  applyApprovedFixes,
-  autoFix = true,
-  maxFixPasses = 2,
-  onStage,
-} = {}) {
+export async function runWorkflow(input, options = {}) {
+  const {
+    registry: inputRegistry = [], draft: suppliedDraft, imageDirector, designDirector, marketSearch,
+    marketFetchPage, marketResearchLimit = 10, applyApprovedFixes, autoFix = true, maxFixPasses = 2, onStage,
+  } = options && typeof options === 'object' ? options : {};
+  const registry = Array.isArray(inputRegistry) ? inputRegistry : [];
   const stages = [];
   const report = (id, status, details) => {
     const item = stage(id, status, details);
@@ -42,7 +35,8 @@ export async function runWorkflow(input, {
   };
 
   report('brief', 'running');
-  const { project, analysis } = suppliedDraft?.project && suppliedDraft?.analysis
+  const { project, analysis } = suppliedDraft?.project && typeof suppliedDraft.project === 'object'
+    && suppliedDraft?.analysis && typeof suppliedDraft.analysis === 'object'
     ? suppliedDraft
     : draftFromNiche(input || {});
   report('brief', 'completed', { assumptions: project.assumptions || [] });
@@ -78,7 +72,7 @@ export async function runWorkflow(input, {
   report('concept', 'running');
   // generate() выбирает Design DNA с учётом реестра, строит HTML и выполняет аудит.
   let generated = generate(project, { registry });
-  const spec = buildSpec(generated.project, generated.concept, analysis);
+  let spec = buildSpec(generated.project, generated.concept, analysis);
   report('concept', 'completed', {
     architecture: generated.concept.designDNA.primaryArchetype,
     rationale: generated.concept.designDNA.selectionRationale,
@@ -93,8 +87,12 @@ export async function runWorkflow(input, {
   let visualAssets = null;
   if (isFunction(imageDirector)) {
     report('visual', 'running');
-    visualAssets = await imageDirector({ project: generated.project, analysis, concept: generated.concept, brief: imageBrief });
-    report('visual', 'completed', { integrated: Boolean(visualAssets) });
+    try {
+      visualAssets = await imageDirector({ project: generated.project, analysis, concept: generated.concept, brief: imageBrief });
+      report('visual', visualAssets ? 'completed' : 'needs_attention', { assetsPrepared: Boolean(visualAssets), integrated: false });
+    } catch (error) {
+      report('visual', 'needs_attention', { assetsPrepared: false, error: String(error?.message || 'адаптер изображений завершился ошибкой').slice(0, 240) });
+    }
   } else {
     report('visual', 'needs_input', { brief: imageBrief, reason: 'Image Director adapter is not configured; upload real photos in the studio.' });
   }
@@ -112,8 +110,11 @@ export async function runWorkflow(input, {
   // Проходов не больше maxFixPasses; цикл останавливается, если исправлять нечего или ничего не изменилось.
   report('quality', 'running');
   const quality = fixAndRecheck(generated.project, raw => generate(raw, { registry }), { maxPasses: autoFix ? maxFixPasses : 0 });
-  if (quality.passes.length) generated = quality.generated;
-  report('quality', quality.after.counts.critical ? 'needs_attention' : 'completed', {
+  if (quality.passes.length) {
+    generated = quality.generated;
+    spec = buildSpec(generated.project, generated.concept, analysis);
+  }
+  report('quality', qualityStageStatus(quality.after), {
     before: quality.before.counts, after: quality.after.counts, score: quality.after.score,
     autoFixed: quality.passes.flatMap(p => p.applied), stoppedBy: quality.stoppedBy,
     remaining: quality.after.findings,
@@ -125,17 +126,21 @@ export async function runWorkflow(input, {
     : async context => ({ ...reviewDesign(context.project, { concept: context.concept, audit: context.audit }), mode: 'rules-based' });
   if (isFunction(runDesignReview)) {
     report('design_review', 'running');
-    designReview = await runDesignReview({
-      project: generated.project,
-      analysis,
-      marketIntelligence,
-      concept: generated.concept,
-      html: generated.html,
-      audit: generated.audit,
-      imageBrief,
-      visualAssets,
-    });
-    report('design_review', 'completed', { mode: designReview?.mode || 'adapter', review: designReview });
+    try {
+      designReview = await runDesignReview({
+        project: generated.project,
+        analysis,
+        marketIntelligence,
+        concept: generated.concept,
+        html: generated.html,
+        audit: generated.audit,
+        imageBrief,
+        visualAssets,
+      });
+      report('design_review', designReview ? 'completed' : 'needs_attention', { mode: designReview?.mode || 'adapter', review: designReview });
+    } catch (error) {
+      report('design_review', 'needs_attention', { error: String(error?.message || 'проверка дизайна завершилась ошибкой').slice(0, 240) });
+    }
   } else {
     report('design_review', 'needs_input', { reason: 'AI Design Director adapter is not configured.' });
   }

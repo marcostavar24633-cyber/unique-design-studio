@@ -19,7 +19,7 @@ export const MECHANICS = Object.freeze({
   microinteractions: 'Микровзаимодействия: отклик кнопок на нажатие, плавные состояния ссылок',
 });
 
-export const MOTION_STYLES = Object.freeze({ auto: 'Автоматически по бренду и нише', cinematic: 'Cinematic Motion Design — полный набор эффектов', static: 'Минимум движения' });
+export const MOTION_STYLES = Object.freeze({ auto: 'Автоматически по бренду и нише', luxury: 'Люкс — медленно и сдержанно', cinematic: 'Cinematic Motion Design — выразительное движение', static: 'Минимум движения' });
 
 export const INTENSITY = Object.freeze({
   calm: { label: 'спокойная', budget: 2, duration: 900, distance: 10 },
@@ -39,11 +39,12 @@ const LOUD_WORDS = /дерзк|ярк|энерги|смел|живой|игри�
  */
 export function chooseMotion(project, { archetype, motion, nicheId, seed }) {
   const requestedStyle = project.passthrough?.motionStyle;
-  const mode = requestedStyle === 'cinematic' ? (motion === 'static' ? 'reveal' : motion) : requestedStyle === 'static' ? 'static' : motion;
+  const mode = requestedStyle === 'cinematic' ? (motion === 'static' ? 'reveal' : motion) : requestedStyle === 'luxury' ? 'reveal' : requestedStyle === 'static' ? 'static' : motion;
   const character = `${project.brandCharacter || ''} ${project.visualDirection || ''}`;
   const why = [];
   let intensity = 'balanced';
   if (requestedStyle === 'cinematic') { intensity = 'expressive'; why.push('владелец выбрал кинематографичное движение'); }
+  else if (requestedStyle === 'luxury') { intensity = 'calm'; why.push('владелец выбрал люкс-профиль: медленное, малозаметное движение'); }
   else if (requestedStyle === 'static') { intensity = 'calm'; why.push('владелец выбрал минимальное движение'); }
   else if (project.tier === 'luxury') { intensity = 'calm'; why.push('люкс — сдержанное, медленное движение'); }
   else if (CALM_NICHES.has(nicheId) || CALM_WORDS.test(character)) { intensity = 'calm'; why.push('ниша и характер требуют спокойной подачи'); }

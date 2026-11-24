@@ -17,7 +17,7 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'ken-burns', heroWithGallery: 'slideshow', heroWithoutPhoto: 'aurora', cardEffect: 'photo-zoom',
     textEffect: 'scroll-fade',
     buttonStyle: 'glass', typeStyle: 'italic-accent', textAnimation: 'blur-in', buttonAnimation: 'shine',
-    sectionLayout: 'alternating', transitionType: 'glow', imageMask: 'arch', motionStyle: 'cinematic',
+    sectionLayout: 'alternating', transitionType: 'glow', imageMask: 'rounded-rect', motionStyle: 'cinematic',
   },
   aurora: {
     label: 'Световая аврора', description: 'Многослойные цветовые поля, крупный заголовок, светящиеся CTA и плавный ритм.',
@@ -26,7 +26,7 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'duotone', heroWithGallery: 'slideshow', heroWithoutPhoto: 'aurora', cardEffect: 'gradient-border',
     textEffect: 'scroll-fade',
     buttonStyle: 'glow', typeStyle: 'oversized', textAnimation: 'highlight-sweep', buttonAnimation: 'pulse',
-    sectionLayout: 'bands', transitionType: 'mesh', imageMask: 'circle', motionStyle: 'cinematic',
+    sectionLayout: 'bands', transitionType: 'mesh', imageMask: 'rounded-rect', motionStyle: 'cinematic',
   },
   editorial: {
     label: 'Журнальная типографика', description: 'Мастхед, колонная композиция, бумажная фактура и выразительная работа с заголовками.',
@@ -35,7 +35,7 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'line-split', heroWithGallery: 'line-split', heroWithoutPhoto: 'line-split', cardEffect: 'underline-arrow',
     textEffect: 'scroll-fade',
     buttonStyle: 'outline', typeStyle: 'italic-accent', textAnimation: 'rise-headings', buttonAnimation: 'underline-grow',
-    sectionLayout: 'magazine', transitionType: 'arch', imageMask: 'arch', motionStyle: 'cinematic',
+    sectionLayout: 'magazine', transitionType: 'arch', imageMask: 'rounded-rect', motionStyle: 'cinematic',
   },
   product: {
     label: 'Предметная сцена', description: 'Товар или работа становится главным объектом, навигация поддерживает каталог, CTA получает чёткий акцент.',
@@ -44,7 +44,7 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'ken-burns', heroWithGallery: 'slideshow', heroWithoutPhoto: 'morph', cardEffect: 'spotlight',
     textEffect: 'scroll-fade',
     buttonStyle: 'gradient', typeStyle: 'tight-display', textAnimation: 'tracking-in', buttonAnimation: 'shine',
-    sectionLayout: 'inset-panel', transitionType: 'glow', imageMask: 'chevron', motionStyle: 'cinematic',
+    sectionLayout: 'inset-panel', transitionType: 'glow', imageMask: 'rounded-rect', motionStyle: 'cinematic',
   },
   graphic: {
     label: 'Графический контраст', description: 'Плакатная композиция, крупная типографика, полутон и контрастные блоки.',
@@ -53,7 +53,34 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'photo-wipe', heroWithGallery: 'double-exposure', heroWithoutPhoto: 'grid', cardEffect: 'stack',
     textEffect: 'scroll-fade',
     buttonStyle: 'block', typeStyle: 'oversized', textAnimation: 'skew-headings', buttonAnimation: 'nudge',
-    sectionLayout: 'index-number', transitionType: 'split', imageMask: 'notch', motionStyle: 'cinematic',
+    sectionLayout: 'index-number', transitionType: 'split', imageMask: 'rounded-rect', motionStyle: 'cinematic',
+  },
+  'atelier-luxe': {
+    label: 'Ателье — тихая роскошь', description: 'Тёплая журнальная подача, деликатный свет и сатиновые детали без навязчивого движения.',
+    archetypes: ['editorial', 'immersive', 'storytelling'], placements: { editorial: 'column-and-plate', immersive: 'bleed-bottom-left', storytelling: 'chapter-side' }, navStyle: 'masthead',
+    directions: ['warm-paper', 'aubergine', 'gallery-white'], graphicDirection: 'editorial', cinematicLayers: 'paper-light',
+    heroWithPhoto: 'focus-pull', heroWithGallery: 'duotone', heroWithoutPhoto: 'atelier-light', cardEffect: 'satin-edge',
+    textEffect: 'scroll-fade',
+    buttonStyle: 'outline', typeStyle: 'italic-accent', textAnimation: 'rise-headings', buttonAnimation: 'underline-grow',
+    sectionLayout: 'magazine', transitionType: 'fade', imageMask: 'rounded-rect', motionStyle: 'luxury',
+  },
+  'black-tie': {
+    label: 'Black Tie — вечерняя галерея', description: 'Глубокий тёмный фон, крупная антиква, точечный свет и строгие контурные элементы.',
+    archetypes: ['immersive', 'editorial', 'brand-manifesto'], placements: { immersive: 'bleed-center', editorial: 'column-and-plate', 'brand-manifesto': 'manifesto-center' }, navStyle: 'overlay',
+    directions: ['gallery-black', 'night-sky', 'aubergine'], graphicDirection: 'cinematic', cinematicLayers: 'film',
+    heroWithPhoto: 'duotone', heroWithGallery: 'slideshow', heroWithoutPhoto: 'atelier-light', cardEffect: 'layered-shadow',
+    textEffect: 'scroll-fade',
+    buttonStyle: 'outline', typeStyle: 'small-caps', textAnimation: 'tracking-in', buttonAnimation: 'border-draw',
+    sectionLayout: 'wide', transitionType: 'glow', imageMask: 'rounded-rect', motionStyle: 'luxury',
+  },
+  'modern-heirloom': {
+    label: 'Modern Heirloom — наследие сегодня', description: 'Материалы и оттенки ремесленной мастерской в чистой современной композиции.',
+    archetypes: ['editorial', 'product-first', 'portfolio-mosaic'], placements: { editorial: 'column-and-plate', 'product-first': 'spotlight-stage', 'portfolio-mosaic': 'mosaic-visual-first' }, navStyle: 'bar',
+    directions: ['chestnut', 'warm-paper', 'forest'], graphicDirection: 'macro', cinematicLayers: 'soft-grain',
+    heroWithPhoto: 'focus-pull', heroWithGallery: 'duotone', heroWithoutPhoto: 'line-split', cardEffect: 'satin-edge',
+    textEffect: 'scroll-fade',
+    buttonStyle: 'underline', typeStyle: 'small-caps', textAnimation: 'rise-headings', buttonAnimation: 'underline-grow',
+    sectionLayout: 'inset-panel', transitionType: 'fade', imageMask: 'rounded-rect', motionStyle: 'luxury',
   },
 });
 
@@ -62,16 +89,17 @@ export const ART_DIRECTION_PRESET_IDS = Object.keys(ART_DIRECTION_PRESETS);
 /** Apply a recipe to automatic choices while retaining every explicit field override. */
 export function applyArtDirectionPreset(project) {
   const id = project?.passthrough?.artDirectionPreset;
-  const preset = ART_DIRECTION_PRESETS[id];
+  const preset = Object.hasOwn(ART_DIRECTION_PRESETS, id) ? ART_DIRECTION_PRESETS[id] : null;
   if (!preset) return project;
   const passthrough = { ...project.passthrough };
-  const hasPhoto = Boolean(project.images?.hero || project.gallery?.length);
+  const uniqueGalleryCount = new Set((Array.isArray(project.gallery) ? project.gallery : []).map(photo => typeof photo === 'string' ? photo : photo?.src).filter(Boolean)).size;
+  const hasPhoto = Boolean(project.images?.hero || uniqueGalleryCount);
   const settings = {
     navStyle: preset.navStyle,
     heroPlacement: preset.placements?.[project.architecture?.exact] || '',
     graphicDirection: preset.graphicDirection,
     cinematicLayers: preset.cinematicLayers,
-    heroEffect: project.gallery?.length > 1 ? preset.heroWithGallery : hasPhoto ? preset.heroWithPhoto : preset.heroWithoutPhoto,
+    heroEffect: uniqueGalleryCount >= 2 ? preset.heroWithGallery : hasPhoto ? preset.heroWithPhoto : preset.heroWithoutPhoto,
     cardEffect: preset.cardEffect,
     textEffect: preset.textEffect,
     buttonStyle: preset.buttonStyle,
@@ -106,7 +134,9 @@ export function validateArtDirectionPresets() {
       const map = { graphicDirection: 'graphics', cinematicLayers: 'layers', heroWithPhoto: 'heroes', heroWithGallery: 'heroes', heroWithoutPhoto: 'heroes', cardEffect: 'cards', textEffect: 'text', typeStyle: 'types', textAnimation: 'textAnimations', buttonAnimation: 'buttonAnimations', sectionLayout: 'sectionLayouts', transitionType: 'transitions', imageMask: 'masks', buttonStyle: 'buttons', navStyle: 'navs' };
       if (!checks[map[field]]?.includes(preset[field])) errors.push(`${id}.${field}: ${preset[field]}`);
     }
-    for (const [architecture, placement] of Object.entries(preset.placements || {})) if (!ARCHETYPES[architecture]?.placements[placement]) errors.push(`${id}.placements.${architecture}: ${placement}`);
+    for (const [architecture, placement] of Object.entries(preset.placements || {})) {
+      if (!Object.hasOwn(ARCHETYPES, architecture) || !Object.hasOwn(ARCHETYPES[architecture].placements, placement)) errors.push(`${id}.placements.${architecture}: ${placement}`);
+    }
   }
   return errors;
 }

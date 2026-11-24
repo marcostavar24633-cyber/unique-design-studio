@@ -13,6 +13,7 @@ export const SEVERITY_LABELS = { critical: 'Critical', high: 'High', medium: 'Me
 
 /** Не показываем контроль качества как завершённый без замечаний, требующих просмотра. */
 export function qualityStageStatus(report) {
+  if (!report || !report.counts || !Array.isArray(report.findings)) return 'attention';
   if (report?.counts?.critical || report?.counts?.high) return 'attention';
   return report?.findings?.length ? 'review' : 'done';
 }
@@ -36,10 +37,10 @@ export const CATEGORIES = Object.freeze({
 
 // Проверки technical audit → направление. Неизвестные id попадают в «UX».
 const AUDIT_CATEGORY = {
-  lang: 'seo', title: 'seo', description: 'seo', 'seo-title-length': 'seo', 'seo-description-length': 'seo', 'og-title': 'seo', 'og-description': 'seo',
+  lang: 'seo', title: 'seo', description: 'seo', 'seo-title-length': 'seo', 'seo-description-length': 'seo', 'og-title': 'seo', 'og-description': 'seo', 'og-image': 'seo',
   h1: 'hierarchy', landmarks: 'accessibility', 'skip-link': 'accessibility', focus: 'accessibility', 'reduced-motion': 'accessibility', 'form-labels': 'accessibility',
   'img-alt': 'accessibility', 'img-alt-empty': 'accessibility', 'img-alt-duplicates': 'accessibility', 'img-alt-quality': 'accessibility',
-  'unique-ids': 'functionality', links: 'functionality', cta: 'commercial', 'cta-path': 'commercial', 'form-delivery': 'functionality',
+  'unique-ids': 'functionality', links: 'functionality', 'external-links-unverified': 'functionality', cta: 'commercial', 'cta-path': 'commercial', 'cta-target-unavailable': 'commercial', 'cta-target-invalid': 'commercial', 'booking-path': 'commercial', 'form-delivery': 'functionality',
   'safe-urls': 'security', 'self-contained': 'security',
   contrast: 'contrast', 'no-images': 'images', placeholders: 'commercial', 'placeholder-contacts': 'commercial', 'no-invented-prices': 'commercial',
   uniqueness: 'uniqueness', rationale: 'niche', viewport: 'responsive', weight: 'performance',
@@ -104,12 +105,22 @@ const AUTO_FIXES = {
  * @returns {{ findings: object[], counts: Record<string, number>, byCategory: Record<string, object[]>, score: number }}
  */
 export function qualityReport(generated) {
-  const project = generated.project;
+  if (!generated || typeof generated !== 'object' || !generated.project || typeof generated.project !== 'object') {
+    const finding = { id: 'generation:missing-project', source: 'generation', category: 'functionality', severity: 'critical', autoFix: false, message: 'Результат генерации не содержит проекта для проверки.' };
+    const counts = Object.fromEntries(SEVERITIES.map(severity => [severity, severity === 'critical' ? 1 : 0]));
+    const byCategory = Object.fromEntries(Object.keys(CATEGORIES).map(category => [category, category === 'functionality' ? [finding] : []]));
+    return { findings: [finding], counts, byCategory, score: 0 };
+  }
+  const project = normalizeProject(generated.project);
   const findings = [];
   const add = f => findings.push({ autoFix: false, ...f });
 
-  for (const c of [...(generated.audit?.errors || []), ...(generated.audit?.warnings || [])]) {
-    add({ id: `audit:${c.id}`, source: 'audit', category: categoryOfAudit(c.id), severity: severityOfAudit(c), message: c.message, autoFix: Boolean(AUTO_FIXES[c.id]) && Boolean(AUTO_FIXES[c.id](project)) });
+  const auditErrors = Array.isArray(generated.audit?.errors) ? generated.audit.errors : [];
+  const auditWarnings = Array.isArray(generated.audit?.warnings) ? generated.audit.warnings : [];
+  for (const c of [...auditErrors, ...auditWarnings].filter(check => check && typeof check === 'object')) {
+    const checkId = typeof c.id === 'string' ? c.id : 'unknown';
+    const hasFix = Object.hasOwn(AUTO_FIXES, checkId) && Boolean(AUTO_FIXES[checkId](project));
+    add({ id: `audit:${checkId}`, source: 'audit', category: categoryOfAudit(checkId), severity: severityOfAudit(c), message: String(c.message || 'Проверка вернула неполные данные.'), autoFix: hasFix });
   }
 
   const images = reviewImageSet(project, generated.concept);
@@ -122,7 +133,10 @@ export function qualityReport(generated) {
   }
 
   const u = generated.concept?.uniquenessCheck;
-  const closest = (u?.comparedWith || []).reduce((m, x) => Math.max(m, x.similarity || 0), 0);
+  const closest = (Array.isArray(u?.comparedWith) ? u.comparedWith : []).reduce((max, entry) => {
+    const similarity = Number(entry?.similarity);
+    return Number.isFinite(similarity) ? Math.max(max, Math.min(1, Math.max(0, similarity))) : max;
+  }, 0);
   if (closest >= 0.75) add({ id: 'uniqueness:similar', source: 'uniqueness', category: 'uniqueness', severity: 'medium', message: `Сайт похож на один из прошлых проектов на ${Math.round(closest * 100)}% — проверьте первый экран и порядок секций.` });
   if (detectNiche(project).id === 'generic') add({ id: 'niche:generic', source: 'niche', category: 'niche', severity: 'medium', message: 'Ниша не распознана: структура и тексты собраны по универсальному профилю. Уточните нишу или добавьте описание бизнеса.' });
 
@@ -137,11 +151,16 @@ export function qualityReport(generated) {
 
 /** Применяет безопасные автоисправления к сырому проекту. Возвращает новый объект и список применённых. */
 export function applyAutoFixes(raw, findings) {
-  const next = JSON.parse(JSON.stringify(raw || {}));
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  // Исправления меняют только верхнеуровневые поля; поверхностная копия сохраняет
+  // импортируемые значения без падения на циклических ссылках и BigInt.
+  const next = { ...source };
   const applied = [];
-  for (const f of findings) {
+  for (const f of Array.isArray(findings) ? findings : []) {
+    if (!f || typeof f !== 'object') continue;
     if (!f.autoFix) continue;
-    const fix = AUTO_FIXES[f.id.replace(/^audit:/, '')];
+    const id = typeof f.id === 'string' ? f.id.replace(/^audit:/, '') : '';
+    const fix = Object.hasOwn(AUTO_FIXES, id) ? AUTO_FIXES[id] : null;
     const patch = fix && fix(next);
     if (!patch) continue;
     Object.assign(next, patch);
@@ -156,13 +175,18 @@ export function applyAutoFixes(raw, findings) {
  * @param {object} raw исходный проект
  * @param {(raw: object) => object} regenerate функция, возвращающая результат generate()
  */
-export function fixAndRecheck(raw, regenerate, { maxPasses = 2 } = {}) {
+export function fixAndRecheck(raw, regenerate, options = {}) {
+  if (typeof regenerate !== 'function') throw new TypeError('Нужна функция повторной генерации');
+  const { maxPasses = 2 } = options && typeof options === 'object' ? options : {};
+  let requestedPasses = NaN;
+  try { requestedPasses = Number(maxPasses); } catch { /* non-coercible values use the default */ }
+  const passLimit = Number.isFinite(requestedPasses) ? Math.max(0, Math.min(5, Math.floor(requestedPasses))) : 2;
   let project = raw;
   let generated = regenerate(project);
   let report = qualityReport(generated);
   const before = report;
   const passes = [];
-  for (let i = 0; i < maxPasses; i++) {
+  for (let i = 0; i < passLimit; i++) {
     const { project: next, applied } = applyAutoFixes(project, report.findings);
     if (!applied.length) break;
     project = next;
@@ -171,6 +195,10 @@ export function fixAndRecheck(raw, regenerate, { maxPasses = 2 } = {}) {
     passes.push({ applied, before: report.counts, after: after.counts });
     report = after;
   }
-  const stoppedBy = passes.length >= maxPasses ? 'limit' : 'nothing-to-fix';
+  const actionable = report.findings.some(f => {
+    const id = typeof f?.id === 'string' ? f.id.replace(/^audit:/, '') : '';
+    return Boolean(f?.autoFix) && Object.hasOwn(AUTO_FIXES, id);
+  });
+  const stoppedBy = actionable && passes.length >= passLimit ? 'limit' : 'nothing-to-fix';
   return { project, generated, before, after: report, passes, stoppedBy };
 }

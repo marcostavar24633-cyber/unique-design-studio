@@ -19,7 +19,7 @@ export function fadePhrases(project) {
 /** Эффект текста проекта: ручной выбор владельца главнее; иначе — по архитектуре, классу и данным. */
 export function chooseTextEffect(project, { archetype, intensity }, seed) {
   const forced = project.passthrough?.textEffect;
-  if (forced && TEXT_EFFECTS[forced]) return forced === 'fade-words' && fadePhrases(project).length < 2 ? 'none' : forced;
+  if (Object.hasOwn(TEXT_EFFECTS, forced)) return forced === 'fade-words' && fadePhrases(project).length < 2 ? 'none' : forced;
   if (archetype === 'brutalist' || archetype === 'split-utility') return 'none';
   const pool = ['none'];
   if (fadePhrases(project).length >= 2 && archetype !== 'catalog') pool.push('fade-words', 'fade-words');

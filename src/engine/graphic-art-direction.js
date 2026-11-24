@@ -37,6 +37,8 @@ const NICHE_RULES = [
 ];
 
 export function chooseGraphicDirection(project = {}, visual = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  visual = visual && typeof visual === 'object' ? visual : {};
   const niche = String(project.niche || '').toLowerCase();
   const context = [project.description, project.mainOffer, project.brandCharacter].join(' ').toLowerCase();
   const source = niche + ' ' + context;

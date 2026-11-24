@@ -3,7 +3,11 @@
 import { normalizeProject } from './project.js';
 import { safeUrl } from './util.js';
 
-const clone = value => JSON.parse(JSON.stringify(value));
+const clone = value => {
+  try { if (typeof structuredClone === 'function') return structuredClone(value); } catch { /* fall back for DOM/functions */ }
+  try { return JSON.parse(JSON.stringify(value)); } catch { /* preserve unsupported import data shallowly */ }
+  return Array.isArray(value) ? value.slice() : value && typeof value === 'object' ? { ...value } : value;
+};
 const has = value => String(value ?? '').trim().length > 0;
 const itemCount = value => Array.isArray(value) ? value.length : 0;
 
@@ -121,7 +125,7 @@ const APPROVED_FIELDS = new Set([
  * Никакие неизвестные поля, изображения или локальные данные не удаляются.
  */
 export function applyApprovedDesignPatch(input, patch, approvedFields = []) {
-  const allowed = new Set(approvedFields.filter(key => APPROVED_FIELDS.has(key)));
+  const allowed = new Set((Array.isArray(approvedFields) ? approvedFields : []).filter(key => APPROVED_FIELDS.has(key)));
   const next = clone(input && typeof input === 'object' ? input : {});
   const applied = [];
   for (const key of allowed) {
