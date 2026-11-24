@@ -138,7 +138,31 @@ test('движение: контент не прячется без JS, скри
   assert.ok(html.includes("classList.add('js-reveal')"));
   assert.ok(html.includes('prefers-reduced-motion: reduce'));
   assert.ok(!/\[data-reveal\]\{opacity:0/.test(html.replace(/html\.js-reveal \[data-reveal\]/g, '')), 'скрытие только при наличии JS');
-  assert.ok(!generate({ ...full, architecture: 'minimal' }).html.includes('<script>('), 'статичная архитектура не несёт скрипт анимации');
+  const staticHtml = generate({ ...full, architecture: 'minimal' }).html;
+  assert.ok(!staticHtml.includes("classList.add('js-reveal')"), 'статичная архитектура не подключает анимацию появления');
+  assert.ok(staticHtml.includes('data-theme-toggle'), 'переключатель темы доступен и без анимаций');
+});
+
+test('дополнительные блоки контента выводятся только при наличии данных', () => {
+  const { html, concept } = generate({ ...full,
+    testimonials: [['Анна', 'Прекрасный результат']],
+    team: [['Мария Иванова', 'Архитектор']],
+    stats: [['12 лет', 'опыта']],
+  });
+  for (const id of ['testimonials', 'team', 'stats']) assert.ok(concept.homepage.sectionOrder.includes(id), `${id}: включён в порядок секций`);
+  assert.match(html, /class="uds-testimonial"/);
+  assert.match(html, /class="uds-team-card"/);
+  assert.match(html, /class="uds-stat"/);
+  assert.ok(!generate({ ...full }).html.includes('id="testimonials"'));
+});
+
+test('переключение темы и выбор стиля навигации попадают в сайт', () => {
+  const { html, concept } = generate({ ...full, navStyle: 'framed' });
+  assert.equal(concept.visualSystem.nav, 'framed');
+  assert.match(html, /class="nav nav--framed"/);
+  assert.match(html, /data-theme-toggle/);
+  assert.match(html, /localStorage\.setItem\(key,alternate\?'alternate':'default'\)/);
+  assert.match(html, /--uds-alt-bg/);
 });
 
 test('аудит ловит дефекты', () => {

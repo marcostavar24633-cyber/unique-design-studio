@@ -52,6 +52,9 @@ function contentSignals(p) {
     about: Boolean(p.aboutText),
     advantages: p.advantages.length,
     faqs: p.faqs.length,
+    testimonials: p.testimonials.length,
+    team: p.team.length,
+    stats: p.stats.length,
     contacts: Boolean(p.contacts.phone || p.contacts.email || p.contacts.address),
   };
 }
@@ -182,7 +185,7 @@ function compose(project, profile, ranked, seed, avoid) {
   const typePool = tierPool.length ? tierPool : profile.types.filter(t => arch.types.includes(t));
   const typeCharacter = pick(stream(seed, 'type'), typePool.length ? typePool : arch.types, avoid.types);
   const presetNav = project.passthrough?.navStyle;
-  const nav = arch.navs.includes(presetNav) && !avoid.navs.includes(presetNav) ? presetNav : pick(stream(seed, 'nav'), arch.navs, avoid.navs);
+  const nav = Object.hasOwn(NAV_LABELS, presetNav) ? presetNav : pick(stream(seed, 'nav'), arch.navs, avoid.navs);
   let dirPool = artDirection?.directions?.length ? artDirection.directions : profile.directions;
   // Люкс: сдержанные «галерейные» и глубокие направления; тёмный фон с золотом по-прежнему не по умолчанию.
   if (!artDirection && project.tier === 'luxury') dirPool = ['gallery-white', 'gallery-black', 'aubergine', 'night-sky', 'warm-paper', 'chestnut'];
@@ -248,16 +251,16 @@ export function similarity(a, b) {
 function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', seed = hash(project.id || project.brand)) {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
-    gallery: s.gallery > 0, faq: s.faqs > 0, contact: true,
+    gallery: s.gallery > 0, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
   };
   // Ведущие секции ниши сохраняют приоритет. Внутри выбранного ритма есть
   // два редакционных маршрута: порядок не сводится к одной схеме на всю нишу.
   const lead = uniq(profile.lead || []).filter(id => id !== 'contact' && has[id]);
-  const base = uniq(arch.order).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
+  const base = uniq([...arch.order, 'testimonials', 'team', 'stats']).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
   const preferences = {
     editorial: [
-      ['about', 'gallery', 'items', 'advantages', 'process', 'faq'],
-      ['gallery', 'about', 'advantages', 'items', 'process', 'faq'],
+      ['about', 'gallery', 'items', 'testimonials', 'advantages', 'process', 'team', 'stats', 'faq'],
+      ['gallery', 'about', 'advantages', 'items', 'testimonials', 'process', 'stats', 'team', 'faq'],
     ],
     offset: [
       ['gallery', 'advantages', 'about', 'items', 'faq', 'process'],

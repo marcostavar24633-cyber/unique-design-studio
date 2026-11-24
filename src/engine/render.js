@@ -19,7 +19,7 @@ import { cardShapeCss, photoCompositionCss, revealCss, sectionCompositionsCss } 
 import { cardEffectCss, effectsScript, heroEffectCss, heroEffectMarkup, heroMarqueeHtml } from './effects.js';
 import { EXTRA_LAYOUT_CSS, LAYOUT_ORDER_FAMILY, buttonAnimationCss, buttonAnimationScript, textAnimationCss, typeStyleCss } from './typography-layout.js';
 import { createVisualIdentity } from '../visual-identity.js';
-import { contrast, ensureContrast, readableOn } from './color.js';
+import { contrast, ensureContrast, readableOn, mix } from './color.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -62,12 +62,14 @@ function context(project, concept) {
   const labels = {
     about: copy('about'), items: localizedItemsLabel(project.lang, vs.itemsLabel), advantages: copy('advantages'), process: copy('process'),
     gallery: vs.nicheId === 'photo' ? copy('portfolioWork') : copy('gallery'), faq: copy('faq'), contact: copy('contactSection'),
+    testimonials: project.lang.startsWith('en') ? 'Testimonials' : 'Отзывы', team: project.lang.startsWith('en') ? 'Team' : 'Команда', stats: project.lang.startsWith('en') ? 'By the numbers' : 'Факты и цифры',
   };
   const titles = {
     about: project.aboutTitle || labels.about, items: project.servicesTitle || labels.items,
     advantages: project.advantagesTitle || labels.advantages, process: project.processTitle || labels.process,
     gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || labels.faq,
     contact: project.contactTitle || (project.lang.startsWith('en') ? labels.contact : concept.homepage.primaryCTA),
+    testimonials: project.lang.startsWith('en') ? 'What clients say' : 'Отзывы клиентов', team: project.lang.startsWith('en') ? 'Our team' : 'Наша команда', stats: project.lang.startsWith('en') ? 'Our track record' : 'В цифрах',
   };
   const siteStates = project.site?.fieldStates || {};
   const pageStates = project.fieldStates || {};
@@ -178,7 +180,8 @@ function nav(c) {
   const brandText = `<span>${esc(c.brand)}</span>`;
   const brandNote = c.p.site.header.tagline ? `<small class="nav__tagline">${esc(c.p.site.header.tagline)}</small>` : '';
   const brand = `<a class="nav__brand" href="#top">${brandMark}${brandText}${brandNote}</a>`;
-  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}</nav>`;
+  const themeLabel = c.p.lang.startsWith('en') ? 'Switch light or dark theme' : 'Переключить светлую или тёмную тему';
+  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}<button class="ds-theme-toggle" type="button" data-theme-toggle aria-label="${themeLabel}" title="${themeLabel}"><span aria-hidden="true">◐</span><span class="ds-theme-toggle__label">${c.p.lang.startsWith('en') ? 'Theme' : 'Тема'}</span></button></nav>`;
   if (kind === 'category') {
     const cats = c.p.categories.length
       ? c.p.categories.map(t => `<li>${c.order.includes('items') ? `<a href="#items">${esc(t)}</a>` : `<span>${esc(t)}</span>`}</li>`)
@@ -186,6 +189,15 @@ function nav(c) {
     if (cats.length) out += `<nav aria-label="${esc(systemCopy(c.p.lang, 'categories'))}"><ul class="cats">${cats.join('')}</ul></nav>`;
   }
   return out + '</header>';
+}
+
+function themeCss(concept, identity) {
+  const palette = identity ? visualIdentityTokens(identity) : concept.visualSystem.palette;
+  const dark = palette.mode === 'dark';
+  const bg = dark ? '#f7f6f2' : '#151719', surface = dark ? '#ffffff' : '#202327';
+  const text = readableOn(bg, '#171819', '#f8f7f3');
+  const muted = ensureContrast(mix(text, bg, .38), bg, 4.6), border = mix(bg, text, .18);
+  return `:root{--uds-alt-bg:${bg};--uds-alt-surface:${surface};--uds-alt-text:${text};--uds-alt-muted:${muted};--uds-alt-border:${border};--uds-alt-focus:${palette.focus || palette.accent}}html[data-uds-theme="alternate"]{color-scheme:${dark ? 'light' : 'dark'};--ds-bg:var(--uds-alt-bg);--ds-surface:var(--uds-alt-surface);--ds-text:var(--uds-alt-text);--ds-text-muted:var(--uds-alt-muted);--ds-border:var(--uds-alt-border);--ds-focus:var(--uds-alt-focus)}.ds-theme-toggle{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:6px 11px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-pill);background:var(--ds-surface);color:var(--ds-text);cursor:pointer}.ds-theme-toggle:hover{border-color:var(--ds-accent)}.ds-theme-toggle__label{font-size:.82rem}@media(max-width:760px){.ds-theme-toggle__label{display:none}.ds-theme-toggle{min-width:40px;justify-content:center;padding:6px}}`;
 }
 
 // Фото фоном первого экрана — в архитектурах, где первый экран построен на тексте, каталоге или форме.
@@ -394,6 +406,18 @@ const SECTION = {
     const composition = c.vs.sectionCompositions?.faq || 'list';
     return wrap(c, 'faq', `<div class="faq faq--${esc(composition)}">${d}</div>`);
   },
+  testimonials(c) {
+    const rows = c.p.testimonials.map(item => `<figure class="uds-testimonial" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('testimonial', item.id)}"><blockquote>${esc(item.text || item.title)}</blockquote>${item.text && item.title ? `<figcaption>${esc(item.title)}</figcaption>` : ''}</figure>`).join('');
+    return wrap(c, 'testimonials', `<div class="uds-testimonials">${rows}</div>`);
+  },
+  team(c) {
+    const rows = c.p.team.map(item => `<article class="uds-team-card" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('team', item.id)}">${item.image ? `<img src="${esc(item.image)}" alt="${esc(item.alt || item.title)}" loading="lazy" decoding="async">` : ''}<h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}</article>`).join('');
+    return wrap(c, 'team', `<div class="uds-team">${rows}</div>`);
+  },
+  stats(c) {
+    const rows = c.p.stats.map(item => `<div class="uds-stat" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('stat', item.id)}"><strong>${esc(item.title)}</strong>${item.text ? `<span>${esc(item.text)}</span>` : ''}</div>`).join('');
+    return wrap(c, 'stats', `<div class="uds-stats">${rows}</div>`);
+  },
   contact(c) {
     const k = c.p.contacts, rows = [];
     if (k.phone) rows.push(`<li><span>${systemCopy(c.p.lang, 'phone')}</span><a href="tel:${esc(k.phone.replace(/[^\d+]/g, ''))}">${esc(k.phone)}</a></li>`);
@@ -410,6 +434,8 @@ const SECTION = {
 // ---------- Скрипт страницы: только нужные фрагменты ----------
 function script(c, scene) {
   const parts = [];
+  const themeKey = JSON.stringify(`uds:theme:${c.p.id || 'site'}`);
+  parts.push(`(function(){var root=document.documentElement,key=${themeKey},button=document.querySelector('[data-theme-toggle]'),saved='';try{saved=localStorage.getItem(key)||''}catch(e){}if(saved==='alternate')root.dataset.udsTheme='alternate';if(button)button.addEventListener('click',function(){var alternate=root.dataset.udsTheme!=='alternate';if(alternate)root.dataset.udsTheme='alternate';else delete root.dataset.udsTheme;try{localStorage.setItem(key,alternate?'alternate':'default')}catch(e){}})})()`);
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
   if (c.form) {
     const copy = ['sending', 'sent', 'failed'].map(key => JSON.stringify(systemCopy(c.p.lang, key))).join(',');
@@ -497,7 +523,8 @@ export function renderCss(concept, scene = null, identity = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
-    CORE_CSS, tokensCss(vs), visualIdentityCss(identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
+    CORE_CSS, tokensCss(vs), visualIdentityCss(identity), themeCss(concept, identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
+    '.uds-testimonials,.uds-team,.uds-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span{color:var(--ds-text-muted)}.uds-team-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3{margin:0 0 6px}.uds-team-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}',
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}.nav__brand{display:inline-flex;align-items:center;gap:10px}.nav__tagline{display:block;font-size:.72em;color:var(--ds-text-muted)}.form__status{margin:0;padding:10px 12px;border:1px solid var(--ds-border);border-left:3px solid var(--ds-accent);border-radius:var(--ds-radius-sm);color:var(--ds-text)}.form__status[data-state="error"]{border-left-color:#b42318}.form__status[data-state="success"]{border-left-color:#147d46}.foot__links{display:flex;flex-wrap:wrap;gap:8px 14px}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
