@@ -89,6 +89,15 @@ test('подбор профилей под нишу: по сфере, катег
   assert.deepEqual(matchTemplates([], { niche: 'кафе' }), []);
 });
 
+test('конкретный профиль выбирается вручную независимо от автоматического совпадения ниши', () => {
+  const library = [analyzed(), normalizeTemplate({ id: 'empty', name: 'Пустой профиль' })];
+  const [reference] = referencesFor(library, { niche: 'парикмахерская' }, { profileId: 'furniture' });
+  assert.equal(reference.id, 'furniture');
+  assert.deepEqual(reference.why, ['выбран вручную']);
+  assert.deepEqual(referencesFor(library, { niche: 'мебель' }, { profileId: 'empty' }), []);
+  assert.deepEqual(referencesFor(library, { niche: 'мебель' }, { profileId: 'missing' }), []);
+});
+
 test('референс для генератора не содержит палитры, шрифтов, адреса и текстов источника', () => {
   const [ref] = referencesFor([analyzed()], { niche: 'мебель на заказ' });
   const dump = JSON.stringify(ref);

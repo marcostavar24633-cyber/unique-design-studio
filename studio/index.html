@@ -108,7 +108,7 @@
           <div class="field"><label for="auto-audience">Для кого</label><input id="auto-audience" placeholder="Например: новички, которым нужен план тренировок"></div>
           <div class="field"><label for="auto-services">Услуги или товары</label><textarea id="auto-services" rows="4" placeholder="Например: Персональная тренировка | План под цель и опыт"></textarea><small>По одной позиции на строку. Описание можно отделить символом |. Если заполнить список, автопилот возьмёт его вместо типового каталога ниши.</small></div>
         </details>
-        <div class="field"><label for="auto-library">Библиотека шаблонов</label><select id="auto-library" aria-describedby="auto-library-h"><option value="auto">Учитывать подходящие профили</option><option value="off">Не использовать — только ниша</option></select><small id="auto-library-h"></small></div>
+        <div class="field"><label for="auto-library">Библиотека шаблонов</label><select id="auto-library" aria-describedby="auto-library-h"><option value="auto">Учитывать подходящие профили</option><option value="specific">Выбрать конкретный профиль</option><option value="off">Не использовать — только ниша</option></select><small id="auto-library-h"></small><div class="field" id="auto-library-profile-field" hidden><label for="auto-library-profile">Профиль для сайта</label><select id="auto-library-profile"><option value="">Выберите профиль</option></select></div></div>
         <button type="submit" class="primary wide" id="auto-go">Сгенерировать всё</button>
         <div id="auto-progress" class="auto-progress" hidden data-state="running" aria-live="polite">
           <div class="auto-progress-heading"><b id="auto-progress-stage">Подготовка проекта</b><strong id="auto-progress-value">0%</strong></div>
