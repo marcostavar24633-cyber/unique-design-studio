@@ -19,7 +19,7 @@ const MEDIA = [
 ];
 const sel = MEDIA.join(',');
 const MASK_RULES = {
-  'rounded-rect': `${sel}{border-radius:var(--ds-radius-md,18px)}`,
+  'rounded-rect': `${sel}{border-radius:18px}`,
 };
 
 export function dividerHtml() { return ''; }

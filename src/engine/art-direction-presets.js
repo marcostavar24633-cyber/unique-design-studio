@@ -35,7 +35,7 @@ export const ART_DIRECTION_PRESETS = Object.freeze({
     heroWithPhoto: 'line-split', heroWithGallery: 'line-split', heroWithoutPhoto: 'line-split', cardEffect: 'underline-arrow',
     textEffect: 'scroll-fade',
     buttonStyle: 'outline', typeStyle: 'italic-accent', textAnimation: 'rise-headings', buttonAnimation: 'underline-grow',
-    sectionLayout: 'magazine', transitionType: 'arch', imageMask: 'rounded-rect', motionStyle: 'cinematic',
+    sectionLayout: 'magazine', transitionType: 'fade', imageMask: 'rounded-rect', motionStyle: 'cinematic',
   },
   product: {
     label: 'Предметная сцена', description: 'Товар или работа становится главным объектом, навигация поддерживает каталог, CTA получает чёткий акцент.',

@@ -7,8 +7,9 @@ import { cardShapeCss, revealCss } from '../src/engine/variety.js';
 const base = { brand: 'Поток', niche: 'студия йоги', title: 'Йога для спины', contacts: { email: 'hello@example.com' },
   services: [['Хатха', 'Спокойная практика'], ['Виньяса', 'Динамичные связки']], advantages: [['Малые группы', 'До 8 человек'], ['Утро и вечер', 'Удобное время']] };
 
-test('по 15 вариантов форм карточек, эффектов появления и стилей кнопок', () => {
-  assert.equal(CARD_SHAPE_IDS.length, 15);
+test('формы карточек без арок, 15 эффектов появления и стилей кнопок', () => {
+  assert.equal(CARD_SHAPE_IDS.length, 14);
+  assert.equal(CARD_SHAPES.arch, undefined, 'арочные карточки исключены из генератора');
   assert.equal(REVEAL_IDS.length, 15);
   assert.equal(Object.keys(BUTTONS).length, 15);
   assert.deepEqual(Object.keys(BUTTON_CSS).sort(), Object.keys(BUTTONS).sort(), 'у каждого стиля кнопки есть CSS');
@@ -16,9 +17,9 @@ test('по 15 вариантов форм карточек, эффектов п�
   for (const id of REVEAL_IDS) assert.ok(revealCss(id), id);
 });
 
-test('ручной выбор владельца главнее, неизвестные значения игнорируются', () => {
+test('генератор сохраняет округлые карточки, а выбор владельца управляет эффектом появления', () => {
   const c = buildConcept({ ...base, cardShape: 'ticket', revealEffect: 'flip-y', buttonStyle: 'neon' }).visualSystem;
-  assert.equal(c.variety.cardShape, 'ticket');
+  assert.equal(c.variety.cardShape, 'rounded');
   assert.equal(c.variety.reveal, 'flip-y');
   assert.equal(c.variety.revealForced, true);
   assert.equal(c.button.id, 'neon');
@@ -27,14 +28,14 @@ test('ручной выбор владельца главнее, неизвес�
   assert.equal(auto.variety.revealForced, false);
 });
 
-test('авто-выбор: люкс и брутализм сдержаны в своих рамках, кнопки люкса — сдержанные', () => {
+test('авто-компоновка сохраняет скруглённые карточки для всех архитектур', () => {
   for (let i = 0; i < 12; i++) {
     const lux = buildConcept({ ...base, brand: 'Люкс ' + i, tier: 'luxury' }).visualSystem;
-    assert.ok(['square', 'arch', 'leaf', 'rounded'].includes(lux.variety.cardShape));
+    assert.equal(lux.variety.cardShape, 'rounded');
     assert.ok(['fade-in', 'fade-up', 'blur-in', 'clip-up'].includes(lux.variety.reveal));
     assert.ok(['outline', 'underline'].includes(lux.button.id));
     const brut = buildConcept({ ...base, brand: 'Брут ' + i, architecture: 'brutalist' }).visualSystem;
-    assert.ok(['square', 'chamfer', 'offset-frame'].includes(brut.variety.cardShape));
+    assert.equal(brut.variety.cardShape, 'rounded');
     assert.equal(brut.button.id, 'block');
   }
   assert.deepEqual(chooseVariety({}, { seed: 7 }), chooseVariety({}, { seed: 7 }), 'воспроизводимо');
@@ -60,12 +61,14 @@ test('появление: только с JavaScript, при reduced-motion вс
   assert.ok(forced.html.includes('clip-path:inset(0 100% 0 0)'));
 });
 
-test('страницы с каждой формой, эффектом и кнопкой проходят аудит; выбор сохраняется в экспорте', () => {
+test('формы карточек из старых данных не меняют генерацию; эффекты и кнопки сохраняются', () => {
   CARD_SHAPE_IDS.forEach((shape, i) => {
     const r = generate({ ...base, id: `v-${shape}`, cardShape: shape, revealEffect: REVEAL_IDS[i], buttonStyle: Object.keys(BUTTONS)[i], palette: i % 2 ? 'dark' : 'light' });
     assert.deepEqual(r.audit.errors, [], shape);
+    assert.equal(r.concept.visualSystem.variety.cardShape, 'rounded', shape);
+    assert.match(r.html, /\.ds-button\{border-radius:999px!important\}/, 'кнопки всегда скруглены');
   });
   const r = generate({ ...base, cardShape: 'folded', revealEffect: 'zoom-out', buttonStyle: 'glass' });
   const again = generate(JSON.parse(JSON.stringify(exportProject(r.project))));
-  assert.deepEqual([again.concept.visualSystem.variety.cardShape, again.concept.visualSystem.variety.reveal, again.concept.visualSystem.button.id], ['folded', 'zoom-out', 'glass']);
+  assert.deepEqual([again.concept.visualSystem.variety.cardShape, again.concept.visualSystem.variety.reveal, again.concept.visualSystem.button.id], ['rounded', 'zoom-out', 'glass']);
 });

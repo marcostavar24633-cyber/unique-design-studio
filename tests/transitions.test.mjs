@@ -7,9 +7,11 @@ const base = { brand: 'Ханой', niche: 'кафе', title: 'Вьетнамс�
   services: [['Фо', 'Суп'], ['Нем', 'Роллы']], advantages: [['Травы', 'Свежие'], ['Бульон', '12 часов']] };
 
 test('градиентный переход всегда применяется между блоками', () => {
+  assert.equal(TRANSITIONS.arch, undefined, 'арочный переход исключён');
   const a = buildConcept(base).visualSystem.transition, b = buildConcept(base).visualSystem.transition;
   assert.deepEqual(a, b);
   assert.equal(a.type, 'fade');
+  assert.equal(chooseTransition({ passthrough: { transitionType: 'arch' } }, {}).type, 'fade', 'старый арочный переход заменяется градиентом');
   assert.equal(buildConcept({ ...base, architecture: 'brutalist' }).visualSystem.transition.type, 'fade');
   assert.equal(buildConcept({ ...base, architecture: 'minimal' }).visualSystem.transition.type, 'fade');
   for (const type of TRANSITION_IDS) assert.equal(buildConcept({ ...base, tier: 'luxury', transitionType: type }).visualSystem.transition.type, 'fade');
