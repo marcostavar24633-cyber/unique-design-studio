@@ -119,6 +119,20 @@ test('служебные подписи, действия и ALT работаю�
   assert.match(brutalist.html, /<nav aria-label="Page sections">/);
 });
 
+test('английская подпись раздела услуг сохраняет смысл выбранной ниши', () => {
+  const cases = [
+    ['Кофейня / кафе / ресторан', 'Menu'], ['Интернет-магазин техники', 'Catalog'],
+    ['магазин морепродуктов', 'Products'], ['Обучение и курсы', 'Program'],
+    ['Цифровой продукт / IT-сервис', 'Features'], ['События и праздники', 'Packages'],
+    ['Бутик / ювелирные изделия и аксессуары', 'Collections'],
+    ['автосервис', 'What we repair'], ['фитнес-клуб', 'Services'],
+  ];
+  for (const [niche, label] of cases) {
+    const { html } = generate({ brand: 'Studio', niche, title: 'Example', lang: 'en', services: [['One', 'Description'], ['Two', 'Description'], ['Three', 'Description']] });
+    assert.ok(html.includes(`>${label}</h2>`), `${niche} should use “${label}”`);
+  }
+});
+
 test('движение: контент не прячется без JS, скрипт уважает reduced motion', () => {
   const { html } = generate({ ...full, architecture: 'immersive' });
   assert.ok(html.includes("classList.add('js-reveal')"));
