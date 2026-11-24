@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T20:21:16.801Z
+Время обновления: 2026-11-24T20:46:49.324Z
 Ветка: main
-Последний commit: b996dcfb585ad8fced1c4c3c6c744d08bc0789ee
-Дата коммита: 2026-11-25T00:21:04+04:00
-Сообщение: fix: localize commerce controls and request cart (#252)
+Последний commit: b8a41626b1785c869beeeeaec61a153dc833e6ca
+Дата коммита: 2026-11-25T00:46:34+04:00
+Сообщение: Let users name gallery photos (#254)
 
 Последние коммиты:
+- b8a4162 · 2026-11-25 · Let users name gallery photos (#254)
+- 7895189 · 2026-11-24 · docs: refresh project handoff
 - b996dcf · 2026-11-25 · fix: localize commerce controls and request cart (#252)
 - 011fb5c · 2026-11-24 · docs: refresh project handoff
 - bdd7e09 · 2026-11-25 · ci: avoid duplicate runs on pull request branches (#251)
 - db39e7c · 2026-11-24 · docs: refresh project handoff
 - 3599942 · 2026-11-24 · test: stabilize editor photo resize flow (#250)
 - 1509819 · 2026-11-24 · docs: refresh project handoff
-- 70c1766 · 2026-11-24 · fix: preserve niche-specific English section labels (#249)
-- 10e161f · 2026-11-24 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
