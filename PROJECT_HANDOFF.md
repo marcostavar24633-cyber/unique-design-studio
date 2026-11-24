@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T20:57:41.235Z
+Время обновления: 2026-11-24T23:03:33.505Z
 Ветка: main
-Последний commit: 595cc9d844163a6e140517f60493b1f19fa3722c
-Дата коммита: 2026-11-25T00:57:26+04:00
-Сообщение: Allow choosing a specific design profile (#255)
+Последний commit: eb2a5516a13678244ccca5f0a54caa2a115f2348
+Дата коммита: 2026-11-25T03:03:22+04:00
+Сообщение: Merge pull request #256 from marcostavar24633-cyber/codex/main-branch-generator-fixes
 
 Последние коммиты:
+- eb2a551 · 2026-11-25 · Merge pull request #256 from marcostavar24633-cyber/codex/main-branch-generator-fixes
+- 70f06b4 · 2026-11-25 · fix: commit image alt edits on blur
+- 9c41e04 · 2026-11-25 · fix: restore complete stylesheet in tablet navigation update
+- 8cf7ee5 · 2026-11-25 · fix: prevent tablet navigation overlap
+- af8bb41 · 2026-11-25 · feat: expand generator themes and editor previews
+- 262960e · 2026-11-24 · docs: refresh project handoff
 - 595cc9d · 2026-11-25 · Allow choosing a specific design profile (#255)
 - 6f53688 · 2026-11-24 · docs: refresh project handoff
-- b8a4162 · 2026-11-25 · Let users name gallery photos (#254)
-- 7895189 · 2026-11-24 · docs: refresh project handoff
-- b996dcf · 2026-11-25 · fix: localize commerce controls and request cart (#252)
-- 011fb5c · 2026-11-24 · docs: refresh project handoff
-- bdd7e09 · 2026-11-25 · ci: avoid duplicate runs on pull request branches (#251)
-- db39e7c · 2026-11-24 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
