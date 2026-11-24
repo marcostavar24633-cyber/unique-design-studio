@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildConcept, generate, exportProject, BUTTONS, CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, chooseVariety } from '../src/engine/index.js';
+import { buildConcept, generate, exportProject, BUTTONS, CARD_SHAPES, CARD_SHAPE_IDS, REVEALS, REVEAL_IDS, choosePhotoComposition, chooseVariety } from '../src/engine/index.js';
 import { BUTTON_CSS } from '../src/engine/css.js';
-import { cardShapeCss, revealCss } from '../src/engine/variety.js';
+import { cardShapeCss, photoCompositionCss, revealCss } from '../src/engine/variety.js';
 
 const base = { brand: 'Поток', niche: 'студия йоги', title: 'Йога для спины', contacts: { email: 'hello@example.com' },
   services: [['Хатха', 'Спокойная практика'], ['Виньяса', 'Динамичные связки']], advantages: [['Малые группы', 'До 8 человек'], ['Утро и вечер', 'Удобное время']] };
@@ -15,6 +15,25 @@ test('формы карточек без арок, 15 эффектов появ�
   assert.deepEqual(Object.keys(BUTTON_CSS).sort(), Object.keys(BUTTONS).sort(), 'у каждого стиля кнопки есть CSS');
   for (const id of CARD_SHAPE_IDS) assert.ok(cardShapeCss(id), id);
   for (const id of REVEAL_IDS) assert.ok(revealCss(id), id);
+});
+
+test('веер и перекрытие не сдвигают фото при включённом reduced motion', () => {
+  assert.match(photoCompositionCss('fan'), /prefers-reduced-motion:reduce\)\{\.gallery--fan>li\{transition:none\}\.gallery--fan>li:hover,\.gallery--fan>li\[data-reveal\]\.is-in:hover\{transform:none\}\}/);
+  assert.match(photoCompositionCss('overlap'), /prefers-reduced-motion:reduce\)\{\.gallery--overlap>li\{transition:none\}/);
+  assert.match(photoCompositionCss('overlap'), /\.gallery--overlap>li:nth-child\(3n\+2\):hover,\.gallery--overlap>li:nth-child\(3n\):hover,\.gallery--overlap>li\[data-reveal\]\.is-in:nth-child\(3n\+2\):hover,\.gallery--overlap>li\[data-reveal\]\.is-in:nth-child\(3n\):hover\{transform:none\}/);
+  assert.match(photoCompositionCss('fan'), /\.gallery--fan>li\[data-reveal\]\.is-in\{transform:rotate\(var\(--photo-tilt,0deg\)\) translateY\(var\(--photo-rise,0px\)\)\}/);
+  assert.match(photoCompositionCss('overlap'), /\.gallery--overlap>li\[data-reveal\]\.is-in:nth-child\(3n\)\{transform:translate\(-24px,-10px\)/);
+  assert.match(photoCompositionCss('fan'), /\.gallery--fan>li\[data-reveal\]\.is-in:hover\{transform:translateY\(-10px\) rotate\(0\) scale\(1\.045\)\}/);
+});
+
+test('веер симметричен для 3–4 фото и переключается на слоистую раскладку для больших наборов', () => {
+  for (const count of [3, 4]) {
+    const gallery = Array.from({ length: count }, (_, i) => ({ src: `https://img.example/${i}.jpg`, alt: `Фото ${i + 1}` }));
+    const { html } = generate({ ...base, gallery, photoComposition: 'fan' });
+    assert.match(html, new RegExp(`gallery--fan--count-${count}`));
+  }
+  const largeGallery = Array.from({ length: 6 }, (_, i) => ({ src: `https://img.example/${i}.jpg`, alt: `Фото ${i + 1}` }));
+  assert.equal(choosePhotoComposition({ gallery: largeGallery, passthrough: { photoComposition: 'fan' } }), 'overlap');
 });
 
 test('генератор сохраняет округлые карточки, а выбор владельца управляет эффектом появления', () => {
@@ -72,3 +91,4 @@ test('формы карточек из старых данных не меняю
   const again = generate(JSON.parse(JSON.stringify(exportProject(r.project))));
   assert.deepEqual([again.concept.visualSystem.variety.cardShape, again.concept.visualSystem.variety.reveal, again.concept.visualSystem.button.id], ['rounded', 'zoom-out', 'glass']);
 });
+
