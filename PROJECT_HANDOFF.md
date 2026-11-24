@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T20:46:49.324Z
+Время обновления: 2026-11-24T20:57:41.235Z
 Ветка: main
-Последний commit: b8a41626b1785c869beeeeaec61a153dc833e6ca
-Дата коммита: 2026-11-25T00:46:34+04:00
-Сообщение: Let users name gallery photos (#254)
+Последний commit: 595cc9d844163a6e140517f60493b1f19fa3722c
+Дата коммита: 2026-11-25T00:57:26+04:00
+Сообщение: Allow choosing a specific design profile (#255)
 
 Последние коммиты:
+- 595cc9d · 2026-11-25 · Allow choosing a specific design profile (#255)
+- 6f53688 · 2026-11-24 · docs: refresh project handoff
 - b8a4162 · 2026-11-25 · Let users name gallery photos (#254)
 - 7895189 · 2026-11-24 · docs: refresh project handoff
 - b996dcf · 2026-11-25 · fix: localize commerce controls and request cart (#252)
 - 011fb5c · 2026-11-24 · docs: refresh project handoff
 - bdd7e09 · 2026-11-25 · ci: avoid duplicate runs on pull request branches (#251)
 - db39e7c · 2026-11-24 · docs: refresh project handoff
-- 3599942 · 2026-11-24 · test: stabilize editor photo resize flow (#250)
-- 1509819 · 2026-11-24 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
