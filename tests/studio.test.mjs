@@ -73,6 +73,8 @@ test('код веб-редактора синтаксически коррект
     "asset-coverage-list",
     "data-hero-alt",
     "data-gallery-alt",
+    "data-gallery-caption",
+    "Название / подпись",
     "data-service-alt",
     "data-copy-asset-prompt",
     "ALT-текст",
