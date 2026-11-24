@@ -48,6 +48,23 @@ test('магазин с ценами и категориями получает 
   assert.ok(g.audit.ok, g.audit.errors.map(e => e.message).join('; '));
 });
 
+test('магазинная корзина и каталог используют язык страницы и валюту из цен', () => {
+  const g = generate(furniture({
+    lang: 'en', brand: 'North Furniture', niche: 'магазин мебели', title: 'Furniture for your home',
+    services: [
+      ['Sofa', 'Three seats.', '$1,299.00', '', '', 'Living room'],
+      ['Armchair', 'Oak frame.', '$499.00', '', '', 'Living room'],
+      ['Bed', 'Queen size.', '$899.00', '', '', 'Bedroom'],
+    ],
+  }));
+  for (const label of ['Categories', 'All', 'Sort by', 'Price: low to high', 'Add to request', 'Request', 'This is a request, not a payment']) {
+    assert.ok(g.html.includes(label), `missing English commerce label: ${label}`);
+  }
+  assert.match(g.html, /currency="USD"/);
+  assert.match(g.html, /new Intl\.NumberFormat\(locale/);
+  assert.doesNotMatch(g.html, /aria-label="Добавить|>В заявку<|>Категории<|>Сначала дешевле<|>Заявка<|Стоимость уточним при подтверждении заявки/);
+});
+
 test('черновик автопилота без цен: фильтров по ценам и корзины нет', () => {
   const p = autopilot({ niche: 'магазин мебели', email: 'hello@example.com' }, { registry: [] }).project;
   const g = generate(p);
@@ -102,3 +119,4 @@ test('студия: категория позиции редактируется
   assert.match(js, /Название \| Описание \| Цена \| URL картинки \| ALT-текст \| Категория/);
   assert.match(js, /\[r\.title, r\.text, r\.price, r\.image, r\.alt, r\.category(, r\.badge)?\]/);
 });
+

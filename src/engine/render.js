@@ -357,7 +357,7 @@ const SECTION = {
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
       const shop = c.vs.commerce?.tools || c.vs.commerce?.cart;
-      const parts = { media, title: `${i.badge ? `<span class="item__badge">${esc(i.badge)}</span>` : ''}<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '', moreLabel: esc(systemCopy(c.p.lang, 'moreDetails')), flipHint: esc(systemCopy(c.p.lang, 'flipHint')) };
+      const parts = { media, title: `${i.badge ? `<span class="item__badge">${esc(i.badge)}</span>` : ''}<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n, c.p.lang) : '', moreLabel: esc(systemCopy(c.p.lang, 'moreDetails')), flipHint: esc(systemCopy(c.p.lang, 'flipHint')) };
       const flip = mech === 'flip' && media && parts.text;
       // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
       const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
