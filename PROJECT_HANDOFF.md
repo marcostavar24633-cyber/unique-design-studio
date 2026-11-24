@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T17:15:30.979Z
+Время обновления: 2026-11-24T17:45:18.171Z
 Ветка: main
-Последний commit: 42e54ce19154c01dde921c0100da8f38f9fd4621
-Дата коммита: 2026-11-24T21:15:17+04:00
-Сообщение: Fix hidden-section links and photo composition motion (#247)
+Последний commit: fc6b8dfc18231ad673fcaf2fade43727eddf3452
+Дата коммита: 2026-11-24T21:45:06+04:00
+Сообщение: fix: improve generator accessibility and localization (#248)
 
 Последние коммиты:
+- fc6b8df · 2026-11-24 · fix: improve generator accessibility and localization (#248)
+- 997d13c · 2026-11-24 · docs: refresh project handoff
 - 42e54ce · 2026-11-24 · Fix hidden-section links and photo composition motion (#247)
 - d3c8d08 · 2026-11-24 · docs: refresh project handoff
 - b139365 · 2026-11-24 · Remove arch-shaped generator styles (#246)
 - 0d58c9f · 2026-11-24 · docs: refresh project handoff
 - 26a8a33 · 2026-11-24 · Improve generator layouts and editor controls (#245)
 - f3bcdfb · 2026-11-23 · docs: refresh project handoff
-- 4583f80 · 2026-11-24 · Verify staging AI diagnostics and image response CORS (#244)
-- 977712b · 2026-11-23 · Cover image retries after 429, 503 and network timeouts (#243)
 <!-- HANDOFF:AUTO:END -->
