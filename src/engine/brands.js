@@ -63,7 +63,7 @@ export const BRANDS = {
     mode: 'light', bg: '#f4efe7', surface: '#ebe3d6', text: '#16120f', muted: '#5b5047', accent: '#94451f',
     display: 'Cormorant Garamond', body: 'Onest',
     radius: { sm: '2px', md: '16px', lg: '28px', button: '999px' },
-    note: 'Слоновая кость, медный акцент (#94451f, светлый #e0a57d), ночные тёмные секции (#0d0b09); арочные формы.',
+    note: 'Слоновая кость, медный акцент (#94451f, светлый #e0a57d), ночные тёмные секции (#0d0b09); сдержанные скруглённые формы.',
   },
   remont: {
     name: 'РЕМОНТ',

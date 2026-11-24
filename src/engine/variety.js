@@ -1,8 +1,6 @@
-// Разнообразие оформления: 15 форм карточек и 15 эффектов появления блоков.
-// Формы применяются только к «коробочным» карточкам (позиции-карточки, товарные, бенто, карточки преимуществ):
-// списки-линейки и нумерованные позиции не меняются. Срезы углов не глубже внутреннего отступа карточек,
-// поэтому текст не обрезается. Появление работает только с JavaScript и без prefers-reduced-motion:
-// без них контент сразу виден.
+// Генератор закрепляет скруглённые прямоугольники. Реестр CSS-форм оставлен для совместимости,
+// но альтернативная геометрия не выбирается автоматической сборкой. В редакторе есть собственные настройки.
+// Эффекты появления работают с JavaScript и отключаются при prefers-reduced-motion.
 import { pick, stream } from './util.js';
 
 export const CARD_SHAPES = Object.freeze({
@@ -11,7 +9,6 @@ export const CARD_SHAPES = Object.freeze({
   capsule: 'Капсула',
   leaf: 'Лист',
   'leaf-reverse': 'Лист, зеркальный',
-  arch: 'Арка сверху',
   tab: 'Вкладка',
   ticket: 'Билет с вырезами',
   chamfer: 'Срезанные углы',
@@ -43,31 +40,22 @@ export const REVEALS = Object.freeze({
 });
 export const REVEAL_IDS = Object.keys(REVEALS);
 
-// Пулы авто-выбора: по форме палитры и архитектуре.
-const SHAPE_POOL = {
-  sharp: ['square', 'chamfer', 'cut-corner', 'notch', 'folded', 'offset-frame', 'tab', 'ticket'],
-  soft: ['rounded', 'tab', 'leaf', 'ticket', 'squircle', 'folded', 'notch'],
-  round: ['capsule', 'blob', 'leaf', 'arch', 'squircle', 'leaf-reverse'],
-};
 const REVEAL_POOL = {
   calm: ['fade-in', 'fade-up', 'blur-in', 'clip-up'],
   balanced: ['fade-up', 'slide-left', 'slide-right', 'zoom-in', 'clip-up', 'clip-left', 'rise-scale', 'fade-down', 'zoom-out'],
   expressive: ['flip-x', 'flip-y', 'rotate-in', 'skew-in', 'rise-scale', 'clip-left', 'zoom-in', 'slide-right'],
 };
 
-/** Форма карточек и эффект появления. Ручной выбор владельца (passthrough.cardShape / revealEffect) главнее. */
+/** Генерация всегда использует прямоугольные карточки со скруглением; альтернативы остаются в canvas editor. */
 export function chooseVariety(project = {}, options = {}) {
-  const { shape = 'soft', archetype = '', intensity = 'balanced', seed = 0 } = options && typeof options === 'object' ? options : {};
+  const { archetype = '', intensity = 'balanced', seed = 0 } = options && typeof options === 'object' ? options : {};
   project = project && typeof project === 'object' ? project : {};
   const f = project.passthrough || {};
-  let shapes = SHAPE_POOL[shape] || SHAPE_POOL.soft;
-  if (archetype === 'brutalist') shapes = ['square', 'chamfer', 'offset-frame'];
-  if (project.tier === 'luxury') shapes = ['square', 'arch', 'leaf', 'rounded'];
   let reveals = REVEAL_POOL[intensity] || REVEAL_POOL.balanced;
   if (project.tier === 'luxury') reveals = REVEAL_POOL.calm;
   if (archetype === 'brutalist') reveals = ['clip-up', 'clip-left', 'skew-in', 'slide-left'];
   return Object.freeze({
-    cardShape: Object.hasOwn(CARD_SHAPES, f.cardShape) ? f.cardShape : pick(stream(seed, 'card-shape'), shapes),
+    cardShape: 'rounded',
     reveal: Object.hasOwn(REVEALS, f.revealEffect) ? f.revealEffect : pick(stream(seed, 'reveal-effect'), reveals),
     revealForced: Object.hasOwn(REVEALS, f.revealEffect),
   });
@@ -124,7 +112,7 @@ export function choosePhotoComposition(project = {}, options = {}) {
 
 /** Стили композиции фотографий. Все варианты сохраняют прямоугольные фото со скруглением. */
 export function photoCompositionCss(id) {
-  const shared = `.gallery img{border-radius:var(--ds-radius-md,18px)!important;clip-path:none!important;mask:none!important;-webkit-mask:none!important}`;
+  const shared = `.gallery img{border-radius:18px!important;clip-path:none!important;mask:none!important;-webkit-mask:none!important}`;
   const desktop = {
     fan: `@media(min-width:761px){.gallery--fan{display:flex;justify-content:center;align-items:center;gap:0;padding:clamp(24px,4vw,52px) 0}.gallery--fan>li{position:relative;flex:0 1 19%;min-width:0;margin-inline:-.5%;transform:rotate(var(--photo-tilt,0deg)) translateY(var(--photo-rise,0px));transition:transform .3s var(--ds-ease),z-index .3s}.gallery--fan>li:nth-child(1){--photo-tilt:-11deg;--photo-rise:22px}.gallery--fan>li:nth-child(2){--photo-tilt:-5deg;--photo-rise:4px}.gallery--fan>li:nth-child(3){--photo-tilt:0deg;--photo-rise:-8px}.gallery--fan>li:nth-child(4){--photo-tilt:5deg;--photo-rise:4px}.gallery--fan>li:nth-child(5){--photo-tilt:11deg;--photo-rise:22px}.gallery--fan>li:hover{z-index:5;transform:translateY(-10px) rotate(0) scale(1.045)}.gallery--fan figure{padding:7px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-lg);background:var(--ds-surface);box-shadow:0 14px 32px color-mix(in srgb,var(--ds-text) 13%,transparent)}.gallery--fan img{aspect-ratio:4/5}}@media(prefers-reduced-motion:reduce){.gallery--fan>li{transition:none}}`,
     overlap: `@media(min-width:761px){.gallery--overlap{grid-template-columns:repeat(12,minmax(0,1fr));gap:0 10px;align-items:center;padding-block:16px}.gallery--overlap>li{position:relative;grid-column:span 4;margin-block:10px;transition:transform .25s var(--ds-ease),z-index .25s}.gallery--overlap>li:nth-child(3n+2){transform:translate(-12px,18px);z-index:2}.gallery--overlap>li:nth-child(3n){transform:translate(-24px,-10px);z-index:1}.gallery--overlap>li:nth-child(3n+2):hover,.gallery--overlap>li:nth-child(3n):hover{z-index:5;transform:translateY(-8px) scale(1.035)}.gallery--overlap img{aspect-ratio:4/5}}@media(prefers-reduced-motion:reduce){.gallery--overlap>li{transition:none}}`,
@@ -167,7 +155,6 @@ const SHAPE_CSS = {
   capsule: `${sel('')}{border-radius:clamp(28px,4vw,44px)}`,
   leaf: `${sel('')}{border-radius:32px 6px 32px 6px}`,
   'leaf-reverse': `${sel('')}{border-radius:6px 32px 6px 32px}`,
-  arch: `${sel('')}{border-radius:56px 56px 10px 10px}`,
   tab: `${sel('')}{border-radius:4px 26px 4px 4px}`,
   ticket: `${sel('')}{border-radius:10px;-webkit-mask:radial-gradient(circle 9px at 0 50%,transparent 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,transparent 98%,#000) right/51% 100% no-repeat;mask:radial-gradient(circle 9px at 0 50%,transparent 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,transparent 98%,#000) right/51% 100% no-repeat}`,
   chamfer: `${sel('')}{border-radius:0;clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px)}`,
@@ -180,7 +167,7 @@ const SHAPE_CSS = {
 };
 
 /** CSS формы карточек. */
-const PHOTO_CARD_SHAPE_CSS = `${photoSel('')}{border-radius:var(--ds-radius-lg,24px);clip-path:none!important;mask:none!important;-webkit-mask:none!important}${photoSel(' .item__media')}{overflow:hidden;border-radius:var(--ds-radius-md,18px)}${photoSel(' .item__media img')}{border-radius:var(--ds-radius-md,18px)!important}`;
+const PHOTO_CARD_SHAPE_CSS = `${photoSel('')}{border-radius:20px;clip-path:none!important;mask:none!important;-webkit-mask:none!important}${photoSel(' .item__media')}{overflow:hidden;border-radius:18px}${photoSel(' .item__media img')}{border-radius:18px!important}`;
 export function cardShapeCss(id) {
   return (Object.hasOwn(SHAPE_CSS, id) ? SHAPE_CSS[id] : '') + PHOTO_CARD_SHAPE_CSS;
 }

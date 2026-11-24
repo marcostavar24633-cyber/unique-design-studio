@@ -478,13 +478,13 @@ export function renderCss(concept, scene = null, identity = null) {
     cinematicLayersCss(vs.cinematicLayers),
     sectionBackdropsCss(vs.sectionBackdrops),
     transitionCss(vs.transition, vs.sectionLayout),
-    cardShapeCss(vs.variety?.cardShape),
+    cardShapeCss('rounded'),
     photoCompositionCss(vs.photoComposition),
     sectionCompositionsCss(vs.sectionCompositions),
     revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
     vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
-    '.ds-button{border-radius:var(--ds-radius-pill,999px)!important}',
+    '.ds-button{border-radius:999px!important}',
   ].join('\n').replace(/\n\s*/g, '');
 }
 

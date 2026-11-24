@@ -22,14 +22,14 @@ test('маска только у фото: не у карточек, кнопо�
     const selectors = css.slice(0, css.indexOf('{')).split(',');
     for (const s of selectors) assert.match(s, / img$/, `${mask}: ${s}`);
     assert.doesNotMatch(css, /hero__photo-bg|\.item\{|ds-button|\.item,/);
-    assert.match(css, /border-radius:var\(--ds-radius-md,18px\)/, `${mask}: все фото остаются прямоугольными со скруглением`);
+    assert.match(css, /border-radius:18px/, `${mask}: все фото остаются прямоугольными со скруглением`);
   }
 });
 
 test('разделители секций полностью отсутствуют из HTML и CSS', () => {
   const g = site({ sectionDivider: 'double-wave' });
   assert.equal(dividerHtml('wave'), '');
-  assert.match(formsCss({ mask: 'none', divider: 'wave' }), /border-radius:var\(--ds-radius-md,18px\)/);
+  assert.match(formsCss({ mask: 'none', divider: 'wave' }), /border-radius:18px/);
   assert.doesNotMatch(g.html, /ds-divider|uds-divider/);
   assert.equal(g.concept.visualSystem.forms.divider, 'none');
 });
