@@ -68,6 +68,15 @@ test('доступность разметки для всех архитекту
   }
 });
 
+test('скрытые секции услуг не оставляют битых ссылок ни в одной архитектуре', () => {
+  for (const architecture of ARCHETYPE_IDS) {
+    const { html, audit } = generate({ ...full, architecture, fieldStates: { cta: 'hidden', ctaUrl: 'hidden', 'sections.items': 'hidden' } });
+    assert.ok(!audit.errors.some(error => error.id === 'links'), architecture);
+    assert.ok(audit.errors.some(error => error.id === 'cta'), `${architecture}: скрытый CTA остаётся в отчёте`);
+    if (architecture === 'modular-grid') assert.doesNotMatch(html, /class="bento__cell bento__cta"/);
+  }
+});
+
 test('движение: контент не прячется без JS, скрипт уважает reduced motion', () => {
   const { html } = generate({ ...full, architecture: 'immersive' });
   assert.ok(html.includes("classList.add('js-reveal')"));
@@ -258,3 +267,4 @@ test('явно заданный heroAlt сохраняет приоритет н
   });
   assert.ok(result.html.includes('alt="Стол из натурального дуба" fetchpriority="high"'));
 });
+

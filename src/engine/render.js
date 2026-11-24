@@ -32,6 +32,9 @@ const SECTION_LAYOUT_CSS = {
 
 const sectionClass = (c, id) => "ds-section sec sec--" + id + " section-layout--" + (c.vs.sectionLayout || "editorial") + (c.vs.sectionCompositions?.[id] ? " section-composition--" + c.vs.sectionCompositions[id] : "");
 const itemAnchor = item => `item-${slugify(item?.id || item?.title || 'item')}`;
+const itemLink = (c, item, content, attributes = '') => c.order.includes('items')
+  ? `<a href="#${itemAnchor(item)}"${attributes}>${content}</a>`
+  : `<span${attributes}>${content}</span>`;
 
 /** Подключение веб-шрифтов (только при fonts: "web"). По умолчанию страница не делает внешних запросов. */
 function fontLinks(fonts = []) {
@@ -146,8 +149,8 @@ function nav(c) {
   let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}</nav>`;
   if (kind === 'category') {
     const cats = c.p.categories.length
-      ? c.p.categories.map(t => `<li><a href="#items">${esc(t)}</a></li>`)
-      : c.p.services.slice(0, 8).map(i => `<li><a href="#${itemAnchor(i)}">${esc(i.title)}</a></li>`);
+      ? c.p.categories.map(t => `<li>${c.order.includes('items') ? `<a href="#items">${esc(t)}</a>` : `<span>${esc(t)}</span>`}</li>`)
+      : c.p.services.slice(0, 8).map(i => `<li>${itemLink(c, i, esc(i.title))}</li>`);
     if (cats.length) out += `<nav aria-label="${esc(systemCopy(c.p.lang, 'categories'))}"><ul class="cats">${cats.join('')}</ul></nav>`;
   }
   return out + '</header>';
@@ -170,7 +173,7 @@ const HERO = {
     const it = c.p.services[0];
     // Единый выбор изображения для всех архитектур: hero → галерея → услуга → мотив.
     const media = visual(c);
-    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#${itemAnchor(it)}">Подробнее</a></div>` : '';
+    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}${itemLink(c, it, 'Подробнее', ' class="ds-button ds-button--secondary"')}</div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },
   editorial(c) {
@@ -186,8 +189,8 @@ const HERO = {
   },
   catalog(c) {
     const tiles = c.p.categories.length
-      ? c.p.categories.slice(0, 8).map((t, n) => `<li><a href="#items"><span class="n">${pad(n + 1)}</span><span>${esc(t)}</span></a></li>`)
-      : c.p.services.slice(0, 8).map((i, n) => `<li><a href="#${itemAnchor(i)}"><span class="n">${pad(n + 1)}</span><span>${esc(i.title)}</span></a></li>`);
+      ? c.p.categories.slice(0, 8).map((t, n) => `<li>${c.order.includes('items') ? `<a href="#items"><span class="n">${pad(n + 1)}</span><span>${esc(t)}</span></a>` : `<span><span class="n">${pad(n + 1)}</span><span>${esc(t)}</span></span>`}</li>`)
+      : c.p.services.slice(0, 8).map((i, n) => `<li>${itemLink(c, i, `<span class="n">${pad(n + 1)}</span><span>${esc(i.title)}</span>`)}</li>`);
     const search = c.p.services.length >= 4
       ? `<form class="search" role="search" hidden data-search><label class="vh" for="q">${systemCopy(c.p.lang, 'searchIn')} «${esc(c.labels.items)}»</label><input class="ds-field" type="search" id="q" placeholder="${systemCopy(c.p.lang, 'search')}: ${esc(c.labels.items.toLowerCase())}" autocomplete="off"></form><p class="search__status" role="status" aria-live="polite" data-search-status></p>` : '';
     return `<div class="ds-container hero__wrap"><div class="hero__head">${kicker(c)}${h1(c)}${lede(c)}${search}<div class="actions">${cta(c)}</div></div>${tiles.length ? `<ul class="tiles" role="list">${tiles.join('')}</ul>` : ''}</div>`;
@@ -197,7 +200,7 @@ const HERO = {
     let tool;
     if (c.form) tool = leadForm(c, 'hero');
     else {
-      const picks = c.p.services.slice(0, 5).map(i => `<li><a href="#${itemAnchor(i)}">${esc(i.title)}</a></li>`).join('');
+      const picks = c.p.services.slice(0, 5).map(i => `<li>${itemLink(c, i, esc(i.title))}</li>`).join('');
       tool = `${picks ? `<ul class="picker">${picks}</ul>` : c.p.contactText ? `<p>${esc(c.p.contactText)}</p>` : ''}${cta(c)}`;
     }
     const title = c.form ? c.cta : c.p.services.length ? `${c.labels.items}: с чего начать` : c.cta;
@@ -209,8 +212,9 @@ const HERO = {
   },
   'modular-grid'(c) {
     const entries = c.p.services.slice(0, 3);
-    const cells = entries.map((i, n) => `<a class="bento__cell bento__entry" href="#${itemAnchor(i)}"><span class="n">${pad(n + 1)}</span><strong>${esc(i.title)}</strong>${i.text ? `<span>${esc(i.text)}</span>` : ''}</a>`).join('');
-    return `<div class="ds-container"><div class="bento bento--n${entries.length}"><div class="bento__cell bento__head">${kicker(c)}${h1(c)}${lede(c)}</div><div class="bento__cell bento__visual">${visual(c)}</div>${cells}<a class="bento__cell bento__cta" data-cta="primary" href="${esc(c.ctaHref)}"><span>${esc(c.cta)}</span><span aria-hidden="true">→</span></a></div></div>`;
+    const cells = entries.map((i, n) => itemLink(c, i, `<span class="n">${pad(n + 1)}</span><strong>${esc(i.title)}</strong>${i.text ? `<span>${esc(i.text)}</span>` : ''}`, ' class="bento__cell bento__entry"')).join('');
+    const primaryAction = c.ctaHref ? `<a class="bento__cell bento__cta" data-cta="primary" href="${esc(c.ctaHref)}"><span>${esc(c.cta)}</span><span aria-hidden="true">→</span></a>` : '';
+    return `<div class="ds-container"><div class="bento bento--n${entries.length}"><div class="bento__cell bento__head">${kicker(c)}${h1(c)}${lede(c)}</div><div class="bento__cell bento__visual">${visual(c)}</div>${cells}${primaryAction}</div></div>`;
   },
   brutalist(c) {
     const index = c.order.map((id, n) => `<li><a href="#${id}"><span class="n">${pad(n + 1)}</span>${esc(c.labels[id])}</a></li>`).join('');
@@ -225,7 +229,7 @@ const HERO = {
     return `<div class="ds-container proof-led__layout"><div class="proof-led__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${proof ? `<ol class="proof-led__list">${proof}</ol>` : `<div class="proof-led__visual">${visual(c)}</div>`}</div>`;
   },
   'service-picker'(c) {
-      const options = c.p.services.slice(0, 5).map(item => `<li><a href="#${itemAnchor(item)}"><span><b>${esc(item.title)}</b>${item.text ? `<small>${esc(item.text)}</small>` : ''}</span>${item.price ? `<strong>${esc(item.price)}</strong>` : '<span aria-hidden="true">→</span>'}</a></li>`).join('');
+      const options = c.p.services.slice(0, 5).map(item => `<li>${itemLink(c, item, `<span><b>${esc(item.title)}</b>${item.text ? `<small>${esc(item.text)}</small>` : ''}</span>${item.price ? `<strong>${esc(item.price)}</strong>` : '<span aria-hidden="true">→</span>'}`)}</li>`).join('');
     return `<div class="ds-container service-picker__layout"><div>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${options ? `<nav class="service-picker__panel" aria-label="${esc(c.labels.items)}"><ol>${options}</ol></nav>` : `<div class="service-picker__panel">${visual(c)}</div>`}</div>`;
   },
   'portfolio-mosaic'(c) {
@@ -252,7 +256,7 @@ const HERO = {
     return `<div class="ds-container story-timeline__layout"><div class="story-timeline__intro">${kicker(c)}${h1(c)}${lede(c)}${c.p.aboutText ? `<p>${esc(c.p.aboutText)}</p>` : ''}<div class="actions">${cta(c)}</div></div>${events ? `<ol class="story-timeline__events">${events}</ol>` : `<div class="story-timeline__visual">${visual(c)}</div>`}</div>`;
   },
   'price-comparison'(c) {
-    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#${itemAnchor(item)}" aria-label="Подробнее: ${esc(item.title)}">→</a></li>`).join('');
+    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, '→', ` aria-label="Подробнее: ${esc(item.title)}"`)}</li>`).join('');
     return `<div class="ds-container price-comparison__layout"><header>${kicker(c)}${h1(c)}${lede(c)}</header>${offers ? `<ol class="price-comparison__offers">${offers}</ol>` : `<div class="price-comparison__visual">${visual(c)}</div>`}<div class="actions">${cta(c)}</div></div>`;
   },
   'brand-manifesto'(c) {
@@ -279,11 +283,11 @@ const HERO = {
     return `<div class="ds-container feature-grid__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${features ? `<div class="feature-grid__items">${features}</div>` : `<div class="feature-grid__visual">${visual(c)}</div>`}</div>`;
   },
   'service-directory'(c) {
-    const services = c.p.services.slice(0, 6).map((item, i) => `<li><a href="#${itemAnchor(item)}"><span class="n">${pad(i + 1)}</span><span class="service-directory__name">${esc(item.title)}</span><span class="service-directory__arrow" aria-hidden="true">↗</span></a></li>`).join('');
+    const services = c.p.services.slice(0, 6).map((item, i) => `<li>${itemLink(c, item, `<span class="n">${pad(i + 1)}</span><span class="service-directory__name">${esc(item.title)}</span><span class="service-directory__arrow" aria-hidden="true">↗</span>`)}</li>`).join('');
     return `<div class="ds-container service-directory__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${services ? `<ol class="service-directory__list">${services}</ol>` : `<div class="service-directory__visual">${visual(c)}</div>`}</div>`;
   },
   'pricing-cards'(c) {
-    const offers = c.p.services.slice(0, 3).map(item => `<article class="pricing-cards__item"><span class="n">${pad(c.p.services.indexOf(item) + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#${itemAnchor(item)}">Подробнее <span aria-hidden="true">→</span></a></article>`).join('');
+    const offers = c.p.services.slice(0, 3).map(item => `<article class="pricing-cards__item"><span class="n">${pad(c.p.services.indexOf(item) + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, `Подробнее <span aria-hidden="true">→</span>`)}</article>`).join('');
     return `<div class="ds-container pricing-cards__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${offers ? `<div class="pricing-cards__items">${offers}</div>` : `<div class="pricing-cards__visual">${visual(c)}</div>`}</div>`;
   },
   'portfolio-feature'(c) {
@@ -349,7 +353,8 @@ const SECTION = {
   gallery(c) {
     const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-item-id="${esc(g.id)}" data-uds-edit-scope="${canvasEditScope('gallery', g.id)}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
     const composition = c.vs.photoComposition || 'grid';
-    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}" role="list">${li}</ul>`);
+    const countClass = composition === 'fan' ? ` gallery--fan--count-${c.p.gallery.length}` : '';
+    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list">${li}</ul>`);
   },
   faq(c) {
     const d = c.p.faqs.map(f => `<details data-uds-item-id="${esc(f.id)}" data-uds-edit-scope="${canvasEditScope('faq', f.id)}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
@@ -571,3 +576,4 @@ ${canvasEditsRuntime(project.passthrough.canvasEdits)}
 </html>
 `;
 }
+
