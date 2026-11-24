@@ -225,5 +225,12 @@ export function normalizeReferences(value) {
   });
 }
 
-/** Подбор + преобразование: то, что кладётся в проект как designReferences. */
-export const referencesFor = (library, input, opts) => matchTemplates(library, input, opts).map(toReference);
+/** Подбор по нише или применение одного явно выбранного профиля как референса. */
+export const referencesFor = (library, input = {}, opts = {}) => {
+  const profileId = str(opts.profileId);
+  if (profileId) {
+    const template = normalizeLibrary(library).find(t => t.id === profileId && !isProfileEmpty(t));
+    return template ? [toReference({ template, why: ['выбран вручную'] })] : [];
+  }
+  return matchTemplates(library, input, opts).map(toReference);
+};

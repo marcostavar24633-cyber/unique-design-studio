@@ -1413,14 +1413,32 @@ function readTemplateLibrary() {
 }
 function renderLibraryHint() {
   const hint = $('#auto-library-h'); if (!hint) return;
-  const filled = readTemplateLibrary().filter(t => t.status !== 'source-saved').length;
+  const mode = $('#auto-library').value;
+  const library = readTemplateLibrary();
+  const filled = library.filter(t => t.status !== 'source-saved');
+  const select = $('#auto-library-profile');
+  const field = $('#auto-library-profile-field');
+  const savedId = (() => { try { return localStorage.getItem('uds:selected-template-profile') || ''; } catch { return ''; } })();
+  const selectedId = select.value || savedId;
+  select.innerHTML = '<option value="">Выберите профиль</option>' + filled.map(t => '<option value="' + esc(t.id) + '">' + esc(t.name) + ' · ' + esc(t.category) + '</option>').join('');
+  if (filled.some(t => t.id === selectedId)) select.value = selectedId;
+  field.hidden = mode !== 'specific';
+  select.disabled = !filled.length;
   const link = '<a href="templates.html">Открыть библиотеку</a>';
-  hint.innerHTML = $('#auto-library').value === 'off' ? 'Концепция строится только по нише и контенту. ' + link
-    : filled ? 'Заполненных профилей: ' + filled + '. Подходящие принципы переосмысляются, дизайн не копируется. ' + link
+  if (mode === 'off') hint.innerHTML = 'Концепция строится только по нише и контенту. ' + link;
+  else if (mode === 'specific') {
+    const selected = filled.find(t => t.id === select.value);
+    hint.innerHTML = selected ? 'Будут переосмыслены структурные и UX-принципы профиля «' + esc(selected.name) + '»; композиция страницы останется самостоятельной. ' + link
+      : filled.length ? 'Выберите заполненный профиль для генерации. ' + link : 'Сначала добавьте и заполните профиль в библиотеке. ' + link;
+  } else hint.innerHTML = filled.length ? 'Заполненных профилей: ' + filled.length + '. Движок выберет подходящие и переосмыслит их принципы. ' + link
     : 'В библиотеке пока нет заполненных профилей. ' + link;
 }
-try { $('#auto-library').value = localStorage.getItem('uds:use-library') === 'off' ? 'off' : 'auto'; } catch {}
+try {
+  const mode = localStorage.getItem('uds:use-library');
+  $('#auto-library').value = ['off', 'specific'].includes(mode) ? mode : 'auto';
+} catch {}
 $('#auto-library').addEventListener('change', () => { try { localStorage.setItem('uds:use-library', $('#auto-library').value); } catch {} renderLibraryHint(); });
+$('#auto-library-profile').addEventListener('change', () => { try { localStorage.setItem('uds:selected-template-profile', $('#auto-library-profile').value); } catch {} renderLibraryHint(); });
 window.addEventListener('storage', e => { if (e.key === LIBRARY_KEY) renderLibraryHint(); });
 window.addEventListener('pageshow', renderLibraryHint);
 renderLibraryHint();
@@ -1442,8 +1460,21 @@ $('#auto').addEventListener('submit', async e => {
     customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
-  const useLibrary = $('#auto-library').value !== 'off';
-  const references = useLibrary ? referencesFor(readTemplateLibrary(), input) : [];
+  const libraryMode = $('#auto-library').value;
+  const library = readTemplateLibrary();
+  const profileId = $('#auto-library-profile').value;
+  if (libraryMode === 'specific' && !profileId) {
+    $('#auto-status').textContent = 'Выберите конкретный заполненный профиль или добавьте его в библиотеку.';
+    $('#auto-library-profile').focus();
+    return;
+  }
+  const references = libraryMode === 'off' ? [] : referencesFor(library, input, libraryMode === 'specific' ? { profileId } : undefined);
+  if (libraryMode === 'specific' && !references.length) {
+    $('#auto-status').textContent = 'Выбранный профиль пуст или уже удалён. Обновите список и выберите заполненный профиль.';
+    renderLibraryHint();
+    $('#auto-library-profile').focus();
+    return;
+  }
   if (references.length) input.designReferences = references;
   const endpoint = $('#auto-endpoint').value.trim();
   try {
