@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T16:24:34.640Z
+Время обновления: 2026-11-24T16:49:20.957Z
 Ветка: main
-Последний commit: 26a8a333f0a1c39def6dd55a0186e37c0f0c94b7
-Дата коммита: 2026-11-24T20:24:20+04:00
-Сообщение: Improve generator layouts and editor controls (#245)
+Последний commit: b1393653bfc701e3c02686915ce7d04b187a89cc
+Дата коммита: 2026-11-24T20:49:01+04:00
+Сообщение: Remove arch-shaped generator styles (#246)
 
 Последние коммиты:
+- b139365 · 2026-11-24 · Remove arch-shaped generator styles (#246)
+- 0d58c9f · 2026-11-24 · docs: refresh project handoff
 - 26a8a33 · 2026-11-24 · Improve generator layouts and editor controls (#245)
 - f3bcdfb · 2026-11-23 · docs: refresh project handoff
 - 4583f80 · 2026-11-24 · Verify staging AI diagnostics and image response CORS (#244)
 - 977712b · 2026-11-23 · Cover image retries after 429, 503 and network timeouts (#243)
 - 24a4445 · 2026-11-23 · Stabilize preview card drag in layout E2E (#242)
 - f16b31f · 2026-11-23 · docs: refresh project handoff
-- 3cc96dd · 2026-11-23 · Verify the live staging image response in the studio (#241)
-- 9e77f59 · 2026-11-23 · test: cover image persistence and AI journal after reload (#214) (#239)
 <!-- HANDOFF:AUTO:END -->
