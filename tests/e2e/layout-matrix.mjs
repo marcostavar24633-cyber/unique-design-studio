@@ -5,7 +5,7 @@ import { ARCHETYPE_IDS, generate } from '../../src/engine/index.js';
 import { MECHANICS } from '../../src/engine/mechanics.js';
 import { MASKS } from '../../src/engine/forms.js';
 import { LAYOUT_QA_SOURCE } from '../../src/engine/layout-qa.js';
-import { CARD_SHAPE_IDS, REVEAL_IDS } from '../../src/engine/variety.js';
+import { CARD_SHAPE_IDS, PHOTO_COMPOSITIONS, REVEAL_IDS } from '../../src/engine/variety.js';
 import { BUTTONS } from '../../src/engine/data.js';
 import { CINEMATIC_PRESET_IDS } from '../../src/engine/cinematic/visual-layers.js';
 
@@ -52,6 +52,13 @@ export function layoutPages() {
   return pages;
 }
 
+export function photoCompositionPages() {
+  return Object.keys(PHOTO_COMPOSITIONS).map(composition => ({
+    name: `фото/${composition}`,
+    html: generate({ ...base, id: `qa-photo-${composition}`, photoComposition: composition }).html,
+  }));
+}
+
 // Самопроверка: на нарочно сломанной странице проверка обязана найти все четыре вида проблем.
 export const BROKEN_PAGE = `<!doctype html><html lang="ru"><body style="margin:0;background:#fff;font:16px sans-serif">
 <p id="covered" style="margin:40px">Текст под картинкой</p>
@@ -81,6 +88,20 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
       await page.setViewportSize({ width, height: 820 });
       await page.setContent(html, { waitUntil: 'load' });
       await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
+      const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
+      for (const f of found) failures.push(`раскладка ${name} @${width}: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
+      runs++;
+    }
+  }
+  // Every photo layout gets an explicit responsive pass; the architecture matrix's seeded layouts
+  // cannot guarantee that fan, overlap, and filmstrip are all represented on a given run.
+  for (const { name, html } of photoCompositionPages()) {
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 820 });
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
+      const check = await page.evaluate(() => ({ overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
+      if (check.overflow > 1) failures.push(`раскладка ${name} @${width}: горизонтальный выход за экран ${check.overflow}px`);
       const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
       for (const f of found) failures.push(`раскладка ${name} @${width}: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
       runs++;
@@ -118,3 +139,4 @@ export async function hiddenCheck(browser) {
   await page.close();
   return found.filter(f => /Скрытый|скрытый/.test(f.text));
 }
+

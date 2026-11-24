@@ -105,12 +105,13 @@ export const MECHANIC_CSS = {
 };
 
 /** Разметка тела карточки с учётом механики. parts — готовые фрагменты HTML (экранированы вызывающим). */
-export function mechanicBody(mechanic, { media, title, text, price, action }) {
+export function mechanicBody(mechanic, { media, title, text, price, action, moreLabel = 'Подробнее', flipHint = 'Наведите, чтобы узнать больше' }) {
   if (mechanic === 'expand' && text) {
-    return `${media}<div class="item__body">${title}${price}<details class="item__more"><summary>Подробнее</summary>${text}</details>${action}</div>`;
+    return `${media}<div class="item__body">${title}${price}<details class="item__more"><summary>${moreLabel}</summary>${text}</details>${action}</div>`;
   }
   if (mechanic === 'flip' && media && text) {
-    return `<div class="flip"><div class="flip__inner"><div class="flip__front">${media}<div class="item__body">${title}<span class="flip__hint" aria-hidden="true">Наведите, чтобы узнать больше</span></div></div><div class="flip__back">${text}${price}${action}</div></div></div>`;
+    return `<div class="flip"><div class="flip__inner"><div class="flip__front">${media}<div class="item__body">${title}<span class="flip__hint" aria-hidden="true">${flipHint}</span></div></div><div class="flip__back">${text}${price}${action}</div></div></div>`;
   }
   return `${media}<div class="item__body">${title}${text}${price}${action}</div>`;
 }
+

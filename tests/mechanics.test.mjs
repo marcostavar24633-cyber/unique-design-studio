@@ -32,7 +32,7 @@ test('переворот: карточка фокусируемая, движе�
 
 test('лента: прокручиваемая область с подписью и фокусом, без колонок базовой сетки', () => {
   const g = site('rail');
-  assert.match(g.html, /<div class="rail" role="region" aria-label="[^"]+: прокрутите вбок" tabindex="0">/);
+  assert.match(g.html, /<div class="rail" role="region" aria-label="Услуги: Листайте вбок →" tabindex="0">/);
   assert.match(MECHANIC_CSS.rail, /grid-template-columns:none/);
 });
 
@@ -68,3 +68,4 @@ test('без описания раскрытие и переворот не пр
   assert.doesNotMatch(mechanicBody('expand', { media: '', title: '<h3>А</h3>', text: '', price: '', action: '' }), /details/);
   assert.doesNotMatch(mechanicBody('flip', { media: '<img>', title: '<h3>А</h3>', text: '', price: '', action: '' }), /flip/);
 });
+

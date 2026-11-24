@@ -77,6 +77,48 @@ test('скрытые секции услуг не оставляют битых 
   }
 });
 
+test('горизонтальная фотолента доступна с клавиатуры и имеет видимый фокус', () => {
+  const gallery = Array.from({ length: 4 }, (_, i) => ({ src: `data:image/webp;base64,AA${i}`, alt: `Кадр ${i + 1}` }));
+  const { html } = generate({ ...full, gallery, photoComposition: 'filmstrip' });
+  assert.match(html, /class="gallery gallery--filmstrip" role="list" tabindex="0" aria-label="Галерея фотографий\. Прокручивайте по горизонтали/);
+  assert.match(html, /\.gallery--filmstrip:focus-visible\{outline:3px solid var\(--ds-accent\);outline-offset:4px\}/);
+});
+
+test('неизвестная внутренняя цель CTA заменяется рабочим адресом и указывается в отчёте', () => {
+  const { html, audit } = generate({ ...full, ctaUrl: '#missing-section' });
+  assert.ok(!html.includes('href="#missing-section"'));
+  assert.match(html, /data-cta="primary" href="#contact"/);
+  assert.ok(audit.errors.some(error => error.id === 'cta-target-invalid' && error.message.includes('#missing-section')));
+});
+
+test('служебные подписи, действия и ALT работают на английской версии страницы', () => {
+  const contacts = { phone: '+1 555 0100', email: 'hello@example.com', address: '10 Main Street', hours: 'Mon–Fri' };
+  const local = generate({ ...full, lang: 'en', architecture: 'local-presence', contacts });
+  assert.match(local.html, /<span>Address<\/span>/);
+  assert.match(local.html, /<span>Hours<\/span>/);
+  const hub = generate({ ...full, lang: 'en', architecture: 'contact-hub', contacts });
+  assert.match(hub.html, /<span>Phone<\/span>/);
+  assert.match(hub.html, /<span>Email<\/span>/);
+  const product = generate({ ...full, lang: 'en', architecture: 'product-first' });
+  assert.ok(product.html.includes('More details'));
+  const portfolio = generate({ ...full, lang: 'en', architecture: 'portfolio-feature', gallery: [{ src: 'data:image/webp;base64,AA==', alt: '' }] });
+  assert.ok(portfolio.html.includes('alt="Featured work"'));
+  const translatedSections = generate({ ...full, contactTitle: '', lang: 'en', architecture: 'immersive', itemsMechanic: 'expand', faqs: [['Question?', 'Answer.']] });
+  for (const label of ['About', 'Benefits', 'How it works', 'Questions', 'Contact', 'Services', 'More details']) {
+    assert.ok(translatedSections.html.includes(label), `missing English system label: ${label}`);
+  }
+  assert.ok(!/О нас|Преимущества|Как это работает|Частые вопросы|Подробнее/.test(translatedSections.html));
+  const rail = generate({ ...full, lang: 'en', itemsMechanic: 'rail' });
+  assert.match(rail.html, /aria-label="Services: Scroll horizontally →"/);
+  assert.match(rail.html, /class="rail__hint" aria-hidden="true">Scroll horizontally →/);
+  const flip = generate({ ...full, lang: 'en', itemsMechanic: 'flip', services: full.services.map((item, index) => [item[0], item[1], item[2], `data:image/webp;base64,${index}`]) });
+  assert.match(flip.html, /Hover or focus the card to learn more/);
+  const story = generate({ ...full, lang: 'en', architecture: 'storytelling' });
+  assert.match(story.html, /<nav aria-label="Page chapters">/);
+  const brutalist = generate({ ...full, lang: 'en', architecture: 'brutalist' });
+  assert.match(brutalist.html, /<nav aria-label="Page sections">/);
+});
+
 test('движение: контент не прячется без JS, скрипт уважает reduced motion', () => {
   const { html } = generate({ ...full, architecture: 'immersive' });
   assert.ok(html.includes("classList.add('js-reveal')"));
