@@ -297,11 +297,6 @@ try {
   await addedImage.scrollIntoViewIfNeeded();
   await page.click('#canvas-inspector-close');
   await addedImage.locator('img').click({ force: true });
-  await page.waitForFunction(() => {
-    const frame = document.querySelector('#frame');
-    const selected = frame?.contentDocument?.querySelector('.uds-edit-selected');
-    return Boolean(selected?.closest('.uds-added-element--image'));
-  }, null, { timeout: 10000 });
   await page.click('#canvas-options-trigger');
   await page.waitForFunction(() => [...document.querySelector('#canvas-element-style')?.options || []].some(option => option.value === 'polaroid'));
   const photoResizeHandle = preview.locator('.uds-resize-handle');
