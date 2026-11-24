@@ -59,7 +59,7 @@ test('автоисправление SEO-описания собирает те�
 });
 
 test('если норму не достичь имеющимся текстом — исправление не предлагается', () => {
-  const r = qualityReport(generate(project('ремонт велосипедов')));
+  const r = qualityReport(generate({ brand: 'Мастерская', niche: 'ремонт велосипедов', title: 'Ремонт', description: 'Короткое описание.', seoDescription: 'Короткое описание.', services: [], advantages: [], process: [], aboutText: '', mainOffer: '' }));
   const seo = r.findings.find(f => f.id === 'audit:seo-description-length');
   if (seo) assert.equal(seo.autoFix, false);
 });
@@ -88,7 +88,7 @@ test('конвейер: этап качества между аудитом и D
   assert.deepEqual(WORKFLOW_STAGES.slice(6, 9), ['audit', 'quality', 'design_review']);
   const r = await runWorkflow({ niche: 'кофейня', email: 'hello@example.com' });
   const q = r.stages.findLast(s => s.id === 'quality');
-  assert.ok(['completed', 'needs_attention'].includes(q.status));
+  assert.ok(['done', 'review', 'attention'].includes(q.status));
   assert.ok(q.before && q.after && typeof q.score === 'number');
   assert.ok(r.quality.findings);
   if (q.autoFixed.length) assert.ok(r.project.seoDescription || r.project.seoTitle);

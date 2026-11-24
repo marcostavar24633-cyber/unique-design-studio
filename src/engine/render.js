@@ -5,8 +5,8 @@ import { motifSvg } from './motif.js';
 import { motionCss, motionScript } from './motion.js';
 import { COMMERCE_CSS, addButton, cartPanel, catalogControls, commerceScript, itemAttrs } from './commerce.js';
 import { normalizeProject } from './project.js';
-import { canvasBlocksHtml, canvasEditScope, canvasEditsRuntime, canvasElementsHtml, canvasMovesRuntime, canvasOrderRuntime } from './canvas.js';
-import { esc } from './util.js';
+import { canvasBlocksHtml, canvasEditScope, canvasEditsRuntime, canvasElementsHtml, canvasMovesRuntime, canvasOrderRuntime, canvasResponsiveEditsRuntime } from './canvas.js';
+import { esc, slugify } from './util.js';
 import { MECHANIC_CSS, mechanicBody } from './mechanics.js';
 import { formsCss } from './forms.js';
 import { fadeWordsHtml, textEffectCss } from './text-effects.js';
@@ -14,7 +14,8 @@ import { directScene } from './cinematic/scene-director.js';
 import { sceneMarkup, sceneCss, sceneScript } from './cinematic/scene-runtime.js';
 import { cinematicLayersCss, cinematicLightMarkup } from './cinematic/visual-layers.js';
 import { transitionCss, transitionHtml } from './cinematic/transitions.js';
-import { cardShapeCss, revealCss } from './variety.js';
+import { sectionBackdropsCss } from './section-backdrops.js';
+import { cardShapeCss, photoCompositionCss, revealCss, sectionCompositionsCss } from './variety.js';
 import { cardEffectCss, effectsScript, heroEffectCss, heroEffectMarkup, heroMarqueeHtml } from './effects.js';
 import { EXTRA_LAYOUT_CSS, LAYOUT_ORDER_FAMILY, buttonAnimationCss, buttonAnimationScript, textAnimationCss, typeStyleCss } from './typography-layout.js';
 import { createVisualIdentity } from '../visual-identity.js';
@@ -25,11 +26,12 @@ const pad = n => String(n).padStart(2, '0');
 const SECTION_LAYOUT_CSS = {
   editorial: ".ds-section.section-layout--editorial:not(.sec--contact) .sec__head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding-bottom:16px;border-bottom:1px solid var(--ds-border)}.ds-section.section-layout--editorial:not(.sec--contact) .sec__head h2{max-width:16ch}.ds-section.section-layout--editorial:not(.sec--contact) .sec__intro{max-width:38ch;margin:0;text-align:left}@media(min-width:760px){.sec--gallery.section-layout--editorial .gallery{grid-template-columns:repeat(12,minmax(0,1fr))}.sec--gallery.section-layout--editorial .gallery li:nth-child(4n+1),.sec--gallery.section-layout--editorial .gallery li:nth-child(4n+4){grid-column:span 7}.sec--gallery.section-layout--editorial .gallery li:nth-child(4n+2),.sec--gallery.section-layout--editorial .gallery li:nth-child(4n+3){grid-column:span 5}}",
   offset: "@media(min-width:900px){.ds-section.section-layout--offset:not(.sec--contact) .ds-container{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:clamp(24px,5vw,72px);align-items:start}.ds-section.section-layout--offset:not(.sec--contact) .sec__head{position:sticky;top:28px}.ds-section.section-layout--offset:not(.sec--contact) .sec__head+*{min-width:0}}@media(min-width:760px){.sec--gallery.section-layout--offset .gallery{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.sec--gallery.section-layout--offset .gallery li:nth-child(even){margin-top:clamp(24px,5vw,64px)}}",
-  framed: ".ds-section.section-layout--framed:not(.sec--contact){background:var(--ds-surface);border-block:1px solid var(--ds-border)}.ds-section.section-layout--framed:not(.sec--contact) .ds-container{padding-block:clamp(24px,4vw,48px)}.ds-section.section-layout--framed:not(.sec--contact) .sec__head{padding-left:clamp(14px,2vw,24px);border-left:3px solid var(--ds-accent)}.sec--gallery.section-layout--framed .gallery figure{padding:10px;border:1px solid var(--ds-border);background:var(--ds-bg)}.sec--gallery.section-layout--framed .gallery img{border-radius:0}",
-  quiet: ".ds-section.section-layout--quiet:not(.sec--contact){border-top:1px solid var(--ds-border)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head{margin-bottom:clamp(16px,2.5vw,28px)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head h2{font-size:clamp(1.35rem,1.1rem + 1.6vw,2.2rem);letter-spacing:-.025em}.sec--gallery.section-layout--quiet .gallery img{aspect-ratio:4/3;border-radius:0}"
+  framed: ".ds-section.section-layout--framed:not(.sec--contact){background:var(--ds-surface);border-block:1px solid var(--ds-border)}.ds-section.section-layout--framed:not(.sec--contact) .ds-container{padding-block:clamp(24px,4vw,48px)}.ds-section.section-layout--framed:not(.sec--contact) .sec__head{padding-left:clamp(14px,2vw,24px);border-left:3px solid var(--ds-accent)}.sec--gallery.section-layout--framed .gallery figure{padding:10px;border:1px solid var(--ds-border);background:var(--ds-bg)}",
+  quiet: ".ds-section.section-layout--quiet:not(.sec--contact){border-top:1px solid var(--ds-border)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head{margin-bottom:clamp(16px,2.5vw,28px)}.ds-section.section-layout--quiet:not(.sec--contact) .sec__head h2{font-size:clamp(1.35rem,1.1rem + 1.6vw,2.2rem);letter-spacing:-.025em}.sec--gallery.section-layout--quiet .gallery img{aspect-ratio:4/3}"
 };
 
-const sectionClass = (c, id) => "ds-section sec sec--" + id + " section-layout--" + (c.vs.sectionLayout || "editorial");
+const sectionClass = (c, id) => "ds-section sec sec--" + id + " section-layout--" + (c.vs.sectionLayout || "editorial") + (c.vs.sectionCompositions?.[id] ? " section-composition--" + c.vs.sectionCompositions[id] : "");
+const itemAnchor = item => `item-${slugify(item?.id || item?.title || 'item')}`;
 
 /** Подключение веб-шрифтов (только при fonts: "web"). По умолчанию страница не делает внешних запросов. */
 function fontLinks(fonts = []) {
@@ -54,7 +56,16 @@ function context(project, concept) {
     gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || 'Частые вопросы',
     contact: project.contactTitle || concept.homepage.primaryCTA,
   };
-  const ctaHref = project.ctaUrl || '#contact';
+  const siteStates = project.site?.fieldStates || {};
+  const pageStates = project.fieldStates || {};
+  const ctaUnavailable = pageStates.ctaUrl === 'manual' && !project.ctaUrl || pageStates.cta === 'manual' && !project.cta;
+  const ctaTextHidden = pageStates.cta === 'hidden' || (pageStates.cta !== 'manual' && siteStates.cta === 'hidden');
+  const ctaUrlHidden = pageStates.ctaUrl === 'hidden' || (pageStates.ctaUrl !== 'manual' && siteStates.ctaUrl === 'hidden');
+  const ctaExplicitlyHidden = ctaTextHidden || ctaUrlHidden;
+  const ctaHrefCandidate = project.ctaUrl || (ctaUnavailable || ctaExplicitlyHidden ? '' : '#contact');
+  const hiddenSections = new Set([...(Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []), ...Object.keys(project.fieldStates || {}).filter(key => key.startsWith('sections.') && project.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
+  const ctaTarget = ctaHrefCandidate.startsWith('#') ? ctaHrefCandidate.slice(1) : '';
+  const ctaHref = ctaExplicitlyHidden || ctaUnavailable || (ctaTarget && hiddenSections.has(ctaTarget)) ? '' : ctaHrefCandidate;
   const title = project.title || project.brand || project.niche || 'Новый проект';
   const brand = project.brand || project.niche || 'Проект';
   return { p: project, concept, vs, order, labels, titles, ctaHref, title, brand, cta: concept.homepage.primaryCTA, form: leadFormSpec(project) };
@@ -67,7 +78,13 @@ function leadFormSpec(p) {
   return null;
 }
 
-const cta = (c, cls = '') => `<a class="ds-button${cls}" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.cta)}</a>`;
+const SYSTEM_COPY = {
+  ru: { skip: 'Перейти к содержимому', name: 'Имя', contact: 'Телефон или e-mail', unselected: 'Не выбрано', phone: 'Телефон', email: 'E-mail', address: 'Адрес', hours: 'Часы работы', more: 'Показать ещё', moreDetails: 'Подробнее', searchIn: 'Поиск по разделу', search: 'Поиск', categories: 'Разделы ассортимента', chapters: 'Главы страницы', pageSections: 'Разделы страницы', mainPhoto: 'Главная фотография проекта', projectPhoto: 'Фотография проекта', sending: 'Отправляем заявку…', sent: 'Заявка отправлена.', failed: 'Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.' },
+  en: { skip: 'Skip to content', name: 'Name', contact: 'Phone or email', unselected: 'Not selected', phone: 'Phone', email: 'Email', address: 'Address', hours: 'Hours', more: 'Show more', moreDetails: 'More details', searchIn: 'Search in', search: 'Search', categories: 'Catalog categories', chapters: 'Page chapters', pageSections: 'Page sections', mainPhoto: 'Main project photo', projectPhoto: 'Project photo', sending: 'Sending your request…', sent: 'Your request was sent.', failed: 'The request could not be sent. Check your connection and try again.' },
+};
+const systemCopy = (lang, key) => (SYSTEM_COPY[String(lang || '').toLowerCase().split('-')[0]] || SYSTEM_COPY.ru)[key];
+
+const cta = (c, cls = '') => c.ctaHref ? `<a class="ds-button${cls}" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.cta)}</a>` : '';
 const secondary = (c, id) => (c.order.includes(id) ? `<a class="ds-button ds-button--secondary" href="#${id}">${esc(c.labels[id])}</a>` : '');
 const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${esc(c.p.niche)}</p>` : '');
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
@@ -88,12 +105,12 @@ function visual(c, variant = 0) {
   // Декоративные варианты (variant > 0) остаются мотивами и не дублируют фотографию.
   if (!variant) {
     if (c.p.images.hero) {
-      const alt = c.p.images.heroAlt || c.p.title || c.p.brand || c.p.niche || "Главная фотография проекта";
+      const alt = c.p.images.heroAlt || c.p.title || c.p.brand || c.p.niche || systemCopy(c.p.lang, 'mainPhoto');
       return c.p.images.heroMobile ? `<picture class="ds-hero-picture"><source media="(max-width:600px)" srcset="${esc(c.p.images.heroMobile)}"><img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async"></picture>` : `<img ${artStyle(c.p, "hero")} src="${esc(c.p.images.hero)}" alt="${esc(alt)}" fetchpriority="high" decoding="async">`;
     }
     if (c.p.gallery[0]?.src) {
       const photo = c.p.gallery[0];
-      return `<img ${artStyle(c.p, "gallery", 0)} src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || c.p.title || c.p.niche || "Фотография проекта")}" fetchpriority="high" decoding="async">`;
+      return `<img ${artStyle(c.p, "gallery", 0)} src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || c.p.title || c.p.niche || systemCopy(c.p.lang, 'projectPhoto'))}" fetchpriority="high" decoding="async">`;
     }
     const firstService = c.p.services.find(item => item.image);
     if (firstService) {
@@ -108,10 +125,11 @@ function leadForm(c, prefix) {
   if (!c.form) return '';
   const opts = c.p.services.filter(i => i.title).map(i => `<option>${esc(i.title)}</option>`).join('');
   return `<form class="form" action="${esc(c.form.action)}" method="post" data-form-delivery="endpoint-configured">
-<label for="${prefix}-name">Имя<input class="ds-field" id="${prefix}-name" name="name" autocomplete="name" required></label>
-<label for="${prefix}-contact">Телефон или e-mail<input class="ds-field" id="${prefix}-contact" name="contact" autocomplete="tel" required></label>
-${opts ? `<label for="${prefix}-topic">${esc(c.labels.items)}<select class="ds-field" id="${prefix}-topic" name="topic" data-topic><option value="">Не выбрано</option>${opts}</select></label>` : ''}
+<label for="${prefix}-name">${systemCopy(c.p.lang, 'name')}<input class="ds-field" id="${prefix}-name" name="name" autocomplete="name" required></label>
+<label for="${prefix}-contact">${systemCopy(c.p.lang, 'contact')}<input class="ds-field" id="${prefix}-contact" name="contact" autocomplete="tel" required></label>
+${opts ? `<label for="${prefix}-topic">${esc(c.labels.items)}<select class="ds-field" id="${prefix}-topic" name="topic" data-topic><option value="">${systemCopy(c.p.lang, 'unselected')}</option>${opts}</select></label>` : ''}
 <button class="ds-button" type="submit">${esc(c.cta)}</button>
+<p class="form__status" data-form-status role="status" aria-live="polite" hidden></p>
 </form>`;
 }
 
@@ -121,12 +139,16 @@ function nav(c) {
   const links = c.order.filter(id => id !== 'contact').slice(0, 5).map(id => `<li><a href="#${id}">${esc(c.labels[id])}</a></li>`).join('');
   const list = kind !== 'minimal' && links ? `<ul class="nav__links">${links}</ul>` : '';
   const withCta = kind !== 'masthead';
-  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="Основная навигация"><a class="nav__brand" href="#top">${esc(c.brand)}</a>${list}${withCta ? `<a class="ds-button nav__cta" href="${esc(c.ctaHref)}">${esc(c.cta)}</a>` : ''}</nav>`;
+  const brandMark = c.p.site.logo ? `<img class="nav__logo" src="${esc(c.p.site.logo)}" alt="" style="max-width:150px;max-height:40px;width:auto;height:auto;object-fit:contain">` : '';
+  const brandText = `<span>${esc(c.brand)}</span>`;
+  const brandNote = c.p.site.header.tagline ? `<small class="nav__tagline">${esc(c.p.site.header.tagline)}</small>` : '';
+  const brand = `<a class="nav__brand" href="#top">${brandMark}${brandText}${brandNote}</a>`;
+  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}</nav>`;
   if (kind === 'category') {
     const cats = c.p.categories.length
       ? c.p.categories.map(t => `<li><a href="#items">${esc(t)}</a></li>`)
-      : c.p.services.slice(0, 8).map((i, n) => `<li><a href="#item-${n}">${esc(i.title)}</a></li>`);
-    if (cats.length) out += `<nav aria-label="Разделы ассортимента"><ul class="cats">${cats.join('')}</ul></nav>`;
+      : c.p.services.slice(0, 8).map(i => `<li><a href="#${itemAnchor(i)}">${esc(i.title)}</a></li>`);
+    if (cats.length) out += `<nav aria-label="${esc(systemCopy(c.p.lang, 'categories'))}"><ul class="cats">${cats.join('')}</ul></nav>`;
   }
   return out + '</header>';
 }
@@ -148,7 +170,7 @@ const HERO = {
     const it = c.p.services[0];
     // Единый выбор изображения для всех архитектур: hero → галерея → услуга → мотив.
     const media = visual(c);
-    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#item-0">Подробнее</a></div>` : '';
+    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}<a class="ds-button ds-button--secondary" href="#${itemAnchor(it)}">Подробнее</a></div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },
   editorial(c) {
@@ -165,9 +187,9 @@ const HERO = {
   catalog(c) {
     const tiles = c.p.categories.length
       ? c.p.categories.slice(0, 8).map((t, n) => `<li><a href="#items"><span class="n">${pad(n + 1)}</span><span>${esc(t)}</span></a></li>`)
-      : c.p.services.slice(0, 8).map((i, n) => `<li><a href="#item-${n}"><span class="n">${pad(n + 1)}</span><span>${esc(i.title)}</span></a></li>`);
+      : c.p.services.slice(0, 8).map((i, n) => `<li><a href="#${itemAnchor(i)}"><span class="n">${pad(n + 1)}</span><span>${esc(i.title)}</span></a></li>`);
     const search = c.p.services.length >= 4
-      ? `<form class="search" role="search" hidden data-search><label class="vh" for="q">Поиск по разделу «${esc(c.labels.items)}»</label><input class="ds-field" type="search" id="q" placeholder="Поиск: ${esc(c.labels.items.toLowerCase())}" autocomplete="off"></form><p class="search__status" role="status" aria-live="polite" data-search-status></p>` : '';
+      ? `<form class="search" role="search" hidden data-search><label class="vh" for="q">${systemCopy(c.p.lang, 'searchIn')} «${esc(c.labels.items)}»</label><input class="ds-field" type="search" id="q" placeholder="${systemCopy(c.p.lang, 'search')}: ${esc(c.labels.items.toLowerCase())}" autocomplete="off"></form><p class="search__status" role="status" aria-live="polite" data-search-status></p>` : '';
     return `<div class="ds-container hero__wrap"><div class="hero__head">${kicker(c)}${h1(c)}${lede(c)}${search}<div class="actions">${cta(c)}</div></div>${tiles.length ? `<ul class="tiles" role="list">${tiles.join('')}</ul>` : ''}</div>`;
   },
   'split-utility'(c) {
@@ -175,7 +197,7 @@ const HERO = {
     let tool;
     if (c.form) tool = leadForm(c, 'hero');
     else {
-      const picks = c.p.services.slice(0, 5).map((i, n) => `<li><a href="#item-${n}">${esc(i.title)}</a></li>`).join('');
+      const picks = c.p.services.slice(0, 5).map(i => `<li><a href="#${itemAnchor(i)}">${esc(i.title)}</a></li>`).join('');
       tool = `${picks ? `<ul class="picker">${picks}</ul>` : c.p.contactText ? `<p>${esc(c.p.contactText)}</p>` : ''}${cta(c)}`;
     }
     const title = c.form ? c.cta : c.p.services.length ? `${c.labels.items}: с чего начать` : c.cta;
@@ -187,7 +209,7 @@ const HERO = {
   },
   'modular-grid'(c) {
     const entries = c.p.services.slice(0, 3);
-    const cells = entries.map((i, n) => `<a class="bento__cell bento__entry" href="#item-${n}"><span class="n">${pad(n + 1)}</span><strong>${esc(i.title)}</strong>${i.text ? `<span>${esc(i.text)}</span>` : ''}</a>`).join('');
+    const cells = entries.map((i, n) => `<a class="bento__cell bento__entry" href="#${itemAnchor(i)}"><span class="n">${pad(n + 1)}</span><strong>${esc(i.title)}</strong>${i.text ? `<span>${esc(i.text)}</span>` : ''}</a>`).join('');
     return `<div class="ds-container"><div class="bento bento--n${entries.length}"><div class="bento__cell bento__head">${kicker(c)}${h1(c)}${lede(c)}</div><div class="bento__cell bento__visual">${visual(c)}</div>${cells}<a class="bento__cell bento__cta" data-cta="primary" href="${esc(c.ctaHref)}"><span>${esc(c.cta)}</span><span aria-hidden="true">→</span></a></div></div>`;
   },
   brutalist(c) {
@@ -203,7 +225,7 @@ const HERO = {
     return `<div class="ds-container proof-led__layout"><div class="proof-led__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${proof ? `<ol class="proof-led__list">${proof}</ol>` : `<div class="proof-led__visual">${visual(c)}</div>`}</div>`;
   },
   'service-picker'(c) {
-    const options = c.p.services.slice(0, 5).map((item, i) => `<li><a href="#item-${i}"><span><b>${esc(item.title)}</b>${item.text ? `<small>${esc(item.text)}</small>` : ''}</span>${item.price ? `<strong>${esc(item.price)}</strong>` : '<span aria-hidden="true">→</span>'}</a></li>`).join('');
+      const options = c.p.services.slice(0, 5).map(item => `<li><a href="#${itemAnchor(item)}"><span><b>${esc(item.title)}</b>${item.text ? `<small>${esc(item.text)}</small>` : ''}</span>${item.price ? `<strong>${esc(item.price)}</strong>` : '<span aria-hidden="true">→</span>'}</a></li>`).join('');
     return `<div class="ds-container service-picker__layout"><div>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${options ? `<nav class="service-picker__panel" aria-label="${esc(c.labels.items)}"><ol>${options}</ol></nav>` : `<div class="service-picker__panel">${visual(c)}</div>`}</div>`;
   },
   'portfolio-mosaic'(c) {
@@ -230,7 +252,7 @@ const HERO = {
     return `<div class="ds-container story-timeline__layout"><div class="story-timeline__intro">${kicker(c)}${h1(c)}${lede(c)}${c.p.aboutText ? `<p>${esc(c.p.aboutText)}</p>` : ''}<div class="actions">${cta(c)}</div></div>${events ? `<ol class="story-timeline__events">${events}</ol>` : `<div class="story-timeline__visual">${visual(c)}</div>`}</div>`;
   },
   'price-comparison'(c) {
-    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#item-${i}" aria-label="Подробнее: ${esc(item.title)}">→</a></li>`).join('');
+    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#${itemAnchor(item)}" aria-label="Подробнее: ${esc(item.title)}">→</a></li>`).join('');
     return `<div class="ds-container price-comparison__layout"><header>${kicker(c)}${h1(c)}${lede(c)}</header>${offers ? `<ol class="price-comparison__offers">${offers}</ol>` : `<div class="price-comparison__visual">${visual(c)}</div>`}<div class="actions">${cta(c)}</div></div>`;
   },
   'brand-manifesto'(c) {
@@ -257,11 +279,11 @@ const HERO = {
     return `<div class="ds-container feature-grid__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${features ? `<div class="feature-grid__items">${features}</div>` : `<div class="feature-grid__visual">${visual(c)}</div>`}</div>`;
   },
   'service-directory'(c) {
-    const services = c.p.services.slice(0, 6).map((item, i) => `<li><a href="#item-${i}"><span class="n">${pad(i + 1)}</span><span class="service-directory__name">${esc(item.title)}</span><span class="service-directory__arrow" aria-hidden="true">↗</span></a></li>`).join('');
+    const services = c.p.services.slice(0, 6).map((item, i) => `<li><a href="#${itemAnchor(item)}"><span class="n">${pad(i + 1)}</span><span class="service-directory__name">${esc(item.title)}</span><span class="service-directory__arrow" aria-hidden="true">↗</span></a></li>`).join('');
     return `<div class="ds-container service-directory__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${services ? `<ol class="service-directory__list">${services}</ol>` : `<div class="service-directory__visual">${visual(c)}</div>`}</div>`;
   },
   'pricing-cards'(c) {
-    const offers = c.p.services.slice(0, 3).map((item, i) => `<article class="pricing-cards__item"><span class="n">${pad(i + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#item-${i}">Подробнее <span aria-hidden="true">→</span></a></article>`).join('');
+    const offers = c.p.services.slice(0, 3).map(item => `<article class="pricing-cards__item"><span class="n">${pad(c.p.services.indexOf(item) + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}<a href="#${itemAnchor(item)}">Подробнее <span aria-hidden="true">→</span></a></article>`).join('');
     return `<div class="ds-container pricing-cards__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${offers ? `<div class="pricing-cards__items">${offers}</div>` : `<div class="pricing-cards__visual">${visual(c)}</div>`}</div>`;
   },
   'portfolio-feature'(c) {
@@ -293,7 +315,8 @@ const SECTION = {
   items(c) {
     const v = c.vs.variants.items;
     const mech = c.vs.variants.itemsMechanic || 'none';
-    const li = c.p.services.map((i, n) => {
+    const renderItems = (entries, offset) => entries.map((i, localIndex) => {
+      const n = offset + localIndex;
       const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.services?.[n];
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
@@ -302,40 +325,47 @@ const SECTION = {
       const flip = mech === 'flip' && media && parts.text;
       // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
       const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
-      const editScope = canvasEditScope('item', [i.title, i.text, i.category, i.price, i.badge, i.alt].join('|'));
-      return `<li class="item${flip ? ' item--flip' : ''}" id="item-${n}" data-uds-edit-scope="${editScope}"${shop ? itemAttrs(i) : ''}${attrs} data-reveal>${mechanicBody(mech, parts)}</li>`;
+      const editScope = canvasEditScope('item', i.id);
+      return `<li class="item${flip ? ' item--flip' : ''}${i.image ? ' item--photo' : ''}" id="${itemAnchor(i)}" data-uds-item-id="${esc(i.id)}" data-uds-item-index="${n}" data-uds-edit-scope="${editScope}"${shop ? itemAttrs(i) : ''}${attrs} data-reveal>${mechanicBody(mech, parts)}</li>`;
     }).join('');
-    const list = `<ul class="items items--${v}${mech !== 'none' ? ` items--mech-${mech}` : ''}" role="list">${li}</ul>`;
+    const listClass = `items items--${v}${mech !== 'none' ? ` items--mech-${mech}` : ''}`;
+    const pageSize = 12;
+    const initial = c.p.services.slice(0, pageSize);
+    const remaining = c.p.services.slice(pageSize);
+    const list = `<ul class="${listClass}" role="list">${renderItems(initial, 0)}</ul>${remaining.length ? `<details class="items__more"><summary>${systemCopy(c.p.lang, 'more')} (${remaining.length})</summary><ul class="${listClass}" role="list">${renderItems(remaining, pageSize)}</ul></details>` : ''}`;
     const body = mech === 'rail'
       ? `<div class="rail" role="region" aria-label="${esc(c.labels.items)}: прокрутите вбок" tabindex="0">${list}</div><p class="rail__hint" aria-hidden="true">Листайте вбок →</p>`
       : list;
     return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}${body}`, c.p.servicesIntro);
   },
   advantages(c) {
-    const li = c.p.advantages.map(a => `<li data-uds-edit-scope="${canvasEditScope('advantage', [a.title, a.text].join('|'))}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
+    const li = c.p.advantages.map(a => `<li data-uds-item-id="${esc(a.id)}" data-uds-edit-scope="${canvasEditScope('advantage', a.id)}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'advantages', `<ul class="adv adv--${c.vs.variants.advantages}" role="list">${li}</ul>`, c.p.advantagesIntro);
   },
   process(c) {
-    const li = c.p.process.map(a => `<li data-uds-edit-scope="${canvasEditScope('process', [a.title, a.text].join('|'))}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
+    const li = c.p.process.map(a => `<li data-uds-item-id="${esc(a.id)}" data-uds-edit-scope="${canvasEditScope('process', a.id)}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
   gallery(c) {
-    const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-edit-scope="${canvasEditScope('gallery', [g.caption, g.alt].join('|'))}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
-    return wrap(c, 'gallery', `<ul class="gallery" role="list">${li}</ul>`);
+    const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-item-id="${esc(g.id)}" data-uds-edit-scope="${canvasEditScope('gallery', g.id)}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
+    const composition = c.vs.photoComposition || 'grid';
+    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}" role="list">${li}</ul>`);
   },
   faq(c) {
-    const d = c.p.faqs.map(f => `<details data-uds-edit-scope="${canvasEditScope('faq', [f.title, f.text].join('|'))}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
-    return wrap(c, 'faq', `<div class="faq">${d}</div>`);
+    const d = c.p.faqs.map(f => `<details data-uds-item-id="${esc(f.id)}" data-uds-edit-scope="${canvasEditScope('faq', f.id)}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
+    const composition = c.vs.sectionCompositions?.faq || 'list';
+    return wrap(c, 'faq', `<div class="faq faq--${esc(composition)}">${d}</div>`);
   },
   contact(c) {
     const k = c.p.contacts, rows = [];
-    if (k.phone) rows.push(`<li><span>Телефон</span><a href="tel:${esc(k.phone.replace(/[^\d+]/g, ''))}">${esc(k.phone)}</a></li>`);
-    if (k.email) rows.push(`<li><span>E-mail</span><a href="mailto:${esc(k.email)}">${esc(k.email)}</a></li>`);
-    if (k.address) rows.push(`<li><span>Адрес</span>${esc(k.address)}</li>`);
-    if (k.hours) rows.push(`<li><span>Часы работы</span>${esc(k.hours)}</li>`);
+    if (k.phone) rows.push(`<li><span>${systemCopy(c.p.lang, 'phone')}</span><a href="tel:${esc(k.phone.replace(/[^\d+]/g, ''))}">${esc(k.phone)}</a></li>`);
+    if (k.email) rows.push(`<li><span>${systemCopy(c.p.lang, 'email')}</span><a href="mailto:${esc(k.email)}">${esc(k.email)}</a></li>`);
+    if (k.address) rows.push(`<li><span>${systemCopy(c.p.lang, 'address')}</span>${esc(k.address)}</li>`);
+    if (k.hours) rows.push(`<li><span>${systemCopy(c.p.lang, 'hours')}</span>${esc(k.hours)}</li>`);
     const form = leadForm(c, 'contact');
     const ext = c.p.ctaUrl && !c.p.ctaUrl.startsWith('#') ? `<div class="actions">${cta(c)}</div>` : '';
-    return `<section id="contact" class="${sectionClass(c, 'contact')}" aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''}"><div><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form}</div></section>`;
+    const composition = c.vs.sectionCompositions?.contact || 'split';
+    return `<section id="contact" class="${sectionClass(c, 'contact')}" aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''} contact--layout-${esc(composition)}"><div><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form}</div></section>`;
   },
 };
 
@@ -343,6 +373,11 @@ const SECTION = {
 function script(c, scene) {
   const parts = [];
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
+  if (c.form) {
+    const copy = ['sending', 'sent', 'failed'].map(key => JSON.stringify(systemCopy(c.p.lang, key))).join(',');
+    parts.push(`document.querySelectorAll('form[data-form-delivery="endpoint-configured"]').forEach(function(f){var u;try{u=new URL(f.action,location.href)}catch(e){return}if(u.origin!==location.origin)return;var status=f.querySelector('[data-form-status]'),button=f.querySelector('[type="submit"]');if(!status||!button)return;var msg=[${copy}];f.addEventListener('submit',function(e){e.preventDefault();status.hidden=false;status.textContent=msg[0];status.dataset.state='sending';button.disabled=true;fetch(f.action,{method:f.method||'POST',body:new FormData(f),credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){if(!r.ok||r.redirected)throw new Error('delivery');f.reset();status.textContent=msg[1];status.dataset.state='success'}).catch(function(){status.textContent=msg[2];status.dataset.state='error'}).finally(function(){button.disabled=false})})})`);
+  }
+  if (c.p.services.length > 12) parts.push(`document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var target;try{target=document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))}catch(_){return}var more=target&&target.closest('details.items__more');if(more&&!more.open){e.preventDefault();more.open=true;history.pushState(null,'',a.getAttribute('href'));requestAnimationFrame(function(){target.scrollIntoView({behavior:'smooth',block:'center'})})}})`);
   if (revealActive(c.vs)) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
   if (c.vs.motionPlan?.mechanics.includes('parallax')) parts.push(`var px=document.querySelector('[data-parallax]');if(px&&!${reduce}){var tick=false;addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){px.style.transform='translate3d(0,'+Math.min(scrollY*.08,40)+'px,0)';tick=false})},{passive:true})}`);
   if (c.vs.archetype === 'catalog' && c.p.services.length >= 4) parts.push(`var sf=document.querySelector('[data-search]');if(sf){sf.hidden=false;var st=document.querySelector('[data-search-status]');sf.addEventListener('submit',function(e){e.preventDefault();document.getElementById('items').scrollIntoView()});sf.querySelector('input').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase(),n=0;var items=document.querySelectorAll('#items .item'),tools=document.querySelector('[data-catalog-tools]');if(tools){items.forEach(function(li){if(!q||li.textContent.toLowerCase().indexOf(q)>-1)n++});tools.dispatchEvent(new CustomEvent('uds:catalog-search'));}else{items.forEach(function(li){var ok=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!ok;if(ok)n++})}if(!tools)st.textContent=q?'Найдено: '+n:''})}`);
@@ -425,7 +460,7 @@ export function renderCss(concept, scene = null, identity = null) {
   const used = concept.homepage.sectionOrder;
   return [
     CORE_CSS, tokensCss(vs), visualIdentityCss(identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
-    '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}',
+    '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}.nav__brand{display:inline-flex;align-items:center;gap:10px}.nav__tagline{display:block;font-size:.72em;color:var(--ds-text-muted)}.form__status{margin:0;padding:10px 12px;border:1px solid var(--ds-border);border-left:3px solid var(--ds-accent);border-radius:var(--ds-radius-sm);color:var(--ds-text)}.form__status[data-state="error"]{border-left-color:#b42318}.form__status[data-state="success"]{border-left-color:#147d46}.foot__links{display:flex;flex-wrap:wrap;gap:8px 14px}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
     (vs.commerce?.tools || vs.commerce?.cart) && used.includes('items') ? COMMERCE_CSS : '',
@@ -436,15 +471,20 @@ export function renderCss(concept, scene = null, identity = null) {
     used.includes('advantages') ? ADV_CSS[vs.variants.advantages] : '',
     used.includes('process') ? PROC_CSS[vs.variants.process] : '',
     used.includes('items') ? `.item__media{aspect-ratio:4/3;overflow:hidden;background:var(--u-tint)}.item__media .ds-media{display:block;width:100%;height:100%;object-fit:cover}.items--cards .item__media{margin:calc(clamp(18px,2.4vw,28px)*-1) calc(clamp(18px,2.4vw,28px)*-1) 16px}.items--bento .item__media{margin:calc(clamp(18px,2.6vw,32px)*-1) calc(clamp(18px,2.6vw,32px)*-1) 16px}.items--rules .item__media,.items--numbered .item__media{max-width:420px;border-radius:var(--ds-radius-md)}` : '',
+    used.includes('items') ? '.items__more{margin-top:16px}.items__more>summary{width:max-content;max-width:100%;padding:10px 16px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);cursor:pointer}.items__more[open]>summary{margin-bottom:16px}' : '',
     // Motion CSS подключается последним: стеклянные поверхности сохраняются поверх базовых стилей карточек.
     motionCss(vs.motionPlan),
     sceneCss(scene),
     cinematicLayersCss(vs.cinematicLayers),
+    sectionBackdropsCss(vs.sectionBackdrops),
     transitionCss(vs.transition, vs.sectionLayout),
     cardShapeCss(vs.variety?.cardShape),
+    photoCompositionCss(vs.photoComposition),
+    sectionCompositionsCss(vs.sectionCompositions),
     revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
     vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
+    '.ds-button{border-radius:var(--ds-radius-pill,999px)!important}',
   ].join('\n').replace(/\n\s*/g, '');
 }
 
@@ -491,6 +531,12 @@ export function renderSite(input, concept) {
   if (!c.order.includes('contact')) sectionSequence.push(blocksAfter.contact);
   const sections = sectionSequence.filter(Boolean).join('\n' + transitionHtml(c.vs.transition) + '\n');
   const foot = [project.contacts.phone, project.contacts.email, project.contacts.address].filter(Boolean).map(esc).join(' · ');
+  const siteLinks = project.site.links.map(link => `<a href="${esc(link.href)}">${esc(link.label)}</a>`).join(' · ');
+  const pageSocialState = project.fieldStates?.['images.social'];
+  const siteSocialState = project.site?.fieldStates?.['images.social'];
+  const siteSocialManualEmpty = pageSocialState !== 'manual' && siteSocialState === 'manual' && !project.site?.socialImage && !project.images.social;
+  const socialImageSuppressed = pageSocialState === 'hidden' || (pageSocialState !== 'manual' && siteSocialState === 'hidden' && !project.images.social) || pageSocialState === 'manual' && !project.images.social || siteSocialManualEmpty;
+  const shareImage = socialImageSuppressed ? '' : project.images.social || project.images.hero || project.site.logo;
   return `<!doctype html>
 <html lang="${esc(project.lang)}">
 <head>
@@ -501,20 +547,21 @@ ${desc ? `<meta name="description" content="${esc(desc)}">` : ''}
 <meta property="og:title" content="${esc(pageTitle)}">
 ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 <meta property="og:type" content="website">
+${shareImage ? `<meta property="og:image" content="${esc(shareImage)}">` : ''}
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
 ${fontLinks(visualIdentity ? visualIdentityFonts(visualIdentity) : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">
-<a class="skip" href="#main">Перейти к содержимому</a>
+<a class="skip" href="#main">${systemCopy(project.lang, 'skip')}</a>
 ${nav(c)}
 <main id="main">
 ${placeElements(`<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>`, 'hero')}
 ${transitionHtml(c.vs.transition)}
 ${sections}
 </main>
-<footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}</span>${foot ? `<span>${foot}</span>` : ''}</div></footer>
+<footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}${project.site.footer.note ? ` · ${esc(project.site.footer.note)}` : ''}${project.site.footer.copyright ? ` · ${esc(project.site.footer.copyright)}` : ''}</span>${foot ? `<span>${foot}</span>` : ''}${siteLinks ? `<nav class="foot__links" aria-label="${project.lang.startsWith('en') ? 'Site links' : 'Ссылки сайта'}">${siteLinks}</nav>` : ''}</div></footer>
 ${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
 ${script(c, scene)}
 ${canvasOrderRuntime(project.passthrough.canvasOrder)}

@@ -33,8 +33,10 @@ const BY_ARCHETYPE = {
  * с фильтрами магазина — только механики, которые не ломаются при скрытии карточек.
  */
 export function chooseMechanic(project, archetype, seed, commerce = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  commerce = commerce && typeof commerce === 'object' ? commerce : {};
   const forced = project.passthrough?.itemsMechanic;
-  if (forced && MECHANICS[forced]) return forced;
+  if (Object.hasOwn(MECHANICS, forced)) return forced;
   const items = (project.services || []).filter(i => i.title);
   const n = items.length;
   if (n < 2) return 'none';
@@ -82,7 +84,7 @@ export const MECHANIC_CSS = {
 .flip__hint{display:none}`,
   stack: `
 .items--mech-stack{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(14px,2vw,22px)}
-@media(min-width:700px){
+@media(min-width:900px){
   .items--mech-stack .item{position:sticky;top:calc(var(--stack-top,84px) + var(--stack-i,0) * 14px);box-shadow:0 -10px 30px rgba(0,0,0,.12);background:var(--ds-bg);padding-block:clamp(12px,1.6vw,20px)}
   /* Карточка колоды должна помещаться в экран: иначе следующая «прилипает» поверх недочитанного текста.
      Фото слева, текст справа, высота фото ограничена. */

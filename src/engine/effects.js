@@ -1,4 +1,4 @@
-// Эффекты карточек (22) и первого экрана (20).
+// Эффекты карточек и первого экрана.
 // Правила: эффекты наведения дублируются фокусом с клавиатуры (:focus-within); на сенсорных экранах скрытое
 // наведением содержимое показано сразу; при prefers-reduced-motion всё статично; декоративные слои aria-hidden;
 // фотоэффекты включаются только при наличии фото; бейджи и счётчики — только из данных проекта.
@@ -14,11 +14,13 @@ export const CARD_EFFECTS = Object.freeze({
   grain: 'Фактура на карточке',
   'layered-shadow': 'Многослойные тени',
   'inner-parallax': 'Параллакс внутри карточки',
+  'tilt-depth': 'Объёмный наклон за курсором',
+  'satin-edge': 'Сатиновая кромка',
   stack: 'Стопка листов',
   neumorph: 'Неоморфизм',
   isometric: 'Изометрия',
   curtain: 'Шторка с описанием',
-  'mask-reveal': 'Маска-проявление фото',
+  'mask-reveal': 'Прямоугольное проявление фото',
   'color-photo': 'Фото из ч/б в цвет',
   'photo-zoom': 'Зум фото в рамке',
   'underline-arrow': 'Подчёркивание и стрелка',
@@ -52,45 +54,92 @@ export const HERO_EFFECTS = Object.freeze({
   'depth-parallax': 'Слоистый параллакс',
   'magnetic-cta': 'Магнитная кнопка',
   'hero-spotlight': 'Прожектор',
+  'atelier-light': 'Мягкий свет мастерской',
+  'focus-pull': 'Проявление из мягкого фокуса',
 });
 export const HERO_EFFECT_IDS = Object.keys(HERO_EFFECTS);
-const PHOTO_HERO = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone', 'slideshow']);
+const PHOTO_HERO = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone', 'slideshow', 'focus-pull']);
+const PHOTO_CARD = new Set(['photo-zoom', 'color-photo', 'mask-reveal']);
 
 /** Выбор эффектов. Ручной выбор владельца (passthrough.cardEffect / heroEffect) главнее; 'none' — без эффекта. */
-export function chooseEffects(project = {}, { archetype = '', tier = 'standard', intensity = 'balanced', seed = 0 } = {}) {
+export function chooseEffects(project = {}, options = {}) {
+  const { archetype = '', tier = 'standard', intensity = 'balanced', motionPlan = null, itemsMechanic = 'none', seed = 0 } = options && typeof options === 'object' ? options : {};
+  project = project && typeof project === 'object' ? project : {};
   const f = project.passthrough || {};
+  const mode = f.effectMode || (f.cardEffect || f.heroEffect ? 'mixed' : 'auto');
+  const autoSeed = seed + (Number(f.effectsSeed) || 0);
+  const cardOverride = mode === 'auto' ? '' : (f.cardEffect || (mode === 'manual' ? 'layered-shadow' : ''));
+  const heroOverride = mode === 'auto' ? '' : (f.heroEffect || (mode === 'manual' ? 'none' : ''));
   const requestedStyle = f.motionStyle;
-  const photos = [project.images?.hero, ...(project.gallery || []).map(g => g.src)].filter(Boolean);
-  const calm = requestedStyle === 'static' || (requestedStyle !== 'cinematic' && (tier === 'luxury' || intensity === 'calm'));
+  const photos = [...new Set([project.images?.hero, ...(project.gallery || []).map(g => g.src), ...(project.services || []).map(item => item.image)].filter(Boolean))];
+  const slideshowPhotos = [...new Set((project.gallery || []).map(g => g.src).filter(Boolean))];
+  const hasServicePhotos = (project.services || []).some(item => item.image);
+  const hasBadges = (project.services || []).some(item => item.badge);
+  const staticCardPool = ['grain', 'bento-accent',
+    ...((project.services || []).some(item => item.badge) ? ['badges'] : []),
+    ...((project.services || []).some(item => item.image) ? ['color-photo'] : []),
+  ];
+  const mechanics = new Set(motionPlan?.mechanics || []);
+  const luxuryProfile = requestedStyle === 'luxury' || (tier === 'luxury' && requestedStyle !== 'cinematic');
+  const calm = requestedStyle === 'static' || requestedStyle === 'luxury' || (requestedStyle !== 'cinematic' && (tier === 'luxury' || intensity === 'calm'));
   let card;
-  if (f.cardEffect === 'none' || CARD_EFFECTS[f.cardEffect]) card = f.cardEffect;
+  if (cardOverride === 'none' || Object.hasOwn(CARD_EFFECTS, cardOverride)) card = cardOverride;
   else {
-    let pool = calm ? ['layered-shadow', 'underline-arrow', 'photo-zoom', 'color-photo', 'stack', 'grain']
-      : ['spotlight', 'sheen', 'gradient-border', 'border-glow', 'layered-shadow', 'stack', 'curtain', 'photo-zoom', 'underline-arrow', 'stagger', 'focus-dim', 'bento-accent', 'mask-reveal'];
+    let pool = requestedStyle === 'static' ? staticCardPool
+      : calm ? ['layered-shadow', 'underline-arrow', 'photo-zoom', 'color-photo', 'stack', 'grain', ...(luxuryProfile ? ['satin-edge'] : [])]
+      : ['spotlight', 'sheen', 'gradient-border', 'border-glow', 'layered-shadow', 'stack', 'curtain', 'photo-zoom', 'underline-arrow', 'stagger', 'focus-dim', 'bento-accent', 'mask-reveal', 'tilt-depth'];
     if (archetype === 'brutalist') pool = ['stagger', 'underline-arrow', 'isometric'];
     if (archetype === 'catalog' || archetype === 'product-first') pool = ['photo-zoom', 'layered-shadow', 'badges', 'spotlight', 'sheen'];
-    card = pick(stream(seed, 'card-effect'), pool);
+    if (luxuryProfile && calm) {
+      const hasServicePhotos = (project.services || []).some(item => item.image);
+      pool = ['satin-edge', 'layered-shadow', ...(hasServicePhotos ? ['photo-zoom', 'color-photo'] : [])];
+    }
+    if (requestedStyle === 'static') pool = staticCardPool;
+    if (mechanics.has('tilt-cards')) pool = pool.filter(id => !['tilt-depth', 'magnetic', 'stagger', 'stack', 'isometric', 'layered-shadow'].includes(id));
+    if (['flip', 'stack'].includes(itemsMechanic)) pool = pool.filter(id => !['tilt-depth', 'magnetic', 'stagger', 'stack', 'isometric', 'layered-shadow'].includes(id));
+    pool = pool.filter(id => !['photo-zoom', 'color-photo', 'mask-reveal'].includes(id) || hasServicePhotos);
+    pool = pool.filter(id => id !== 'badges' || hasBadges);
+    if (!pool.length) pool = ['layered-shadow', 'grain', 'bento-accent'];
+    card = pick(stream(autoSeed, 'card-effect'), pool, !cardOverride ? [f.effectsAvoid?.card].filter(Boolean) : []);
   }
+  const cardRequested = card;
+  const cardUnavailable = (PHOTO_CARD.has(card) && !hasServicePhotos) || (card === 'badges' && !hasBadges);
+  if (cardUnavailable) card = 'layered-shadow';
   let hero;
-  if (f.heroEffect === 'none' || HERO_EFFECTS[f.heroEffect]) hero = f.heroEffect;
+  if (heroOverride === 'none' || Object.hasOwn(HERO_EFFECTS, heroOverride)) hero = heroOverride;
+  else if (requestedStyle === 'static') hero = photos.length
+    ? pick(stream(autoSeed, 'hero-effect-static'), ['duotone', 'double-exposure'], !heroOverride ? [f.effectsAvoid?.hero].filter(Boolean) : [])
+    : 'none';
   else if (requestedStyle === 'cinematic') {
-    const cinematicPool = photos.length >= 2
+    const cinematicPool = slideshowPhotos.length >= 2
       ? ['slideshow', 'double-exposure', 'photo-wipe', 'ken-burns', 'duotone']
       : photos.length
         ? ['photo-wipe', 'ken-burns', 'duotone', 'double-exposure']
         : ['aurora', 'grid', 'morph', 'wave-lines', 'starfield'];
-    hero = pick(stream(seed, 'hero-effect-cinematic'), cinematicPool);
+    const compatible = mechanics.has('dynamic-gradient') && !photos.length
+      ? cinematicPool.filter(id => !['aurora', 'grid', 'morph', 'wave-lines', 'starfield'].includes(id))
+      : cinematicPool;
+    hero = pick(stream(autoSeed, 'hero-effect-cinematic'), compatible.length ? compatible : ['line-split', 'outline-fill'], !heroOverride ? [f.effectsAvoid?.hero].filter(Boolean) : []);
   }
   else {
-    let pool = calm ? ['fog', 'aurora', 'line-split', 'outline-fill', 'typewriter'] : ['aurora', 'grid', 'bokeh', 'starfield', 'wave-lines', 'morph', 'text-mask', 'marquee', 'line-split', 'depth-parallax', 'hero-spotlight', 'magnetic-cta'];
-    if (photos.length) pool = pool.concat(calm ? ['ken-burns', 'duotone'] : ['ken-burns', 'photo-wipe', 'duotone', 'double-exposure']);
-    if (photos.length >= 2 && !calm) pool.push('slideshow');
+    let pool = calm ? ['fog', 'aurora', 'line-split', 'outline-fill', 'typewriter', ...(luxuryProfile ? ['atelier-light'] : [])] : ['aurora', 'grid', 'bokeh', 'starfield', 'wave-lines', 'morph', 'text-mask', 'marquee', 'line-split', 'depth-parallax', 'hero-spotlight', 'magnetic-cta'];
+    if (photos.length) pool = pool.concat(calm ? ['ken-burns', 'duotone', ...(luxuryProfile ? ['focus-pull'] : [])] : ['ken-burns', 'photo-wipe', 'duotone', 'double-exposure']);
+    if (slideshowPhotos.length >= 2 && !calm) pool.push('slideshow');
     if (archetype === 'brutalist') pool = ['marquee', 'grid', 'outline-fill', 'line-split'];
-    hero = pick(stream(seed, 'hero-effect'), pool);
+    if (luxuryProfile) pool = photos.length
+      ? ['atelier-light', 'focus-pull', 'duotone', 'ken-burns']
+      : ['atelier-light', 'line-split'];
+    if (mechanics.has('parallax')) pool = pool.filter(id => id !== 'depth-parallax');
+    if (mechanics.has('magnetic-buttons')) pool = pool.filter(id => id !== 'magnetic-cta');
+    if (mechanics.has('dynamic-gradient')) pool = pool.filter(id => !['aurora', 'fog', 'bokeh', 'wave-lines', 'morph', 'atelier-light', 'hero-spotlight'].includes(id));
+    if (mechanics.has('cinematic-reveal')) pool = pool.filter(id => !['outline-fill', 'typewriter', 'line-split'].includes(id));
+    if (mechanics.has('kinetic-type')) pool = pool.filter(id => !['text-mask', 'outline-fill', 'typewriter', 'line-split'].includes(id));
+    if (!pool.length) pool = photos.length ? ['ken-burns', 'duotone'] : ['text-mask', 'marquee'];
+    hero = pick(stream(autoSeed, 'hero-effect'), pool, !heroOverride ? [f.effectsAvoid?.hero].filter(Boolean) : []);
   }
   // Фотоэффект без фото (или слайд-шоу без двух снимков) не применяется — честно отмечаем.
-  const heroUnavailable = (PHOTO_HERO.has(hero) && !photos.length) || (hero === 'slideshow' && photos.length < 2);
-  return Object.freeze({ card, hero: heroUnavailable ? 'none' : hero, heroRequested: hero, heroUnavailable, calm });
+  const heroUnavailable = (PHOTO_HERO.has(hero) && !photos.length) || (hero === 'slideshow' && slideshowPhotos.length < 2);
+  return Object.freeze({ card, cardRequested, cardUnavailable, hero: heroUnavailable ? 'none' : hero, heroRequested: hero, heroUnavailable, calm });
 }
 
 // ---------------- Карточки ----------------
@@ -100,6 +149,7 @@ const s = (list, suf = '') => list.map(x => x + suf).join(',');
 const hov = (list, suf = '') => list.flatMap(x => [`${x}:hover${suf}`, `${x}:focus-within${suf}`]).join(',');
 const MOTION = css => `@media(prefers-reduced-motion:no-preference){${css}}`;
 const TOUCH = css => `@media(hover:none){${css}}`;
+const REDUCED_CARD_MOTION = `@media(prefers-reduced-motion:reduce){${[...BOX, ...ANY].flatMap(selector => [selector, `${selector} *`, `${selector}::before`, `${selector}::after`, `${selector} *::before`, `${selector} *::after`]).join(',')}{animation:none!important;transition:none!important;scroll-behavior:auto!important}}`;
 
 const CARD_CSS = {
   spotlight: `${s(BOX)}{position:relative;isolation:isolate}${s(BOX, '::before')}{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--ds-accent) 16%,transparent),transparent 70%)}${hov(BOX, '::before')}{opacity:1}`,
@@ -110,11 +160,13 @@ const CARD_CSS = {
   grain: `${s(BOX)}{background-image:url("data:image/svg+xml,${encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0.09 0 0 0 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>").replace(/'/g, '%27')}");background-size:200px}`,
   'layered-shadow': `${s(BOX)}{box-shadow:0 1px 2px color-mix(in srgb,var(--ds-text) 8%,transparent),0 6px 14px color-mix(in srgb,var(--ds-text) 7%,transparent),0 18px 36px color-mix(in srgb,var(--ds-text) 6%,transparent);transition:box-shadow .35s,transform .35s}${hov(BOX)}{box-shadow:0 2px 4px color-mix(in srgb,var(--ds-text) 9%,transparent),0 12px 26px color-mix(in srgb,var(--ds-text) 9%,transparent),0 34px 64px color-mix(in srgb,var(--ds-text) 10%,transparent)}` + MOTION(`${hov(BOX)}{transform:translateY(-4px)}`),
   'inner-parallax': MOTION(`${s(BOX, ' img')}{transform:translate(calc((var(--hx,.5) - .5) * -14px),calc((var(--hy,.5) - .5) * -14px)) scale(1.06);transition:transform .2s}${s(BOX, ' h3')}{transform:translate(calc((var(--hx,.5) - .5) * 6px),calc((var(--hy,.5) - .5) * 6px));transition:transform .2s}`),
+  'satin-edge': `${s(BOX)}{position:relative}${s(BOX, '::after')}{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;padding:1px;background:linear-gradient(135deg,color-mix(in srgb,#fff 42%,transparent),color-mix(in srgb,var(--ds-accent) 46%,transparent) 42%,color-mix(in srgb,#fff 10%,transparent) 68%,color-mix(in srgb,var(--ds-accent) 32%,transparent));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;opacity:.58;transition:opacity .55s ease}${hov(BOX, '::after')}{opacity:.95}`,
+  'tilt-depth': `@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){${s(BOX)}{transform:perspective(900px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(-2px);transform-style:preserve-3d;transition:transform .22s cubic-bezier(.2,.7,.2,1),box-shadow .22s;will-change:transform}${s(BOX, ':hover')},${s(BOX, ':focus-within')}{box-shadow:0 18px 42px color-mix(in srgb,var(--ds-text) 16%,transparent)}}`,
   stack: `${s(BOX)}{position:relative;box-shadow:6px 6px 0 -1px var(--ds-surface),6px 6px 0 0 var(--ds-border),12px 12px 0 -1px var(--ds-surface),12px 12px 0 0 var(--ds-border);margin:0 12px 12px 0}` + MOTION(`${s(BOX)}{transition:box-shadow .35s,transform .35s}${hov(BOX)}{transform:translate(-3px,-3px);box-shadow:10px 10px 0 -1px var(--ds-surface),10px 10px 0 0 var(--ds-border),20px 20px 0 -1px var(--ds-surface),20px 20px 0 0 var(--ds-border)}`),
   neumorph: `${s(BOX)}{border-color:transparent;background:var(--ds-bg);box-shadow:8px 8px 18px color-mix(in srgb,var(--ds-text) 12%,transparent),-8px -8px 18px color-mix(in srgb,#fff 70%,transparent)}${hov(BOX)}{box-shadow:inset 6px 6px 14px color-mix(in srgb,var(--ds-text) 10%,transparent),inset -6px -6px 14px color-mix(in srgb,#fff 65%,transparent)}`,
   isometric: MOTION(`${s(BOX)}{transform:perspective(900px) rotateX(10deg) rotateZ(-2deg);transition:transform .45s var(--ds-ease),box-shadow .45s;box-shadow:0 18px 30px color-mix(in srgb,var(--ds-text) 12%,transparent)}${hov(BOX)}{transform:none;box-shadow:0 8px 16px color-mix(in srgb,var(--ds-text) 10%,transparent)}`),
   curtain: `${s(BOX)}{position:relative;overflow:hidden}${s(BOX, ' h3 ~ p:not(.price)')}{transition:opacity .35s,transform .35s}` + `@media(hover:hover){${s(BOX, ':not(:hover):not(:focus-within) h3 ~ p:not(.price)')}{opacity:0;transform:translateY(10px)}}`,
-  'mask-reveal': `${s(BOX, ' .item__media img')}{transition:clip-path .6s var(--ds-ease)}` + `@media(hover:hover) and (prefers-reduced-motion:no-preference){${s(BOX, ' .item__media img')}{clip-path:circle(38% at 50% 50%)}${hov(BOX, ' .item__media img')}{clip-path:circle(75% at 50% 50%)}}`,
+  'mask-reveal': `${s(BOX, ' .item__media img')}{clip-path:inset(2% round var(--ds-radius-md,18px));transition:clip-path .6s var(--ds-ease)}` + `@media(hover:hover) and (prefers-reduced-motion:no-preference){${hov(BOX, ' .item__media img')}{clip-path:inset(0 round var(--ds-radius-md,18px))}}@media(hover:none), (prefers-reduced-motion:reduce){${s(BOX, ' .item__media img')}{clip-path:inset(0 round var(--ds-radius-md,18px))}}`,
   'color-photo': `@media(hover:hover){${s(BOX, ' img')}{filter:grayscale(1);transition:filter .5s}${hov(BOX, ' img')}{filter:var(--uds-grade,) grayscale(0)}}`,
   'photo-zoom': `${s(BOX, ' .item__media')}{overflow:hidden}` + MOTION(`${s(BOX, ' .item__media img')}{transition:transform .6s var(--ds-ease)}${hov(BOX, ' .item__media img')}{transform:scale(1.08)}`),
   'underline-arrow': `${s(ANY, ' h3')}{display:inline;background:linear-gradient(var(--ds-accent),var(--ds-accent)) 0 100%/0 2px no-repeat;transition:background-size .35s var(--ds-ease)}${hov(ANY, ' h3')}{background-size:100% 2px}${s(ANY, ' h3::after')}{content:" →";display:inline-block;color:var(--u-accent-ink);transition:transform .3s}${hov(ANY, ' h3::after')}{transform:translateX(5px)}`,
@@ -129,7 +181,7 @@ const CARD_CSS = {
 const BADGE_BASE = '.item__badge{display:inline-block;align-self:flex-start;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:var(--u-tint);color:var(--ds-text);font-size:.75rem;font-weight:700}';
 
 export function cardEffectCss(id) {
-  return BADGE_BASE + (CARD_CSS[id] || '');
+  return BADGE_BASE + (CARD_CSS[id] || '') + REDUCED_CARD_MOTION;
 }
 
 /** Скрипты эффектов: только мелкие обработчики, отключаются при reduced-motion и на сенсорных экранах. */
@@ -139,7 +191,7 @@ export function effectsScript(fx) {
   const fine = "matchMedia('(hover: hover) and (pointer: fine)').matches";
   const box = BOX.join(',');
   const parts = [];
-  if (['spotlight', 'border-glow', 'holo', 'inner-parallax'].includes(fx.card)) parts.push(`if(${fine}){document.querySelectorAll(${JSON.stringify(box)}).forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');c.style.setProperty('--hx',x.toFixed(3));c.style.setProperty('--hy',y.toFixed(3))})})}`);
+  if (['spotlight', 'border-glow', 'holo', 'inner-parallax', 'tilt-depth'].includes(fx.card)) parts.push(`if(${fine}&&${ok}){document.querySelectorAll(${JSON.stringify(box)}).forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));c.style.setProperty('--mx',(x*100)+'%');c.style.setProperty('--my',(y*100)+'%');c.style.setProperty('--hx',x.toFixed(3));c.style.setProperty('--hy',y.toFixed(3));if(${JSON.stringify(fx.card === 'tilt-depth')}){c.style.setProperty('--tilt-x',((.5-y)*7)+'deg');c.style.setProperty('--tilt-y',((x-.5)*7)+'deg')}});c.addEventListener('pointerleave',function(){c.style.setProperty('--hx','.5');c.style.setProperty('--hy','.5');c.style.setProperty('--tilt-x','0deg');c.style.setProperty('--tilt-y','0deg')})})}`);
   if (fx.card === 'magnetic') parts.push(`if(${fine}&&${ok}){document.querySelectorAll(${JSON.stringify(box)}).forEach(function(c){c.addEventListener('pointermove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--mgx',((e.clientX-r.left)/r.width-.5)*8+'px');c.style.setProperty('--mgy',((e.clientY-r.top)/r.height-.5)*8+'px')});c.addEventListener('pointerleave',function(){c.style.setProperty('--mgx','0px');c.style.setProperty('--mgy','0px')})})}`);
   // Счётчик: число из текста набирается при появлении. Текст для чтения с экрана остаётся итоговым.
   if (fx.card === 'counter') parts.push(`if(${ok}&&'IntersectionObserver'in window){var cio=new IntersectionObserver(function(es){es.forEach(function(en){if(!en.isIntersecting)return;cio.unobserve(en.target);var el=en.target,full=el.textContent,m=full.match(/\\d[\\d\\s]*/);if(!m)return;var target=parseInt(m[0].replace(/\\s/g,''),10);if(!(target>1))return;el.setAttribute('aria-label',full);var t0=performance.now();(function step(t){var k=Math.min(1,(t-t0)/1200),v=Math.round(target*(1-Math.pow(1-k,3)));el.textContent=full.replace(m[0],String(v)+(/\\s$/.test(m[0])?' ':''));if(k<1)requestAnimationFrame(step);else el.textContent=full})(t0)})},{threshold:.6});document.querySelectorAll('.adv>li h3,.items>.item h3').forEach(function(h){if(/\\d/.test(h.textContent))cio.observe(h)})}`);
@@ -161,14 +213,14 @@ export function heroEffectMarkup(fx, project = {}) {
   const h = fx?.hero;
   if (!h || h === 'none') return '';
   if (h === 'slideshow') {
-    const photos = (project.gallery || []).map(g => g.src).filter(Boolean).slice(0, 4);
+    const photos = [...new Set((project.gallery || []).map(g => g.src).filter(Boolean))].slice(0, 4);
     return `<span class="uds-hfx uds-hfx--slideshow">${photos.map((src, i) => `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" style="--i:${i};--n:${photos.length}">`).join('')}</span>`;
   }
   if (h === 'double-exposure') {
     const src = (project.gallery || []).map(g => g.src).find(Boolean) || project.images?.hero;
     return src ? `<span class="uds-hfx uds-hfx--double-exposure"><img src="${esc(src)}" alt="" loading="lazy" decoding="async"></span>` : '';
   }
-  if (['aurora', 'grid', 'fog', 'bokeh', 'starfield', 'wave-lines', 'morph', 'hero-spotlight', 'depth-parallax'].includes(h)) return `<span class="uds-hfx uds-hfx--${h}"></span>`;
+  if (['aurora', 'grid', 'fog', 'bokeh', 'starfield', 'wave-lines', 'morph', 'hero-spotlight', 'depth-parallax', 'atelier-light'].includes(h)) return `<span class="uds-hfx uds-hfx--${h}"></span>`;
   return '';
 }
 
@@ -200,6 +252,7 @@ export function heroEffectCss(fx, palette = {}) {
     'ken-burns': MOTION(`${HERO_IMG}{animation:uds-kb ${22 * t}s ease-in-out infinite alternate;transform-origin:60% 40%}@keyframes uds-kb{from{transform:scale(1.02)}to{transform:scale(1.14) translate(-2%,-1%)}}`) + `.hero .ds-hero-picture,.hero__figure,.hero__frame{overflow:hidden}`,
     'double-exposure': `.uds-hfx--double-exposure img{width:100%;height:100%;object-fit:cover;mix-blend-mode:${dark ? 'screen' : 'multiply'};opacity:.16;filter:grayscale(1) contrast(1.1)}`,
     'photo-wipe': MOTION(`${HERO_IMG}{animation:uds-wipe 1.4s var(--ds-ease) both}@keyframes uds-wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}`),
+    'focus-pull': MOTION(`${HERO_IMG}{animation:uds-focus-pull 1.8s cubic-bezier(.2,.7,.2,1) both}@keyframes uds-focus-pull{from{filter:blur(12px);opacity:.68;transform:scale(1.025)}to{filter:blur(0);opacity:1;transform:scale(1)}}`),
     duotone: `${HERO_IMG}{filter:grayscale(1) sepia(1) hue-rotate(${(hue - 38 + 360) % 360}deg) saturate(${dark ? 1.2 : 0.9}) contrast(1.05)}`,
     slideshow: `.uds-hfx--slideshow img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}.uds-hfx--slideshow img:first-child{opacity:.22}.uds-hfx--slideshow::after{content:"";position:absolute;inset:0;background:color-mix(in srgb,var(--ds-bg) 55%,transparent)}` + MOTION(`.uds-hfx--slideshow img{animation:uds-slides calc(var(--n) * 6s) infinite;animation-delay:calc(var(--i) * 6s)}.uds-hfx--slideshow img:first-child{opacity:0}@keyframes uds-slides{0%,100%{opacity:0}8%,30%{opacity:.22}38%{opacity:0}}`),
     // Градиент между цветом текста и акцентным текстом: оба пары проверены на контраст с фоном.
@@ -211,14 +264,20 @@ export function heroEffectCss(fx, palette = {}) {
     'depth-parallax': `.uds-hfx--depth-parallax{background:radial-gradient(30% 40% at 25% 35%,color-mix(in srgb,var(--ds-accent) 18%,transparent),transparent 70%),radial-gradient(25% 35% at 75% 65%,color-mix(in srgb,var(--ds-accent) 12%,transparent),transparent 70%)}` + MOTION(`.uds-hfx--depth-parallax{transform:translate(calc((var(--px,.5) - .5) * -40px),calc((var(--py,.5) - .5) * -30px));transition:transform .3s}.hero .hero__copy,.hero h1{transform:translate(calc((var(--px,.5) - .5) * 10px),calc((var(--py,.5) - .5) * 8px));transition:transform .3s}.hero img.ds-media{transform:translate(calc((var(--px,.5) - .5) * -18px),calc((var(--py,.5) - .5) * -14px)) scale(1.04);transition:transform .3s}`),
     'magnetic-cta': MOTION(`.hero [data-cta="primary"]{transition:transform .25s var(--ds-ease)}`),
     'hero-spotlight': `.uds-hfx--hero-spotlight{background:radial-gradient(420px circle at calc(var(--px,.5) * 100%) calc(var(--py,.4) * 100%),color-mix(in srgb,var(--ds-accent) ${dark ? 22 : 12}%,transparent),transparent 70%)}`,
+    'atelier-light': `.uds-hfx--atelier-light{background:radial-gradient(ellipse 34% 52% at 12% 22%,color-mix(in srgb,var(--ds-accent) 16%,transparent),transparent 72%),radial-gradient(ellipse 28% 48% at 88% 76%,color-mix(in srgb,#fff 8%,transparent),transparent 74%);opacity:.72}` + MOTION(`.uds-hfx--atelier-light{animation:uds-atelier-light ${28 * t}s ease-in-out infinite alternate}@keyframes uds-atelier-light{to{transform:translate3d(1.5%,-1%,0) scale(1.025);opacity:.88}}`),
   };
-  return base + (css[h] || '');
+  const reducedMotion = `@media(prefers-reduced-motion:reduce){.hero .uds-hfx,.hero .uds-hfx *,${HERO_IMG},.hero h1,.hero .lede,.hero [data-cta="primary"]{animation:none!important;transition:none!important;scroll-behavior:auto!important}}`;
+  return base + (css[h] || '') + reducedMotion;
 }
 
 /** Описание для концепции. */
 export function describeEffects(fx) {
   if (!fx) return '';
-  const card = fx.card === 'none' ? 'без эффекта' : CARD_EFFECTS[fx.card];
-  const hero = fx.hero === 'none' ? (fx.heroUnavailable ? `без эффекта (для «${HERO_EFFECTS[fx.heroRequested]}» нужны фото)` : 'без эффекта') : HERO_EFFECTS[fx.hero];
+  const card = fx.cardUnavailable
+    ? `вместо «${CARD_EFFECTS[fx.cardRequested] || fx.cardRequested}» — ${CARD_EFFECTS[fx.card]}`
+    : fx.card === 'none' ? 'без эффекта' : CARD_EFFECTS[fx.card];
+  const hero = fx.hero === 'none' ? (fx.heroUnavailable
+    ? `без эффекта (для «${HERO_EFFECTS[fx.heroRequested]}» ${fx.heroRequested === 'slideshow' ? 'нужны минимум два разных фото в галерее' : 'нужны фото'})`
+    : 'без эффекта') : HERO_EFFECTS[fx.hero];
   return `Карточки — ${card}; первый экран — ${hero}`;
 }

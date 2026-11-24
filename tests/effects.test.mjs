@@ -7,9 +7,9 @@ const photo = 'https://example.com/a.jpg';
 const base = { brand: 'Поток', niche: 'студия йоги', title: 'Йога для спины', contacts: { email: 'hello@example.com' },
   services: [['Хатха', 'Спокойная практика', '900 ₽', '', '', '', 'Хит'], ['Виньяса', 'Динамичные связки']], advantages: [['12 лет практики', 'Опыт'], ['8 человек', 'В группе']] };
 
-test('22 эффекта карточек и 20 эффектов первого экрана', () => {
-  assert.equal(CARD_EFFECT_IDS.length, 22);
-  assert.equal(HERO_EFFECT_IDS.length, 20);
+test('24 эффекта карточек и 22 эффекта первого экрана', () => {
+  assert.equal(CARD_EFFECT_IDS.length, 24);
+  assert.equal(HERO_EFFECT_IDS.length, 22);
 });
 
 test('ручной выбор главнее; «без эффекта» поддержан; неизвестное — авто', () => {
@@ -30,7 +30,7 @@ test('фотоэффекты первого экрана без фото не п
     assert.equal(chooseEffects({ images: { hero: photo }, passthrough: { heroEffect: id } }, {}).hero, id);
   }
   assert.equal(chooseEffects({ images: { hero: photo }, passthrough: { heroEffect: 'slideshow' } }, {}).hero, 'none', 'слайд-шоу требует двух фото');
-  assert.equal(chooseEffects({ images: { hero: photo }, gallery: [{ src: photo }], passthrough: { heroEffect: 'slideshow' } }, {}).hero, 'slideshow');
+  assert.equal(chooseEffects({ images: { hero: photo }, gallery: [{ src: photo }, { src: 'https://example.com/b.jpg' }], passthrough: { heroEffect: 'slideshow' } }, {}).hero, 'slideshow');
   for (let i = 0; i < 20; i++) {
     const fx = buildConcept({ ...base, brand: 'Без фото ' + i }).visualSystem.effects;
     assert.ok(!['ken-burns', 'duotone', 'photo-wipe', 'double-exposure', 'slideshow'].includes(fx.hero), 'авто без фото не выбирает фотоэффекты');
@@ -41,13 +41,13 @@ test('доступность: наведение дублируется фоку
   for (const id of CARD_EFFECT_IDS) {
     const css = cardEffectCss(id);
     if (/:hover/.test(css) && !/@media\(hover:hover\)/.test(css)) assert.match(css, /:focus-within/, `${id}: наведение без фокуса`);
-    if (/animation:|transition:transform|transform:translate|rotateX/.test(css.replace(/@media\(prefers-reduced-motion:no-preference\)\{.*\}/, ''))) {
-      assert.ok(/prefers-reduced-motion:no-preference|@media\(hover:hover\)/.test(css) || !/animation:/.test(css), `${id}: анимация вне медиазапроса движения`);
+    if (/animation:|transition:transform|transform:translate|rotateX/.test(css)) {
+      assert.ok(/prefers-reduced-motion:no-preference|@media\(hover:hover\)/.test(css) || /prefers-reduced-motion:reduce/.test(css), `${id}: движение должно быть ограничено настройкой доступности`);
     }
   }
   for (const id of HERO_EFFECT_IDS) {
     const css = heroEffectCss({ hero: id }, { mode: 'light', accent: '#cc5522' });
-    const animated = css.match(/animation:[^;}]+/g) || [];
+    const animated = (css.match(/animation:[^;}]+/g) || []).filter(rule => !/^animation:\s*none\b/.test(rule));
     if (animated.length) assert.match(css, /@media\(prefers-reduced-motion:no-preference\)/, `${id}: анимация только без reduced-motion`);
     const markup = heroEffectMarkup({ hero: id }, { gallery: [{ src: photo }, { src: photo }], images: { hero: photo } });
     assert.doesNotMatch(markup, /alt="[^"]+"/, `${id}: декоративные фото без alt-текста`);

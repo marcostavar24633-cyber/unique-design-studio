@@ -24,7 +24,7 @@ test('раскрытие: подробности в <details>, работает 
 
 test('переворот: карточка фокусируемая, движение только для мыши и без reduced-motion', () => {
   const g = site('flip');
-  assert.match(g.html, /<li class="item item--flip" id="item-0"[^>]* tabindex="0"/);
+  assert.match(g.html, /<li class="item item--flip[^"]*" id="item-[^"]+"[^>]* tabindex="0"/);
   assert.match(g.html, /class="flip__back"><p>Описание позиции номер 1<\/p><p class="price">100 ₽<\/p>/);
   assert.match(MECHANIC_CSS.flip, /@media \(hover:hover\) and \(pointer:fine\) and \(prefers-reduced-motion:no-preference\)/);
   assert.match(MECHANIC_CSS.flip, /\.item--flip:focus-within \.flip__inner\{transform:rotateY\(180deg\)\}/);
@@ -39,7 +39,7 @@ test('лента: прокручиваемая область с подпись�
 test('колода: ступенчатый sticky только на широких экранах, одна колонка', () => {
   const g = site('stack');
   assert.match(g.html, /style="--stack-i:2"/);
-  assert.match(MECHANIC_CSS.stack, /@media\(min-width:700px\)\{[^}]*position:sticky/);
+  assert.match(MECHANIC_CSS.stack, /@media\(min-width:900px\)\{[^}]*position:sticky/);
   assert.match(MECHANIC_CSS.stack, /grid-template-columns:minmax\(0,1fr\)/);
 });
 

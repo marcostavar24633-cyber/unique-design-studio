@@ -22,13 +22,14 @@ test('проект без поля архитектуры работает в а
   assert.equal(generate(old).concept.designDNA.primaryArchetype, 'split-utility');
 });
 
-test('экспорт совместим со старым форматом и сохраняет неизвестные поля', () => {
+test('экспорт сохраняет старые поля и неизвестные данные, дополняя устойчивыми идентификаторами', () => {
   const r = generate(legacy);
   const out = r.exported;
   assert.ok(['catalog', 'editorial', 'immersive', 'service', 'modular'].includes(out.designArchitecture));
   assert.ok(['Тёмная', 'Светлая'].includes(out.palette));
-  assert.deepEqual(out.services, legacy.services);
-  assert.deepEqual(out.faqs, legacy.faqs);
+  assert.deepEqual(out.services.map(row => row.slice(0, 2)), legacy.services.map(row => row.slice(0, 2)));
+  assert.ok(out.services.every(row => typeof row[7] === 'string' && row[7].startsWith('service-')));
+  assert.deepEqual(out.faqs.map(row => row.slice(0, 2)), legacy.faqs.map(row => row.slice(0, 2)));
   assert.equal(out.marketResearch, legacy.marketResearch);
   assert.deepEqual(out.researchSources, legacy.researchSources);
   assert.ok(out.concept.designDNA.primaryArchetype, 'концепция сохраняется в экспорте');

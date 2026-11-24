@@ -23,7 +23,7 @@ test('content review catches missing required copy and cliché language', () => 
     process: [{ title: 'Заявка', text: 'Свяжитесь с нами' }],
     faqs: [{ title: 'Сколько стоит?', text: 'Обсудим задачу' }],
   });
-  assert.equal(result.status, 'review');
+  assert.equal(result.status, 'needs-work');
   assert.ok(result.findings.some(item => item.id === 'generic-copy'));
   assert.ok(result.findings.some(item => item.id === 'absolute-claim'));
 });

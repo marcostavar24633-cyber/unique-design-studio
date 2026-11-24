@@ -23,12 +23,16 @@ export function canvasEditScope(prefix, value) {
 export function canvasBlocksHtml(value, after = 'contact', elementsBySection = {}) {
   if (!Array.isArray(value)) return '';
   const placements = new Set(['hero', 'about', 'items', 'advantages', 'process', 'gallery', 'faq', 'contact']);
+  const usedIds = new Set(['main', 'top', 'hero', 'about', 'items', 'advantages', 'process', 'gallery', 'faq', 'contact']);
   return value.slice(0, 30).map((block, index) => {
     if (!block || typeof block !== 'object') return '';
     const anchor = placements.has(block.after) ? block.after : 'contact';
     if (anchor !== after) return '';
     const type = BLOCK_TYPES.has(block.type) ? block.type : 'text';
-    const id = slugify(String(block.id || `canvas-${index + 1}`)).slice(0, 48) || `canvas-${index + 1}`;
+    const baseId = slugify(String(block.id || `canvas-${index + 1}`)).slice(0, 48) || `canvas-${index + 1}`;
+    let id = baseId, suffix = 1;
+    while (usedIds.has(id)) id = `${baseId.slice(0, 40)}-${++suffix}`;
+    usedIds.add(id);
     const title = esc(String(block.title || (type === 'quote' ? 'Цитата' : 'Новый раздел')).slice(0, 180));
     const text = esc(String(block.text || 'Добавьте содержание этого раздела.').slice(0, 2400));
     const color = HEX.test(block.color || '') ? block.color : '';
@@ -50,9 +54,13 @@ export function canvasBlocksHtml(value, after = 'contact', elementsBySection = {
 /** Responsive elements inserted by the owner into a selected page section. */
 export function canvasElementsHtml(value) {
   if (!Array.isArray(value) || !value.length) return '';
+  const usedIds = new Set();
   const items = value.slice(0, 30).map((item, index) => {
     if (!item || typeof item !== 'object') return '';
-    const id = slugify(String(item.id || `element-${index + 1}`));
+    const baseId = slugify(String(item.id || `element-${index + 1}`)).slice(0, 48);
+    let id = baseId, suffix = 1;
+    while (usedIds.has(id)) id = `${baseId.slice(0, 40)}-${++suffix}`;
+    usedIds.add(id);
     const title = esc(String(item.title || '').slice(0, 180));
     const text = esc(String(item.text || '').slice(0, 1200));
     const href = esc(safeUrl(item.href) || '#contact');
@@ -63,10 +71,12 @@ export function canvasElementsHtml(value) {
     const attrs = `class="uds-added-element uds-added-element--${item.type === 'image' ? 'image' : item.type === 'button' ? 'button' : 'card'}${item.type === 'card' ? ' ds-card' : ''}" data-uds-element="${id}" data-uds-edit-key="${key}"`;
     if (item.type === 'image') return `<figure ${attrs}>${src ? `<img data-uds-edit-key="${mediaKey}" src="${src}" alt="${alt}" loading="lazy" decoding="async">` : '<div class="uds-added-element__placeholder">Выберите фотографию в настройках элемента</div>'}${title ? `<figcaption>${title}</figcaption>` : ''}</figure>`;
     if (item.type === 'button') return `<a ${attrs} href="${href}">${title || text || 'Новая кнопка'}</a>`;
+    if (item.type === 'heading') return `<h2 ${attrs}>${title || text || 'Новый заголовок'}</h2>`;
+    if (item.type === 'text') return `<p ${attrs}>${text || title || 'Новый текст'}</p>`;
     return `<div ${attrs}>${src ? `<img src="${src}" alt="${alt}" loading="lazy" decoding="async">` : ''}${title ? `<h3>${title}</h3>` : ''}${text ? `<p>${text}</p>` : ''}</div>`;
   }).filter(Boolean).join('');
   if (!items) return '';
-  return `<style>.uds-added-elements{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:clamp(12px,2vw,24px);width:min(100% - 32px,1200px);margin:clamp(20px,4vw,48px) auto}.uds-added-element{min-width:0;box-sizing:border-box;position:relative}.uds-added-element--card{padding:clamp(16px,2vw,26px);border:1px solid color-mix(in srgb,var(--ds-text) 12%,transparent);border-radius:var(--ds-radius,16px);background:color-mix(in srgb,var(--ds-surface) 94%,var(--ds-accent) 6%)}.uds-added-element--card h3{margin:0 0 8px}.uds-added-element--card p{margin:0}.uds-added-element--card img,.uds-added-element--image img{display:block;width:100%;height:auto;max-height:520px;object-fit:cover;border-radius:inherit}.uds-added-element--button{display:inline-flex;align-items:center;justify-content:center;justify-self:start;min-height:44px;padding:12px 22px;border-radius:var(--ds-radius,12px);background:var(--ds-accent);color:var(--ds-accent-contrast);text-decoration:none;font-weight:700}.uds-added-element--image{margin:0}.uds-added-element--image figcaption{margin-top:8px}.uds-added-element__placeholder{display:grid;place-items:center;min-height:180px;padding:20px;border:1px dashed currentColor;border-radius:12px;opacity:.72;text-align:center}@media(max-width:600px){.uds-added-elements{grid-template-columns:minmax(0,1fr);width:min(100% - 24px,1200px);gap:14px}}</style><div class="uds-added-elements" data-uds-elements-container>${items}</div>`;
+  return `<style>.uds-added-elements{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:clamp(12px,2vw,24px);width:min(100% - 32px,1200px);margin:clamp(20px,4vw,48px) auto}.uds-added-element{min-width:0;box-sizing:border-box;position:relative}.uds-added-element--card{padding:clamp(16px,2vw,26px);border:1px solid color-mix(in srgb,var(--ds-text) 12%,transparent);border-radius:var(--ds-radius,16px);background:color-mix(in srgb,var(--ds-surface) 94%,var(--ds-accent) 6%)}.uds-added-element--card h3{margin:0 0 8px}.uds-added-element--card p{margin:0}.uds-added-element--card img,.uds-added-element--image img{display:block;width:100%;height:auto;max-height:520px;object-fit:cover;border-radius:inherit}.uds-added-element--text,.uds-added-element--heading{display:block;width:100%;padding:0;border:0;background:transparent}.uds-added-element--heading{font-size:clamp(1.5rem,1.2rem + 1.4vw,2.25rem);font-weight:700}.uds-added-element--button{display:inline-flex;align-items:center;justify-content:center;justify-self:start;min-height:44px;padding:12px 22px;border-radius:var(--ds-radius,12px);background:var(--ds-accent);color:var(--ds-accent-contrast);text-decoration:none;font-weight:700}.uds-added-element--image{margin:0}.uds-added-element--image figcaption{margin-top:8px}.uds-added-element__placeholder{display:grid;place-items:center;min-height:180px;padding:20px;border:1px dashed currentColor;border-radius:12px;opacity:.72;text-align:center}@media(max-width:600px){.uds-added-elements{grid-template-columns:minmax(0,1fr);width:min(100% - 24px,1200px);gap:14px}}</style><div class="uds-added-elements" data-uds-elements-container>${items}</div>`;
 }
 
 /** Persisted visual tweaks are applied to generated HTML with a DOM-safe, bounded runtime. */
@@ -84,6 +94,90 @@ export function canvasEditsRuntime(value) {
 }
 
 /** Applies sibling order changes made in the visual editor. */
+/** Responsive overrides inherit desktop → tablet → mobile and keep content edits shared. */
+export function canvasResponsiveEditsRuntime(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+  const allowedKeys = new Set(['width', 'height', 'fontSize', 'rotation', 'translateX', 'translateY', 'opacity', 'align', 'color', 'background', 'shape', 'animation', 'elementStyle', 'buttonStyle']);
+  const rows = [];
+  for (const range of ['desktop', 'tablet', 'mobile']) {
+    const bucket = value[range];
+    if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) continue;
+    for (const [key, edit] of Object.entries(bucket)) {
+      if (!/^u:[\w-]+:\d+$/.test(key) || !edit || typeof edit !== 'object') continue;
+      const clean = Object.fromEntries(Object.entries(edit).filter(([name]) => allowedKeys.has(name)));
+      if (Object.keys(clean).length) rows.push([range, key, clean]);
+    }
+  }
+  if (!rows.length) return '';
+  const data = JSON.stringify(rows).replace(/</g, '\\u003c');
+  const animationCss = (() => {
+    const animations = new Set(rows.map(([, , edit]) => edit.animation).filter(value => ['fade', 'rise', 'float', 'pulse', 'glow', 'tilt'].includes(value)));
+    if (!animations.size && !rows.some(([, , edit]) => edit.animation === 'none')) return '';
+    const keyframes = [
+      animations.has('fade') ? '@keyframes uds-canvas-fade{from{opacity:0}to{opacity:1}}' : '',
+      animations.has('rise') ? '@keyframes uds-canvas-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}' : '',
+      animations.has('float') ? '@keyframes uds-canvas-float{50%{transform:translateY(-7px)}}' : '',
+      animations.has('pulse') ? '@keyframes uds-canvas-pulse{50%{transform:scale(1.035)}}' : '',
+      animations.has('glow') ? '@keyframes uds-canvas-glow{to{filter:drop-shadow(0 0 12px color-mix(in srgb,var(--ds-accent) 55%,transparent))}}' : '',
+    ].join('');
+    const rules = rows.filter(([, , edit]) => edit.animation !== undefined).map(([range, key, edit]) => {
+      const selector = `[data-uds-edit-key="${key}"]`;
+      const animation = {
+        fade: 'uds-canvas-fade .6s ease both', rise: 'uds-canvas-rise .65s cubic-bezier(.2,.7,.2,1) both',
+        float: 'uds-canvas-float 3.6s ease-in-out infinite', pulse: 'uds-canvas-pulse 2.4s ease-in-out infinite',
+        glow: 'uds-canvas-glow 2.4s ease-in-out infinite alternate',
+      }[edit.animation];
+      const rule = edit.animation === 'none' ? `${selector}{animation:none!important;transition:none!important;transform:none!important;filter:none!important}`
+        : edit.animation === 'tilt' ? `${selector}{animation:none!important;transition:transform .25s ease!important}${selector}:hover{transform:perspective(700px) rotateX(2deg) rotateY(-2deg)!important}`
+        : animation ? `${selector}{animation:${animation}!important}` : '';
+      if (!rule) return '';
+      if (range === 'tablet') return `@media(max-width:900px){${rule}}`;
+      if (range === 'mobile') return `@media(max-width:600px){${rule}}`;
+      return rule;
+    }).join('');
+    const reducedMotionSelectors = [...new Set(rows.filter(([, , edit]) => edit.animation && edit.animation !== 'none').map(([, key]) => `[data-uds-edit-key="${key}"]`))].join(',');
+    const reducedMotionRule = reducedMotionSelectors ? `@media(prefers-reduced-motion:reduce){${reducedMotionSelectors}{animation:none!important;transition:none!important;transform:none!important;filter:none!important}}` : '';
+    return `<style>${keyframes}${rules}${reducedMotionRule}</style>`;
+  })();
+  const styleCss = (() => {
+    const important = value => `${value}!important`;
+    const elementStyles = {
+      soft: { border: '1px solid color-mix(in srgb,var(--ds-text) 10%,transparent)', background: 'color-mix(in srgb,var(--ds-surface) 94%,var(--ds-accent) 6%)', 'box-shadow': '0 14px 38px color-mix(in srgb,var(--ds-text) 14%,transparent)' },
+      outline: { border: '1px solid var(--ds-accent)', background: 'transparent', 'box-shadow': 'none' },
+      glass: { border: '1px solid color-mix(in srgb,var(--ds-text) 18%,transparent)', background: 'color-mix(in srgb,var(--ds-surface) 68%,transparent)', 'backdrop-filter': 'blur(14px)', 'box-shadow': '0 12px 32px #0002' },
+      accent: { background: 'linear-gradient(135deg,var(--ds-accent),color-mix(in srgb,var(--ds-accent) 76%,var(--ds-text)))', color: 'var(--ds-accent-contrast)', 'border-color': 'transparent' },
+      quote: { 'border-inline-start': '4px solid var(--ds-accent)', background: 'color-mix(in srgb,var(--ds-accent) 8%,transparent)', padding: '16px 20px' },
+      'photo-frame': { border: '8px solid var(--ds-surface)', background: 'var(--ds-surface)', 'box-shadow': '0 12px 34px color-mix(in srgb,var(--ds-text) 20%,transparent)' },
+      polaroid: { padding: '12px 12px 34px', background: '#fff', color: '#202329', 'box-shadow': '0 12px 34px #0003', border: '1px solid #00000012' },
+      monochrome: { filter: 'grayscale(1)' }, warm: { filter: 'sepia(.28) saturate(1.12)' }, cinematic: { filter: 'contrast(1.12) saturate(.84)' },
+    };
+    const buttonStyles = {
+      solid: { background: 'var(--ds-accent)', color: 'var(--ds-accent-contrast)', 'border-color': 'var(--ds-accent)' },
+      outline: { background: 'transparent', color: 'var(--ds-text)', 'border-color': 'var(--ds-accent)' },
+      ghost: { background: 'var(--u-tint)', color: 'var(--ds-text)', 'border-color': 'transparent' },
+      gradient: { background: 'linear-gradient(120deg,var(--ds-accent),oklch(from var(--ds-accent) l c calc(h + 28)))', color: 'var(--ds-accent-contrast)', 'border-color': 'var(--ds-accent)' },
+      glass: { background: 'color-mix(in srgb,var(--ds-surface) 58%,transparent)', color: 'var(--ds-text)', 'border-color': 'color-mix(in srgb,var(--ds-text) 24%,transparent)', 'backdrop-filter': 'blur(12px)' },
+      glow: { background: 'var(--ds-accent)', color: 'var(--ds-accent-contrast)', 'border-color': 'var(--ds-accent)', 'box-shadow': '0 0 22px color-mix(in srgb,var(--ds-accent) 42%,transparent)' },
+    };
+    const declarationText = values => Object.entries(values).map(([property, value]) => `${property}:${important(value)}`).join(';');
+    const rules = [];
+    for (const [range, key, edit] of rows) {
+      const selector = `[data-uds-edit-key="${key}"]`;
+      let rule = '';
+      if (elementStyles[edit.elementStyle]) {
+        const declarations = declarationText(elementStyles[edit.elementStyle]);
+        rule = edit.elementStyle === 'monochrome' || edit.elementStyle === 'warm' || edit.elementStyle === 'cinematic'
+          ? `${selector},${selector} img{${declarations}}` : `${selector}{${declarations}}`;
+      }
+      if (buttonStyles[edit.buttonStyle]) rule += `${selector}{${declarationText(buttonStyles[edit.buttonStyle])}}`;
+      if (!rule) continue;
+      rules.push(range === 'tablet' ? `@media(max-width:900px){${rule}}` : range === 'mobile' ? `@media(max-width:600px){${rule}}` : rule);
+    }
+    return rules.length ? `<style>${rules.join('')}</style>` : '';
+  })();
+  return `${animationCss}${styleCss}<script>(()=>{const rows=${data},snapshots=new WeakMap(),find=key=>[...document.querySelectorAll('[data-uds-edit-key]')].find(node=>node.dataset.udsEditKey===key),restore=node=>{let s=snapshots.get(node);if(!s){s={style:node.getAttribute('style'),shape:node.getAttribute('data-uds-canvas-shape')};snapshots.set(node,s)}else{if(s.style===null)node.removeAttribute('style');else node.setAttribute('style',s.style);if(s.shape===null)node.removeAttribute('data-uds-canvas-shape');else node.setAttribute('data-uds-canvas-shape',s.shape)}},apply=(node,e)=>{const num=(key,min,max)=>{const n=Number(e[key]);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):null};for(const key of ['width','height'])if(Object.hasOwn(e,key)){const n=e[key]===null?null:num(key,0,key==='width'?1600:1200);node.style[key]=n===null||n===0?'':n+'px'}const font=num('fontSize',10,120),rotation=num('rotation',-45,45),x=num('translateX',-1600,1600),y=num('translateY',-1200,1200),opacity=num('opacity',0,1);if(font!==null)node.style.fontSize=font+'px';if(rotation!==null)node.style.rotate=rotation+'deg';if(x!==null||y!==null)node.style.translate=node.closest('[data-uds-free-canvas]')?'calc(-50% + '+(x||0)+'px) calc(-50% + '+(y||0)+'px)':(x||0)+'px '+(y||0)+'px';if(opacity!==null)node.style.opacity=opacity;if(e.width!==undefined||e.height!==undefined){const image=node.matches('img')?node:node.querySelector('img');if(image===node){image.style.objectFit='cover';image.style.maxWidth='none';const frame=node.closest('figure,.uds-added-element--image,[class*=media],[class*=image],[class*=visual],[class*=photo]');if(frame&&frame!==node){frame.style.width=node.style.width;frame.style.height=node.style.height;frame.style.boxSizing='border-box';frame.style.overflow='hidden';frame.style.background='transparent';if(frame.querySelector(':scope > figcaption'))node.style.height='calc(100% - 2.5em)'}}else if(image&&(node.matches('figure,.uds-added-element--image')||node.children.length===1)){node.style.overflow='hidden';node.style.background='transparent';image.style.width='100%';image.style.height=node.querySelector(':scope > figcaption')?'calc(100% - 2.5em)':'100%';image.style.maxWidth='none';image.style.maxHeight='none';image.style.objectFit='cover';image.style.display='block'}}if(['left','center','right'].includes(e.align)){node.style.textAlign=e.align;node.style.marginInline=e.align==='center'?'auto':e.align==='right'?'auto 0':'0 auto'}if(/^#[\\da-f]{6}$/i.test(e.color||''))node.style.color=e.color;if(/^#[\\da-f]{6}$/i.test(e.background||''))node.style.backgroundColor=e.background;if(['square','soft','round','pill','circle','auto'].includes(e.shape)){const radii={square:'0px',soft:'8px',round:'22px',pill:'999px',circle:'50%'};node.removeAttribute('data-uds-canvas-shape');if(e.shape==='auto')node.style.removeProperty('border-radius');else node.style.setProperty('border-radius',radii[e.shape],'important')}};const sync=()=>{const width=innerWidth,keys=new Set(rows.map(row=>row[1]));for(const key of keys){const node=find(key);if(!node)continue;const image=node.matches('img')?node:node.querySelector('img');if(image&&image!==node)restore(image);if(image===node){const frame=node.closest('figure,.uds-added-element--image,[class*=media],[class*=image],[class*=visual],[class*=photo]');if(frame&&frame!==node)restore(frame)}restore(node);const edit={};for(const name of ['desktop','tablet','mobile']){if(name==='desktop'&&width<=900||name==='tablet'&&width>900||name==='mobile'&&width>600)continue;for(const [source,id,patch] of rows)if(id===key&&source===name)Object.assign(edit,patch)}if(Object.keys(edit).length)apply(node,edit)}};let pending=false;addEventListener('resize',()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;sync()})},{passive:true});sync()})()</script>`;
+}
+
 export function canvasOrderRuntime(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
   const rows = Object.entries(value).filter(([group, keys]) => typeof group === 'string' && Array.isArray(keys) && keys.length > 1)

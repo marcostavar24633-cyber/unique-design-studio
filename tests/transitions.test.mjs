@@ -21,17 +21,18 @@ test('настройки градиента владельца применяю�
   const css = transitionCss(tr);
   assert.ok(css.includes('color-mix(in srgb,#ff3366 70%,transparent)'), 'свой цвет начала');
   assert.ok(css.includes('var(--ds-accent) 55%'), 'пустой цвет конца — авто из палитры');
-  assert.ok(css.includes('height:24px'));
+  assert.ok(css.includes('height:48px'), '24 px — высота настройки; псевдоэлемент занимает по 24 px с каждой стороны');
   assert.match(describeTransition(tr), /Мягкий градиент: цвета #ff3366 → глубокий акцент, угол 360°, высота 24 px, интенсивность 70%/);
 });
 
-test('переход — декоративная полоса со своим местом: без отрицательных отступов и поверх контента', () => {
+test('градиентный переход не добавляет высоту секции и остаётся декоративным', () => {
   for (const type of TRANSITION_IDS) {
     const tr = chooseTransition({ passthrough: { transitionType: type } }, {});
     const html = transitionHtml(tr), css = transitionCss(tr, 'framed');
     assert.equal(tr.type, 'fade');
     assert.equal(html, '<div class="uds-transition uds-transition--fade" aria-hidden="true"></div>');
-    assert.doesNotMatch(css, /margin[^;]*-|z-index|position:fixed/, type);
+    assert.match(css, /height:0/, `${type}: переход не занимает место в потоке`);
+    assert.doesNotMatch(css, /position:fixed/, type);
     assert.match(css, /\.uds-transition--fade::before\{/, `${type}: рисунок в ::before, заливка полосы не обрезается`);
   }
   assert.match(transitionCss(chooseTransition({ passthrough: { transitionType: 'fade' } }, {}), 'framed'), /border-top:0/, 'в «рамках» линии на стыке убираются');

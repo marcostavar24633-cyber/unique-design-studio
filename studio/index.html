@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Unique Design Studio</title>
 <meta name="description" content="Студия уникальных главных страниц: Design Brief, Design DNA, генерация HTML и антишаблонная проверка.">
-<link rel="stylesheet" href="studio.css?v=studio-header-20261120">
+<link rel="stylesheet" href="studio.css?v=effects-preview-20261123">
 <link rel="stylesheet" href="redesign.css">
 </head>
 <body class="dashboard-mode">
@@ -103,6 +103,11 @@
           <div class="field"><label for="auto-city">Город</label><input id="auto-city" placeholder="необязательно"></div>
         </div>
         <div class="field"><label for="auto-details">Что важно знать</label><textarea id="auto-details" placeholder="Необязательно: чем отличаетесь, для кого, что продаёте"></textarea></div>
+        <details class="auto-brief-extra"><summary>Уточнить содержание сайта</summary>
+          <div class="field"><label for="auto-offer">Основное предложение</label><textarea id="auto-offer" rows="2" placeholder="Какой продукт или результат вы предлагаете? Например: индивидуальные тренировки в зале и онлайн"></textarea></div>
+          <div class="field"><label for="auto-audience">Для кого</label><input id="auto-audience" placeholder="Например: новички, которым нужен план тренировок"></div>
+          <div class="field"><label for="auto-services">Услуги или товары</label><textarea id="auto-services" rows="4" placeholder="Например: Персональная тренировка | План под цель и опыт"></textarea><small>По одной позиции на строку. Описание можно отделить символом |. Если заполнить список, автопилот возьмёт его вместо типового каталога ниши.</small></div>
+        </details>
         <div class="field"><label for="auto-library">Библиотека шаблонов</label><select id="auto-library" aria-describedby="auto-library-h"><option value="auto">Учитывать подходящие профили</option><option value="off">Не использовать — только ниша</option></select><small id="auto-library-h"></small></div>
         <button type="submit" class="primary wide" id="auto-go">Сгенерировать всё</button>
         <div id="auto-progress" class="auto-progress" hidden data-state="running" aria-live="polite">
@@ -165,6 +170,7 @@
         <button type="button" data-w="768" aria-pressed="false">Планшет</button>
         <button type="button" data-w="1280" aria-pressed="false">Компьютер</button>
         <button type="button" data-w="" aria-pressed="true">Вся ширина</button>
+        <label class="size-custom">Точная ширина <input id="preview-custom-width" type="number" min="320" max="1920" step="1" inputmode="numeric" aria-label="Точная ширина предпросмотра в пикселях"> px</label>
       </div>
     </div>
     <section id="view-preview" role="tabpanel" aria-labelledby="tab-preview" class="view view--preview"><iframe id="frame" title="Предпросмотр страницы" sandbox="allow-scripts"></iframe><button type="button" id="arrange-toggle" class="preview-fullscreen preview-arrange" aria-pressed="false" title="Перетаскивать, выбирать и менять элементы на странице">✎ <span>Редактировать на странице</span></button><button type="button" id="canvas-options-trigger" class="preview-fullscreen canvas-options-trigger" hidden>⚙ <span>Настроить элемент</span></button><button type="button" id="preview-fullscreen" class="preview-fullscreen" aria-pressed="false" aria-label="Развернуть предпросмотр на весь экран" title="На весь экран">⛶ <span>На весь экран</span></button></section>
@@ -180,18 +186,20 @@
       <label id="canvas-href-field" hidden>Ссылка кнопки или элемента<input id="canvas-href" type="text" maxlength="2048" placeholder="https://… или #раздел" autocomplete="url" spellcheck="false"></label>
       <label id="canvas-alt-field" hidden>Описание изображения<input id="canvas-alt" type="text" maxlength="240" autocomplete="off" placeholder="Кратко опишите изображение"></label>
       <label id="canvas-block-placement-row" hidden>Разместить после<select id="canvas-block-placement" aria-label="Позиция добавленного блока"></select></label>
+      <label class="canvas-breakpoint">Настраивать для<select id="canvas-breakpoint"><option value="all">Все экраны — базовый стиль</option><option value="desktop">Компьютер</option><option value="tablet">Планшет (до 900 px)</option><option value="mobile">Телефон (до 600 px)</option></select><small>Размер, положение, наклон, выравнивание, цвет, форма, прозрачность, анимацию, оформление и стиль кнопки можно настроить отдельно. Текст и ссылки остаются общими. Узкие экраны наследуют настройки широких, пока вы не измените их.</small></label>
       <div class="canvas-inspector__grid"><label>Цвет текста<input id="canvas-color" type="color" value="#202329"></label><label>Фон элемента<input id="canvas-background" type="color" value="#ffffff"></label><label id="canvas-font-size-field" class="canvas-inspector__range">Размер текста <output id="canvas-size-out">24 px</output><input id="canvas-size" type="range" min="12" max="96" value="24"></label><label class="canvas-inspector__range">Угол наклона <output id="canvas-rotation-out">0°</output><input id="canvas-rotation" type="range" min="-45" max="45" step="1" value="0"></label><label>Смещение X, px<input id="canvas-offset-x" type="number" min="-1600" max="1600" step="1" value="0"></label><label>Смещение Y, px<input id="canvas-offset-y" type="number" min="-1200" max="1200" step="1" value="0"></label><label>Ширина, px<input id="canvas-width" type="number" min="0" max="1600" step="10" placeholder="Авто"></label><label>Высота, px<input id="canvas-height" type="number" min="0" max="1200" step="10" placeholder="Авто"></label><label class="canvas-inspector__ratio"><input id="canvas-lock-ratio" type="checkbox"> Сохранять пропорции</label><label>Форма элемента<select id="canvas-shape"><option value="auto">По умолчанию</option><option value="square">Прямые углы</option><option value="soft">Мягкие углы</option><option value="round">Скруглённый</option><option value="pill">Капсула</option><option value="circle">Круглая маска</option></select></label><label id="canvas-element-style-field">Стиль элемента<select id="canvas-element-style"><option value="inherit">По умолчанию</option></select></label><label id="canvas-button-style-field" hidden>Стиль кнопки<select id="canvas-button-style"><option value="inherit">По умолчанию проекта</option><option value="solid">Заливка</option><option value="outline">Контур</option><option value="ghost">Лёгкая</option><option value="gradient">Градиент</option><option value="glass">Стекло</option><option value="glow">Свечение</option></select></label><label class="canvas-inspector__range">Прозрачность <output id="canvas-opacity-out">100%</output><input id="canvas-opacity" type="range" min="0" max="100" step="5" value="100"></label><label>Анимация элемента<select id="canvas-animation"><option value="none">Без анимации</option><option value="fade">Мягкое появление</option><option value="rise">Подъём</option><option value="float">Плавание</option><option value="pulse">Пульсация</option><option value="glow">Свечение</option><option value="tilt">Наклон при наведении</option></select></label></div>
       <p class="canvas-inspector__hint">Перемещение: стрелки — 1 px, Shift + стрелки — 10 px. Можно также перетащить элемент мышью или пальцем.</p>
       <div class="canvas-actions" role="group" aria-label="Действия с элементом">
         <button type="button" id="canvas-align">Автовыравнивание</button><button type="button" id="canvas-reset-position">Сбросить смещение</button><button type="button" id="canvas-add">＋ Добавить</button>
         <button type="button" id="canvas-replace">Заменить</button><button type="button" id="canvas-duplicate">Дублировать</button>
         <button type="button" id="canvas-copy-position">Копировать положение</button><button type="button" id="canvas-paste-position" disabled>Вставить положение</button><button type="button" id="canvas-copy-style">Копировать стиль</button><button type="button" id="canvas-paste-style" disabled>Вставить стиль</button>
-        <button type="button" id="canvas-reset-edit" disabled>Сбросить правки</button>
+        <button type="button" id="canvas-reset-edit" disabled>Сбросить правки</button><button type="button" id="canvas-reset-breakpoint" disabled>Сбросить настройки этого экрана</button>
         <button type="button" id="canvas-delete" class="danger">Удалить</button>
       </div>
       <div class="canvas-actions canvas-layer-actions" role="group" aria-label="Перекрытие элементов" id="canvas-layer-actions" hidden><button type="button" id="canvas-bring-front">На передний план</button><button type="button" id="canvas-send-back">На задний план</button><button type="button" id="canvas-fan-five" class="canvas-layer-actions__fan">Разложить 5 фото веером</button></div><div class="canvas-inspector__history"><button type="button" id="canvas-undo" disabled>↶ Отменить</button><button type="button" id="canvas-redo" disabled>↷ Повторить</button></div>
       <label id="canvas-overlap-list-row" hidden>Перекрытие в этой секции<select id="canvas-overlap-layers" size="4" aria-label="Элементы от заднего плана к переднему"></select><small>Сверху списка — передний план</small></label>
       <label>Слои страницы<select id="canvas-layers" size="4" aria-label="Выбрать текстовый элемент"></select></label>
+      <label class="canvas-command">Команда редактору<input id="canvas-command" type="text" maxlength="500" placeholder="Добавь текст: Запишитесь на консультацию" autocomplete="off"><button type="button" id="canvas-command-run">Выполнить</button><small>Поддерживается: добавить текст или заголовок в выбранную секцию, скрыть или вернуть выбранный элемент.</small></label>
       <small class="canvas-hotkeys">Перетаскивайте элемент мышью или пальцем, чтобы менять его положение внутри секции. Автовыравнивание возвращает его в поток и к ближайшему краю или центру.</small>
       <small class="canvas-hotkeys">Двойной клик — править текст · Shift+F10 — меню · Esc — отменить · Ctrl/⌘+Z — отмена · Ctrl/⌘+D — дубликат · Delete — удалить</small>
     </aside>

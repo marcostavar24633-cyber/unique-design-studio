@@ -189,9 +189,9 @@ try {
   check(!await page.locator('body').evaluate(node => node.classList.contains('dashboard-mode')), 'пункт «Настройки» не открыл рабочую область');
   check(await page.locator('#form .group').first().evaluate(node => node.open), 'пункт «Настройки» не раскрыл поля проекта');
   check(await page.locator('#form .group').nth(1).evaluate(node => !node.open), 'второстепенные настройки должны быть свёрнуты по умолчанию');
-  check(await page.locator('#form .group').count() === 6, 'настройки не сгруппированы в шесть понятных разделов');
+  check(await page.locator('#form .group').count() === 7, 'настройки не сгруппированы в семь понятных разделов');
   // Загрузка фото: главное изображение, мобильная версия и галерея должны сохраняться в свои поля.
-  const photoGroup = page.locator('#form .group').nth(2);
+  const photoGroup = page.locator('#form .group').nth(3);
   await photoGroup.locator('summary').click();
   const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pWQAAAAASUVORK5CYII=', 'base64');
   const testImage = { name: 'test-photo.png', mimeType: 'image/png', buffer: tinyPng };

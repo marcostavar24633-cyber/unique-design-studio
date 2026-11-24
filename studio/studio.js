@@ -14,6 +14,11 @@ const MAX_SERVICE_PHOTOS = 6;
 // Сколько кадров генерировать одновременно: FLUX.2 klein тратит 10–15 с на кадр, поэтому по одному 15 кадров шли бы ~3 минуты.
 // 3 параллельных запроса укладываются в лимит Worker на фото (IMAGE_LIMIT), а при 429 очередь ждёт Retry-After.
 const IMAGE_CONCURRENCY = 3;
+const sourcePhotoCounts = raw => {
+  const gallery = [...new Set((Array.isArray(raw?.gallery) ? raw.gallery : []).map(item => typeof item === 'string' ? item : item?.src).filter(Boolean))];
+  const all = new Set([raw?.images?.hero || raw?.heroImage, ...gallery].filter(Boolean));
+  return { all: all.size, gallery: gallery.length };
+};
 const $ = sel => document.querySelector(sel);
 const AI_USAGE_RANGE_KEY = 'uds:ai-usage-range';
 const DEFAULT_AI_ENDPOINT = 'https://unique-design-studio-ai.marcostavar24633.workers.dev/api/generate-landing';
@@ -35,7 +40,8 @@ function renderContentQaReview(report) {
   summary.textContent = status + '. ' + report.summary + ' Оценка: ' + report.score + '/100. Замечаний: ' + report.findings.length + '.';
   for (const finding of report.findings) {
     const item = document.createElement('li');
-    item.textContent = (finding.field ? finding.field + ': ' : '') + finding.message;
+    const severity = { high: 'Обязательно', medium: 'Проверить', low: 'Рекомендация', review: 'Сверить факт' }[finding.severity] || '';
+    item.textContent = [severity, finding.field].filter(Boolean).join(' · ') + (severity || finding.field ? ': ' : '') + finding.message;
     list.append(item);
   }
 }
@@ -605,8 +611,17 @@ const GROUPS = [
     ['brand', 'Бренд'], ['niche', 'Ниша', 'text', 'Например: кофейня, магазин телескопов, салон красоты'],
     ['title', 'Заголовок первого экрана'], ['description', 'Описание предложения', 'area'],
     ['cta', 'Текст главной кнопки'], ['ctaUrl', 'Ссылка главной кнопки', 'text', 'Необязательно. По умолчанию ведёт к разделу контактов'],
+    ['@hideCTA', 'Скрыть главную кнопку вручную', 'hideCTA', 'Состояние сохраняется между пересборками.'],
     ['seoTitle', 'SEO-заголовок (title)', 'text', 'Необязательно. 30–60 символов. Если пусто — «Заголовок — Бренд»'],
     ['seoDescription', 'SEO-описание (meta description)', 'area', 'Необязательно. 120–160 символов. Если пусто — описание предложения'],
+  ]],
+  ['Общие настройки сайта', false, [
+    ['site.logo', 'Логотип сайта (URL изображения)', 'text', 'Общий логотип шапки для страниц сайта.'],
+    ['site.socialImage', 'Обложка для превью ссылок (URL)', 'text', 'Используется, если у страницы нет собственного изображения для Open Graph.'],
+    ['site.contacts.phone', 'Общий телефон'], ['site.contacts.email', 'Общий e-mail'],
+    ['site.contacts.address', 'Общий адрес'], ['site.contacts.hours', 'Общие часы работы'],
+    ['site.header.tagline', 'Подпись рядом с брендом'], ['site.header.ctaLabel', 'Текст кнопки в шапке'],
+    ['site.footer.note', 'Примечание в подвале'], ['site.footer.copyright', 'Строка авторских прав'],
   ]],
   ['Дизайн и фирменный стиль', false, [
     ['@stylePreset', 'Готовый стиль оформления', 'stylePreset', '20 согласованных сочетаний композиции, палитры и геометрии. После выбора каждый параметр можно менять вручную.'],
@@ -619,7 +634,7 @@ const GROUPS = [
     ['@graphicDirection', 'Направление графики', 'graphicDirection', 'Стиль фото и заданий на графику: кинематографичная съёмка, макрофактура, студийная съёмка товара и др. Авто — по нише'],
     ['@artDirectionPreset', 'Сценарий арт-дирекции', 'artDirectionPreset', 'Согласованный комплект: архитектура и положение заголовка, шапка и навигация, стиль CTA, типографика, движение, свет, фактура и переходы. Явные настройки отдельных эффектов имеют приоритет'],
     ['@cinematicLayers', 'Фактура и свет', 'cinematicLayers', 'Зерно, бумага, полутон, сетка или сканлинии и световые слои первого экрана. Авто — по направлению графики. Только декор позади текста: контраст не меняется'],
-    ['@transition', 'Переходы между секциями', 'transition', 'Полоса между секциями: градиент, свечение, диагональ, арка, волна или срез. Цвета «Авто» — акцент палитры и его глубокий оттенок. Переход не ложится на текст'],
+    ['@transition', 'Переходы между секциями', 'transition', 'Мягкий градиентный ореол на стыке блоков без отдельной полосы и отступа. Цвета «Авто» согласованы с палитрой'],
     ['@cardShape', 'Форма карточек', 'cardShape', 'Форма карточек услуг, товаров и преимуществ: углы, срезы, вырезы, загнутый угол и другие — 15 вариантов. Авто — по характеру формы и архитектуре'],
     ['@revealEffect', 'Появление блоков', 'revealEffect', 'Как блоки проявляются при прокрутке — 15 эффектов. Ручной выбор включает появление. Без JavaScript и при «уменьшить движение» контент виден сразу'],
     ['@buttonStyle', 'Стиль кнопок', 'buttonStyle', '15 стилей: капсула, градиент, свечение, объём, выезжающая заливка, стрелка, стекло, неон и другие. Цвета — из палитры, контраст сохраняется'],
@@ -627,9 +642,13 @@ const GROUPS = [
     ['@sectionLayout', 'Раскладка секций', 'sectionLayout', '15 раскладок: журнальная, смещённая, рамки, центр, липкий заголовок, чередование сторон, полосы, колонки, панели, рельс, узкая, широкая, номер секции, карточки-секции'],
     ['@textAnimation', 'Анимация текста', 'textAnimation', 'Сжатие трекинга, проявление из размытия, маркер и подчёркивание при прокрутке, подъём и наклон заголовков, печать надписи. Только без «уменьшить движение»'],
     ['@buttonAnimation', 'Анимация кнопок', 'buttonAnimation', 'Пульс, блик, волна от нажатия, толчок стрелки, обводка, подъём, упругое нажатие, дыхание свечения, желе, подчёркивание. Несовместимые со стилем кнопки сочетания пропускаются'],
-    ['@cardEffect', 'Эффект карточек', 'cardEffect', '22 эффекта: прожектор, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
-    ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '20 эффектов: аврора, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
-    ['@motionStyle', 'Интенсивность движения', 'motionStyle', 'Авто подбирает эффекты по нише и бренду. Кинематографичный режим включает выразительные сцены и анимацию. Статичный сохраняет только лёгкие интерфейсные отклики'],
+    ['@effectMode', 'Режим выбора эффектов', 'effectMode', 'Авто — движок подбирает и обновляет эффекты; вручную — фиксированный выбор; смешанный — можно закрепить карточки или первый экран, остальное подбирается автоматически. Выбор запоминается при повторной генерации'],
+    ['@designRefresh', 'Новый вариант дизайна', 'designRefresh', 'Меняет автоматически выбранные композицию, палитру, навигацию и подачу секций. Явные ручные настройки сохраняются'],
+    ['@effectRefresh', 'Новый вариант эффектов', 'effectRefresh', 'Меняет только автоматически подобранные эффекты. Зафиксированные вручную остаются прежними'],
+    ['@effectPreview', 'Предпросмотр эффектов', 'effectPreview', 'Миниатюра показывает текущий выбор; наведите курсор, чтобы увидеть реакцию интерактивных эффектов'],
+    ['@cardEffect', 'Эффект карточек', 'cardEffect', '24 эффекта: прожектор, объёмный наклон, сатиновая кромка, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
+    ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '22 эффекта: аврора, мягкий свет мастерской, проявление из мягкого фокуса, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
+    ['@motionStyle', 'Интенсивность движения', 'motionStyle', 'Авто подбирает эффекты по нише и бренду. Люкс — медленные малозаметные появления и сдержанные эффекты. Кинематографичный — выразительное движение. Статичный — автоматические эффекты без постоянной анимации; ручной выбор сохраняется'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
     ['@fonts', 'Шрифты', 'fonts', 'Системные — страница без внешних запросов. Google Fonts — характерные шрифты с кириллицей, одинаковые на всех устройствах'],
@@ -674,7 +693,7 @@ function set(path, value) {
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
   if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
-  const a = Array.isArray(r) ? r : [r.title, r.text, r.price, r.image, r.alt, r.category, r.badge];
+  const a = Array.isArray(r) ? r.slice(0, 7) : [r.title, r.text, r.price, r.image, r.alt, r.category, r.badge];
   const cells = a.map(x => x ?? '');
   if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
   while (cells.length > 1 && !cells.at(-1)) cells.pop();
@@ -685,16 +704,34 @@ function textToRows(text, path) {
   if (path === 'categories') return rows.map(r => r[0]);
   if (path === 'gallery') {
     const embedded = (state.raw.gallery || []).filter(g => String(g.src || '').startsWith('data:image/'));
-    return [...rows.map(r => ({ src: r[0], caption: r[1] || '', alt: r[2] || '' })), ...embedded];
+    const current = (state.raw.gallery || []).filter(g => !String(g.src || '').startsWith('data:image/'));
+    return [...rows.map((r, i) => {
+      const old = current.find(g => g.src === r[0]) || (rows.length === current.length ? current[i] : null);
+      return { ...(old?.id ? { id: old.id } : {}), src: r[0], caption: r[1] || '', alt: r[2] || '' };
+    }), ...embedded];
   }
   if (path === 'services') return rows.map((row, i) => {
-    const old = (state.raw.services || []).find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]);
+    const current = state.raw.services || [];
+    const old = current.find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]) || (rows.length === current.length ? current[i] : null);
     const image = Array.isArray(old) ? old[3] : old?.image;
     const oldAlt = Array.isArray(old) ? old[4] : old?.alt;
+    const oldId = Array.isArray(old) ? old[7] : old?.id;
     if (String(image || '').startsWith('data:image/')) row[3] = image;
     if (!row[4] && oldAlt) row[4] = oldAlt;
+    if (oldId) row[7] = oldId;
     return row;
   });
+  if (['advantages', 'process', 'faqs'].includes(path)) {
+    const current = state.raw[path] || [];
+    return rows.map((row, i) => {
+      const old = current.find(item => (Array.isArray(item) ? item[0] : item.title) === row[0]) || (rows.length === current.length ? current[i] : null);
+      const id = Array.isArray(old) ? old[7] : old?.id;
+      if (!id) return row;
+      const cells = row.slice(0, 7);
+      cells[7] = id;
+      return cells;
+    });
+  }
   return rows;
 }
 
@@ -731,6 +768,7 @@ function buildForm() {
     const d = hint ? ` aria-describedby="${id}-h"` : '';
     let control;
     if (type === 'area') control = `<textarea id="${id}" data-path="${path}"${d}>${esc(get(path))}</textarea>`;
+    else if (type === 'hideCTA') control = `<label class="row"><input type="checkbox" data-hide-cta${state.raw.fieldStates?.cta === 'hidden' ? ' checked' : ''}> Не показывать CTA</label>`;
     else if (type === 'list') control = `<textarea id="${id}" class="list" data-list="${path}"${d} spellcheck="false">${esc(rowsToText(get(path), path))}</textarea>`;
     else if (type === 'arch') control = `<select id="${id}" data-special="arch">
 <option value="auto">${LEGACY_LABELS.auto}</option>
@@ -769,9 +807,29 @@ function buildForm() {
     else if (type === 'sectionLayout') control = `<select id="${id}" data-special="sectionLayout"${d}><option value="">Авто — с проверкой на повторы</option>${Object.entries(SECTION_LAYOUTS).map(([k, v]) => `<option value="${k}"${state.raw.sectionLayout === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'textAnimation') control = `<select id="${id}" data-special="textAnimation"${d}><option value="">Авто — по плану движения</option><option value="none"${state.raw.textAnimation === 'none' ? ' selected' : ''}>Без</option>${Object.entries(TEXT_ANIMATIONS).map(([k, v]) => `<option value="${k}"${state.raw.textAnimation === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'buttonAnimation') control = `<select id="${id}" data-special="buttonAnimation"${d}><option value="">Авто — по плану движения</option><option value="none"${state.raw.buttonAnimation === 'none' ? ' selected' : ''}>Без</option>${Object.entries(BUTTON_ANIMATIONS).map(([k, v]) => `<option value="${k}"${state.raw.buttonAnimation === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-    else if (type === 'cardEffect') control = `<select id="${id}" data-special="cardEffect"${d}><option value="">Авто — по архитектуре и классу</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-    else if (type === 'heroEffect') control = `<select id="${id}" data-special="heroEffect"${d}><option value="">Авто — по архитектуре, классу и наличию фото</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-    else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}><option value=""${!state.raw.motionStyle ? ' selected' : ''}>Авто — по нише и бренду</option><option value="cinematic"${state.raw.motionStyle === 'cinematic' ? ' selected' : ''}>Кинематографичный — выразительный</option><option value="static"${state.raw.motionStyle === 'static' ? ' selected' : ''}>Статичный — минимум движения</option></select>`;
+    else if (type === 'effectMode') {
+      const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
+      control = `<select id="${id}" data-special="effectMode"${d}>${[['auto','Авто'],['manual','Выбрать вручную'],['mixed','Смешанный']].map(([k,v]) => `<option value="${k}"${mode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
+    }
+    else if (type === 'effectRefresh') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); const autoAvailable = mode === 'auto' || (mode === 'mixed' && (!state.raw.cardEffect || !state.raw.heroEffect)); control = `<button id="${id}" type="button" data-refresh-effects${autoAvailable ? '' : ' disabled'}>Обновить авто-эффекты</button>`; }
+    else if (type === 'designRefresh') control = `<button id="${id}" type="button" data-refresh-design>Собрать другой дизайн</button>`;
+    else if (type === 'effectPreview') {
+      const fx = result?.concept?.visualSystem?.effects || {};
+      const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
+      const card = state.raw.effectMode === 'auto' ? fx.card : state.raw.cardEffect || (state.raw.effectMode === 'manual' ? 'layered-shadow' : fx.card);
+      const requestedHero = mode === 'auto' ? fx.heroRequested || fx.hero : state.raw.heroEffect || fx.heroRequested || fx.hero;
+      const hero = mode === 'auto' ? fx.hero : state.raw.heroEffect || (mode === 'manual' ? 'none' : fx.hero);
+      const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw);
+      const photoRequired = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']);
+      const unavailable = (mode === 'auto' && fx.heroUnavailable) || (photoRequired.has(requestedHero) && photoCount < 1) || (requestedHero === 'slideshow' && galleryPhotoCount < 2);
+      const previewHero = unavailable ? 'none' : hero;
+      const cardLabel = card === 'none' ? 'Без эффекта' : CARD_EFFECTS[card] || 'Запустите генерацию для авто-подбора';
+      const heroLabel = unavailable ? (requestedHero === 'slideshow' ? 'Для слайд-шоу нужны 2 фото' : 'Для эффекта нужна фотография') : hero === 'none' ? 'Без эффекта' : HERO_EFFECTS[hero] || 'Запустите генерацию для авто-подбора';
+      control = `<div id="${id}" class="effect-preview-grid" role="group" aria-label="Предпросмотр текущих эффектов"><div class="effect-preview-unit"><div class="effect-preview-sample effect-preview-sample--card" data-card-effect="${esc(card || 'none')}"><span class="effect-preview-spark" aria-hidden="true"></span><b>Образец карточки</b><small>Материал · коллекция</small></div><span class="effect-preview-label">Карточки: ${esc(cardLabel)}</span></div><div class="effect-preview-unit"><div class="effect-preview-sample effect-preview-sample--hero" data-hero-effect="${esc(previewHero || 'none')}"><span class="effect-preview-orb" aria-hidden="true"></span><b>Главный экран</b><small>Свет · композиция</small></div><span class="effect-preview-label">Первый экран: ${esc(heroLabel)}</span></div></div>`;
+    }
+    else if (type === 'cardEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); control = `<select id="${id}" data-special="cardEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре и классу'}</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`; }
+    else if (type === 'heroEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw); const needsPhoto = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']); control = `<select id="${id}" data-special="heroEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре, классу и фото'}</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => { const unavailable = needsPhoto.has(k) ? photoCount < 1 : k === 'slideshow' ? galleryPhotoCount < 2 : false; return `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${esc(v)}${unavailable ? (k === 'slideshow' ? ' — нужны 2 фото в галерее' : ' — нужно фото') : ''}</option>`; }).join('')}</select>`; }
+    else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}><option value=""${!state.raw.motionStyle ? ' selected' : ''}>Авто — по нише и бренду</option><option value="luxury"${state.raw.motionStyle === 'luxury' ? ' selected' : ''}>Люкс — медленно и сдержанно</option><option value="cinematic"${state.raw.motionStyle === 'cinematic' ? ' selected' : ''}>Кинематографичный — выразительный</option><option value="static"${state.raw.motionStyle === 'static' ? ' selected' : ''}>Статичный — минимум движения</option></select>`;
     else if (type === 'artDirectionPreset') control = `<select id="${id}" data-special="artDirectionPreset"${d}><option value=""${!state.raw.artDirectionPreset ? ' selected' : ''}>Авто — под нишу и содержимое</option>${Object.entries(ART_DIRECTION_PRESETS).map(([k, v]) => `<option value="${k}"${state.raw.artDirectionPreset === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`;
     else if (type === 'cardShape') control = `<select id="${id}" data-special="cardShape"${d}><option value="">Авто — по форме и архитектуре</option>${Object.entries(CARD_SHAPES).map(([k, v]) => `<option value="${k}"${state.raw.cardShape === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'layout') control = layoutControl(id);
@@ -786,8 +844,11 @@ function buildForm() {
     else if (type === 'upload-hero') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero"><div class="media-preview">${p.images.hero ? `<figure><img src="${esc(p.images.hero)}" alt=""><label>ALT-текст <input type="text" data-hero-alt value="${esc(state.raw.images?.heroAlt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="hero">Удалить фото</button>${state.raw.images?.heroMobile ? `<div class="mobile-hero-asset"><img src="${esc(state.raw.images.heroMobile)}" alt=""><span>Отдельное фото для телефона</span><button type="button" data-remove-image="hero-mobile">Удалить мобильное фото</button></div>` : `<label class="mobile-hero-upload">Отдельная композиция для телефона <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="hero-mobile"></label>`}</figure>${cropEditor("hero", 0, p.images.hero)}` : '<span class="note">Фото пока не загружено — будет использован графический мотив.</span>'}</div>`;
     else if (type === 'upload-gallery') control = `<input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple data-upload="gallery"><div class="media-preview media-preview--grid">${(p.gallery || []).map((g,i) => `<figure draggable="true" data-gallery-item="${i}"><img src="${esc(g.src)}" alt="${esc(g.alt)}"><figcaption>${esc(g.caption || `Фото ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-gallery-alt="${i}" value="${esc(g.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="gallery:${i}">Удалить</button>${state.raw.imageArtDirection?.mobileSources?.gallery?.[i] ? `<div class="mobile-hero-asset"><img src="${esc(state.raw.imageArtDirection.mobileSources.gallery[i])}" alt=""><span>Мобильная версия фото</span><button type="button" data-remove-image="gallery-mobile:${i}">Удалить мобильное фото</button></div>` : `<label class="mobile-hero-upload">Отдельное фото для телефона <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="gallery-mobile" data-image-index="${i}"></label>`}${cropEditor("gallery", i, g.src)}<div class="gallery-primary-controls">${i === 0 ? '<span class="gallery-primary-badge">★ Главное фото</span>' : `<button type="button" data-gallery-primary="${i}">Сделать главным</button>`}<button type="button" data-preview-gallery="${i}">Просмотр</button></div><div class="gallery-order-controls" aria-label="Порядок фотографии"><button type="button" data-move-gallery="${i}" data-direction="-1" ${i === 0 ? "disabled" : ""} aria-label="Переместить фото выше" title="Выше">↑</button><button type="button" data-move-gallery="${i}" data-direction="1" ${i === (p.gallery.length - 1) ? "disabled" : ""} aria-label="Переместить фото ниже" title="Ниже">↓</button></div></figure>`).join('') || '<span class="note">Галерея пока пуста.</span>'}</div>`;
     else if (type === 'upload-service') { const services = Array.isArray(state.raw.services) ? state.raw.services : []; control = `<label for="${id}-target">Для какой позиции</label><select id="${id}-target" data-service-target>${services.map((s,i) => `<option value="${i}">${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</option>`).join('') || '<option value="">Сначала добавьте позиции выше</option>'}</select><input id="${id}" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service"><div class="media-preview media-preview--grid">${services.map((s,i) => { const src = Array.isArray(s) ? s[3] : s.image; return src ? `<figure><img src="${esc(src)}" alt=""><figcaption>${esc(Array.isArray(s) ? s[0] : s.title || `Позиция ${i+1}`)}</figcaption><label>ALT-текст <input type="text" data-service-alt="${i}" value="${esc(Array.isArray(s) ? s[4] || '' : s.alt || '')}" placeholder="Что изображено на фото"></label><button type="button" data-remove-image="service:${i}">Удалить</button>${state.raw.imageArtDirection?.mobileSources?.services?.[i] ? `<div class="mobile-hero-asset"><img src="${esc(state.raw.imageArtDirection.mobileSources.services[i])}" alt=""><span>Мобильная фотография</span><button type="button" data-remove-image="service-mobile:${i}">Удалить мобильное фото</button></div>` : `<label class="mobile-hero-upload">Отдельное фото для телефона <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" data-upload="service-mobile" data-image-index="${i}"></label>`}${cropEditor("services", i, src)}</figure>` : ''; }).join('') || '<span class="note">Пока нет фотографий товаров и услуг.</span>'}</div>`; }
-    else control = `<input id="${id}" data-path="${path}" value="${esc(get(path))}"${d}>`;
-    return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
+    else {
+      const value = path.startsWith('contacts.') ? (get(path) || p.contacts[path.slice('contacts.'.length)]) : get(path);
+      control = `<input id="${id}" data-path="${path}" value="${esc(value)}"${d}>`;
+    }
+    return `<div class="field">${type === 'effectPreview' ? `<span class="field-label">${label}</span>` : `<label for="${id}">${label}</label>`}${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
   // Раскрытые группы и прокрутка сохраняются: пересборка после перестановки не должна сворачивать панель.
   const openGroups = new Set([...$('#form').querySelectorAll('details.group[open]>summary')].map(n => n.textContent));
@@ -1378,7 +1439,8 @@ $('#auto').addEventListener('submit', async e => {
   userStartedProject = true;
   const input = {
     niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
-    details: $('#auto-details').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
+    details: $('#auto-details').value.trim(), mainOffer: $('#auto-offer').value.trim(), targetAudience: $('#auto-audience').value.trim(),
+    services: $('#auto-services').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
     customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
   };
   if (!input.niche) return $('#auto-niche').focus();
@@ -1421,7 +1483,8 @@ $('#auto').addEventListener('submit', async e => {
       const promptInput = input.customPromptMode === 'append' && input.customPrompt
         ? { ...input, customPrompt: '' }
         : input;
-      const studioPrompt = autopilot(promptInput, { registry: registry(), forWorker: true }).prompt.slice(0, 16000);
+      const contentBrief = autopilot(promptInput, { registry: registry(), forWorker: true });
+      const studioPrompt = contentBrief.prompt.slice(0, 16000);
       // Передаём только данные, которые Worker действительно использует; большие локальные объекты
       // из полного input не нужны. customPrompt отдельно нужен Worker, если его нет в studioPrompt.
       const aiPayload = {
@@ -1429,7 +1492,12 @@ $('#auto').addEventListener('submit', async e => {
         brand: input.brand,
         city: input.city,
         tier: input.tier,
-        details: input.details,
+        details: input.details.length > 2000
+          ? input.details.slice(0, 1999).replace(/\s+\S*$/, '').trim() + '…'
+          : input.details,
+        mainOffer: input.mainOffer,
+        targetAudience: input.targetAudience,
+        services: input.services,
         studioPrompt,
         customPrompt: input.customPrompt || '',
         customPromptMode: input.customPromptMode || 'append',
@@ -1469,9 +1537,15 @@ $('#auto').addEventListener('submit', async e => {
       logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing && body.generation?.status === 'completed' ? 'ok' : 'error', error: body.error || (body.generation?.status === 'partial' ? 'Частичная генерация: ' + (body.generation.failedStage || 'этап не завершён') : res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || body.generation?.stages?.reduce((n, stage) => n + (stage.attempts || 0), 0) || null, route: body.route || '', provider: body.provider || '' });
       if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
       setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
-      const contentReview = reviewGeneratedContent(body.landing);
+      draft = fromAiLanding(body.landing, {
+        ...input,
+        plannedSectionIds: contentBrief.concept.homepage.sections.map(section => section.id),
+      });
+      const contentReview = reviewGeneratedContent({ ...body.landing, ...draft.project }, {
+        sectionIds: contentBrief.concept.homepage.sections.map(section => section.id),
+        forWorker: true,
+      });
       renderContentQaReview(contentReview);
-      draft = fromAiLanding(body.landing, input);
       refreshAiUsage();
       note = body.generation?.status === 'partial'
         ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы включены в проект; недостающий этап можно будет повторить отдельно.`
@@ -1581,7 +1655,7 @@ ${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Биб�
     ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
     ['Арт-дирекция', esc(vs.artDirection?.label || 'Авто по нише и содержимому')], ['Шапка', esc(c.homepage.navigationPattern)], ['Положение заголовка', esc(c.homepage.heroComposition)],
     ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Переходы', esc(describeTransition(vs.transition))], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
-    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Типографика', esc(TYPE_STYLES[vs.typography2?.typeStyle] || 'без доп. оформления')], ['Раскладка секций', esc(SECTION_LAYOUTS[vs.sectionLayout] || vs.sectionLayout)], ['Анимации', esc('текст — ' + (TEXT_ANIMATIONS[vs.typography2?.textAnimation] || 'без') + '; кнопки — ' + (BUTTON_ANIMATIONS[vs.typography2?.buttonAnimation] || 'без'))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Фон секции', esc(Object.entries(vs.sectionBackdrops || {}).map(([id, style]) => `${id}: ${{'accent-glow':'мягкое свечение','soft-wash':'градиентная вуаль','technical-grid':'тонкая сетка'}[style] || style}`).join(' · ') || 'без дополнительного акцента')], ['Типографика', esc(TYPE_STYLES[vs.typography2?.typeStyle] || 'без доп. оформления')], ['Раскладка секций', esc(SECTION_LAYOUTS[vs.sectionLayout] || vs.sectionLayout)], ['Анимации', esc('текст — ' + (TEXT_ANIMATIONS[vs.typography2?.textAnimation] || 'без') + '; кнопки — ' + (BUTTON_ANIMATIONS[vs.typography2?.buttonAnimation] || 'без'))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
   ])}</div>
 <h2>Палитра и контраст</h2>
 <div class="swatches">${sw.map(([n, bg, fg]) => `<div class="swatch" style="background:${bg};color:${fg}"><b>${n}</b>${bg}</div>`).join('')}</div>
@@ -2351,7 +2425,19 @@ $('#form').addEventListener('input', e => {
       preview.style.objectPosition = x + '% ' + y + '%';
     }
   }
-  else if (t.dataset.path) set(t.dataset.path, t.value);
+  else if (t.dataset.path) {
+    set(t.dataset.path, t.value);
+    if (t.dataset.path.startsWith('site.contacts.')) {
+      const key = `contacts.${t.dataset.path.slice('site.contacts.'.length)}`;
+      const states = { ...(state.raw.site?.fieldStates || {}) };
+      if (t.value.trim()) states[key] = 'manual'; else if (states[key] === 'manual') delete states[key];
+      state.raw.site = { ...(state.raw.site || {}), fieldStates: states };
+    } else {
+      const states = { ...(state.raw.fieldStates || {}) };
+      if (t.value.trim()) states[t.dataset.path] = 'manual'; else if (states[t.dataset.path] === 'manual') delete states[t.dataset.path];
+      state.raw.fieldStates = states;
+    }
+  }
   else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
   else if (t.dataset.special === 'stylePreset') {
     const preset = STYLE_PRESETS.find(item => item.id === t.value);
@@ -2378,6 +2464,14 @@ $('#form').addEventListener('input', e => {
   else if (['transitionAngle', 'transitionHeight', 'transitionIntensity'].includes(t.dataset.special)) {
     state.raw[t.dataset.special] = Number(t.value);
     const out = $('#form').querySelector(`[data-transition-out="${t.dataset.special}"]`); if (out) out.value = t.value + (t.dataset.unit || '');
+  }
+  else if (t.dataset.special === 'effectMode') {
+    state.raw.effectMode = t.value;
+    if (t.value === 'auto') { delete state.raw.cardEffect; delete state.raw.heroEffect; delete state.raw.effectsAvoid; }
+    if (t.value === 'manual') {
+      if (!state.raw.cardEffect) state.raw.cardEffect = 'layered-shadow';
+      if (!state.raw.heroEffect) state.raw.heroEffect = 'none';
+    }
   }
   else if (['cardShape', 'revealEffect', 'buttonStyle', 'cardEffect', 'heroEffect', 'motionStyle', 'artDirectionPreset', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
   else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
@@ -2629,6 +2723,13 @@ async function handleImageUpload(input) {
 }
 $('#form').addEventListener('change', e => {
   const input = e.target;
+  if (input.matches('[data-hide-cta]')) {
+    const states = { ...(state.raw.fieldStates || {}) };
+    if (input.checked) states.cta = 'hidden'; else delete states.cta;
+    state.raw.fieldStates = states;
+    run(); buildForm(); toast(input.checked ? 'Главная кнопка скрыта вручную' : 'Главная кнопка снова подбирается автоматически');
+    return;
+  }
   let altChanged = false;
   if (input.matches('[data-hero-alt]')) { state.raw.images = { ...(state.raw.images || {}), heroAlt: input.value }; altChanged = true; }
   if (input.matches('[data-gallery-alt]')) { const g = state.raw.gallery[Number(input.dataset.galleryAlt)]; if (g) { g.alt = input.value; altChanged = true; } }
@@ -2710,12 +2811,20 @@ function orderList(kind, label, titles) {
   const reset = kind === 'sections' && state.raw.sectionOrder ? '<button type="button" data-order-reset>Вернуть автоматический порядок</button>' : '';
   return `<div class="order-block"><p class="order-block__title">${esc(label)}${kind === 'sections' ? (state.raw.sectionOrder ? ' · вручную' : ' · авто') : ''}</p><ol class="order-list" data-order-list="${kind}">${titles.map((t, i) => `<li draggable="true" data-order-item="${i}"><span class="order-list__grip" aria-hidden="true">⋮⋮</span><span class="order-list__name">${esc(t)}</span><span class="order-list__btns"><button type="button" data-order-move="${i}" data-direction="-1" ${i === 0 ? 'disabled' : ''} aria-label="«${esc(t)}» выше" title="Выше">↑</button><button type="button" data-order-move="${i}" data-direction="1" ${i === last ? 'disabled' : ''} aria-label="«${esc(t)}» ниже" title="Ниже">↓</button></span></li>`).join('')}</ol>${reset}</div>`;
 }
+function sectionVisibilityControl() {
+  const available = new Set(result?.concept?.homepage?.sectionOrder || []);
+  const hidden = new Set([...(Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []), ...Object.keys(state.raw.fieldStates || {}).filter(key => key.startsWith('sections.') && state.raw.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
+  const labels = { ...ORDER_SECTION_LABELS, contact: 'Контакты' };
+  const choices = Object.entries(labels).filter(([id]) => available.has(id) || hidden.has(id));
+  if (!choices.length) return '';
+  return `<fieldset class="order-block section-visibility"><legend class="order-block__title">Показывать секции</legend><div class="section-visibility__list">${choices.map(([id, label]) => `<label><input type="checkbox" data-section-visibility="${id}"${hidden.has(id) ? '' : ' checked'}> ${esc(label)}</label>`).join('')}</div></fieldset>`;
+}
 function layoutControl() {
   const sections = currentSectionOrder().map(sid => {
     const custom = ORDER_SECTION_TITLES[sid] && String(state.raw[ORDER_SECTION_TITLES[sid]] || '').trim();
     return custom ? `${ORDER_SECTION_LABELS[sid] || sid}: ${custom}` : ORDER_SECTION_LABELS[sid] || sid;
   });
-  const html = orderList('sections', 'Секции страницы (первый экран всегда сверху, контакты — внизу)', sections)
+  const html = orderList('sections', 'Секции страницы (первый экран всегда сверху)', sections) + sectionVisibilityControl()
     + ORDER_LISTS.map(([key, label]) => {
       const rows = key === 'canvasBlocks' ? orderedCanvasBlocks() : (Array.isArray(state.raw[key]) ? state.raw[key] : []);
       return orderList(key, label, rows.map(orderItemTitle));
@@ -2780,6 +2889,17 @@ $('#form').addEventListener('dragend', () => {
   orderDrag = null;
   $('#form').querySelectorAll('[data-order-item].is-dragging,[data-order-item].is-drop-target').forEach(n => n.classList.remove('is-dragging', 'is-drop-target'));
 });
+$('#form').addEventListener('change', e => {
+  const input = e.target.closest('[data-section-visibility]');
+  if (!input) return;
+  const id = input.dataset.sectionVisibility;
+  const states = { ...(state.raw.fieldStates || {}) };
+  if (input.checked) { delete states[`sections.${id}`]; state.raw.hiddenSections = (Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []).filter(value => value !== id); }
+  else { states[`sections.${id}`] = 'hidden'; state.raw.hiddenSections = [...new Set([...(Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []), id])]; }
+  state.raw.fieldStates = states;
+  rememberCanvasChange(); run(); buildForm();
+  toast(input.checked ? 'Секция снова будет подбираться движком' : 'Секция скрыта вручную');
+});
 $('#form').addEventListener('click', e => {
   const move = e.target.closest('[data-order-move]');
   if (move) { const from = Number(move.dataset.orderMove); reorderLayout(move.closest('[data-order-list]').dataset.orderList, from, from + Number(move.dataset.direction)); return; }
@@ -2798,17 +2918,18 @@ mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');
 let drag=null;addEventListener('dragstart',e=>{if(e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')&&!e.target.closest('.uds-arrange-tag,li.item'))return;const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
 const dropTarget=e=>{if(drag?.dataset.arrange==='custom-block')return e.target.closest('main section:not(.sec--contact)');if(drag?.dataset.arrange==='item'){const section=e.target.closest('main section');if(section&&section!==drag.closest('section'))return section}return e.target.closest('[data-arrange="'+drag?.dataset.arrange+'"]')};
 addEventListener('dragover',e=>{if(!drag)return;const n=dropTarget(e);document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
-addEventListener('drop',e=>{if(!drag)return;const kind=drag.dataset.arrange;const n=dropTarget(e);if(!n)return;e.preventDefault();if(kind==='item'&&n.matches('main section')&&n!==drag.closest('section')){const rect=n.getBoundingClientRect();parent.postMessage({type:'uds-canvas-move',key:drag.dataset.udsEditKey,sectionId:n.classList.contains('hero')?'hero':n.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))},'*');return}if(kind==='custom-block'){if(n===drag)return;const detail={type:'uds-arrange',kind:'custom-place',blockId:drag.dataset.udsBlock};if(n.dataset.udsBlock)detail.targetBlockId=n.dataset.udsBlock;else detail.after=n.classList.contains('hero')?'hero':n.id;parent.postMessage(detail,'*');return}const from=kind==='item'?Number(drag.id.slice(5)):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.id.slice(5)):Number(n.dataset.arrangeIndex);send(kind,from,to);});
+addEventListener('drop',e=>{if(!drag)return;const kind=drag.dataset.arrange;const n=dropTarget(e);if(!n)return;e.preventDefault();if(kind==='item'&&n.matches('main section')&&n!==drag.closest('section')){const rect=n.getBoundingClientRect();parent.postMessage({type:'uds-canvas-move',key:drag.dataset.udsEditKey,sectionId:n.classList.contains('hero')?'hero':n.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))},'*');return}if(kind==='custom-block'){if(n===drag)return;const detail={type:'uds-arrange',kind:'custom-place',blockId:drag.dataset.udsBlock};if(n.dataset.udsBlock)detail.targetBlockId=n.dataset.udsBlock;else detail.after=n.classList.contains('hero')?'hero':n.id;parent.postMessage(detail,'*');return}const from=kind==='item'?Number(drag.dataset.udsItemIndex):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.dataset.udsItemIndex):Number(n.dataset.arrangeIndex);send(kind,from,to);});
 addEventListener('dragend',()=>{if(drag)drag.classList.remove('is-drag');drag=null;document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));});
 addEventListener('click',e=>{if(e.target.closest('a,button'))e.preventDefault();},true);})();<\/script>`;
 const CANVAS_SCRIPT = `<script>(()=>{const editCss=document.createElement('style');editCss.textContent='.uds-edit-selected{outline:2px solid #4d7cff!important;outline-offset:3px!important;border-radius:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote,.uds-arrange a,.uds-arrange button{cursor:text}.uds-arrange h1:hover:not(.uds-edit-selected),.uds-arrange h2:hover:not(.uds-edit-selected),.uds-arrange h3:hover:not(.uds-edit-selected),.uds-arrange h4:hover:not(.uds-edit-selected),.uds-arrange p:hover:not(.uds-edit-selected),.uds-arrange blockquote:hover:not(.uds-edit-selected),.uds-arrange a:hover:not(.uds-edit-selected),.uds-arrange button:hover:not(.uds-edit-selected){outline:1px dashed #4d7cff88!important;outline-offset:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote{user-select:none;-webkit-user-select:none}[contenteditable="true"]{outline:2px solid #4d7cff!important;outline-offset:3px;user-select:text!important;-webkit-user-select:text!important;cursor:text}';document.head.append(editCss);const send=(type,data={})=>parent.postMessage({type,...data},'*');addEventListener('scroll',()=>send('uds-canvas-scroll',{x:scrollX,y:scrollY}),{passive:true});const pathKey=n=>{const a=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';a.unshift([...p.children].filter(x=>!x.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return a.join('.')};const key=n=>n.dataset.udsEditKey||pathKey(n);const candidates=()=>[...document.querySelectorAll('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,figcaption,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const assignKeys=()=>{const list=candidates(),counts=new Map(),used=new Set(),keep=new Set();for(const n of list){const key=n.dataset.udsEditKey,match=String(key||'').match(/^u:([\\w-]+):(\\d+)$/);if(match&&!used.has(key)){used.add(key);keep.add(n);counts.set(match[1],Math.max(counts.get(match[1])||0,Number(match[2])))}}for(const n of list){if(keep.has(n))continue;const itemScope=n.closest('[data-uds-edit-scope]')?.dataset.udsEditScope;const section=n.closest('[data-uds-block]')||n.closest('section');const namedSection=itemScope||section?.id||[...(section?.classList||[])].find(c=>c.startsWith('sec--'))?.slice(5)||(n.closest('.hero')?'hero':'main');const prefix=n.matches('img,figure,svg')?'media-':n.matches('span,strong,em')?'inline-':n.matches('dialog,[role=dialog]')?'dialog-':n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')?'layout-':'';const scope=prefix+(n.id?'id-'+n.id:namedSection).replace(/[^\\w-]/g,'-').slice(0,48);let value=counts.get(scope)||0;do{value++}while(used.has('u:'+scope+':'+value));const key='u:'+scope+':'+value;n.dataset.udsEditKey=key;used.add(key);counts.set(scope,value)}};assignKeys();const label=n=>(n.tagName.toLowerCase()+': '+n.textContent.trim()).slice(0,90);const pick=n=>{if(!n)return;document.querySelectorAll('.uds-edit-selected').forEach(x=>x.classList.remove('uds-edit-selected'));n.classList.add('uds-edit-selected');const r=n.getBoundingClientRect();send('uds-canvas-select',{key:key(n),tag:n.tagName.toLowerCase(),button:n.matches('button,a.ds-button'),layout:n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element,dialog,[role=dialog]'),text:n.textContent.trim(),alt:n.matches('img')?n.alt:'',href:n.matches('a')?n.getAttribute('href')||'':'',label:label(n),color:getComputedStyle(n).color,background:getComputedStyle(n).backgroundColor,fontSize:parseFloat(getComputedStyle(n).fontSize)||24,opacity:parseFloat(getComputedStyle(n).opacity)||0,align:getComputedStyle(n).textAlign,blockId:n.closest('[data-uds-block]')?.dataset.udsBlock||'',sectionId:n.closest('section')?.id||(n.closest('.hero')?'hero':''),elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',rect:{center:r.left+r.width/2,viewport:innerWidth,width:n.offsetWidth,height:n.offsetHeight}})};const refresh=()=>send('uds-canvas-layers',{layers:candidates().map(n=>({key:key(n),label:label(n)}))});const editable=e=>{const n=e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,figcaption,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element');return n&&(n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')||!n.children.length||/^H[1-4]$/.test(n.tagName))?n:null};document.addEventListener('dblclick',e=>{const n=editable(e);if(!n||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))return;e.preventDefault();e.stopPropagation();n.dataset.udsBeforeInline=n.textContent;n.contentEditable='true';n.focus()});document.addEventListener('keydown',e=>{const n=e.target.closest('[contenteditable="true"]');if(!n)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();n.blur()}if(e.key==='Escape'){e.preventDefault();n.textContent=n.dataset.udsBeforeInline||'';n.dataset.udsCancelInline='1';n.blur()}});document.addEventListener('blur',e=>{const n=e.target.closest?.('[contenteditable="true"]');if(!n)return;n.contentEditable='false';if(n.dataset.udsCancelInline){delete n.dataset.udsCancelInline;return}send('uds-canvas-inline-commit',{key:key(n),text:n.textContent.slice(0,2000)})},true);document.addEventListener('keydown',e=>{const editing=e.target.closest?.('[contenteditable="true"]'),key=e.key.toLowerCase(),modifier=e.ctrlKey||e.metaKey;if(!editing&&(key==='contextmenu'||(key==='f10'&&e.shiftKey))){e.preventDefault();const selected=document.querySelector('.uds-edit-selected');send(selected?'uds-canvas-options':'uds-canvas-menu',selected?{key:key(selected)}:{});return}if(editing){if(modifier&&key==='d')e.preventDefault();return}if((modifier&&['z','y','d'].includes(key))||key==='delete'||(['arrowleft','arrowright','arrowup','arrowdown'].includes(key)&&document.querySelector('.uds-edit-selected'))){e.preventDefault();send('uds-canvas-shortcut',{key,modifier,shift:e.shiftKey})}},true);document.addEventListener('click',e=>{if(document.documentElement.dataset.udsCanvasDragged){e.preventDefault();e.stopPropagation();return}if(e.target.closest('[contenteditable="true"]'))return;if(e.target.closest('.uds-arrange-tag'))return;e.preventDefault();e.stopPropagation();const n=editable(e);if(n)pick(n);else send('uds-canvas-menu',{key:''})},true);document.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();const n=editable(e);if(n){pick(n);send('uds-canvas-options',{key:key(n)})}else send('uds-canvas-menu',{key:''})},true);let pressTimer=null;document.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const n=editable(e);if(!n)return;pressTimer=setTimeout(()=>{pick(n);send('uds-canvas-options',{key:key(n)});pressTimer=null},560)},{passive:false});for(const ev of ['pointerup','pointercancel','pointermove'])document.addEventListener(ev,()=>{clearTimeout(pressTimer);pressTimer=null},{passive:true});addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data||{};if(m.type==='uds-canvas-restore-scroll'){const style=document.documentElement.style;style.setProperty('scroll-behavior','auto','important');scrollTo(Math.max(0,Number(m.x)||0),Math.max(0,Number(m.y)||0));style.removeProperty('scroll-behavior');return}if(m.type==='uds-canvas-arrange-fan'){const section=m.sectionId==='hero'?document.querySelector('.hero'):document.getElementById(m.sectionId);if(!section)return;const figures=[...section.querySelectorAll('figure')].filter(n=>n.querySelector('img')&&!n.closest('[data-uds-free-canvas]')||n.querySelector('img'));const images=[...section.querySelectorAll('img')].filter(n=>!n.closest('figure'));const photos=[...new Set([...figures,...images])].slice(0,5);if(photos.length<5){parent.postMessage({type:'uds-canvas-fan-error',message:'Для веера в выбранной секции нужно минимум пять фотографий'},'*');return}send({type:'uds-canvas-fan',sectionId:m.sectionId,photos:photos.map(key)})}if(m.type==='uds-canvas-select-element'){const n=[...document.querySelectorAll('[data-uds-element]')].find(x=>x.dataset.udsElement===m.elementId);if(n)pick(n)}if(m.type==='uds-canvas-select-key'){const n=candidates().find(x=>key(x)===m.key);if(n)pick(n)}if(m.type==='uds-canvas-select-block'){const block=[...document.querySelectorAll('[data-uds-block]')].find(x=>x.dataset.udsBlock===m.blockId);const n=block?.querySelector('h2,h3,p');if(n)pick(n)}if(m.type==='uds-canvas-select-duplicate'){const original=candidates().find(n=>key(n)===m.key);const duplicate=original?.nextElementSibling;if(duplicate&&candidates().includes(duplicate))pick(duplicate)}if(m.type==='uds-canvas-preview'){const n=candidates().find(x=>key(x)===m.key);if(!n)return;const p=m.patch||{};if(typeof p.text==='string')n.textContent=p.text;if(typeof p.alt==='string'&&n.tagName==='IMG')n.alt=p.alt.slice(0,240);if(typeof p.href==='string'&&n.matches('a')&&!p.href.startsWith('//')&&/^(?:https?:\\/\\/|mailto:|tel:|\\/(?!\\/)|#)/i.test(p.href))n.setAttribute('href',p.href.slice(0,2048));if(/^#[\\da-f]{6}$/i.test(p.color||''))n.style.color=p.color;if(/^#[\da-f]{6}$/i.test(p.background||''))n.style.backgroundColor=p.background;if(Number.isFinite(+p.translateX)||Number.isFinite(+p.translateY)){const x=Math.max(-1600,Math.min(1600,Number(p.translateX)||0)),y=Math.max(-1200,Math.min(1200,Number(p.translateY)||0));n.style.translate=n.closest('[data-uds-free-canvas]')?'calc(-50% + '+x+'px) calc(-50% + '+y+'px)':x+'px '+y+'px';}if(Number.isFinite(+p.rotation))n.style.rotate=Math.max(-45,Math.min(45,+p.rotation))+'deg';if(Number.isFinite(+p.fontSize))n.style.fontSize=Math.max(12,Math.min(96,+p.fontSize))+'px';if(Number.isFinite(+p.opacity))n.style.opacity=Math.max(0,Math.min(1,+p.opacity));if(p.width===null)n.style.width='';else if(Number.isFinite(+p.width))n.style.width=Math.max(0,Math.min(1600,+p.width))+'px';if(p.height===null)n.style.height='';else if(Number.isFinite(+p.height))n.style.height=Math.max(0,Math.min(1200,+p.height))+'px';if(['left','center','right'].includes(p.align))n.style.textAlign=p.align;if(p.tag&&['h2','h3','p','a','button'].includes(p.tag)){const r=document.createElement(p.tag);for(const a of [...n.attributes])r.setAttribute(a.name,a.value);r.textContent=n.textContent;n.replaceWith(r);pick(r)}}});refresh()})();<\/script>`;
-const CANVAS_DRAG_SCRIPT = `<script>(()=>{const selector='h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element';const nodes=()=>[...document.querySelectorAll(selector)].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const path=n=>{const parts=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';parts.unshift([...p.children].filter(c=>!c.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return parts.join('.')};const send=(payload,keys)=>parent.postMessage(typeof payload==='string'?{type:'uds-arrange',kind:'canvas-order',group:payload,keys}:payload,'*');let drag=null;const candidate=e=>e.target.closest?.('.uds-added-element,.item,.ds-card,.spotlight,.tool,.bento__cell,[data-uds-element]')||e.target.closest?.(selector);const atPoint=(x,y)=>document.elementsFromPoint(x,y).map(el=>el.closest?.(selector)).find(n=>n&&nodes().includes(n));const translation=n=>{const value=getComputedStyle(n).translate;if(!value||value==='none')return[0,0];const parts=value.split(/\\s+/).map(parseFloat);return[Number.isFinite(parts[0])?parts[0]:0,Number.isFinite(parts[1])?parts[1]:0]};const dragDelta=(state,e)=>{let x=e.clientX-state.x,y=e.clientY-state.y;if(state.bounds){const minX=state.bounds.left-state.rect.left,maxX=state.bounds.right-state.rect.right,minY=state.bounds.top-state.rect.top,maxY=state.bounds.bottom-state.rect.bottom;x=maxX>=minX?Math.max(minX,Math.min(maxX,x)):0;y=maxY>=minY?Math.max(minY,Math.min(maxY,y)):0}return[x,y]};document.addEventListener('dragstart',e=>{if(drag){e.preventDefault();e.stopImmediatePropagation()}},true);nodes().forEach(n=>n.classList.add('uds-canvas-draggable'));document.addEventListener('pointerdown',e=>{const n=candidate(e);if(!n||!nodes().includes(n)||e.target.closest('.uds-arrange-tag,[contenteditable=true]')||n.matches('dialog,[role=dialog]'))return;const [baseX,baseY]=translation(n),rect=n.getBoundingClientRect(),container=n.parentElement?.closest('section,.hero,.site-head,nav,footer,.foot,main'),bounds=container?.getBoundingClientRect(),freeCanvas=n.closest('[data-uds-free-canvas]');drag={node:n,id:e.pointerId,x:e.clientX,y:e.clientY,baseX,baseY,rect,bounds:null,freeCanvas,freeSection:freeCanvas?.closest('section'),active:false};},{capture:true,passive:true});document.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;if(!drag.active&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;const n=drag.node;if(!drag.active){drag.active=true;n.classList.add('uds-canvas-dragging')}e.preventDefault();const [dx,dy]=dragDelta(drag,e);if(drag.freeCanvas&&drag.freeSection){const r=drag.freeSection.getBoundingClientRect();n.style.left=Math.max(0,Math.min(100,(e.clientX-r.left)/Math.max(1,r.width)*100))+'%';n.style.top=Math.max(0,Math.min(100,(e.clientY-r.top)/Math.max(1,r.height)*100))+'%'}else n.style.translate=Math.max(-1600,Math.min(1600,drag.baseX+dx))+'px '+Math.max(-1200,Math.min(1200,drag.baseY+dy))+'px';const target=atPoint(e.clientX,e.clientY);document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));if(target&&target!==n&&nodes().includes(target)&&target.parentElement===n.parentElement)target.classList.add('uds-canvas-drop');},{capture:true,passive:false});document.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;if(!state.active)return;document.documentElement.dataset.udsCanvasDragged='1';setTimeout(()=>delete document.documentElement.dataset.udsCanvasDragged,500);const n=state.node;let target=atPoint(e.clientX,e.clientY);if(n.matches('li.item')){const sibling=nodes().find(x=>x!==n&&x.matches('li.item')&&x.parentElement===n.parentElement&&(()=>{const r=x.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom})());if(sibling)target=sibling}n.classList.remove('uds-canvas-dragging');document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));const fromSection=n.closest('section'),sourceHeader=n.closest('.site-head,nav'),toSection=target?.closest('section');if(target&&(!fromSection?Boolean(sourceHeader):true)&&toSection&&fromSection!==toSection&&!n.matches('section,.hero')){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection?(fromSection.classList.contains('hero')?'hero':fromSection.id):'header',sectionId:toSection.classList.contains('hero')?'hero':toSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(target&&toSection&&fromSection===toSection&&!n.matches('section,.hero')&&target.parentElement!==n.parentElement){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(state.freeCanvas&&state.freeSection&&toSection===fromSection){const rect=state.freeSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(!target||target===n||!nodes().includes(target)||target.parentElement!==n.parentElement){send({type:'uds-canvas-position',key:n.dataset.udsEditKey,translateX:Math.max(-1600,Math.min(1600,state.baseX+dragDelta(state,e)[0])),translateY:Math.max(-1200,Math.min(1200,state.baseY+dragDelta(state,e)[1]))});return}if(n.matches('li.item')&&target?.matches('li.item')&&target.parentElement===n.parentElement){const from=Number(n.id.slice(5)),to=Number(target.id.slice(5));if(Number.isInteger(from)&&Number.isInteger(to))send({type:'uds-arrange',kind:'item',from,to});return}const siblings=nodes().filter(x=>x.parentElement===n.parentElement),rect=target.getBoundingClientRect(),layout=getComputedStyle(n.parentElement),horizontal=(layout.display==='flex'&&layout.flexDirection.startsWith('row'))||(layout.display==='grid'&&layout.gridTemplateColumns.split(' ').length>1),after=horizontal?e.clientX>rect.left+rect.width/2:e.clientY>rect.top+rect.height/2;const ordered=siblings.filter(x=>x!==n);ordered.splice(ordered.indexOf(target)+(after?1:0),0,n);const keys=ordered.map(x=>x.dataset.udsEditKey);if(keys.length<2||keys.some(k=>!/^u:[\\w-]+:\\d+$/.test(k||'')))return;send('path:'+path(n.parentElement),keys);},{capture:true,passive:true});document.addEventListener('pointercancel',()=>{if(drag?.active){drag.node.classList.remove('uds-canvas-dragging');drag.node.style.translate=drag.baseX||drag.baseY?drag.baseX+'px '+drag.baseY+'px':''}drag=null;document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));});const style=document.createElement('style');style.textContent='.uds-canvas-draggable{cursor:grab!important;touch-action:none}.uds-canvas-dragging{opacity:.45!important;cursor:grabbing!important}.uds-canvas-drop{outline:3px solid #3b6cff!important;outline-offset:3px!important}';document.head.append(style)})();<\/script>`;
+const CANVAS_DRAG_SCRIPT = `<script>(()=>{const selector='h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element';const nodes=()=>[...document.querySelectorAll(selector)].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const path=n=>{const parts=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';parts.unshift([...p.children].filter(c=>!c.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return parts.join('.')};const send=(payload,keys)=>parent.postMessage(typeof payload==='string'?{type:'uds-arrange',kind:'canvas-order',group:payload,keys}:payload,'*');let drag=null;const candidate=e=>e.target.closest?.('.uds-added-element,.item,.ds-card,.spotlight,.tool,.bento__cell,[data-uds-element]')||e.target.closest?.(selector);const atPoint=(x,y)=>document.elementsFromPoint(x,y).map(el=>el.closest?.(selector)).find(n=>n&&nodes().includes(n));const translation=n=>{const value=getComputedStyle(n).translate;if(!value||value==='none')return[0,0];const parts=value.split(/\\s+/).map(parseFloat);return[Number.isFinite(parts[0])?parts[0]:0,Number.isFinite(parts[1])?parts[1]:0]};const dragDelta=(state,e)=>{let x=e.clientX-state.x,y=e.clientY-state.y;if(state.bounds){const minX=state.bounds.left-state.rect.left,maxX=state.bounds.right-state.rect.right,minY=state.bounds.top-state.rect.top,maxY=state.bounds.bottom-state.rect.bottom;x=maxX>=minX?Math.max(minX,Math.min(maxX,x)):0;y=maxY>=minY?Math.max(minY,Math.min(maxY,y)):0}return[x,y]};document.addEventListener('dragstart',e=>{if(drag){e.preventDefault();e.stopImmediatePropagation()}},true);nodes().forEach(n=>n.classList.add('uds-canvas-draggable'));document.addEventListener('pointerdown',e=>{const n=candidate(e);if(!n||!nodes().includes(n)||e.target.closest('.uds-arrange-tag,[contenteditable=true]')||n.matches('dialog,[role=dialog]'))return;const [baseX,baseY]=translation(n),rect=n.getBoundingClientRect(),container=n.parentElement?.closest('section,.hero,.site-head,nav,footer,.foot,main'),bounds=container?.getBoundingClientRect(),freeCanvas=n.closest('[data-uds-free-canvas]');drag={node:n,id:e.pointerId,x:e.clientX,y:e.clientY,baseX,baseY,rect,bounds:null,freeCanvas,freeSection:freeCanvas?.closest('section'),active:false};},{capture:true,passive:true});document.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;if(!drag.active&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;const n=drag.node;if(!drag.active){drag.active=true;n.classList.add('uds-canvas-dragging')}e.preventDefault();const [dx,dy]=dragDelta(drag,e);if(drag.freeCanvas&&drag.freeSection){const r=drag.freeSection.getBoundingClientRect();n.style.left=Math.max(0,Math.min(100,(e.clientX-r.left)/Math.max(1,r.width)*100))+'%';n.style.top=Math.max(0,Math.min(100,(e.clientY-r.top)/Math.max(1,r.height)*100))+'%'}else n.style.translate=Math.max(-1600,Math.min(1600,drag.baseX+dx))+'px '+Math.max(-1200,Math.min(1200,drag.baseY+dy))+'px';const target=atPoint(e.clientX,e.clientY);document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));if(target&&target!==n&&nodes().includes(target)&&target.parentElement===n.parentElement)target.classList.add('uds-canvas-drop');},{capture:true,passive:false});document.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;if(!state.active)return;document.documentElement.dataset.udsCanvasDragged='1';setTimeout(()=>delete document.documentElement.dataset.udsCanvasDragged,500);const n=state.node;let target=atPoint(e.clientX,e.clientY);if(n.matches('li.item')){const sibling=nodes().find(x=>x!==n&&x.matches('li.item')&&x.parentElement===n.parentElement&&(()=>{const r=x.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom})());if(sibling)target=sibling}n.classList.remove('uds-canvas-dragging');document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));const fromSection=n.closest('section'),sourceHeader=n.closest('.site-head,nav'),toSection=target?.closest('section');if(target&&(!fromSection?Boolean(sourceHeader):true)&&toSection&&fromSection!==toSection&&!n.matches('section,.hero')){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection?(fromSection.classList.contains('hero')?'hero':fromSection.id):'header',sectionId:toSection.classList.contains('hero')?'hero':toSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(target&&toSection&&fromSection===toSection&&!n.matches('section,.hero')&&target.parentElement!==n.parentElement){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(state.freeCanvas&&state.freeSection&&toSection===fromSection){const rect=state.freeSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(!target||target===n||!nodes().includes(target)||target.parentElement!==n.parentElement){send({type:'uds-canvas-position',key:n.dataset.udsEditKey,translateX:Math.max(-1600,Math.min(1600,state.baseX+dragDelta(state,e)[0])),translateY:Math.max(-1200,Math.min(1200,state.baseY+dragDelta(state,e)[1]))});return}if(n.matches('li.item')&&target?.matches('li.item')&&target.parentElement===n.parentElement){const from=Number(n.dataset.udsItemIndex),to=Number(target.dataset.udsItemIndex);if(Number.isInteger(from)&&Number.isInteger(to))send({type:'uds-arrange',kind:'item',from,to});return}const siblings=nodes().filter(x=>x.parentElement===n.parentElement),rect=target.getBoundingClientRect(),layout=getComputedStyle(n.parentElement),horizontal=(layout.display==='flex'&&layout.flexDirection.startsWith('row'))||(layout.display==='grid'&&layout.gridTemplateColumns.split(' ').length>1),after=horizontal?e.clientX>rect.left+rect.width/2:e.clientY>rect.top+rect.height/2;const ordered=siblings.filter(x=>x!==n);ordered.splice(ordered.indexOf(target)+(after?1:0),0,n);const keys=ordered.map(x=>x.dataset.udsEditKey);if(keys.length<2||keys.some(k=>!/^u:[\\w-]+:\\d+$/.test(k||'')))return;send('path:'+path(n.parentElement),keys);},{capture:true,passive:true});document.addEventListener('pointercancel',()=>{if(drag?.active){drag.node.classList.remove('uds-canvas-dragging');drag.node.style.translate=drag.baseX||drag.baseY?drag.baseX+'px '+drag.baseY+'px':''}drag=null;document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));});const style=document.createElement('style');style.textContent='.uds-canvas-draggable{cursor:grab!important;touch-action:none}.uds-canvas-dragging{opacity:.45!important;cursor:grabbing!important}.uds-canvas-drop{outline:3px solid #3b6cff!important;outline-offset:3px!important}';document.head.append(style)})();<\/script>`;
 const CANVAS_RESIZE_SCRIPT = `<script>(()=>{const handle=document.createElement('button');handle.type='button';handle.className='uds-arrange-tag uds-resize-handle';handle.setAttribute('aria-label','Изменить размер элемента');handle.title='Тяните, чтобы изменить размер · Shift — свободные пропорции';handle.style.cssText='position:fixed;z-index:2147483647;width:18px;height:18px;padding:0;border:2px solid #fff;border-radius:5px;background:#3478f6;box-shadow:0 1px 8px #0008;touch-action:none;cursor:nwse-resize;display:none';document.body.append(handle);let selected=null,drag=null;const fitPhoto=n=>{if(!n)return;const img=n.matches('img')?n:n.querySelector('img');if(!img)return;if(img===n){img.style.objectFit='cover';img.style.maxWidth='none';const frame=n.closest('figure,.uds-added-element--image,[class*="media"],[class*="image"],[class*="visual"],[class*="photo"]');if(frame&&frame!==n){frame.style.width=n.style.width;frame.style.height=n.style.height;frame.style.boxSizing='border-box';frame.style.overflow='hidden';frame.style.background='transparent';if(frame.querySelector(':scope > figcaption'))n.style.height='calc(100% - 2.5em)'}return}if(!n.matches('figure,.uds-added-element--image')&&n.children.length>1)return;n.style.overflow='hidden';n.style.background='transparent';img.style.width='100%';img.style.height=n.querySelector(':scope > figcaption')?'calc(100% - 2.5em)':'100%';img.style.maxWidth='none';img.style.maxHeight='none';img.style.objectFit='cover';img.style.display='block'};const place=()=>{if(!selected){handle.style.display='none';return}if(drag)return;const r=selected.getBoundingClientRect();handle.style.left=Math.max(0,Math.min(innerWidth-18,r.right-9))+'px';handle.style.top=Math.max(0,Math.min(innerHeight-18,r.bottom-9))+'px';handle.style.display='block'};const observer=new MutationObserver(()=>{const next=document.querySelector('.uds-edit-selected');if(next!==selected){selected=next;place()}});observer.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});addEventListener('scroll',place,true);addEventListener('resize',place);handle.addEventListener('pointerdown',e=>{if(!selected||e.button!==0)return;e.preventDefault();e.stopPropagation();const r=selected.getBoundingClientRect(),photo=selected.matches('img,figure')||Boolean(selected.querySelector('img'));drag={id:e.pointerId,node:selected,x:e.clientX,y:e.clientY,width:r.width,height:r.height,ratio:r.width/Math.max(1,r.height),photo,display:getComputedStyle(selected).display};handle.setPointerCapture(e.pointerId)});handle.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();let width=Math.max(40,Math.min(1600,drag.width+e.clientX-drag.x)),height=Math.max(24,Math.min(1200,drag.height+e.clientY-drag.y));if(drag.photo&&!e.shiftKey)height=Math.max(24,Math.min(1200,width/drag.ratio));const n=drag.node;if(drag.display==='inline')n.style.display='inline-block';n.style.boxSizing='border-box';n.style.width=width+'px';n.style.height=height+'px';fitPhoto(n);const r=n.getBoundingClientRect();handle.style.left=Math.max(0,Math.min(innerWidth-18,r.right-9))+'px';handle.style.top=Math.max(0,Math.min(innerHeight-18,r.bottom-9))+'px'});const finish=e=>{if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;const r=state.node.getBoundingClientRect();parent.postMessage({type:'uds-canvas-resize',key:state.node.dataset.udsEditKey,width:Math.round(r.width),height:Math.round(r.height),boxSizing:'border-box',scrollX,scrollY},'*');place()};handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish)})();<\/script>`;
 function previewHtml(html) {
   return arrangeMode ? html.replace(/<\/body>(?![\s\S]*<\/body>)/, ARRANGE_SCRIPT + CANVAS_DRAG_SCRIPT + CANVAS_SCRIPT + CANVAS_RESIZE_SCRIPT + '</body>') : html;
 }
 let canvasAspectRatio = 0;
 let selectedCanvasKey = '';
+let activeCanvasBreakpoint = 'all';
 let canvasInspectorOpen = false;
 let canvasStyleClipboard = null;
 let canvasPositionClipboard = null;
@@ -2829,6 +2950,30 @@ $('#form').addEventListener('focusout', e => {
 function refreshCanvasHistory() {
   $('#canvas-undo').disabled = !canvasUndo.length;
   $('#canvas-redo').disabled = !canvasRedo.length;
+}
+const RESPONSIVE_CANVAS_KEYS = new Set(['width', 'height', 'fontSize', 'rotation', 'translateX', 'translateY', 'opacity', 'align', 'color', 'background', 'shape', 'animation', 'elementStyle', 'buttonStyle']);
+function canvasEditForBreakpoint(key, breakpoint = activeCanvasBreakpoint) {
+  const edit = { ...(state.raw.canvasEdits?.[key] || {}) };
+  if (breakpoint === 'all') return edit;
+  const responsive = state.raw.canvasResponsiveEdits || {};
+  for (const range of ['desktop', 'tablet', 'mobile']) {
+    Object.assign(edit, responsive[range]?.[key] || {});
+    if (range === breakpoint) break;
+  }
+  return edit;
+}
+function storeCanvasEditPatch(key, patch, breakpoint = activeCanvasBreakpoint) {
+  const responsivePatch = breakpoint === 'all' ? {} : Object.fromEntries(Object.entries(patch).filter(([name]) => RESPONSIVE_CANVAS_KEYS.has(name)));
+  const globalPatch = { ...patch };
+  for (const name of Object.keys(responsivePatch)) delete globalPatch[name];
+  if (Object.keys(globalPatch).length) state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: { ...(state.raw.canvasEdits?.[key] || {}), ...globalPatch } };
+  if (Object.keys(responsivePatch).length) {
+    // Keep an empty global entry so the shared canvas runtime assigns a stable DOM key before responsive styles run.
+    if (!state.raw.canvasEdits?.[key]) state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: {} };
+    const responsive = { ...(state.raw.canvasResponsiveEdits || {}) };
+    responsive[breakpoint] = { ...(responsive[breakpoint] || {}), [key]: { ...(responsive[breakpoint]?.[key] || {}), ...responsivePatch } };
+    state.raw.canvasResponsiveEdits = responsive;
+  }
 }
 function canvasColorHex(value, fallback) {
   if (/^#[\da-f]{6}$/i.test(value || '')) return value;
@@ -2851,12 +2996,13 @@ function refreshCanvasOverlapLayers(sectionId = selectedCanvasMeta?.sectionId) {
 function setCanvasSelection(info) {
   if (!info || !/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(info.key || '')) return;
   selectedCanvasKey = info.key; selectedCanvasMeta = info;
-  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  const edit = canvasEditForBreakpoint(selectedCanvasKey);
   const customElement = info.elementId && info.sectionId
     ? (state.raw.canvasElements?.[info.sectionId] || []).find(item => item.id === info.elementId)
     : null;
   $('#canvas-inspector').hidden = !canvasInspectorOpen;
   $('#canvas-selected-label').textContent = info.label || info.tag || 'Элемент';
+  $('#canvas-breakpoint').value = activeCanvasBreakpoint;
   $('#canvas-options-trigger').hidden = false;
   const textless = ['img','figure','svg','dialog'].includes(info.tag) && !customElement;
   $('#canvas-text').closest('label').hidden = textless || (info.layout && !customElement);
@@ -2873,7 +3019,13 @@ function setCanvasSelection(info) {
   const elementStyle = $('#canvas-element-style');
   elementStyle.replaceChildren(...elementStyles.map(([value,label]) => new Option(label,value)));
   elementStyle.value = elementStyles.some(([value]) => value === edit.elementStyle) ? edit.elementStyle : 'inherit';
-  $('#canvas-shape').value = edit.shape || 'auto';
+  const shapeControl = $('#canvas-shape');
+  const shapeOptions = photoElement
+    ? [['auto', 'Прямоугольник со скруглением']]
+    : [['auto', 'По умолчанию'], ['square', 'Прямые углы'], ['soft', 'Мягкие углы'], ['round', 'Скруглённый'], ['pill', 'Капсула'], ['circle', 'Круглая маска']];
+  shapeControl.replaceChildren(...shapeOptions.map(([value, label]) => new Option(label, value)));
+  shapeControl.disabled = photoElement;
+  shapeControl.value = photoElement ? 'auto' : edit.shape || 'auto';
   $('#canvas-button-style').value = edit.buttonStyle || 'inherit';
   $('#canvas-animation').value = edit.animation || 'none';
   $('#canvas-text').value = edit.text ?? (customElement
@@ -2916,7 +3068,8 @@ function setCanvasSelection(info) {
   refreshCanvasOverlapLayers(info.sectionId);
   $('#canvas-paste-style').disabled = !canvasStyleClipboard;
   $('#canvas-paste-position').disabled = !canvasPositionClipboard;
-  $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey];
+  $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey] && !['desktop','tablet','mobile'].some(range => state.raw.canvasResponsiveEdits?.[range]?.[selectedCanvasKey]);
+  $('#canvas-reset-breakpoint').disabled = activeCanvasBreakpoint === 'all' || !state.raw.canvasResponsiveEdits?.[activeCanvasBreakpoint]?.[selectedCanvasKey];
   const moved = Boolean(state.raw.canvasMoves?.[selectedCanvasKey]);
   $('#canvas-layer-actions').hidden = !moved && !info.sectionId;
   $('#canvas-bring-front').hidden = !moved; $('#canvas-send-back').hidden = !moved;
@@ -2946,7 +3099,7 @@ function commitCanvasEdit(patch) {
       if (typeof patch.alt === 'string') item.alt = patch.alt.slice(0, 240);
       if (typeof patch.href === 'string' && item.type === 'button') item.href = patch.href;
       if (typeof patch.text === 'string') {
-        if (item.type === 'button' || item.type === 'image' || selectedCanvasMeta.tag === 'h3' || selectedCanvasMeta.tag === 'figcaption') item.title = patch.text.slice(0, 180);
+        if (item.type === 'button' || item.type === 'image' || item.type === 'heading' || /^h[1-4]$/.test(selectedCanvasMeta.tag || '') || selectedCanvasMeta.tag === 'figcaption') item.title = patch.text.slice(0, 180);
         else item.text = patch.text.slice(0, 1200);
       }
       items[index] = item; rememberCanvasChange();
@@ -2955,7 +3108,7 @@ function commitCanvasEdit(patch) {
     }
   }
   rememberCanvasChange();
-  state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [selectedCanvasKey]: { ...(state.raw.canvasEdits?.[selectedCanvasKey] || {}), ...patch } };
+  storeCanvasEditPatch(selectedCanvasKey, patch);
   run();
 }
 function addCanvasBlock(type = 'text') {
@@ -2968,7 +3121,7 @@ function addCanvasBlock(type = 'text') {
   run(); toast('Блок добавлен перед контактами');
 }
 function addCanvasElement(type, sectionId, alreadyRemembered = false) {
-  if (!sectionId || !['card', 'button', 'image'].includes(type)) { toast('Сначала выберите секцию, куда добавить элемент'); return; }
+  if (!sectionId || !['card', 'button', 'image', 'text', 'heading'].includes(type)) { toast('Сначала выберите секцию, куда добавить элемент'); return; }
   const id = `element-${Date.now().toString(36)}`;
   const item = type === 'button'
     ? { id, type, title: 'Новая кнопка', text: '', href: '#contact' }
@@ -2982,6 +3135,40 @@ function addCanvasElement(type, sectionId, alreadyRemembered = false) {
   run();
   if (type === 'image') $('#canvas-element-image-file').click();
   toast(type === 'image' ? 'Выберите изображение для секции' : 'Элемент добавлен в выбранную секцию');
+}
+function executeCanvasCommand() {
+  const input = $('#canvas-command');
+  const command = input.value.trim();
+  const add = command.match(/^(?:добавь|добавить|вставь)\s+(текст|заголовок)\s*:\s*(.+)$/i);
+  if (add) {
+    const sectionId = selectedCanvasMeta?.sectionId;
+    if (!sectionId) { toast('Сначала выберите секцию на холсте, затем повторите команду'); return; }
+    const id = `element-${Date.now().toString(36)}`;
+    const value = add[2].slice(0, 1200);
+    const item = add[1].toLowerCase() === 'заголовок'
+      ? { id, type: 'heading', title: value, text: '' }
+      : { id, type: 'text', title: '', text: value };
+    rememberCanvasChange();
+    state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: [...(state.raw.canvasElements?.[sectionId] || []), item] };
+    pendingCanvasElementId = id; run(); input.value = '';
+    toast(add[1].toLowerCase() === 'заголовок' ? 'Заголовок добавлен и выделен' : 'Текст добавлен и выделен');
+    return;
+  }
+  if (/^(?:убери|скрой)\s+(?:выбранный элемент|выбранный|элемент|иллюстрацию|фото)$/i.test(command)) {
+    if (!selectedCanvasKey) { toast('Сначала выберите элемент, который нужно скрыть'); return; }
+    rememberCanvasChange();
+    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [selectedCanvasKey]: { ...(state.raw.canvasEdits?.[selectedCanvasKey] || {}), hidden: true } };
+    run(); toast('Элемент скрыт; его настройки сохранены. Выберите его в списке слоёв, чтобы вернуть.');
+    return;
+  }
+  if (/^(?:верни|покажи)\s+(?:выбранный элемент|выбранный|элемент|иллюстрацию|фото)$/i.test(command)) {
+    if (!selectedCanvasKey) { toast('Выберите скрытый элемент в списке слоёв, чтобы вернуть его'); return; }
+    rememberCanvasChange();
+    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [selectedCanvasKey]: { ...(state.raw.canvasEdits?.[selectedCanvasKey] || {}), hidden: false } };
+    run(); toast('Элемент восстановлен с прежними настройками');
+    return;
+  }
+  toast('Команда не распознана. Примеры: «Добавь текст: …», «Добавь заголовок: …», «Скрой выбранный элемент», «Верни выбранный элемент».');
 }
 function replaceCanvasElement(type) {
   const sectionId = selectedCanvasMeta?.sectionId;
@@ -3077,10 +3264,21 @@ $('#canvas-shape').addEventListener('change', e => commitCanvasEdit({ shape: e.t
 $('#canvas-element-style').addEventListener('change', e => commitCanvasEdit({ elementStyle: e.target.value }));
 $('#canvas-button-style').addEventListener('change', e => commitCanvasEdit({ buttonStyle: e.target.value }));
 $('#canvas-animation').addEventListener('change', e => commitCanvasEdit({ animation: e.target.value }));
+$('#canvas-breakpoint').addEventListener('change', e => {
+  activeCanvasBreakpoint = e.target.value;
+  const widths = { all: '', desktop: '1280', tablet: '768', mobile: '390' };
+  const width = widths[activeCanvasBreakpoint];
+  $('#frame').style.width = width ? width + 'px' : '100%';
+  $('#view-preview').classList.toggle('sized', Boolean(width));
+  $('#preview-custom-width').value = '';
+  document.querySelectorAll('.sizes button').forEach(button => button.setAttribute('aria-pressed', button.dataset.w === width));
+  selectTab($('#tab-preview'));
+  if (selectedCanvasKey) setTimeout(() => $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'), 80);
+});
 $('#canvas-options-trigger').addEventListener('click', () => { if (!selectedCanvasKey || !arrangeMode) return; canvasInspectorOpen = true; $('#canvas-inspector').hidden = false; $('#canvas-inspector').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); ($('#canvas-text').closest('label').hidden ? $('#canvas-shape') : $('#canvas-text')).focus({ preventScroll: true }); });
 $('#canvas-copy-position').addEventListener('click', () => {
   if (!selectedCanvasKey) return;
-  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  const edit = canvasEditForBreakpoint(selectedCanvasKey);
   canvasPositionClipboard = { translateX: Number(edit.translateX || 0), translateY: Number(edit.translateY || 0) };
   $('#canvas-paste-position').disabled = false;
   toast('Положение скопировано');
@@ -3094,7 +3292,7 @@ $('#canvas-paste-position').addEventListener('click', () => {
 });
 $('#canvas-copy-style').addEventListener('click', () => {
   if (!selectedCanvasKey || !selectedCanvasMeta) return;
-  const edit = state.raw.canvasEdits?.[selectedCanvasKey] || {};
+  const edit = canvasEditForBreakpoint(selectedCanvasKey);
   const align = edit.align || selectedCanvasMeta.align;
   canvasStyleClipboard = {
     color: edit.color || canvasColorHex(selectedCanvasMeta.color, '#202329'),
@@ -3116,14 +3314,33 @@ $('#canvas-paste-style').addEventListener('click', () => {
   toast('Стиль применён');
 });
 $('#canvas-reset-edit').addEventListener('click', () => {
-  if (!selectedCanvasKey || !state.raw.canvasEdits?.[selectedCanvasKey]) return;
+  if (!selectedCanvasKey) return;
   rememberCanvasChange();
   const edits = { ...state.raw.canvasEdits };
   delete edits[selectedCanvasKey];
   if (Object.keys(edits).length) state.raw.canvasEdits = edits;
   else delete state.raw.canvasEdits;
+  const responsive = { ...(state.raw.canvasResponsiveEdits || {}) };
+  for (const range of ['desktop','tablet','mobile']) {
+    const bucket = { ...(responsive[range] || {}) };
+    delete bucket[selectedCanvasKey];
+    if (Object.keys(bucket).length) responsive[range] = bucket; else delete responsive[range];
+  }
+  if (Object.keys(responsive).length) state.raw.canvasResponsiveEdits = responsive; else delete state.raw.canvasResponsiveEdits;
   run();
   toast('Правки элемента сброшены');
+});
+$('#canvas-reset-breakpoint').addEventListener('click', () => {
+  if (!selectedCanvasKey || activeCanvasBreakpoint === 'all') return;
+  rememberCanvasChange();
+  const responsive = { ...(state.raw.canvasResponsiveEdits || {}) };
+  const bucket = { ...(responsive[activeCanvasBreakpoint] || {}) };
+  delete bucket[selectedCanvasKey];
+  if (Object.keys(bucket).length) responsive[activeCanvasBreakpoint] = bucket; else delete responsive[activeCanvasBreakpoint];
+  if (Object.keys(responsive).length) state.raw.canvasResponsiveEdits = responsive; else delete state.raw.canvasResponsiveEdits;
+  run();
+  $('#canvas-reset-breakpoint').disabled = true;
+  toast('Переопределение экрана сброшено; применены унаследованные настройки');
 });
 $('#canvas-block-placement').addEventListener('change', e => {
   const blockId = selectedCanvasMeta?.blockId;
@@ -3133,11 +3350,13 @@ $('#canvas-block-placement').addEventListener('change', e => {
   pendingCanvasBlockId = blockId;
   run(); buildForm();
 });
-$('#canvas-inspector-close').addEventListener('click', () => { canvasInspectorOpen = false; $('#canvas-inspector').hidden = true; $('#canvas-options-trigger').hidden = true; selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-paste-style').disabled = !canvasStyleClipboard; });
+$('#canvas-inspector-close').addEventListener('click', () => { canvasInspectorOpen = false; $('#canvas-inspector').hidden = true; $('#canvas-options-trigger').hidden = true; $('#canvas-paste-style').disabled = !canvasStyleClipboard; });
 $('#canvas-layers').addEventListener('change', e => { selectedCanvasKey = e.target.value; $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'); });
 $('#canvas-overlap-layers').addEventListener('change', e => { selectedCanvasKey = e.target.value; $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'); });
 $('#canvas-add').addEventListener('click', () => $('#canvas-menu').showModal());
 $('#canvas-replace').addEventListener('click', () => $('#canvas-menu').showModal());
+$('#canvas-command-run').addEventListener('click', executeCanvasCommand);
+$('#canvas-command').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); executeCanvasCommand(); } });
 $('#canvas-duplicate').addEventListener('click', () => {
   if (selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId) {
     const sectionId = selectedCanvasMeta.sectionId;
@@ -3285,7 +3504,7 @@ window.addEventListener('message', e => {
     const scrollRestore = Number.isFinite(scrollX) && Number.isFinite(scrollY) ? { x: Math.max(0, scrollX), y: Math.max(0, scrollY) } : null;
     if (scrollRestore) canvasFrameScroll = scrollRestore;
     rememberCanvasChange();
-    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: { ...(state.raw.canvasEdits?.[key] || {}), width, height, boxSizing: 'border-box' } };
+    storeCanvasEditPatch(key, { width, height, boxSizing: 'border-box' });
     run();
     if (scrollRestore) pendingCanvasFrameScroll = scrollRestore;
     toast('Размер элемента сохранён'); return;
@@ -3294,7 +3513,7 @@ window.addEventListener('message', e => {
     const { key, translateX, translateY } = e.data;
     if (!/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(key || '') || !Number.isFinite(translateX) || !Number.isFinite(translateY)) return;
     rememberCanvasChange();
-    state.raw.canvasEdits = { ...(state.raw.canvasEdits || {}), [key]: { ...(state.raw.canvasEdits?.[key] || {}), translateX: Math.max(-1600, Math.min(1600, translateX)), translateY: Math.max(-1200, Math.min(1200, translateY)) } };
+    storeCanvasEditPatch(key, { translateX: Math.max(-1600, Math.min(1600, translateX)), translateY: Math.max(-1200, Math.min(1200, translateY)) });
     run(); toast('Положение элемента сохранено'); return;
   }
   if (e.data?.type === 'uds-canvas-shortcut') {
@@ -3560,6 +3779,25 @@ $('#view-audit').addEventListener('click', async e => {
 $('#form').addEventListener('submit', e => e.preventDefault());
 // Сброс цвета перехода к «Авто»: поле удаляется из проекта, цвет снова берётся из палитры.
 $('#form').addEventListener('click', e => {
+  const refreshDesign = e.target.closest('[data-refresh-design]');
+  if (refreshDesign) {
+    state.raw.designVariant = Math.min(1_000_000, Math.max(0, Math.trunc(Number(state.raw.designVariant) || 0)) + 1);
+    schedule();
+    toast('Автоматические решения дизайна пересобраны; ручные настройки сохранены');
+    return;
+  }
+  const refreshEffects = e.target.closest('[data-refresh-effects]');
+  if (refreshEffects) {
+    const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
+    const autoAvailable = mode === 'auto' || (mode === 'mixed' && (!state.raw.cardEffect || !state.raw.heroEffect));
+    if (!autoAvailable) return;
+    const effects = result?.concept?.visualSystem?.effects;
+    if (effects) state.raw.effectsAvoid = { card: effects.card, hero: effects.hero };
+    state.raw.effectsSeed = (Number(state.raw.effectsSeed) || 0) + 1;
+    schedule();
+    toast('Автоматические эффекты обновлены');
+    return;
+  }
   const b = e.target.closest('[data-transition-reset]'); if (!b) return;
   delete state.raw[b.dataset.transitionReset];
   b.disabled = true;
@@ -3654,8 +3892,23 @@ $('#toggle-settings')?.addEventListener('click', () => {
 document.querySelectorAll('.sizes button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.sizes button').forEach(x => x.setAttribute('aria-pressed', x === b));
   const w = b.dataset.w; $('#frame').style.width = w ? w + 'px' : '100%'; $('#view-preview').classList.toggle('sized', Boolean(w));
+  $('#preview-custom-width').value = '';
+  activeCanvasBreakpoint = w === '390' ? 'mobile' : w === '768' ? 'tablet' : w === '1280' ? 'desktop' : 'all';
+  $('#canvas-breakpoint').value = activeCanvasBreakpoint;
+  if (selectedCanvasKey) setTimeout(() => $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'), 80);
   selectTab($('#tab-preview'));
 }));
+$('#preview-custom-width')?.addEventListener('change', e => {
+  const width = Math.max(320, Math.min(1920, Number(e.target.value) || 320));
+  e.target.value = String(width);
+  $('#frame').style.width = width + 'px';
+  $('#view-preview').classList.add('sized');
+  activeCanvasBreakpoint = width <= 600 ? 'mobile' : width <= 900 ? 'tablet' : 'desktop';
+  $('#canvas-breakpoint').value = activeCanvasBreakpoint;
+  document.querySelectorAll('.sizes button').forEach(button => button.setAttribute('aria-pressed', 'false'));
+  selectTab($('#tab-preview'));
+  if (selectedCanvasKey) setTimeout(() => $('#frame').contentWindow?.postMessage({ type: 'uds-canvas-select-key', key: selectedCanvasKey }, '*'), 80);
+});
 
 const previewFullscreenButton = $('#preview-fullscreen');
 const previewView = $('#view-preview');

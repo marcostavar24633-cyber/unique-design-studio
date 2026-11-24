@@ -23,6 +23,20 @@ export function auditSite(html, concept, input) {
   const tags = parseTags(html);
   const of = name => tags.filter(t => t.name === name);
   const css = (/<style>([\s\S]*?)<\/style>/.exec(html) || [])[1] || '';
+  const renderedCopy = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;|&#39;|&apos;/gi, ' ').replace(/\s+/g, ' ');
+
+  if (/\b\d+(?:[.,]\d+)?\s*(?:%|лет|года|год|дней|дня|часов|часа|минут|₽|руб(?:лей|ля)?)/i.test(renderedCopy)) {
+    add('warn', 'visible-numeric-claim', 'В тексте страницы есть числовое обещание или характеристика. Подтвердите её данными владельца перед публикацией.');
+  }
+  if (/(?:№\s*1|номер один|лучший|самый быстрый|гарантируем|гарантия|100\s*%|всегда|никогда)/i.test(renderedCopy)) {
+    add('warn', 'visible-absolute-claim', 'В тексте страницы есть абсолютное или гарантийное утверждение. Проверьте, что владелец может его подтвердить.');
+  }
+
+  if (project.passthrough?.contentDraftSource === 'local-autopilot') {
+    add('warn', 'local-autopilot-copy-review', 'Локальный автопилот использовал нишевые заготовки. Перед публикацией проверьте перечень услуг и любые условия доставки, записи, оплаты, сроков и гарантии.');
+    const instructions = [...renderedCopy.matchAll(/\b(?:укажите|добавьте|опишите|подтвердите|перечислите|покажите|удалите)\b[^.!?]{0,110}/giu)].map(match => match[0].trim().slice(0, 110));
+    if (instructions.length) add('warn', 'local-autopilot-open-facts', `В тексте страницы осталось ${instructions.length} инструкций для владельца. Замените их данными или удалите. Например: ${[...new Set(instructions)].slice(0, 3).map(text => `«${text}»`).join('; ')}.`);
+  }
 
   // Понятность и структура
   test(of('html')[0]?.attrs.lang, 'lang', 'Указан язык документа', 'У <html> нет атрибута lang');
@@ -35,6 +49,9 @@ export function auditSite(html, concept, input) {
   if (metaDescription && (metaDescription.length < 120 || metaDescription.length > 160)) add('warn', 'seo-description-length', `Длина meta description — ${metaDescription.length} символов; ориентир — 120–160`);
   test(of('meta').some(t => t.attrs.property === 'og:title' && t.attrs.content), 'og-title', 'Есть Open Graph title', 'Нет og:title для превью ссылок', 'warn');
   test(of('meta').some(t => t.attrs.property === 'og:description' && t.attrs.content), 'og-description', 'Есть Open Graph description', 'Нет og:description для превью ссылок', 'warn');
+  const shareImageHidden = project.fieldStates?.['images.social'] === 'hidden'
+    || project.fieldStates?.['images.social'] !== 'manual' && project.site?.fieldStates?.['images.social'] === 'hidden';
+  test(shareImageHidden || of('meta').some(t => t.attrs.property === 'og:image' && t.attrs.content), 'og-image', 'Есть изображение для превью ссылки или оно скрыто владельцем', 'Нет изображения для превью ссылки: добавьте фото страницы или общее фото сайта', 'warn');
   test(of('h1').length === 1, 'h1', 'Ровно один заголовок h1', `Заголовков h1: ${of('h1').length}, должен быть один`);
   test(of('main').length === 1 && of('nav').length >= 1, 'landmarks', 'Есть ориентиры main и nav', 'Нет семантических ориентиров main/nav');
   test(of('a').some(t => t.attrs.class === 'skip'), 'skip-link', 'Есть ссылка «Перейти к содержимому»', 'Нет skip-link');
@@ -47,13 +64,23 @@ export function auditSite(html, concept, input) {
   const broken = links.filter(a => !a.attrs.href || (a.attrs.href.startsWith('#') && !ids.includes(a.attrs.href.slice(1))));
   test(!broken.length, 'links', `Все ссылки ведут к существующим целям (${links.length})`, `Нерабочие ссылки: ${broken.map(a => a.attrs.href || '(пусто)').join(', ')}`);
   test(!/javascript:/i.test(tags.map(t => `${t.attrs.href || ''} ${t.attrs.src || ''}`).join(' ')), 'safe-urls', 'Нет небезопасных схем ссылок', 'Обнаружена ссылка javascript:');
+  const externalLinks = links.map(a => a.attrs.href || '').filter(href => /^https?:\/\//i.test(href));
+  if (externalLinks.length) add('warn', 'external-links-unverified', `Внешние ссылки сохранены (${externalLinks.length}), но их доступность не проверялась в автономном аудите. Проверьте адреса перед публикацией.`);
 
   // CTA и основной путь
   const ctas = tags.filter(t => t.attrs['data-cta'] === 'primary');
-  test(ctas.length >= 1, 'cta', 'Основной CTA виден на первом экране', 'На первом экране нет основного CTA');
+  test(ctas.length >= 1, 'cta', 'Основной CTA виден на первом экране', project.fieldStates?.cta === 'manual' && !project.cta
+    ? 'Основной CTA вручную оставлен без текста: добавьте подпись или верните автоматическое значение.'
+    : 'На первом экране нет основного CTA');
+  const hiddenSections = new Set([...(Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []), ...Object.keys(project.fieldStates || {}).filter(key => key.startsWith('sections.') && project.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
+  const targetSection = project.ctaUrl?.startsWith('#') ? project.ctaUrl.slice(1) : '';
+  if (targetSection && hiddenSections.has(targetSection)) add('error', 'cta-target-unavailable', `Основная кнопка скрыта: её цель «${targetSection}» отключена. Верните секцию или укажите другой адрес кнопки.`);
+  if (project.fieldStates?.ctaUrl === 'manual' && !project.ctaUrl) add('error', 'cta-target-invalid', 'Ручной адрес основной кнопки не поддерживается или не прошёл проверку. Укажите корректный адрес либо верните автоматическое назначение.');
   const k = project.contacts;
   const hasPath = Boolean(project.formAction || k.email || k.phone || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
   test(hasPath, 'cta-path', 'Путь пользователя завершается действием: есть форма, телефон, email или внешняя ссылка', 'CTA ведёт в раздел без способа связи: укажите телефон, email, formAction или ctaUrl');
+  const bookingIntent = /запис|запись|бронир|брон|appointment|booking|reservation/i.test(`${project.primaryGoal} ${project.niche} ${project.title} ${project.cta}`);
+  if (bookingIntent && !hasPath) add('error', 'booking-path', 'Черновик страницы записи собран, но записаться нельзя. Подключите форму с получателем, ссылку на сервис записи или укажите телефон/e-mail.');
   const formDelivery = project.formAction ? 'endpoint-configured' : k.email ? 'mailto-fallback' : 'not-configured';
   if (formDelivery === 'endpoint-configured') add('warn', 'form-delivery', 'HTTPS endpoint формы настроен, но фактическая доставка заявки не подтверждена тестовой отправкой');
   else if (formDelivery === 'mailto-fallback') add('warn', 'form-delivery', 'Указан email для связи, но серверная форма не настроена: отправка через почтовую ссылку зависит от почтового приложения пользователя');

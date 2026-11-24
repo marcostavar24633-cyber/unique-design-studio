@@ -4,6 +4,8 @@
 // Проверка здесь — по данным проекта, без анализа
 // пикселей (яркость, резкость и похожие кадры оцениваются в браузере студии отдельно).
 import { hexToHsl } from './color.js';
+import { normalizeProject } from './project.js';
+import { buildConcept } from './concept.js';
 
 // Архитектуры, в которых первый экран построен на тексте, каталоге или форме: фото здесь — фон под текстом
 // с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
@@ -23,7 +25,7 @@ const NEGATIVE = 'Без надписей, логотипов, водяных з
 
 // hexToHsl возвращает [h, s, l] с l в процентах.
 const isDark = hex => { try { return hexToHsl(hex)[2] < 40; } catch { return false; } };
-const clean = t => String(t || '').trim().replace(/[.;,s]+$/, '');
+const clean = t => String(t || '').trim().replace(/[.;,]+$/, '');
 const lowerFirst = t => (t ? t[0].toLowerCase() + t.slice(1) : t);
 
 function lightFor(project, palette) {
@@ -37,6 +39,8 @@ function lightFor(project, palette) {
  * @returns {{ slots: object[], filled: number, total: number }}
  */
 export function imageSlots(project, concept) {
+  project = normalizeProject(project);
+  concept = concept?.visualSystem && Array.isArray(concept?.homepage?.sectionOrder) ? concept : buildConcept(project);
   const vs = concept.visualSystem;
   const order = concept.homepage?.sectionOrder || [];
   const direction = lowerFirst(clean(concept.designDNA?.imageDirection)) || 'реальные фотографии продукта, людей и процесса';
@@ -110,6 +114,8 @@ const FILE_LIKE = /\.(jpe?g|png|webp|gif|avif)$|^(img|image|photo|dsc|снимо
 
 /** Проверка набора изображений по данным проекта. Возвращает замечания для контроля качества. */
 export function reviewImageSet(project, concept) {
+  project = normalizeProject(project);
+  concept = concept || buildConcept(project);
   const { slots, filled, total } = imageSlots(project, concept);
   const findings = [];
   const add = (id, severity, message, category = 'images') => findings.push({ id: `images:${id}`, source: 'image-director', category, severity, message });
@@ -129,10 +135,14 @@ export function reviewImageSet(project, concept) {
   const dupAlt = alts.filter((a, i) => alts.indexOf(a) !== i);
   if (dupAlt.length) add('alt-duplicate', 'low', `Одинаковые ALT у разных фото: «${dupAlt[0]}». У каждого кадра должно быть своё описание.`, 'accessibility');
   const srcs = [project.images.hero, ...project.gallery.map(g => g.src), ...project.services.map(s => s.image)].filter(Boolean);
-  const dupSrc = srcs.filter((s, i) => srcs.indexOf(s) !== i).length;
-  if (dupSrc) add('src-duplicate', 'medium', `Один и тот же файл использован ${dupSrc + 1} раза — это выглядит как недостаток фото. Нужны разные кадры.`);
+  const srcCounts = new Map();
+  for (const src of srcs) srcCounts.set(src, (srcCounts.get(src) || 0) + 1);
+  const duplicateSources = [...srcCounts.values()].filter(count => count > 1);
+  const duplicateUses = duplicateSources.reduce((sum, count) => sum + count - 1, 0);
+  if (duplicateSources.length) add('src-duplicate', 'medium', `Повторно размещено ${duplicateUses} фото в ${duplicateSources.length} группах файлов — замените копии разными кадрами.`);
   const http = srcs.filter(s => /^http:\/\//i.test(s)).length;
   if (http) add('insecure', 'high', `${http} изображений загружаются по http — браузер может их заблокировать на https-сайте.`, 'security');
-  if ((concept.homepage?.sectionOrder || []).includes('gallery') && project.gallery.length && project.gallery.length < 3) add('gallery-small', 'low', `В галерее ${project.gallery.length} фото — для галереи нужно хотя бы 3 разных кадра.`);
+  const uniqueGalleryPhotos = new Set(project.gallery.map(photo => photo.src).filter(Boolean)).size;
+  if ((concept.homepage?.sectionOrder || []).includes('gallery') && uniqueGalleryPhotos < 3) add('gallery-small', 'low', `В галерее ${uniqueGalleryPhotos} разных фото — для галереи нужно хотя бы 3 разных кадра.`);
   return { findings, filled, total };
 }

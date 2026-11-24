@@ -71,6 +71,8 @@ const TEXTURE_LABELS = { grain: 'зерно', paper: 'волокна бумаг�
  * @returns {{id, label, texture, lights:string[], intensity:'calm'|'balanced', mode:'light'|'dark', rationale}}
  */
 export function chooseCinematicLayers(project = {}, visual = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  visual = visual && typeof visual === 'object' ? visual : {};
   const forced = project.passthrough?.cinematicLayers;
   const mode = visual.palette?.mode === 'dark' ? 'dark' : 'light';
   const calm = project.passthrough?.motionStyle !== 'cinematic' && (project.tier === 'luxury' || visual.motionPlan?.intensity === 'calm');

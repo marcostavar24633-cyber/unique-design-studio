@@ -56,7 +56,9 @@ const REVEAL_POOL = {
 };
 
 /** Форма карточек и эффект появления. Ручной выбор владельца (passthrough.cardShape / revealEffect) главнее. */
-export function chooseVariety(project = {}, { shape = 'soft', archetype = '', intensity = 'balanced', seed = 0 } = {}) {
+export function chooseVariety(project = {}, options = {}) {
+  const { shape = 'soft', archetype = '', intensity = 'balanced', seed = 0 } = options && typeof options === 'object' ? options : {};
+  project = project && typeof project === 'object' ? project : {};
   const f = project.passthrough || {};
   let shapes = SHAPE_POOL[shape] || SHAPE_POOL.soft;
   if (archetype === 'brutalist') shapes = ['square', 'chamfer', 'offset-frame'];
@@ -65,16 +67,99 @@ export function chooseVariety(project = {}, { shape = 'soft', archetype = '', in
   if (project.tier === 'luxury') reveals = REVEAL_POOL.calm;
   if (archetype === 'brutalist') reveals = ['clip-up', 'clip-left', 'skew-in', 'slide-left'];
   return Object.freeze({
-    cardShape: CARD_SHAPES[f.cardShape] ? f.cardShape : pick(stream(seed, 'card-shape'), shapes),
-    reveal: REVEALS[f.revealEffect] ? f.revealEffect : pick(stream(seed, 'reveal-effect'), reveals),
-    revealForced: Boolean(REVEALS[f.revealEffect]),
+    cardShape: Object.hasOwn(CARD_SHAPES, f.cardShape) ? f.cardShape : pick(stream(seed, 'card-shape'), shapes),
+    reveal: Object.hasOwn(REVEALS, f.revealEffect) ? f.revealEffect : pick(stream(seed, 'reveal-effect'), reveals),
+    revealForced: Object.hasOwn(REVEALS, f.revealEffect),
   });
+}
+
+export const PHOTO_COMPOSITIONS = Object.freeze({
+  grid: 'Ровная сетка',
+  fan: 'Веер с перекрытием',
+  overlap: 'Слоистая раскладка',
+  stagger: 'Шахматный ритм',
+  masonry: 'Редакционная колонная сетка',
+  filmstrip: 'Лента с прокруткой',
+  feature: 'Один крупный кадр',
+});
+
+export const SECTION_COMPOSITIONS = Object.freeze({
+  about: Object.freeze({ columns: 'Заголовок и текст в две колонки', centered: 'Центрированный рассказ', reading: 'Узкая колонка для чтения' }),
+  faq: Object.freeze({ columns: 'Вопросы в две колонки', cards: 'Карточная раскладка', list: 'Последовательный список' }),
+  contact: Object.freeze({ split: 'Контакты рядом с формой', stacked: 'Контакты и форма друг под другом', panel: 'Контакты на выделенной панели' }),
+});
+
+/** Независимая компоновка ключевых секций, выбранная по объёму контента и архитектуре. */
+export function chooseSectionCompositions(project = {}, options = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  const seed = options && typeof options === 'object' ? options.seed ?? project.id : project.id;
+  const archetype = options?.archetype || '';
+  const requested = project.passthrough?.sectionCompositions || {};
+  const pickSection = (id, available, automatic) => Object.hasOwn(available, requested[id]) ? requested[id] : pick(stream(seed, `section-composition:${id}`), automatic);
+  const compositions = {};
+  if (project.aboutText) compositions.about = pickSection('about', SECTION_COMPOSITIONS.about,
+    archetype === 'editorial' || archetype === 'storytelling' ? ['columns', 'reading', 'centered'] : ['reading', 'columns', 'centered']);
+  if (Array.isArray(project.faqs) && project.faqs.length) compositions.faq = pickSection('faq', SECTION_COMPOSITIONS.faq,
+    project.faqs.length >= 5 ? ['columns', 'cards', 'list'] : ['list', 'cards', 'columns']);
+  compositions.contact = pickSection('contact', SECTION_COMPOSITIONS.contact,
+    project.formAction ? ['split', 'stacked', 'panel'] : ['panel', 'stacked', 'split']);
+  return Object.freeze(compositions);
+}
+
+/** Выбирает композицию фотогалереи по объёму материала и seed проекта. */
+export function choosePhotoComposition(project = {}, options = {}) {
+  project = project && typeof project === 'object' ? project : {};
+  const count = Array.isArray(project.gallery) ? project.gallery.filter(photo => photo && (typeof photo === 'string' || photo.src)).length : 0;
+  const requested = project.passthrough?.photoComposition;
+  if (Object.hasOwn(PHOTO_COMPOSITIONS, requested) && count >= 3) return requested;
+  if (count < 3) return 'grid';
+  const seed = options && typeof options === 'object' ? options.seed ?? project.id : project.id;
+  const layouts = count <= 5
+    ? ['fan', 'overlap', 'stagger', 'feature']
+    : count <= 8
+      ? ['overlap', 'stagger', 'masonry', 'filmstrip', 'feature']
+      : ['masonry', 'filmstrip', 'stagger', 'grid'];
+  return pick(stream(seed, 'photo-composition'), layouts);
+}
+
+/** Стили композиции фотографий. Все варианты сохраняют прямоугольные фото со скруглением. */
+export function photoCompositionCss(id) {
+  const shared = `.gallery img{border-radius:var(--ds-radius-md,18px)!important;clip-path:none!important;mask:none!important;-webkit-mask:none!important}`;
+  const desktop = {
+    fan: `@media(min-width:761px){.gallery--fan{display:flex;justify-content:center;align-items:center;gap:0;padding:clamp(24px,4vw,52px) 0}.gallery--fan>li{position:relative;flex:0 1 19%;min-width:0;margin-inline:-.5%;transform:rotate(var(--photo-tilt,0deg)) translateY(var(--photo-rise,0px));transition:transform .3s var(--ds-ease),z-index .3s}.gallery--fan>li:nth-child(1){--photo-tilt:-11deg;--photo-rise:22px}.gallery--fan>li:nth-child(2){--photo-tilt:-5deg;--photo-rise:4px}.gallery--fan>li:nth-child(3){--photo-tilt:0deg;--photo-rise:-8px}.gallery--fan>li:nth-child(4){--photo-tilt:5deg;--photo-rise:4px}.gallery--fan>li:nth-child(5){--photo-tilt:11deg;--photo-rise:22px}.gallery--fan>li:hover{z-index:5;transform:translateY(-10px) rotate(0) scale(1.045)}.gallery--fan figure{padding:7px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-lg);background:var(--ds-surface);box-shadow:0 14px 32px color-mix(in srgb,var(--ds-text) 13%,transparent)}.gallery--fan img{aspect-ratio:4/5}}@media(prefers-reduced-motion:reduce){.gallery--fan>li{transition:none}}`,
+    overlap: `@media(min-width:761px){.gallery--overlap{grid-template-columns:repeat(12,minmax(0,1fr));gap:0 10px;align-items:center;padding-block:16px}.gallery--overlap>li{position:relative;grid-column:span 4;margin-block:10px;transition:transform .25s var(--ds-ease),z-index .25s}.gallery--overlap>li:nth-child(3n+2){transform:translate(-12px,18px);z-index:2}.gallery--overlap>li:nth-child(3n){transform:translate(-24px,-10px);z-index:1}.gallery--overlap>li:nth-child(3n+2):hover,.gallery--overlap>li:nth-child(3n):hover{z-index:5;transform:translateY(-8px) scale(1.035)}.gallery--overlap img{aspect-ratio:4/5}}@media(prefers-reduced-motion:reduce){.gallery--overlap>li{transition:none}}`,
+    stagger: `@media(min-width:761px){.gallery--stagger{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}.gallery--stagger>li:nth-child(even){margin-top:clamp(24px,5vw,64px)}.gallery--stagger>li:nth-child(4n+3){margin-top:clamp(12px,2.5vw,32px)}.gallery--stagger img{aspect-ratio:4/5}}`,
+    masonry: `@media(min-width:761px){.gallery--masonry{display:block;columns:3;column-gap:clamp(12px,2vw,24px)}.gallery--masonry>li{break-inside:avoid;margin:0 0 clamp(12px,2vw,24px)}.gallery--masonry img{aspect-ratio:auto;max-height:460px;object-fit:cover}.gallery--masonry>li:nth-child(3n+2) img{aspect-ratio:4/3}}@media(min-width:761px) and (max-width:1000px){.gallery--masonry{columns:2}}`,
+    filmstrip: `@media(min-width:761px){.gallery--filmstrip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x mandatory;scrollbar-width:thin;padding:4px 2px 18px}.gallery--filmstrip>li{flex:0 0 clamp(240px,28vw,360px);scroll-snap-align:start}.gallery--filmstrip img{aspect-ratio:4/5}}`,
+    feature: `@media(min-width:761px){.gallery--feature{grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(110px,auto);align-items:stretch}.gallery--feature>li{grid-column:span 4}.gallery--feature>li:first-child{grid-column:span 8;grid-row:span 2}.gallery--feature>li:first-child img{height:100%;min-height:320px;aspect-ratio:auto}.gallery--feature>li:nth-child(2) img,.gallery--feature>li:nth-child(3) img{aspect-ratio:4/3}}`,
+  };
+  const mobile = id && id !== 'grid'
+    ? `@media(max-width:760px){.gallery--${id}{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(10px,2vw,16px);overflow:visible}.gallery--${id}>li{position:static;grid-column:auto;grid-row:auto;flex:initial;transform:none!important;margin:0}.gallery--${id} img{aspect-ratio:4/5}.gallery--${id}>li:first-child img{min-height:0;aspect-ratio:4/5}}@media(max-width:420px){.gallery--${id}{grid-template-columns:1fr}}`
+    : '';
+  return shared + (desktop[id] || '') + mobile;
+}
+
+/** Стили автономных раскладок «О нас», FAQ и контактов. */
+export function sectionCompositionsCss(compositions = {}) {
+  const css = [];
+  if (compositions.about === 'columns') css.push('@media(min-width:800px){.sec--about.section-composition--columns .ds-container{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:0 clamp(28px,6vw,88px);align-items:start}.sec--about.section-composition--columns .sec__head{position:sticky;top:24px}.sec--about.section-composition--columns .about__text{max-width:64ch}}');
+  if (compositions.about === 'centered') css.push('.sec--about.section-composition--centered .sec__head,.sec--about.section-composition--centered .about__text{margin-inline:auto;text-align:center}.sec--about.section-composition--centered .about__text{max-width:60ch}');
+  if (compositions.about === 'reading') css.push('.sec--about.section-composition--reading .ds-container{max-width:min(100% - 2 * var(--ds-gutter),860px)}.sec--about.section-composition--reading .about__text{max-width:68ch}');
+  if (compositions.faq === 'columns') css.push('@media(min-width:760px){.faq--columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}.faq--columns details:nth-child(odd):last-child{grid-column:1/-1}}');
+  if (compositions.faq === 'cards') css.push('.faq--cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px}.faq--cards details{padding:0 16px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface)}.faq--cards details:last-child{border-bottom:1px solid var(--ds-border)}.faq--cards details[open] summary{border-bottom:1px solid var(--ds-border)}.faq--cards details p{padding-top:14px}');
+  if (compositions.faq === 'list') css.push('.faq--list{max-width:780px}.faq--list details{border-top:1px solid var(--ds-border)}');
+  if (compositions.contact === 'stacked') css.push('.sec--contact .contact--layout-stacked{max-width:820px;grid-template-columns:1fr}.sec--contact .contact--layout-stacked>div:first-child{max-width:62ch}');
+  if (compositions.contact === 'panel') css.push('.sec--contact .contact--layout-panel{padding:clamp(20px,4vw,44px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-lg);background:var(--ds-surface);box-shadow:0 18px 42px color-mix(in srgb,var(--ds-text) 7%,transparent)}');
+  if (compositions.contact === 'split') css.push('@media(min-width:860px){.sec--contact .contact--layout-split{grid-template-columns:minmax(0,1fr) minmax(0,.9fr);align-items:start}}');
+  return css.join('');
 }
 
 // Коробочные карточки, к которым применяется форма.
 // Карточки с переворотом исключены: у них 3D-трансформация, а обрезка формой рассчитана на плоский блок.
 const CARDS = ['.items--cards .item:not(.item--flip)', '.items--product .item:not(.item--flip)', '.items--bento .item:not(.item--flip)', '.adv--cards>li'];
 const sel = suffix => CARDS.map(c => c + suffix).join(',');
+const PHOTO_CARDS = ['.items--cards .item--photo', '.items--product .item--photo', '.items--bento .item--photo', '.adv--cards>li.item--photo'];
+const photoSel = suffix => PHOTO_CARDS.map(c => c + suffix).join(',');
 
 const SHAPE_CSS = {
   square: `${sel('')}{border-radius:0}`,
@@ -95,8 +180,9 @@ const SHAPE_CSS = {
 };
 
 /** CSS формы карточек. */
+const PHOTO_CARD_SHAPE_CSS = `${photoSel('')}{border-radius:var(--ds-radius-lg,24px);clip-path:none!important;mask:none!important;-webkit-mask:none!important}${photoSel(' .item__media')}{overflow:hidden;border-radius:var(--ds-radius-md,18px)}${photoSel(' .item__media img')}{border-radius:var(--ds-radius-md,18px)!important}`;
 export function cardShapeCss(id) {
-  return SHAPE_CSS[id] || '';
+  return (Object.hasOwn(SHAPE_CSS, id) ? SHAPE_CSS[id] : '') + PHOTO_CARD_SHAPE_CSS;
 }
 
 // Начальное состояние элемента до появления; конечное — общее: исходное положение и полная видимость.

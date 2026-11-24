@@ -42,7 +42,7 @@ const TYPE_CSS = {
   compact: `h1{font-size:clamp(1.9rem,1.2rem + 2.6vw,3.2rem);line-height:1.04}${H2}{font-size:clamp(1.25rem,1rem + 1vw,1.8rem)}p{line-height:1.5}`,
 };
 
-export const typeStyleCss = id => TYPE_CSS[id] || '';
+export const typeStyleCss = id => Object.hasOwn(TYPE_CSS, id) ? TYPE_CSS[id] : '';
 
 // ---------- Раскладки секций ----------
 export const SECTION_LAYOUTS = Object.freeze({
@@ -107,7 +107,7 @@ const TEXT_ANIM_CSS = {
   'typewriter-kicker': MOTION('.hero .kicker{animation:uds-tk 1.6s .2s steps(22) both}@keyframes uds-tk{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}'),
   'skew-headings': VIEW('.ds-section .sec__head h2{animation:uds-skew linear both;animation-timeline:view();animation-range:entry 0% cover 30%}@keyframes uds-skew{from{opacity:0;transform:skewY(5deg) translateY(24px)}to{opacity:1;transform:none}}'),
 };
-export const textAnimationCss = id => TEXT_ANIM_CSS[id] || '';
+export const textAnimationCss = id => Object.hasOwn(TEXT_ANIM_CSS, id) ? TEXT_ANIM_CSS[id] : '';
 
 // ---------- Анимации кнопок ----------
 export const BUTTON_ANIMATIONS = Object.freeze({
@@ -136,14 +136,16 @@ const BTN_CSS = {
   jelly: MOTION(`.ds-button:is(:hover,:focus-visible){animation:uds-jelly .55s}@keyframes uds-jelly{30%{transform:scale(1.07,.93)}50%{transform:scale(.95,1.05)}70%{transform:scale(1.02,.98)}100%{transform:none}}`),
   'underline-grow': `.ds-button{background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:50% calc(100% - 8px);background-size:0 1.5px}` + MOTION(`.ds-button{transition:background-size .3s var(--ds-ease)}`) + `.ds-button:is(:hover,:focus-visible){background-size:calc(100% - 44px) 1.5px}`,
 };
-export const buttonAnimationCss = id => BTN_CSS[id] || '';
+export const buttonAnimationCss = id => Object.hasOwn(BTN_CSS, id) ? BTN_CSS[id] : '';
 export function buttonAnimationScript(id) {
   if (id !== 'ripple') return '';
   return `if(!matchMedia('(prefers-reduced-motion: reduce)').matches){document.addEventListener('pointerdown',function(e){var b=e.target.closest&&e.target.closest('.ds-button');if(!b)return;var r=b.getBoundingClientRect(),d=Math.max(r.width,r.height),s=document.createElement('span');s.className='uds-ripple';s.setAttribute('aria-hidden','true');s.style.cssText='width:'+d+'px;height:'+d+'px;left:'+(e.clientX-r.left-d/2)+'px;top:'+(e.clientY-r.top-d/2)+'px';b.appendChild(s);setTimeout(function(){s.remove()},700)})}`;
 }
 
 /** Выбор стиля типографики, анимации текста и кнопок. Ручной выбор (passthrough.*) главнее; 'none' — без. */
-export function chooseTypography(project = {}, { archetype = '', typeCharacter = '', intensity = 'balanced', seed = 0 } = {}) {
+export function chooseTypography(project = {}, options = {}) {
+  const { archetype = '', typeCharacter = '', intensity = 'balanced', seed = 0 } = options && typeof options === 'object' ? options : {};
+  project = project && typeof project === 'object' ? project : {};
   const f = project.passthrough || {};
   const calm = project.tier === 'luxury' || intensity === 'calm';
   const serif = /serif|didone|slab/.test(typeCharacter);
@@ -152,7 +154,7 @@ export function chooseTypography(project = {}, { archetype = '', typeCharacter =
   if (project.tier === 'luxury') styles = ['airy-light', 'small-caps', 'italic-accent', 'tall-leading', 'centered-headings'];
   const texts = calm ? ['tracking-in', 'blur-in', 'underline-draw', 'none'] : ['tracking-in', 'blur-in', 'highlight-sweep', 'underline-draw', 'rise-headings', 'typewriter-kicker', 'skew-headings', 'none'];
   const buttons = calm ? ['lift', 'border-draw', 'underline-grow', 'none'] : ['pulse', 'shine', 'ripple', 'nudge', 'border-draw', 'lift', 'press', 'glow-breath', 'jelly', 'none'];
-  const choose = (key, dict, pool, name) => (f[key] === 'none' || dict[f[key]] ? f[key] : pick(stream(seed, name), pool));
+  const choose = (key, dict, pool, name) => (f[key] === 'none' || Object.hasOwn(dict, f[key]) ? f[key] : pick(stream(seed, name), pool));
   return Object.freeze({
     typeStyle: choose('typeStyle', TYPE_STYLES, styles, 'type-style'),
     textAnimation: choose('textAnimation', TEXT_ANIMATIONS, texts, 'text-animation'),

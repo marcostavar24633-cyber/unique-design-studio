@@ -35,9 +35,19 @@ export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 /** Разрешает только безопасные схемы ссылок; иначе возвращает пустую строку. */
 export function safeUrl(value, { image = false } = {}) {
   const u = String(value ?? '').trim();
-  if (!u) return '';
-  if (/^(https?:\/\/|\/(?!\/)|\.\.?\/|#)/i.test(u)) return u;
-  if (!image && /^(mailto:|tel:)/i.test(u)) return u;
+  const maxLength = image && /^data:image\//i.test(u) ? 5_000_000 : 4_096;
+  if (u.length > maxLength) return '';
+  if (!u || /[\u0000-\u001f\u007f]/.test(u)) return '';
+  if (/^https?:\/\//i.test(u)) {
+    try {
+      const parsed = new URL(u);
+      if (!parsed.hostname || parsed.username || parsed.password) return '';
+      return u;
+    } catch { return ''; }
+  }
+  if (/^(\/(?!\/)|\.\.?\/|#)/i.test(u)) return u;
+  if (!image && /^mailto:/i.test(u)) return /^mailto:[^\s@?]+@[^\s@?]+(?:\.[^\s@?]+)+(?:\?[^\s]*)?$/i.test(u) ? u : '';
+  if (!image && /^tel:/i.test(u)) return /^tel:\+?[\d().\s-]{5,}$/i.test(u) && u.replace(/\D/g, '').length >= 5 ? u : '';
   if (image && /^data:image\/(png|jpe?g|webp|gif|avif|svg\+xml)[;,]/i.test(u)) return u;
   if (/^[\w\-./%]+\.(png|jpe?g|webp|gif|avif|svg|html?)$/i.test(u)) return u;
   return '';

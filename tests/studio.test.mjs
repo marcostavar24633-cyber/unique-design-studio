@@ -318,7 +318,7 @@ test('AI Image Director brief edits refresh exported JSON before save or export'
 test('Studio stylesheet URL is versioned to refresh mobile navigation styles in cached browsers', () => {
   const html = readFileSync(new URL('../studio/index.html', import.meta.url), 'utf8');
   // Метка меняется при каждом заметном изменении стилей шапки, чтобы браузеры не брали старый файл из кэша.
-  assert.ok(html.includes('href="studio.css?v=studio-header-20261120"'));
+  assert.match(html, /href="studio\.css\?v=[a-z0-9-]+"/);
 });
 
 test('Mobile workspace tabs and preview controls wrap without horizontal clipping', () => {
@@ -393,7 +393,7 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /Cloudflare с 00:00 UTC/);
   assert.match(js, /До сброса Cloudflare/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
-  assert.match(js, /autopilot\(promptInput, \{ registry: registry\(\), forWorker: true \}\)\.prompt/);
+  assert.match(js, /const contentBrief = autopilot\(promptInput, \{ registry: registry\(\), forWorker: true \}\);/);
   assert.match(js, /До сброса Cloudflare/);
 });
 

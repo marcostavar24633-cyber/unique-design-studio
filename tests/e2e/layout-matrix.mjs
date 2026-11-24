@@ -74,6 +74,7 @@ export async function selfCheck(browser) {
 export async function runLayoutMatrix(browser, failures, widths = [390, 768, 1280]) {
   let runs = 0;
   const page = await browser.newPage({ viewport: { width: widths[0], height: 820 } });
+  await page.route(/^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//, route => route.abort());
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const { name, html } of layoutPages()) {
     for (const width of widths) {
@@ -89,6 +90,7 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
   // Второй проход — с включённым движением: стеклянные поверхности, наклон, параллакс, эффекты текста
   // действуют только без reduced-motion, и именно они могут ухудшить контраст или наложить блоки.
   const motionPage = await browser.newPage({ viewport: { width: 1280, height: 820 } });
+  await motionPage.route(/^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//, route => route.abort());
   await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
   for (const { name, html } of layoutPages()) {
     await motionPage.setContent(html, { waitUntil: 'load' });
