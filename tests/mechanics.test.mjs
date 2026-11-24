@@ -32,7 +32,7 @@ test('переворот: карточка фокусируемая, движе�
 
 test('лента: прокручиваемая область с подписью и фокусом, без колонок базовой сетки', () => {
   const g = site('rail');
-  assert.match(g.html, /<div class="rail" role="region" aria-label="Услуги: Листайте вбок →" tabindex="0">/);
+  assert.match(g.html, /<div class="rail" role="region" aria-label="[^"]+: Листайте вбок →" tabindex="0">/);
   assert.match(MECHANIC_CSS.rail, /grid-template-columns:none/);
 });
 

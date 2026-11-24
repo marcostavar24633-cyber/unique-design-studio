@@ -32,6 +32,15 @@ const SECTION_LAYOUT_CSS = {
 
 const sectionClass = (c, id) => "ds-section sec sec--" + id + " section-layout--" + (c.vs.sectionLayout || "editorial") + (c.vs.sectionCompositions?.[id] ? " section-composition--" + c.vs.sectionCompositions[id] : "");
 const itemAnchor = item => `item-${slugify(item?.id || item?.title || 'item')}`;
+const localizedItemsLabel = (lang, label) => {
+  if (!String(lang || '').toLowerCase().startsWith('en')) return label;
+  const translations = {
+    'Каталог': 'Catalog', 'Ассортимент': 'Products', 'Меню': 'Menu', 'Услуги': 'Services',
+    'Направления': 'Services', 'Что делаем': 'What we do', 'Что ремонтируем': 'What we repair',
+    'Программа': 'Program', 'Возможности': 'Features', 'Форматы': 'Packages', 'Коллекции': 'Collections',
+  };
+  return translations[label] || 'Services';
+};
 const itemLink = (c, item, content, attributes = '') => c.order.includes('items')
   ? `<a href="#${itemAnchor(item)}"${attributes}>${content}</a>`
   : `<span${attributes}>${content}</span>`;
@@ -51,7 +60,7 @@ function context(project, concept) {
   const order = concept.homepage.sectionOrder;
   const copy = key => systemCopy(project.lang, key);
   const labels = {
-    about: copy('about'), items: copy('items'), advantages: copy('advantages'), process: copy('process'),
+    about: copy('about'), items: localizedItemsLabel(project.lang, vs.itemsLabel), advantages: copy('advantages'), process: copy('process'),
     gallery: vs.nicheId === 'photo' ? copy('portfolioWork') : copy('gallery'), faq: copy('faq'), contact: copy('contactSection'),
   };
   const titles = {
