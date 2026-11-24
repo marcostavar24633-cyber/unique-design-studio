@@ -181,7 +181,7 @@ function nav(c) {
   const brandNote = c.p.site.header.tagline ? `<small class="nav__tagline">${esc(c.p.site.header.tagline)}</small>` : '';
   const brand = `<a class="nav__brand" href="#top">${brandMark}${brandText}${brandNote}</a>`;
   const themeLabel = c.p.lang.startsWith('en') ? 'Switch light or dark theme' : 'Переключить светлую или тёмную тему';
-  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}<button class="ds-theme-toggle" type="button" data-theme-toggle aria-label="${themeLabel}" title="${themeLabel}"><span aria-hidden="true">◐</span><span class="ds-theme-toggle__label">${c.p.lang.startsWith('en') ? 'Theme' : 'Тема'}</span></button></nav>`;
+  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}<button class="ds-theme-toggle" type="button" data-theme-toggle aria-label="${themeLabel}" aria-pressed="false" title="${themeLabel}"><span aria-hidden="true">◐</span><span class="ds-theme-toggle__label">${c.p.lang.startsWith('en') ? 'Theme' : 'Тема'}</span></button></nav>`;
   if (kind === 'category') {
     const cats = c.p.categories.length
       ? c.p.categories.map(t => `<li>${c.order.includes('items') ? `<a href="#items">${esc(t)}</a>` : `<span>${esc(t)}</span>`}</li>`)
@@ -435,7 +435,7 @@ const SECTION = {
 function script(c, scene) {
   const parts = [];
   const themeKey = JSON.stringify(`uds:theme:${c.p.id || 'site'}`);
-  parts.push(`(function(){var root=document.documentElement,key=${themeKey},button=document.querySelector('[data-theme-toggle]'),saved='';try{saved=localStorage.getItem(key)||''}catch(e){}if(saved==='alternate')root.dataset.udsTheme='alternate';if(button)button.addEventListener('click',function(){var alternate=root.dataset.udsTheme!=='alternate';if(alternate)root.dataset.udsTheme='alternate';else delete root.dataset.udsTheme;try{localStorage.setItem(key,alternate?'alternate':'default')}catch(e){}})})()`);
+  parts.push(`(function(){var root=document.documentElement,key=${themeKey},button=document.querySelector('[data-theme-toggle]'),saved='';try{saved=localStorage.getItem(key)||''}catch(e){}if(saved==='alternate')root.dataset.udsTheme='alternate';if(button){button.setAttribute('aria-pressed',String(root.dataset.udsTheme==='alternate'));button.addEventListener('click',function(){var alternate=root.dataset.udsTheme!=='alternate';if(alternate)root.dataset.udsTheme='alternate';else delete root.dataset.udsTheme;button.setAttribute('aria-pressed',String(alternate));try{localStorage.setItem(key,alternate?'alternate':'default')}catch(e){}})}})()`);
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
   if (c.form) {
     const copy = ['sending', 'sent', 'failed'].map(key => JSON.stringify(systemCopy(c.p.lang, key))).join(',');
