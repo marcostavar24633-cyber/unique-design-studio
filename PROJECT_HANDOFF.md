@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-23T20:18:04.387Z
+Время обновления: 2026-11-24T16:24:34.640Z
 Ветка: main
-Последний commit: 4583f80b332a7fa80b4d90e7fddb7cbb0dd8f88e
-Дата коммита: 2026-11-24T00:17:51+04:00
-Сообщение: Verify staging AI diagnostics and image response CORS (#244)
+Последний commit: 26a8a333f0a1c39def6dd55a0186e37c0f0c94b7
+Дата коммита: 2026-11-24T20:24:20+04:00
+Сообщение: Improve generator layouts and editor controls (#245)
 
 Последние коммиты:
+- 26a8a33 · 2026-11-24 · Improve generator layouts and editor controls (#245)
+- f3bcdfb · 2026-11-23 · docs: refresh project handoff
 - 4583f80 · 2026-11-24 · Verify staging AI diagnostics and image response CORS (#244)
 - 977712b · 2026-11-23 · Cover image retries after 429, 503 and network timeouts (#243)
 - 24a4445 · 2026-11-23 · Stabilize preview card drag in layout E2E (#242)
 - f16b31f · 2026-11-23 · docs: refresh project handoff
 - 3cc96dd · 2026-11-23 · Verify the live staging image response in the studio (#241)
 - 9e77f59 · 2026-11-23 · test: cover image persistence and AI journal after reload (#214) (#239)
-- 42b8066 · 2026-11-23 · docs: refresh project handoff
-- 207bb48 · 2026-11-23 · fix: explain blank previews for JavaScript-driven pages (#238)
 <!-- HANDOFF:AUTO:END -->
