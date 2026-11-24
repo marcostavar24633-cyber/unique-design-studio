@@ -21,6 +21,8 @@ button.primary{background:var(--accent);color:var(--accent-ink);border-color:var
 details.group{border-bottom:1px solid var(--line);padding:4px 0}
 details.group summary{padding:10px 0;font-weight:650;cursor:pointer}
 details.group .fields{display:grid;gap:12px;padding:2px 0 16px}
+.editor-quick-actions{display:grid;gap:8px;padding:12px;margin:4px 0 10px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(135deg,rgba(201,164,94,.12),transparent)}.editor-quick-actions>strong{color:var(--accent)}.editor-quick-actions>small{color:var(--muted)}.editor-quick-actions button{width:100%}.editor-quick-actions button:disabled{opacity:.55;cursor:not-allowed}
+.visual-option-preview{border:1px solid var(--line);border-radius:var(--radius);padding:6px 9px}.visual-option-preview>summary{font-size:12px;color:var(--accent);cursor:pointer}.visual-option-preview__list{display:grid;gap:5px;max-height:190px;overflow:auto;padding-top:8px}.visual-option-preview__list button{text-align:left;font-size:12px}.visual-option-preview__list button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
 .field{display:grid;gap:4px}.field label{font-size:13px;font-weight:600}.field small{color:var(--muted);font-size:12px}
 .field input:not([type=color]):not([type=checkbox]),.field textarea,.field select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
 .field textarea{min-height:76px;resize:vertical;font-family:inherit}.field textarea.list{min-height:120px;font-size:13px;white-space:pre;overflow-x:auto}

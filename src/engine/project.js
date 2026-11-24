@@ -138,6 +138,9 @@ export function normalizeProject(raw = {}) {
   p.advantages = items(raw.advantages, 'advantage');
   p.process = items(raw.process, 'process');
   p.faqs = items(raw.faqs, 'faq');
+  p.testimonials = items(raw.testimonials, 'testimonial');
+  p.team = items(raw.team, 'team');
+  p.stats = items(raw.stats, 'stat');
   p.categories = [...new Set((Array.isArray(raw.categories) ? raw.categories : typeof raw.categories === 'string' ? raw.categories.split(/[\r\n,;]/) : [])
     .map(value => str(value && typeof value === 'object' ? value.name ?? value.title ?? value.label : value)).filter(Boolean))].slice(0, 50);
   // Каталог с корзиной-заявкой: true — включить, false — выключить, иначе решает движок по нише и ценам.
@@ -193,7 +196,7 @@ export function normalizeProject(raw = {}) {
   p.formAction = fieldStates.formAction === 'hidden' ? '' : /^https:\/\//i.test(formAction) ? formAction : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
   const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
-    'services', 'items', 'advantages', 'process', 'faqs', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
+    'services', 'items', 'advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'site', 'fieldStates', 'pageContacts', 'inheritedSiteFields', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode', 'sectionDivider']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
   NORMALIZED_PROJECTS.add(p);
@@ -231,6 +234,9 @@ export function exportProject(input, concept) {
   out.advantages = p.advantages.map(toRow);
   out.process = p.process.map(toRow);
   out.faqs = p.faqs.map(toRow);
+  out.testimonials = p.testimonials.map(toRow);
+  out.team = p.team.map(toRow);
+  out.stats = p.stats.map(toRow);
   out.categories = p.categories;
   if (typeof p.commerce === 'boolean') out.commerce = p.commerce;
   out.assumptions = p.assumptions;
