@@ -273,4 +273,6 @@ export const PROC_CSS = {
   steps: `.proc--steps{counter-reset:step;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:clamp(20px,3vw,36px)}.proc--steps>li{counter-increment:step}
 .proc--steps>li::before{content:counter(step);display:grid;place-items:center;width:44px;height:44px;margin-bottom:14px;border-radius:var(--ds-radius-pill);background:var(--ds-accent);color:var(--ds-accent-contrast);font-weight:700}`,
   timeline: `.proc--timeline{counter-reset:step;max-width:760px;border-left:2px solid var(--ds-border)}.proc--timeline>li{counter-increment:step;position:relative;padding:0 0 clamp(24px,4vw,40px) clamp(24px,4vw,44px)}.proc--timeline>li:last-child{padding-bottom:0}
-.proc--timeline>li::before{content:"";position:absolute;left:-8px;top:.35em;width:14px;height:14px;border-radius:50%;background:var(--ds
+.proc--timeline>li::before{content:"";position:absolute;left:-8px;top:.35em;width:14px;height:14px;border-radius:50%;background:var(--ds-accent);box-shadow:0 0 0 4px var(--ds-bg)}
+.proc--timeline h3::before{content:counter(step,decimal-leading-zero) " — ";color:var(--u-accent-ink)}`,
+};
