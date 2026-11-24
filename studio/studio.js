@@ -3291,7 +3291,16 @@ function restoreCanvasSnapshot(snapshot, from, to) {
 $('#canvas-text').addEventListener('input', e => canvasPreview({ text: e.target.value }));
 $('#canvas-text').addEventListener('change', e => commitCanvasEdit({ text: e.target.value }));
 $('#canvas-alt').addEventListener('input', e => canvasPreview({ alt: e.target.value }));
-$('#canvas-alt').addEventListener('change', e => commitCanvasEdit({ alt: e.target.value.slice(0, 240) }));
+const commitCanvasAlt = () => {
+  const value = $('#canvas-alt').value.slice(0, 240);
+  const custom = selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId
+    ? (state.raw.canvasElements?.[selectedCanvasMeta.sectionId] || []).find(item => item.id === selectedCanvasMeta.elementId)?.alt
+    : undefined;
+  const existing = custom ?? canvasEditForBreakpoint(selectedCanvasKey).alt ?? selectedCanvasMeta?.alt ?? '';
+  if (value !== existing) commitCanvasEdit({ alt: value });
+};
+$('#canvas-alt').addEventListener('change', commitCanvasAlt);
+$('#canvas-alt').addEventListener('blur', commitCanvasAlt);
 $('#canvas-href').addEventListener('input', e => canvasPreview({ href: safeCanvasHref(e.target.value) }));
 $('#canvas-href').addEventListener('change', e => commitCanvasEdit({ href: e.target.value }));
 $('#canvas-color').addEventListener('input', e => canvasPreview({ color: e.target.value }));
