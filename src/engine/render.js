@@ -49,15 +49,16 @@ function fontLinks(fonts = []) {
 function context(project, concept) {
   const vs = concept.visualSystem;
   const order = concept.homepage.sectionOrder;
+  const copy = key => systemCopy(project.lang, key);
   const labels = {
-    about: 'О нас', items: vs.itemsLabel, advantages: 'Преимущества', process: 'Как это работает',
-    gallery: vs.nicheId === 'photo' ? 'Работы' : 'Галерея', faq: 'Вопросы', contact: 'Контакты',
+    about: copy('about'), items: copy('items'), advantages: copy('advantages'), process: copy('process'),
+    gallery: vs.nicheId === 'photo' ? copy('portfolioWork') : copy('gallery'), faq: copy('faq'), contact: copy('contactSection'),
   };
   const titles = {
     about: project.aboutTitle || labels.about, items: project.servicesTitle || labels.items,
     advantages: project.advantagesTitle || labels.advantages, process: project.processTitle || labels.process,
-    gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || 'Частые вопросы',
-    contact: project.contactTitle || concept.homepage.primaryCTA,
+    gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || labels.faq,
+    contact: project.contactTitle || (project.lang.startsWith('en') ? labels.contact : concept.homepage.primaryCTA),
   };
   const siteStates = project.site?.fieldStates || {};
   const pageStates = project.fieldStates || {};
@@ -68,10 +69,18 @@ function context(project, concept) {
   const ctaHrefCandidate = project.ctaUrl || (ctaUnavailable || ctaExplicitlyHidden ? '' : '#contact');
   const hiddenSections = new Set([...(Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []), ...Object.keys(project.fieldStates || {}).filter(key => key.startsWith('sections.') && project.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
   const ctaTarget = ctaHrefCandidate.startsWith('#') ? ctaHrefCandidate.slice(1) : '';
-  const ctaHref = ctaExplicitlyHidden || ctaUnavailable || (ctaTarget && hiddenSections.has(ctaTarget)) ? '' : ctaHrefCandidate;
+  const availableAnchors = new Set(['top', 'main', 'hero-h']);
+  for (const id of order) { availableAnchors.add(id); availableAnchors.add(`${id}-h`); }
+  if (order.includes('items')) for (const item of project.services) availableAnchors.add(itemAnchor(item));
+  const invalidCtaTarget = Boolean(ctaTarget && !availableAnchors.has(ctaTarget));
+  const ctaFallback = order.includes('contact') ? '#contact'
+    : project.contacts.phone ? `tel:${project.contacts.phone.replace(/[^+\\d]/g, '')}`
+      : project.contacts.email ? `mailto:${project.contacts.email}` : '';
+  const ctaHref = ctaExplicitlyHidden || ctaUnavailable || (ctaTarget && hiddenSections.has(ctaTarget)) ? ''
+    : invalidCtaTarget ? ctaFallback : ctaHrefCandidate;
   const title = project.title || project.brand || project.niche || 'Новый проект';
   const brand = project.brand || project.niche || 'Проект';
-  return { p: project, concept, vs, order, labels, titles, ctaHref, title, brand, cta: concept.homepage.primaryCTA, form: leadFormSpec(project) };
+  return { p: project, concept, vs, order, labels, titles, ctaHref, invalidCtaTarget, title, brand, cta: concept.homepage.primaryCTA, form: leadFormSpec(project) };
 }
 
 function leadFormSpec(p) {
@@ -82,8 +91,22 @@ function leadFormSpec(p) {
 }
 
 const SYSTEM_COPY = {
-  ru: { skip: 'Перейти к содержимому', name: 'Имя', contact: 'Телефон или e-mail', unselected: 'Не выбрано', phone: 'Телефон', email: 'E-mail', address: 'Адрес', hours: 'Часы работы', more: 'Показать ещё', moreDetails: 'Подробнее', searchIn: 'Поиск по разделу', search: 'Поиск', categories: 'Разделы ассортимента', chapters: 'Главы страницы', pageSections: 'Разделы страницы', mainPhoto: 'Главная фотография проекта', projectPhoto: 'Фотография проекта', sending: 'Отправляем заявку…', sent: 'Заявка отправлена.', failed: 'Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.' },
-  en: { skip: 'Skip to content', name: 'Name', contact: 'Phone or email', unselected: 'Not selected', phone: 'Phone', email: 'Email', address: 'Address', hours: 'Hours', more: 'Show more', moreDetails: 'More details', searchIn: 'Search in', search: 'Search', categories: 'Catalog categories', chapters: 'Page chapters', pageSections: 'Page sections', mainPhoto: 'Main project photo', projectPhoto: 'Project photo', sending: 'Sending your request…', sent: 'Your request was sent.', failed: 'The request could not be sent. Check your connection and try again.' },
+  ru: {
+    skip: 'Перейти к содержимому', name: 'Имя', contact: 'Телефон или e-mail', unselected: 'Не выбрано', phone: 'Телефон', email: 'E-mail', address: 'Адрес', hours: 'Часы работы',
+    more: 'Показать ещё', moreDetails: 'Подробнее', searchIn: 'Поиск по разделу', search: 'Поиск', categories: 'Разделы ассортимента', chapters: 'Главы страницы', pageSections: 'Разделы страницы',
+    about: 'О нас', advantages: 'Преимущества', process: 'Как это работает', faq: 'Вопросы', gallery: 'Галерея', items: 'Услуги', contactSection: 'Контакты',
+    mainPhoto: 'Главная фотография проекта', projectPhoto: 'Фотография проекта', portfolioWork: 'Работа из портфолио', featuredWork: 'Главная работа',
+    galleryScroll: 'Галерея фотографий. Прокручивайте по горизонтали, чтобы увидеть остальные.', scrollHint: 'Листайте вбок →', flipHint: 'Наведите курсор или выберите карточку, чтобы узнать больше.',
+    sending: 'Отправляем заявку…', sent: 'Заявка отправлена.', failed: 'Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.',
+  },
+  en: {
+    skip: 'Skip to content', name: 'Name', contact: 'Phone or email', unselected: 'Not selected', phone: 'Phone', email: 'Email', address: 'Address', hours: 'Hours',
+    more: 'Show more', moreDetails: 'More details', searchIn: 'Search in', search: 'Search', categories: 'Catalog categories', chapters: 'Page chapters', pageSections: 'Page sections',
+    about: 'About', advantages: 'Benefits', process: 'How it works', faq: 'Questions', gallery: 'Gallery', items: 'Services', contactSection: 'Contact',
+    mainPhoto: 'Main project photo', projectPhoto: 'Project photo', portfolioWork: 'Portfolio work', featuredWork: 'Featured work',
+    galleryScroll: 'Photo gallery. Scroll horizontally to see the remaining images.', scrollHint: 'Scroll horizontally →', flipHint: 'Hover or focus the card to learn more.',
+    sending: 'Sending your request…', sent: 'Your request was sent.', failed: 'The request could not be sent. Check your connection and try again.',
+  },
 };
 const systemCopy = (lang, key) => (SYSTEM_COPY[String(lang || '').toLowerCase().split('-')[0]] || SYSTEM_COPY.ru)[key];
 
@@ -173,7 +196,7 @@ const HERO = {
     const it = c.p.services[0];
     // Единый выбор изображения для всех архитектур: hero → галерея → услуга → мотив.
     const media = visual(c);
-    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}${itemLink(c, it, 'Подробнее', ' class="ds-button ds-button--secondary"')}</div>` : '';
+    const body = it ? `<div class="spotlight__body"><p class="spotlight__label">${esc(c.labels.items)}</p><h2>${esc(it.title)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ''}${it.price ? `<p class="price">${esc(it.price)}</p>` : ''}${itemLink(c, it, esc(systemCopy(c.p.lang, 'moreDetails')), ' class="ds-button ds-button--secondary"')}</div>` : '';
     return `<div class="ds-container hero__grid"><div class="hero__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'items')}</div></div><article class="spotlight ds-card"><div class="spotlight__media">${media}</div>${body}</article></div>`;
   },
   editorial(c) {
@@ -208,7 +231,7 @@ const HERO = {
   },
   storytelling(c) {
     const chapters = c.order.map((id, n) => `<li><a href="#${id}"><span class="n">${pad(n + 2)}</span><span>${esc(c.labels[id])}</span></a></li>`).join('');
-    return `<div class="ds-container hero__story"><div><p class="chapter-no">01${c.p.niche ? ' — ' + esc(c.p.niche) : ''}</p>${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div><nav aria-label="Главы страницы"><ol class="chapters">${chapters}</ol></nav></div><div class="hero__band">${visual(c)}</div>`;
+    return `<div class="ds-container hero__story"><div><p class="chapter-no">01${c.p.niche ? ' — ' + esc(c.p.niche) : ''}</p>${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div><nav aria-label="${esc(systemCopy(c.p.lang, 'chapters'))}"><ol class="chapters">${chapters}</ol></nav></div><div class="hero__band">${visual(c)}</div>`;
   },
   'modular-grid'(c) {
     const entries = c.p.services.slice(0, 3);
@@ -218,7 +241,7 @@ const HERO = {
   },
   brutalist(c) {
     const index = c.order.map((id, n) => `<li><a href="#${id}"><span class="n">${pad(n + 1)}</span>${esc(c.labels[id])}</a></li>`).join('');
-    return `<div class="hero__frame"><div class="brut__top"><span>${esc(c.brand)}</span>${c.p.niche ? `<span>${esc(c.p.niche)}</span>` : ''}</div><div class="brut__main">${h1(c)}<div class="brut__side">${lede(c)}${cta(c)}</div></div><nav aria-label="Разделы страницы"><ol class="brut__index">${index}</ol></nav></div>`;
+    return `<div class="hero__frame"><div class="brut__top"><span>${esc(c.brand)}</span>${c.p.niche ? `<span>${esc(c.p.niche)}</span>` : ''}</div><div class="brut__main">${h1(c)}<div class="brut__side">${lede(c)}${cta(c)}</div></div><nav aria-label="${esc(systemCopy(c.p.lang, 'pageSections'))}"><ol class="brut__index">${index}</ol></nav></div>`;
   },
   minimal(c) {
     const proof = c.p.advantages.slice(0, 3).filter(a => a.title).map(a => `<li>${esc(a.title)}</li>`).join('');
@@ -234,7 +257,7 @@ const HERO = {
   },
   'portfolio-mosaic'(c) {
     const photos = c.p.gallery.filter(photo => photo.src).slice(0, 4);
-    const mosaic = photos.length ? `<div class="portfolio-mosaic__grid">${photos.map((photo, i) => `<figure class="portfolio-mosaic__photo portfolio-mosaic__photo--${i + 1}"><img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || 'Работа из портфолио')}"${i ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">${photo.caption ? `<figcaption>${esc(photo.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : `<figure class="portfolio-mosaic__fallback">${visual(c)}</figure>`;
+    const mosaic = photos.length ? `<div class="portfolio-mosaic__grid">${photos.map((photo, i) => `<figure class="portfolio-mosaic__photo portfolio-mosaic__photo--${i + 1}"><img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || systemCopy(c.p.lang, 'portfolioWork'))}"${i ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">${photo.caption ? `<figcaption>${esc(photo.caption)}</figcaption>` : ''}</figure>`).join('')}</div>` : `<figure class="portfolio-mosaic__fallback">${visual(c)}</figure>`;
     return `<div class="ds-container portfolio-mosaic__layout"><div class="portfolio-mosaic__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'gallery')}</div></div>${mosaic}</div>`;
   },
   'process-roadmap'(c) {
@@ -242,8 +265,8 @@ const HERO = {
     return `<div class="ds-container process-roadmap__layout"><div class="process-roadmap__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${steps ? `<ol class="process-roadmap__steps">${steps}</ol>` : `<div class="process-roadmap__visual">${visual(c)}</div>`}</div>`;
   },
   'local-presence'(c) {
-    const k = c.p.contacts, lines = [[k.address && ['Адрес', k.address]], [k.hours && ['Часы работы', k.hours]], [k.phone && ['Телефон', k.phone]], [k.email && ['Почта', k.email]]].flat().filter(Boolean);
-    const details = lines.map(([label, value]) => `<li><span>${label}</span><b>${esc(value)}</b></li>`).join('');
+    const k = c.p.contacts, lines = [['address', k.address], ['hours', k.hours], ['phone', k.phone], ['email', k.email]].filter(([, value]) => value);
+    const details = lines.map(([key, value]) => `<li><span>${esc(systemCopy(c.p.lang, key))}</span><b>${esc(value)}</b></li>`).join('');
     return `<div class="ds-container local-presence__layout"><div>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${details ? `<address class="local-presence__card"><ul>${details}</ul>${c.p.contactText ? `<p>${esc(c.p.contactText)}</p>` : ''}</address>` : `<div class="local-presence__visual">${visual(c)}</div>`}</div>`;
   },
   'appointment-first'(c) {
@@ -256,7 +279,7 @@ const HERO = {
     return `<div class="ds-container story-timeline__layout"><div class="story-timeline__intro">${kicker(c)}${h1(c)}${lede(c)}${c.p.aboutText ? `<p>${esc(c.p.aboutText)}</p>` : ''}<div class="actions">${cta(c)}</div></div>${events ? `<ol class="story-timeline__events">${events}</ol>` : `<div class="story-timeline__visual">${visual(c)}</div>`}</div>`;
   },
   'price-comparison'(c) {
-    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, '→', ` aria-label="Подробнее: ${esc(item.title)}"`)}</li>`).join('');
+    const offers = c.p.services.slice(0, 4).map((item, i) => `<li><span class="n">${pad(i + 1)}</span><div><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div>${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, '→', ` aria-label="${esc(systemCopy(c.p.lang, 'moreDetails'))}: ${esc(item.title)}"`)}</li>`).join('');
     return `<div class="ds-container price-comparison__layout"><header>${kicker(c)}${h1(c)}${lede(c)}</header>${offers ? `<ol class="price-comparison__offers">${offers}</ol>` : `<div class="price-comparison__visual">${visual(c)}</div>`}<div class="actions">${cta(c)}</div></div>`;
   },
   'brand-manifesto'(c) {
@@ -287,19 +310,19 @@ const HERO = {
     return `<div class="ds-container service-directory__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${services ? `<ol class="service-directory__list">${services}</ol>` : `<div class="service-directory__visual">${visual(c)}</div>`}</div>`;
   },
   'pricing-cards'(c) {
-    const offers = c.p.services.slice(0, 3).map(item => `<article class="pricing-cards__item"><span class="n">${pad(c.p.services.indexOf(item) + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, `Подробнее <span aria-hidden="true">→</span>`)}</article>`).join('');
+    const offers = c.p.services.slice(0, 3).map(item => `<article class="pricing-cards__item"><span class="n">${pad(c.p.services.indexOf(item) + 1)}</span><h2>${esc(item.title)}</h2>${item.text ? `<p>${esc(item.text)}</p>` : ''}${item.price ? `<strong class="price">${esc(item.price)}</strong>` : ''}${itemLink(c, item, `${esc(systemCopy(c.p.lang, 'moreDetails'))} <span aria-hidden="true">→</span>`)}</article>`).join('');
     return `<div class="ds-container pricing-cards__layout"><header>${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></header>${offers ? `<div class="pricing-cards__items">${offers}</div>` : `<div class="pricing-cards__visual">${visual(c)}</div>`}</div>`;
   },
   'portfolio-feature'(c) {
     const photos = c.p.gallery.filter(photo => photo.src).slice(0, 5);
     const lead = photos[0];
-    const media = lead ? `<figure class="portfolio-feature__lead"><img src="${esc(lead.src)}" alt="${esc(lead.alt || lead.caption || 'Главная работа')}" fetchpriority="high" decoding="async">${lead.caption ? `<figcaption>${esc(lead.caption)}</figcaption>` : ''}</figure>` : `<figure class="portfolio-feature__lead">${visual(c)}</figure>`;
-    const strip = photos.slice(1).map(photo => `<img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || 'Работа из портфолио')}" loading="lazy" decoding="async">`).join('');
+    const media = lead ? `<figure class="portfolio-feature__lead"><img src="${esc(lead.src)}" alt="${esc(lead.alt || lead.caption || systemCopy(c.p.lang, 'featuredWork'))}" fetchpriority="high" decoding="async">${lead.caption ? `<figcaption>${esc(lead.caption)}</figcaption>` : ''}</figure>` : `<figure class="portfolio-feature__lead">${visual(c)}</figure>`;
+    const strip = photos.slice(1).map(photo => `<img src="${esc(photo.src)}" alt="${esc(photo.alt || photo.caption || systemCopy(c.p.lang, 'portfolioWork'))}" loading="lazy" decoding="async">`).join('');
     return `<div class="ds-container portfolio-feature__layout"><div class="portfolio-feature__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}${secondary(c, 'gallery')}</div></div><div class="portfolio-feature__media">${media}${strip ? `<div class="portfolio-feature__strip">${strip}</div>` : ''}</div></div>`;
   },
   'contact-hub'(c) {
     const k = c.p.contacts;
-    const channels = [k.phone && `<a href="tel:${esc(k.phone.replace(/[^+\d]/g, ''))}"><span>Телефон</span><b>${esc(k.phone)}</b></a>`, k.email && `<a href="mailto:${esc(k.email)}"><span>Почта</span><b>${esc(k.email)}</b></a>`, k.address && `<div><span>Адрес</span><b>${esc(k.address)}</b></div>`, k.hours && `<div><span>Часы работы</span><b>${esc(k.hours)}</b></div>`].filter(Boolean).join('');
+    const channels = [k.phone && `<a href="tel:${esc(k.phone.replace(/[^+\d]/g, ''))}"><span>${esc(systemCopy(c.p.lang, 'phone'))}</span><b>${esc(k.phone)}</b></a>`, k.email && `<a href="mailto:${esc(k.email)}"><span>${esc(systemCopy(c.p.lang, 'email'))}</span><b>${esc(k.email)}</b></a>`, k.address && `<div><span>${esc(systemCopy(c.p.lang, 'address'))}</span><b>${esc(k.address)}</b></div>`, k.hours && `<div><span>${esc(systemCopy(c.p.lang, 'hours'))}</span><b>${esc(k.hours)}</b></div>`].filter(Boolean).join('');
     return `<div class="ds-container contact-hub__layout"><div class="contact-hub__copy">${kicker(c)}${h1(c)}${lede(c)}<div class="actions">${cta(c)}</div></div>${channels ? `<address class="contact-hub__channels">${channels}</address>` : `<div class="contact-hub__visual">${visual(c)}</div>`}</div>`;
   },
   'quick-form'(c) {
@@ -325,7 +348,7 @@ const SECTION = {
       const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "services", n)} src="${esc(i.image)}" alt="${esc(i.alt || i.title)}" loading="lazy" decoding="async">`;
       const media = i.image ? `<div class="item__media">${img}</div>` : '';
       const shop = c.vs.commerce?.tools || c.vs.commerce?.cart;
-      const parts = { media, title: `${i.badge ? `<span class="item__badge">${esc(i.badge)}</span>` : ''}<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '' };
+      const parts = { media, title: `${i.badge ? `<span class="item__badge">${esc(i.badge)}</span>` : ''}<h3>${esc(i.title)}</h3>`, text: i.text ? `<p>${esc(i.text)}</p>` : '', price: i.price ? `<p class="price">${esc(i.price)}</p>` : '', action: c.vs.commerce?.cart ? addButton(i, n) : '', moreLabel: esc(systemCopy(c.p.lang, 'moreDetails')), flipHint: esc(systemCopy(c.p.lang, 'flipHint')) };
       const flip = mech === 'flip' && media && parts.text;
       // Переворот открывается и с клавиатуры: карточка получает фокус, а :focus-within поворачивает её.
       const attrs = `${flip ? ' tabindex="0"' : ''}${mech === 'stack' ? ` style="--stack-i:${n}"` : ''}`;
@@ -338,7 +361,7 @@ const SECTION = {
     const remaining = c.p.services.slice(pageSize);
     const list = `<ul class="${listClass}" role="list">${renderItems(initial, 0)}</ul>${remaining.length ? `<details class="items__more"><summary>${systemCopy(c.p.lang, 'more')} (${remaining.length})</summary><ul class="${listClass}" role="list">${renderItems(remaining, pageSize)}</ul></details>` : ''}`;
     const body = mech === 'rail'
-      ? `<div class="rail" role="region" aria-label="${esc(c.labels.items)}: прокрутите вбок" tabindex="0">${list}</div><p class="rail__hint" aria-hidden="true">Листайте вбок →</p>`
+      ? `<div class="rail" role="region" aria-label="${esc(c.labels.items)}: ${esc(systemCopy(c.p.lang, 'scrollHint'))}" tabindex="0">${list}</div><p class="rail__hint" aria-hidden="true">${esc(systemCopy(c.p.lang, 'scrollHint'))}</p>`
       : list;
     return wrap(c, 'items', `${c.vs.commerce?.tools ? catalogControls(c.p) : ''}${body}`, c.p.servicesIntro);
   },
@@ -354,7 +377,8 @@ const SECTION = {
     const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-item-id="${esc(g.id)}" data-uds-edit-scope="${canvasEditScope('gallery', g.id)}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
     const composition = c.vs.photoComposition || 'grid';
     const countClass = composition === 'fan' ? ` gallery--fan--count-${c.p.gallery.length}` : '';
-    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list">${li}</ul>`);
+    const scrollLabel = composition === 'filmstrip' ? ` tabindex="0" aria-label="${esc(systemCopy(c.p.lang, 'galleryScroll'))}"` : '';
+    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list"${scrollLabel}>${li}</ul>`);
   },
   faq(c) {
     const d = c.p.faqs.map(f => `<details data-uds-item-id="${esc(f.id)}" data-uds-edit-scope="${canvasEditScope('faq', f.id)}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');

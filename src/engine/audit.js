@@ -75,6 +75,7 @@ export function auditSite(html, concept, input) {
   const hiddenSections = new Set([...(Array.isArray(project.passthrough?.hiddenSections) ? project.passthrough.hiddenSections : []), ...Object.keys(project.fieldStates || {}).filter(key => key.startsWith('sections.') && project.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
   const targetSection = project.ctaUrl?.startsWith('#') ? project.ctaUrl.slice(1) : '';
   if (targetSection && hiddenSections.has(targetSection)) add('error', 'cta-target-unavailable', `Основная кнопка скрыта: её цель «${targetSection}» отключена. Верните секцию или укажите другой адрес кнопки.`);
+  else if (targetSection && !ids.includes(targetSection)) add('error', 'cta-target-invalid', `Адрес основной кнопки «#${targetSection}» не существует. Укажите существующий раздел или элемент.`);
   if (project.fieldStates?.ctaUrl === 'manual' && !project.ctaUrl) add('error', 'cta-target-invalid', 'Ручной адрес основной кнопки не поддерживается или не прошёл проверку. Укажите корректный адрес либо верните автоматическое назначение.');
   const k = project.contacts;
   const hasPath = Boolean(project.formAction || k.email || k.phone || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
@@ -161,3 +162,4 @@ export function auditSite(html, concept, input) {
   const warnings = checks.filter(c => c.level === 'warn');
   return { ok: errors.length === 0, errors, warnings, checks, formDelivery };
 }
+
