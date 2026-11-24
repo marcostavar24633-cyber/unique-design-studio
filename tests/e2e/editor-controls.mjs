@@ -301,6 +301,7 @@ try {
   await page.waitForFunction(() => [...document.querySelector('#canvas-element-style')?.options || []].some(option => option.value === 'polaroid'));
   const photoResizeHandle = preview.locator('.uds-resize-handle');
   await page.click('#canvas-inspector-close');
+  await photoResizeHandle.waitFor({ state: 'visible', timeout: 10000 });
   const currentFrameSource = () => page.locator('#frame').getAttribute('srcdoc');
   const waitForFrameSourceChange = source => page.waitForFunction(previous => document.querySelector('#frame')?.srcdoc !== previous, source, { timeout: 10000 });
   const beforePhotoResize = await currentFrameSource();
@@ -467,3 +468,4 @@ console.log('Editor controls E2E пройден: новый проект, сра
 
 // Расположение блоков (перетаскивание и кнопки ↑↓) — отдельный сценарий, запускается следом.
 await import('./layout-order.mjs');
+
