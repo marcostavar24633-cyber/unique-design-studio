@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T18:18:21.862Z
+Время обновления: 2026-11-24T19:59:12.651Z
 Ветка: main
-Последний commit: 70c176615a46795a95d8300f004686573b37ab8c
-Дата коммита: 2026-11-24T22:18:07+04:00
-Сообщение: fix: preserve niche-specific English section labels (#249)
+Последний commit: 3599942e8993ea5f3ebaec5170a6a4f5096fb280
+Дата коммита: 2026-11-24T23:59:01+04:00
+Сообщение: test: stabilize editor photo resize flow (#250)
 
 Последние коммиты:
+- 3599942 · 2026-11-24 · test: stabilize editor photo resize flow (#250)
+- 1509819 · 2026-11-24 · docs: refresh project handoff
 - 70c1766 · 2026-11-24 · fix: preserve niche-specific English section labels (#249)
 - 10e161f · 2026-11-24 · docs: refresh project handoff
 - fc6b8df · 2026-11-24 · fix: improve generator accessibility and localization (#248)
 - 997d13c · 2026-11-24 · docs: refresh project handoff
 - 42e54ce · 2026-11-24 · Fix hidden-section links and photo composition motion (#247)
 - d3c8d08 · 2026-11-24 · docs: refresh project handoff
-- b139365 · 2026-11-24 · Remove arch-shaped generator styles (#246)
-- 0d58c9f · 2026-11-24 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
