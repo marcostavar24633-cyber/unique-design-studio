@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-24T19:59:12.651Z
+Время обновления: 2026-11-24T20:08:01.196Z
 Ветка: main
-Последний commit: 3599942e8993ea5f3ebaec5170a6a4f5096fb280
-Дата коммита: 2026-11-24T23:59:01+04:00
-Сообщение: test: stabilize editor photo resize flow (#250)
+Последний commit: bdd7e0905ffe910543a7ea71d0ddf90afa6855ed
+Дата коммита: 2026-11-25T00:07:47+04:00
+Сообщение: ci: avoid duplicate runs on pull request branches (#251)
 
 Последние коммиты:
+- bdd7e09 · 2026-11-25 · ci: avoid duplicate runs on pull request branches (#251)
+- db39e7c · 2026-11-24 · docs: refresh project handoff
 - 3599942 · 2026-11-24 · test: stabilize editor photo resize flow (#250)
 - 1509819 · 2026-11-24 · docs: refresh project handoff
 - 70c1766 · 2026-11-24 · fix: preserve niche-specific English section labels (#249)
 - 10e161f · 2026-11-24 · docs: refresh project handoff
 - fc6b8df · 2026-11-24 · fix: improve generator accessibility and localization (#248)
 - 997d13c · 2026-11-24 · docs: refresh project handoff
-- 42e54ce · 2026-11-24 · Fix hidden-section links and photo composition motion (#247)
-- d3c8d08 · 2026-11-24 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
