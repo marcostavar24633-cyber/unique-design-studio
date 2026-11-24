@@ -161,6 +161,8 @@ test('переключение темы и выбор стиля навигац�
   assert.equal(concept.visualSystem.nav, 'framed');
   assert.match(html, /class="nav nav--framed"/);
   assert.match(html, /data-theme-toggle/);
+  assert.match(html, /aria-pressed="false"/);
+  assert.match(html, /button\.setAttribute\('aria-pressed',String\(alternate\)\)/);
   assert.match(html, /localStorage\.setItem\(key,alternate\?'alternate':'default'\)/);
   assert.match(html, /--uds-alt-bg/);
 });
