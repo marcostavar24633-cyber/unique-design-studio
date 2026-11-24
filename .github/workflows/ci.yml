@@ -1,7 +1,13 @@
 name: CI
 on:
+  # Проверки PR выполняются через pull_request; push нужен только после слияния в main.
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -38,3 +44,4 @@ jobs:
       - run: npm install --no-save playwright
       - run: npx playwright install chromium
       - run: npm run test:e2e
+
