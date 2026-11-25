@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T09:27:19.412Z
+Время обновления: 2026-11-25T09:41:48.604Z
 Ветка: main
-Последний commit: d170e7745e28e4470b3dea691d0334a9ad0cd40a
-Дата коммита: 2026-11-25T13:27:06+04:00
-Сообщение: fix: stabilize responsive heading fit after fonts load (#261)
+Последний commit: a2b15e9df64408f37e72cdcb79a1d3f4beee4354
+Дата коммита: 2026-11-25T13:41:33+04:00
+Сообщение: fix: keep statement cards readable on narrow screens (#262)
 
 Последние коммиты:
+- a2b15e9 · 2026-11-25 · fix: keep statement cards readable on narrow screens (#262)
+- 7b44b70 · 2026-11-25 · docs: refresh project handoff
 - d170e77 · 2026-11-25 · fix: stabilize responsive heading fit after fonts load (#261)
 - ea3827c · 2026-11-25 · docs: refresh project handoff
 - d74732a · 2026-11-25 · test: use stable studio URL for staging browser check
 - 94893e1 · 2026-11-25 · docs: refresh project handoff
 - a8b374f · 2026-11-25 · ci: verify staging diagnostics from browser
 - 043fb89 · 2026-11-25 · docs: refresh project handoff
-- 18c3637 · 2026-11-25 · fix editor resize and smooth visual option previews
-- 97a8729 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
