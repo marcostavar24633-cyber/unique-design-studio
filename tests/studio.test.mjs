@@ -96,6 +96,9 @@ test('визуальные варианты доступны прямо в на�
   assert.match(source, /frame\.className = 'visual-option-preview-frame'/);
   assert.match(source, /frame\.srcdoc = previewHtml\(html\)/);
   assert.match(source, /uds-canvas-restore-scroll/);
+  assert.match(source, /const scroll = readCanvasFrameScroll\(\)/);
+  assert.match(source, /uds-canvas-preview-ready/);
+  assert.match(source, /e\.source === visualPreviewFrame\?\.contentWindow/);
   assert.match(source, /if \(key === visualPreviewKey\) return/);
   assert.match(source, /sequence !== visualPreviewSequence \|\| !frame\.isConnected/);
   assert.match(source, /frame\.remove\(\);\s*return/);

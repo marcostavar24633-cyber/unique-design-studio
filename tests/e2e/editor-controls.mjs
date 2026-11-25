@@ -75,6 +75,7 @@ try {
     await page.click(`#canvas-menu [data-canvas-menu="${action}"]`);
     await render;
   };
+
   const sourceElement = preview.locator('#about .about__text');
   await sourceElement.click({ button: 'right' });
   await page.waitForFunction(() => document.querySelector('#canvas-inspector')?.hidden === false);
@@ -376,7 +377,8 @@ try {
   check(await preview.locator('#faq .uds-added-element--card').count() === 1, 'замена статического заголовка не создала карточку в той же секции');
 
   // Пользовательские секционные блоки: добавление, выбор для настройки и размещение.
-  await preview.locator('#about h2').click({ force: true });
+  await preview.locator('#about h2').evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await preview.locator('#about h2').click();
   await page.click('#canvas-options-trigger');
   await page.click('#canvas-add');
   const blockAddRender = canvasRender();
@@ -390,6 +392,72 @@ try {
   console.log('Пользовательский блок:', JSON.stringify({ blockSelection, label: await page.locator('#canvas-selected-label').innerText(), blockControlsVisible }));
   check(blockControlsVisible, 'инспектор не показал управление пользовательским блоком');
 
+  await page.click('#ptab-editor');
+  // Живой предпросмотр: реальные стили, плавное переключение и сохранение прокрутки.
+  const previewSelect = page.locator('#form select[data-special="navStyle"][data-preview-enhanced="true"]').first();
+  const previewControl = await previewSelect.evaluate(select => ({
+    special: select.dataset.special,
+    current: select.value,
+    values: [...select.nextElementSibling.querySelectorAll('[data-preview-value]')].map(option => option.dataset.previewValue).filter(value => value && value !== select.value)
+  }));
+  check(previewControl.values.length >= 2, 'для живого предпросмотра доступны менее двух вариантов');
+  if (previewControl.values.length >= 2) {
+    await previewSelect.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
+    const optionGroup = previewSelect.locator('xpath=following-sibling::*[1]');
+    const firstChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[0]}"]`);
+    const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
+    await firstChoice.scrollIntoViewIfNeeded();
+    const mainBeforeHover = await page.locator('#frame').evaluate(frame => frame.srcdoc);
+    const scrollState = await preview.locator('html').evaluate(() => new Promise(resolve => {
+      let previous = window.scrollY;
+      let changedAt = performance.now();
+      const sample = () => {
+        const now = performance.now();
+        const current = window.scrollY;
+        if (Math.abs(current - previous) > 1) { previous = current; changedAt = now; }
+        if (now - changedAt >= 250) return resolve({ y: current, max: Math.max(0, document.documentElement.scrollHeight - innerHeight) });
+        requestAnimationFrame(sample);
+      };
+      sample();
+    }));
+    const stableScroll = scrollState.y;
+    await page.evaluate(() => {
+      window.__udsLastPreviewRestore = null;
+      window.__udsPreviewRestoreHandler = event => {
+        const overlay = [...document.querySelectorAll('#view-preview iframe.visual-option-preview-frame')].at(-1);
+        if (event.source === overlay?.contentWindow && event.data?.type === 'uds-canvas-scroll-restored') window.__udsLastPreviewRestore = event.data;
+      };
+      window.addEventListener('message', window.__udsPreviewRestoreHandler);
+    });
+    await firstChoice.hover();
+    await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForFunction(() => Boolean(window.__udsLastPreviewRestore), null, { timeout: 10000 });
+    const previewA = await page.evaluate(() => {
+      const frame = document.querySelector('#view-preview iframe.visual-option-preview-frame.is-visible');
+      return {
+        differs: Boolean(frame && frame.srcdoc !== document.querySelector('#frame')?.srcdoc),
+        transition: frame ? getComputedStyle(frame).transitionProperty : '',
+        restored: window.__udsLastPreviewRestore
+      };
+    });
+    check(previewA.differs, 'наведение не меняет визуальный вариант относительно текущего сайта');
+    check(previewA.transition.includes('opacity'), `плавное появление предпросмотра не настроено: ${previewA.transition}`);
+    await page.waitForTimeout(120);
+    const liveMainScroll = await preview.locator('body').evaluate(() => window.scrollY);
+    check(Math.abs(Number(previewA.restored.y) - liveMainScroll) < 8, `предпросмотр не сохранил позицию основного холста: текущая прокрутка ${liveMainScroll}, предпросмотр ${previewA.restored.y} (цель ${previewA.restored.targetY}; до наведения ${stableScroll})`);
+    check(scrollState.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
+    await secondChoice.scrollIntoViewIfNeeded();
+    await secondChoice.hover();
+    await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
+    await page.waitForFunction(() => document.querySelectorAll('#view-preview iframe.visual-option-preview-frame').length === 1, null, { timeout: 10000 });
+    const mainRender = canvasRender();
+    await secondChoice.click();
+    await mainRender;
+    check(await previewSelect.inputValue() === previewControl.values[1], 'клик по варианту не выбрал соответствующее значение');
+    const mainAfterSelect = await page.locator('#frame').evaluate(frame => frame.srcdoc);
+    check(mainAfterSelect !== mainBeforeHover, 'выбранный вариант не обновил основной предпросмотр сайта');
+    await page.evaluate(() => window.removeEventListener('message', window.__udsPreviewRestoreHandler));
+  }
   await page.click('#arrange-toggle');
 
   await page.click('#save');
