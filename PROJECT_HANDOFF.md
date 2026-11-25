@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T12:48:09.639Z
+Время обновления: 2026-11-25T13:02:57.174Z
 Ветка: main
-Последний commit: a286b2a37bfb6e629568c852d6546f2f0d5361b5
-Дата коммита: 2026-11-25T16:47:57+04:00
-Сообщение: fix: safely clean up synthetic fault-test Worker
+Последний commit: 4f739585de245f4a34c258d616675da328205c68
+Дата коммита: 2026-11-25T17:02:44+04:00
+Сообщение: fix: wait for fault-test Worker edge cleanup
 
 Последние коммиты:
+- 4f73958 · 2026-11-25 · fix: wait for fault-test Worker edge cleanup
+- aab8e67 · 2026-11-25 · docs: refresh project handoff
 - a286b2a · 2026-11-25 · fix: safely clean up synthetic fault-test Worker
 - e5b19df · 2026-11-25 · docs: refresh project handoff
 - e1267af · 2026-11-25 · test: verify live diagnostics fault handling
 - 785df55 · 2026-11-25 · docs: refresh project handoff
 - 0fe8ceb · 2026-11-25 · test: verify live staging rate limit without AI inference (#266)
 - 0f68207 · 2026-11-25 · docs: refresh project handoff
-- 2b6ec53 · 2026-11-25 · fix: avoid asserting hidden CORS response header (#265)
-- e9e1689 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
