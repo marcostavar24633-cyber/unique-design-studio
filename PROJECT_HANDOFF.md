@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T01:18:37.079Z
+Время обновления: 2026-11-25T02:51:46.602Z
 Ветка: main
-Последний commit: bb2508f59a1f63f3e00523e5c4733968f794c025
-Дата коммита: 2026-11-25T05:18:23+04:00
-Сообщение: Merge pull request #253 from marcostavar24633-cyber/codex/auto-fit-generated-text
+Последний commit: 2f0751cf87d7718b1e62769ef651d4331fc82f51
+Дата коммита: 2026-11-25T06:51:33+04:00
+Сообщение: Merge pull request #259 from marcostavar24633-cyber/codex/image-journal-inferred-provider
 
 Последние коммиты:
+- 2f0751c · 2026-11-25 · Merge pull request #259 from marcostavar24633-cyber/codex/image-journal-inferred-provider
+- 8a1b3b8 · 2026-11-25 · fix: report inferred provider and unknown image usage
+- 8c2a817 · 2026-11-25 · docs: refresh project handoff
 - bb2508f · 2026-11-25 · Merge pull request #253 from marcostavar24633-cyber/codex/auto-fit-generated-text
 - f266ad4 · 2026-11-25 · test: verify preserved resize start position
 - a080ebf · 2026-11-25 · fix: preserve viewport from resize drag start
 - e716086 · 2026-11-25 · test: report editor scroll restoration values
 - aac4805 · 2026-11-25 · fix: restore editor viewport after page fonts settle
-- 6bc9331 · 2026-11-25 · fix: make restored editor scroll position instant
-- 265e5e5 · 2026-11-25 · fix: restore editor preview scroll instantly
-- 7736045 · 2026-11-25 · fix: preserve live editor preview scroll position
 <!-- HANDOFF:AUTO:END -->
