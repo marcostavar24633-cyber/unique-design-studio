@@ -47,7 +47,12 @@ try {
   await page.click('#tab-preview');
   await page.click('#arrange-toggle');
   const preview = page.frameLocator('#frame');
-  const canvasRender = () => page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  const canvasRender = () => {
+    let timer;
+    const timedOut = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('preview iframe did not finish rendering within 15s')), 15000); });
+    const rendered = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+    return Promise.race([rendered, timedOut]).finally(() => clearTimeout(timer));
+  };
   const setCanvasControl = async (selector, value) => {
     const render = canvasRender();
     await page.locator(selector).evaluate((control, next) => {
@@ -113,7 +118,6 @@ try {
   const resizeHandle = preview.locator('.uds-resize-handle');
   await resizeHandle.waitFor({ state: 'visible' });
   const resizeBox = await resizeHandle.boundingBox();
-  const resizeRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   const scrollRestored = page.evaluate(() => new Promise(resolve => {
     const done = event => { if (event.data?.type !== 'uds-canvas-scroll-restored') return; window.removeEventListener('message', done); resolve(event.data); };
     window.addEventListener('message', done);
@@ -123,7 +127,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(resizeBox.x + 89, resizeBox.y + 49, { steps: 5 });
   await page.mouse.up();
-  await resizeRender;
+  await page.waitForTimeout(100);
   const restoredPosition = await scrollRestored;
   await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
   await page.waitForTimeout(80);
@@ -316,8 +320,9 @@ try {
   const photoHandleBox = await photoResizeHandle.boundingBox();
   await page.mouse.move(photoHandleBox.x + 9, photoHandleBox.y + 9);
   await page.mouse.down();
-  await page.mouse.move(photoHandleBox.x + 79, photoHandleBox.y + 49, { steps: 5 });
+  await page.mouse.move(photoHandleBox.x - 31, photoHandleBox.y - 31, { steps: 5 });
   await page.mouse.up();
+  await page.waitForTimeout(100);
   await waitForFrameSourceChange(beforePhotoResize);
   const resizedPhoto = await addedImage.locator('img').evaluate(node => ({ width: Number.parseFloat(getComputedStyle(node).width), height: Number.parseFloat(getComputedStyle(node).height), frameWidth: Number.parseFloat(getComputedStyle(node.closest('figure')).width), objectFit: getComputedStyle(node).objectFit }));
   check(resizedPhoto.width >= 40 && resizedPhoto.height >= 24 && Math.abs(resizedPhoto.width - resizedPhoto.frameWidth) < 2 && resizedPhoto.objectFit === 'cover', `размер фото оторвался от рамки: ${JSON.stringify(resizedPhoto)}`);

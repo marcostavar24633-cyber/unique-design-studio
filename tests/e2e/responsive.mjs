@@ -33,6 +33,7 @@ const browser = await chromium.launch();
 const failures = [];
 let checks = 0;
 const matrixPage = await browser.newPage({ viewport: { width: WIDTHS[0], height: 800 } });
+await matrixPage.route(/^https?:\/\//, route => route.abort());
 for (const { name, html } of pages) {
   for (const width of WIDTHS) {
     await matrixPage.setViewportSize({ width, height: 800 });
@@ -70,6 +71,7 @@ await matrixPage.close();
 // Reduced motion: контент остаётся видимым, класс анимации не включается.
 {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.route(/^https?:\/\//, route => route.abort());
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setContent(generate({ ...full, architecture: 'immersive' }).html, { waitUntil: 'load' });
   if (await page.evaluate(() => document.documentElement.classList.contains('js-reveal'))) failures.push('reduced motion: анимация появления не отключена');
@@ -78,6 +80,7 @@ await matrixPage.close();
 // Без JavaScript весь контент виден.
 {
   const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1280, height: 800 } });
+  await ctx.route(/^https?:\/\//, route => route.abort());
   const page = await ctx.newPage();
   await page.setContent(generate({ ...full, architecture: 'editorial' }).html, { waitUntil: 'load' });
   const hidden = await page.locator('[data-reveal]').evaluateAll(els => els.filter(el => getComputedStyle(el).opacity !== '1').length);

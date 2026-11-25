@@ -8,7 +8,7 @@ import { hash, str } from './util.js';
 export const LIBRARY_KEY = 'uds:template-library:v1';
 export const LIBRARY_VERSION = 2;
 export const SECTION_IDS = ['about', 'items', 'advantages', 'process', 'gallery', 'faq', 'contact'];
-export const SECTION_LABELS = { about: 'О компании', items: 'Каталог / услуги', advantages: 'Преимущества', process: 'Этапы', gallery: 'Галерея', faq: 'Вопросы', contact: 'Контакты' };
+export const SECTION_LABELS = { about: 'О компании', items: 'Каталог / услуги', advantages: 'Преимущества', process: 'Этапы', gallery: 'Галерея', testimonials: 'Отзывы клиентов', team: 'Команда', stats: 'Показатели', faq: 'Вопросы', contact: 'Контакты' };
 
 /** Категория → профили ниш движка, для которых шаблон уместен. Первые восемь — категории формата v1. */
 export const CATEGORY_NICHES = {

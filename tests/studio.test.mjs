@@ -86,6 +86,18 @@ test('код веб-редактора синтаксически коррект
   assert.match(source, /if \(Array\.isArray\(mobileServices\)\) delete mobileServices\[idx\]/);
 });
 
+test('визуальные варианты доступны прямо в настройках и переключаются отдельным плавным слоем', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
+  assert.match(source, /list\.hidden = false/);
+  assert.doesNotMatch(source, /Предпросмотр вариантов/);
+  assert.match(source, /frame\.className = 'visual-option-preview-frame'/);
+  assert.match(source, /frame\.srcdoc = previewHtml\(html\)/);
+  assert.match(source, /uds-canvas-restore-scroll/);
+  assert.match(css, /\.visual-option-preview-frame\.is-visible\{opacity:1\}/);
+  assert.match(css, /prefers-reduced-motion:reduce\)\{\.visual-option-preview-frame\{transition:none\}\}/);
+});
+
 test('Asset library compares responsive crop frames and opens the matching crop editor', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');

@@ -34,7 +34,7 @@ export function tierOf(value) {
 const TEXT_FIELDS = [
   'brand', 'niche', 'title', 'description', 'cta', 'targetAudience', 'mainOffer', 'brandCharacter', 'visualDirection',
   'primaryGoal', 'strategySummary', 'style', 'aboutTitle', 'aboutText', 'servicesTitle', 'servicesIntro',
-  'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'contactTitle', 'contactText',
+  'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'testimonialsTitle', 'teamTitle', 'statsTitle', 'contactTitle', 'contactText',
   // SEO: необязательные отдельные title и description страницы (иначе берутся заголовок и описание).
   'seoTitle', 'seoDescription',
 ];

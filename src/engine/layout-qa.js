@@ -23,6 +23,10 @@ export function layoutQA(opts = {}) {
     // content-visibility, сохраняя размеры, — без этой проверки скрытый текст считался «перекрытым».
     const closed = el.closest('details:not([open])');
     if (closed && !el.closest('summary')) return false;
+    // У переворачиваемой карточки обратная сторона остаётся в DOM и занимает ту же область, что и фото.
+    // При неактивной карточке её текст скрыт backface-visibility, но hit-testing всё ещё может вернуть фото.
+    const flipBack = el.closest('.flip__back');
+    if (flipBack && !flipBack.closest('.item--flip')?.matches(':hover, :focus-within')) return false;
     if (el.checkVisibility && !el.checkVisibility({ contentVisibilityAuto: true, opacityProperty: true, visibilityProperty: true })) return false;
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const cs = getComputedStyle(n);
