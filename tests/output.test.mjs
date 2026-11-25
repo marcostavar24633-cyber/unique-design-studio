@@ -137,6 +137,38 @@ test('служебные подписи, действия и ALT работаю�
   assert.match(brutalist.html, /<nav aria-label="Page sections">/);
 });
 
+test('контактные кнопки используют только заданные безопасные ссылки и наследуются с уровня сайта', () => {
+  const project = {
+    ...full,
+    contacts: { phone: '+7 (900) 123-45-67', telegram: 'https://t.me/studio', max: 'https://max.ru/studio' },
+  };
+  const result = generate(project);
+  for (const action of ['telegram', 'max', 'call']) assert.ok(result.html.includes(`data-contact-action="${action}"`));
+  assert.ok(result.html.includes('href="tel:+79001234567"'));
+  assert.ok(result.exported.contacts.telegram === project.contacts.telegram);
+  assert.ok(result.exported.contacts.max === project.contacts.max);
+  assert.ok(result.html.includes('target="_blank" rel="noopener noreferrer"'));
+
+  const inherited = generate({ ...full, contacts: {}, site: { contacts: { telegram: 'https://t.me/site', max: 'javascript:alert(1)' } } });
+  assert.ok(inherited.html.includes('https://t.me/site'));
+  assert.ok(!inherited.html.includes('javascript:alert(1)'));
+  assert.ok(!inherited.html.includes('data-contact-action="max"'));
+  assert.equal(inherited.project.contacts.telegram, 'https://t.me/site');
+  const messengerOnly = generate({ brand: 'Студия', niche: 'дизайн', title: 'Дизайн пространства', contacts: { telegram: 'https://t.me/studio' } });
+  assert.ok(!messengerOnly.audit.errors.some(error => error.id === 'cta-path'), 'мессенджер считается рабочим способом связи');
+});
+
+test('скорость появления блоков и текста настраивается и попадает в автономный HTML', () => {
+  const slow = generate({ ...full, revealSpeed: 50, textRevealSpeed: 80 });
+  assert.match(slow.html, /--uds-reveal-duration:1300ms/);
+  assert.match(slow.html, /--uds-text-reveal-duration:1500ms/);
+  const fast = generate({ ...full, revealSpeed: 200, textRevealSpeed: 200 });
+  assert.match(fast.html, /--uds-reveal-duration:325ms/);
+  assert.match(fast.html, /--uds-text-reveal-duration:600ms/);
+  assert.match(slow.html, /transition:opacity var\(--uds-reveal-duration/);
+  assert.match(slow.html, /animation-duration:var\(--uds-text-reveal-duration/);
+});
+
 test('английская подпись раздела услуг сохраняет смысл выбранной ниши', () => {
   const cases = [
     ['Кофейня / кафе / ресторан', 'Menu'], ['Интернет-магазин техники', 'Catalog'],

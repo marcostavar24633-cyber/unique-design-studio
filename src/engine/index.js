@@ -21,7 +21,7 @@ export { reviewDesign, applyApprovedDesignPatch, DESIGN_DIRECTOR_APPROVABLE_FIEL
 export { prepareContentIntelligence, reviewGeneratedContent, CONTENT_INTELLIGENCE_MODULES } from './content-intelligence.js';
 export { qualityReport, qualityStageStatus, applyAutoFixes, fixAndRecheck, CATEGORIES as QUALITY_CATEGORIES, SEVERITIES, SEVERITY_LABELS } from './quality.js';
 export { runWorkflow, WORKFLOW_STAGES } from './workflow.js';
-export { GALLERY_FRAMES, imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
+export { CASE_IMAGE_LIMIT, GALLERY_FRAMES, imageSlots, slotBrief, imageTaskPackage, reviewImageSet } from './image-director.js';
 export { createVisualIdentity, listVisualIdentityOptions } from '../visual-identity.js';
 
 /** Полный цикл: проект → концепция → HTML → аудит → запись реестра → JSON для экспорта. */

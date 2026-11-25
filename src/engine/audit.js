@@ -25,6 +25,8 @@ export function auditSite(html, concept, input) {
   const css = (/<style>([\s\S]*?)<\/style>/.exec(html) || [])[1] || '';
   const renderedCopy = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;|&#39;|&apos;/gi, ' ').replace(/\s+/g, ' ');
 
+  if (project.passthrough?.demoContent === true) add('error', 'demo-content-not-for-publication', 'В проекте остаются демонстрационные данные. Замените контакты, цены, кейсы и черновики отзывов подтверждённой информацией, затем отметьте данные как реальные перед экспортом или публикацией.');
+
   if (/\b\d+(?:[.,]\d+)?\s*(?:%|лет|года|год|дней|дня|часов|часа|минут|₽|руб(?:лей|ля)?)/i.test(renderedCopy)) {
     add('warn', 'visible-numeric-claim', 'В тексте страницы есть числовое обещание или характеристика. Подтвердите её данными владельца перед публикацией.');
   }
@@ -78,10 +80,10 @@ export function auditSite(html, concept, input) {
   else if (targetSection && !ids.includes(targetSection)) add('error', 'cta-target-invalid', `Адрес основной кнопки «#${targetSection}» не существует. Укажите существующий раздел или элемент.`);
   if (project.fieldStates?.ctaUrl === 'manual' && !project.ctaUrl) add('error', 'cta-target-invalid', 'Ручной адрес основной кнопки не поддерживается или не прошёл проверку. Укажите корректный адрес либо верните автоматическое назначение.');
   const k = project.contacts;
-  const hasPath = Boolean(project.formAction || k.email || k.phone || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
-  test(hasPath, 'cta-path', 'Путь пользователя завершается действием: есть форма, телефон, email или внешняя ссылка', 'CTA ведёт в раздел без способа связи: укажите телефон, email, formAction или ctaUrl');
+  const hasPath = Boolean(project.formAction || k.email || k.phone || k.telegram || k.max || (project.ctaUrl && !project.ctaUrl.startsWith('#')));
+  test(hasPath, 'cta-path', 'Путь пользователя завершается действием: есть форма, телефон, email, мессенджер или внешняя ссылка', 'CTA ведёт в раздел без способа связи: укажите телефон, email, ссылку Telegram/MAX, formAction или ctaUrl');
   const bookingIntent = /запис|запись|бронир|брон|appointment|booking|reservation/i.test(`${project.primaryGoal} ${project.niche} ${project.title} ${project.cta}`);
-  if (bookingIntent && !hasPath) add('error', 'booking-path', 'Черновик страницы записи собран, но записаться нельзя. Подключите форму с получателем, ссылку на сервис записи или укажите телефон/e-mail.');
+  if (bookingIntent && !hasPath) add('error', 'booking-path', 'Черновик страницы записи собран, но записаться нельзя. Подключите форму с получателем, ссылку на сервис записи, Telegram/MAX или укажите телефон/e-mail.');
   const formDelivery = project.formAction ? 'endpoint-configured' : k.email ? 'mailto-fallback' : 'not-configured';
   if (formDelivery === 'endpoint-configured') add('warn', 'form-delivery', 'HTTPS endpoint формы настроен, но фактическая доставка заявки не подтверждена тестовой отправкой');
   else if (formDelivery === 'mailto-fallback') add('warn', 'form-delivery', 'Указан email для связи, но серверная форма не настроена: отправка через почтовую ссылку зависит от почтового приложения пользователя');

@@ -24,6 +24,7 @@ ul[role=list],ol[role=list]{list-style:none;margin:0;padding:0}
 .lede{max-width:56ch;font-size:1.14em;color:var(--ds-text-muted)}
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:1.6rem}
 .ds-button{max-width:100%;text-align:center;overflow-wrap:anywhere}
+.contact-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}.contact-actions .ds-contact-action{border-radius:999px;min-height:42px;padding:8px 16px;white-space:nowrap}.nav__contact-actions{margin:0;gap:6px}.nav__contact-actions .ds-contact-action{min-height:38px;padding:6px 12px;font-size:.86rem}@media(max-width:760px){.nav__contact-actions{order:4;flex:1 0 100%;justify-content:flex-start}.nav__contact-actions .ds-contact-action{min-height:36px;padding:5px 10px;font-size:.8rem}}
 .price{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ds-text)}
 .visual{position:relative;width:100%;min-width:0;overflow:hidden;background:var(--u-tint);border-radius:var(--ds-radius-lg)}
 .visual>.ds-media{position:absolute;inset:0}

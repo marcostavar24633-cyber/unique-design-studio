@@ -4,16 +4,22 @@ export const TEXT_FIT_CSS = '.uds-fit-text{min-width:0;white-space:nowrap!import
 export function textFitScript() {
   return `(function(){
 var selector='h1,h2,h3,.kicker,.nav__cta,.ds-button,.item__title,.price,[data-uds-fit-text]';
-var original=new WeakMap(),scheduled=false,observedParents=new WeakSet(),parentWidths=new WeakMap();
+var original=new WeakMap(),scheduled=false,observedParents=new WeakSet(),parentWidths=new WeakMap(),pending=new Set(),visible=new Set();
 var resizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(function(entries){
-  var changed=false;
-  entries.forEach(function(entry){var width=entry.contentRect.width,previous=parentWidths.get(entry.target);parentWidths.set(entry.target,width);if(previous!==undefined&&Math.abs(previous-width)>.5)changed=true});
-  if(changed)schedule();
+  entries.forEach(function(entry){var width=entry.contentRect.width,previous=parentWidths.get(entry.target);parentWidths.set(entry.target,width);if(previous===undefined||Math.abs(width-previous)>.5)entry.target.querySelectorAll(selector).forEach(function(el){if(visible.has(el))pending.add(el)})});
+  flush();
 }):null;
+var visibilityObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(function(entries){
+  entries.forEach(function(entry){if(entry.isIntersecting){visible.add(entry.target);pending.add(entry.target)}else visible.delete(entry.target)});
+  flush();
+},{rootMargin:'120px 0px'}):null;
 function textWidth(el){var range=document.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width}
 function fit(){
   scheduled=false;
-  document.querySelectorAll(selector).forEach(function(el){
+  var batch=Array.from(pending);
+  pending.clear();
+  batch.forEach(function(el){
+    if(!el.isConnected)return;
     var saved=original.get(el);
     if(!saved){saved={font:el.style.fontSize,max:el.style.maxWidth,width:el.style.width};original.set(el,saved)}
     el.style.fontSize=saved.font||'';el.style.maxWidth=saved.max||'';el.style.width=saved.width||'';el.classList.remove('uds-fit-text','uds-fit-text--wrap');
@@ -39,9 +45,7 @@ function fit(){
     var low=Math.min(base,1),high=base;
     for(var i=0;i<14;i++){var mid=(low+high)/2;el.style.fontSize=mid+'px';if(textWidth(el)<=width-6)low=mid;else high=mid}
     el.style.fontSize=Math.max(1,low)+'px';
-    // Browser font metrics can settle one frame after document.fonts.ready. Correct
-    // against the rendered width as well, so a late metric change cannot leave a
-    // heading a few pixels wider than its container.
+    // Correct late browser font metric changes without doing layout work during scrolling.
     for(var pass=0;pass<4;pass++){
       var rendered=textWidth(el),contentWidth=Math.max(1,el.clientWidth-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0)-(parseFloat(style.borderLeftWidth)||0)-(parseFloat(style.borderRightWidth)||0));
       if(rendered<=contentWidth-8)break;
@@ -50,12 +54,13 @@ function fit(){
     }
   });
 }
-function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(fit)}
-window.addEventListener('resize',schedule,{passive:true});document.addEventListener('scroll',schedule,true);
-if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){schedule();requestAnimationFrame(schedule)});
+function flush(){if(scheduled||!pending.size)return;scheduled=true;requestAnimationFrame(fit)}
+function schedule(){if(visibilityObserver){visible.forEach(function(el){pending.add(el)});flush();return}document.querySelectorAll(selector).forEach(function(el){var r=el.getBoundingClientRect();if(r.bottom>=-120&&r.top<=innerHeight+120)pending.add(el)});flush()}
+window.addEventListener('resize',schedule,{passive:true});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',schedule);
-if('MutationObserver'in window)new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true});
-schedule();
+if(visibilityObserver)document.querySelectorAll(selector).forEach(function(el){visibilityObserver.observe(el)});
+if('MutationObserver'in window)new MutationObserver(function(records){records.forEach(function(record){if(record.type==='characterData'){var el=record.target.parentElement?.closest(selector);if(el)pending.add(el)}else{if(record.target.nodeType===1){var parent=record.target.closest(selector);if(parent)pending.add(parent)}record.addedNodes.forEach(function(node){if(node.nodeType!==1)return;if(node.matches(selector)){pending.add(node);if(visibilityObserver)visibilityObserver.observe(node)}node.querySelectorAll?.(selector).forEach(function(el){if(visibilityObserver)visibilityObserver.observe(el);else pending.add(el)})})}});flush()}).observe(document.body,{subtree:true,childList:true,characterData:true});
+if(!visibilityObserver)schedule();
 })();`;
 }
-

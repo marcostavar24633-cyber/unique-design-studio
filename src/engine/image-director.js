@@ -11,6 +11,7 @@ import { buildConcept } from './concept.js';
 // с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
 /** Сколько кадров галереи планирует студия (и генерирует автопилот). */
 export const GALLERY_FRAMES = 8;
+export const CASE_IMAGE_LIMIT = 3;
 const GALLERY_SHOT_TITLES = [
   'Пространство и атмосфера',
   'Материалы крупным планом',
@@ -99,6 +100,15 @@ export function imageSlots(project, concept) {
       });
     }
   }
+  if (order.includes('cases')) {
+    project.cases.slice(0, CASE_IMAGE_LIMIT).forEach((item, sourceIndex) => slots.push({
+      ...base, id: `case-${sourceIndex}`, sourceIndex, role: 'case', label: item.title,
+      filled: Boolean(item.image), mobileFilled: false, aspect: '4:3', mobileAspect: '4:3', minWidth: 1200,
+      subject: `${item.title}${item.text ? ` — ${clean(item.text)}` : ''}`,
+      angle: 'medium documentary-style scene, three-quarter view', background: `a believable ${niche} context`,
+      composition: 'a visual concept illustrating the case subject; do not imply this depicts a verified completed client project', alt: item.alt || '',
+    }));
+  }
   return { slots, filled: slots.filter(s => s.filled).length, total: slots.length };
 }
 
@@ -110,6 +120,7 @@ export function slotBrief(slot, project) {
     `Ракурс: ${slot.angle}. Композиция: ${slot.composition}.`,
     `Свет: ${slot.light}. Фон: ${slot.background}.`,
     `Формат: ${slot.aspect}, не меньше ${slot.minWidth} px по ширине; для телефона — ${slot.mobileAspect}${slot.mobileFilled ? ' (мобильная версия загружена)' : ', главный объект в центральной трети'}.`,
+    slot.role === 'case' ? 'Это AI-концепт для иллюстрации описания, а не фотография подтверждённой выполненной работы. Отметьте это рядом с изображением на сайте.' : '',
     project.tier === 'luxury' ? 'Уровень: журнальная съёмка, натуральные материалы, точная цветопередача.' : project.tier === 'premium' ? 'Уровень: профессиональная коммерческая съёмка, выразительная глубина.' : '',
     slot.negative,
   ].filter(Boolean).join('\n');
@@ -144,7 +155,7 @@ export function reviewImageSet(project, concept) {
   if (fileLike.length) add('alt-filename', 'medium', `ALT похож на имя файла: «${fileLike[0]}». Опишите смысл изображения.`, 'accessibility');
   const dupAlt = alts.filter((a, i) => alts.indexOf(a) !== i);
   if (dupAlt.length) add('alt-duplicate', 'low', `Одинаковые ALT у разных фото: «${dupAlt[0]}». У каждого кадра должно быть своё описание.`, 'accessibility');
-  const srcs = [project.images.hero, ...project.gallery.map(g => g.src), ...project.services.map(s => s.image)].filter(Boolean);
+  const srcs = [project.images.hero, ...project.gallery.map(g => g.src), ...project.services.map(s => s.image), ...project.cases.map(s => s.image)].filter(Boolean);
   const srcCounts = new Map();
   for (const src of srcs) srcCounts.set(src, (srcCounts.get(src) || 0) + 1);
   const duplicateSources = [...srcCounts.values()].filter(count => count > 1);

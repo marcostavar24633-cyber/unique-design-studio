@@ -160,10 +160,19 @@ export function normalizeProject(raw = {}) {
       return { id: id.slice(0, 64) || `gallery-${index + 1}`, src, alt: str(g.alt), caption: str(g.caption) };
     }).filter(g => g.src);
   const img = raw.images && typeof raw.images === 'object' ? raw.images : {};
+  const contactKeys = ['phone', 'email', 'address', 'hours', 'telegram', 'max'];
+  const normalizeContact = (value, key) => {
+    const text = str(value);
+    if (key === 'telegram' || key === 'max') {
+      const url = safeUrl(text);
+      return /^https:\/\//i.test(url) ? url : '';
+    }
+    return text;
+  };
   p.site = {
     logo: safeUrl(siteRaw.logo, { image: true }),
     socialImage: safeUrl(siteRaw.socialImage, { image: true }),
-    contacts: Object.fromEntries(['phone', 'email', 'address', 'hours'].map(key => [key, str(siteRaw.contacts?.[key])])),
+    contacts: Object.fromEntries(contactKeys.map(key => [key, normalizeContact(siteRaw.contacts?.[key], key)])),
     links: (Array.isArray(siteRaw.links) ? siteRaw.links.slice(0, 30) : []).map(link => ({ label: str(link?.label).slice(0, 80), href: safeUrl(link?.href) })).filter(link => link.label && link.href),
     header: { tagline: str(siteRaw.header?.tagline), ctaLabel: str(siteRaw.header?.ctaLabel) },
     footer: { note: str(siteRaw.footer?.note), copyright: str(siteRaw.footer?.copyright) },
@@ -183,16 +192,16 @@ export function normalizeProject(raw = {}) {
   if (!fieldStates['images.social'] && !safeUrl(img.social, { image: true })
     && siteFieldStates['images.social'] !== 'hidden' && p.site.socialImage) inheritedSiteFields.push('images.social');
   const c = raw.contacts && typeof raw.contacts === 'object' ? raw.contacts : {};
-  p.contacts = Object.fromEntries(['phone', 'email', 'address', 'hours'].map(key => {
+  p.contacts = Object.fromEntries(contactKeys.map(key => {
     const resolved = resolveLayeredValue({
-      pageValue: str(c[key]), siteValue: p.site.contacts[key],
+      pageValue: normalizeContact(c[key], key), siteValue: p.site.contacts[key],
       pageState: fieldStates[`contacts.${key}`] || 'unset',
       siteState: siteFieldStates[`contacts.${key}`] || 'unset',
     });
     return [key, str(resolved.value)];
   }));
   // Keep page overrides separate so inherited site contacts remain live after export/import.
-  p.pageContacts = Object.fromEntries(['phone', 'email', 'address', 'hours'].map(key => [key, str(c[key])]));
+  p.pageContacts = Object.fromEntries(contactKeys.map(key => [key, normalizeContact(c[key], key)]));
   p.ctaUrl = fieldStates.ctaUrl === 'hidden' ? '' : safeUrl(raw.ctaUrl);
   const formAction = safeUrl(raw.formAction);
   p.formAction = fieldStates.formAction === 'hidden' ? '' : /^https:\/\//i.test(formAction) ? formAction : '';

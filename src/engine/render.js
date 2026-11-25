@@ -109,7 +109,7 @@ function leadFormSpec(p) {
 
 const SYSTEM_COPY = {
   ru: {
-    skip: 'Перейти к содержимому', name: 'Имя', contact: 'Телефон или e-mail', unselected: 'Не выбрано', phone: 'Телефон', email: 'E-mail', address: 'Адрес', hours: 'Часы работы',
+    skip: 'Перейти к содержимому', name: 'Имя', contact: 'Телефон или e-mail', unselected: 'Не выбрано', phone: 'Телефон', email: 'E-mail', address: 'Адрес', hours: 'Часы работы', call: 'Позвонить', telegram: 'Telegram', max: 'MAX',
     more: 'Показать ещё', moreDetails: 'Подробнее', searchIn: 'Поиск по разделу', search: 'Поиск', categories: 'Разделы ассортимента', chapters: 'Главы страницы', pageSections: 'Разделы страницы',
     about: 'О нас', advantages: 'Преимущества', process: 'Как это работает', faq: 'Вопросы', gallery: 'Галерея', items: 'Услуги', contactSection: 'Контакты',
     mainPhoto: 'Главная фотография проекта', projectPhoto: 'Фотография проекта', portfolioWork: 'Работа из портфолио', featuredWork: 'Главная работа',
@@ -117,7 +117,7 @@ const SYSTEM_COPY = {
     sending: 'Отправляем заявку…', sent: 'Заявка отправлена.', failed: 'Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.',
   },
   en: {
-    skip: 'Skip to content', name: 'Name', contact: 'Phone or email', unselected: 'Not selected', phone: 'Phone', email: 'Email', address: 'Address', hours: 'Hours',
+    skip: 'Skip to content', name: 'Name', contact: 'Phone or email', unselected: 'Not selected', phone: 'Phone', email: 'Email', address: 'Address', hours: 'Hours', call: 'Call', telegram: 'Telegram', max: 'MAX',
     more: 'Show more', moreDetails: 'More details', searchIn: 'Search in', search: 'Search', categories: 'Catalog categories', chapters: 'Page chapters', pageSections: 'Page sections',
     about: 'About', advantages: 'Benefits', process: 'How it works', faq: 'Questions', gallery: 'Gallery', items: 'Services', contactSection: 'Contact',
     mainPhoto: 'Main project photo', projectPhoto: 'Project photo', portfolioWork: 'Portfolio work', featuredWork: 'Featured work',
@@ -128,6 +128,15 @@ const SYSTEM_COPY = {
 const systemCopy = (lang, key) => (SYSTEM_COPY[String(lang || '').toLowerCase().split('-')[0]] || SYSTEM_COPY.ru)[key];
 
 const cta = (c, cls = '') => c.ctaHref ? `<a class="ds-button${cls}" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.cta)}</a>` : '';
+const contactActions = (c, inNav = false) => {
+  const k = c.p.contacts;
+  const digits = String(k.phone || '').replace(/\D/g, '');
+  const links = [];
+  if (k.telegram) links.push(`<a class="ds-button ds-button--secondary ds-contact-action" data-contact-action="telegram" href="${esc(k.telegram)}" target="_blank" rel="noopener noreferrer">${esc(systemCopy(c.p.lang, 'telegram'))}</a>`);
+  if (k.max) links.push(`<a class="ds-button ds-button--secondary ds-contact-action" data-contact-action="max" href="${esc(k.max)}" target="_blank" rel="noopener noreferrer">${esc(systemCopy(c.p.lang, 'max'))}</a>`);
+  if (digits.length >= 5) links.push(`<a class="ds-button ds-button--secondary ds-contact-action" data-contact-action="call" href="tel:${esc(k.phone.replace(/[^+\d]/g, ''))}">${esc(systemCopy(c.p.lang, 'call'))}</a>`);
+  return links.length ? `<div class="contact-actions${inNav ? ' nav__contact-actions' : ''}" aria-label="${c.p.lang.startsWith('en') ? 'Contact options' : 'Способы связи'}">${links.join('')}</div>` : '';
+};
 const secondary = (c, id) => (c.order.includes(id) ? `<a class="ds-button ds-button--secondary" href="#${id}">${esc(c.labels[id])}</a>` : '');
 const kicker = c => (c.p.niche && c.p.niche !== c.title ? `<p class="kicker">${esc(c.p.niche)}</p>` : '');
 const lede = (c, cls = 'lede') => (c.p.description ? `<p class="${cls}">${esc(c.p.description)}</p>` : '');
@@ -188,7 +197,7 @@ function nav(c) {
   const brandNote = c.p.site.header.tagline ? `<small class="nav__tagline">${esc(c.p.site.header.tagline)}</small>` : '';
   const brand = `<a class="nav__brand" href="#top">${brandMark}${brandText}${brandNote}</a>`;
   const themeLabel = c.p.lang.startsWith('en') ? 'Switch light or dark theme' : 'Переключить светлую или тёмную тему';
-  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}<button class="ds-theme-toggle" type="button" data-theme-toggle aria-label="${themeLabel}" aria-pressed="false" title="${themeLabel}"><span aria-hidden="true">◐</span><span class="ds-theme-toggle__label">${c.p.lang.startsWith('en') ? 'Theme' : 'Тема'}</span></button></nav>`;
+  let out = `<header class="site-head"><nav class="nav nav--${kind}" aria-label="${c.p.lang.startsWith('en') ? 'Main navigation' : 'Основная навигация'}">${brand}${list}${withCta && c.ctaHref ? `<a class="ds-button nav__cta" data-cta="primary" href="${esc(c.ctaHref)}">${esc(c.p.site.header.ctaLabel || c.cta)}</a>` : ''}${contactActions(c, true)}<button class="ds-theme-toggle" type="button" data-theme-toggle aria-label="${themeLabel}" aria-pressed="false" title="${themeLabel}"><span aria-hidden="true">◐</span><span class="ds-theme-toggle__label">${c.p.lang.startsWith('en') ? 'Theme' : 'Тема'}</span></button></nav>`;
   if (kind === 'category') {
     const cats = c.p.categories.length
       ? c.p.categories.map(t => `<li>${c.order.includes('items') ? `<a href="#items">${esc(t)}</a>` : `<span>${esc(t)}</span>`}</li>`)
@@ -411,7 +420,7 @@ const SECTION = {
     return wrap(c, 'pricing', `<div class="uds-pricing">${entries}</div>`);
   },
   cases(c) {
-    const entries = c.p.cases.map(item => `<article class="uds-case" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('case', item.id)}" data-reveal>${item.image ? `<img src="${esc(item.image)}" alt="${esc(item.alt || item.title)}" loading="lazy" decoding="async">` : ''}<div><h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div></article>`).join('');
+    const entries = c.p.cases.map((item, index) => { const conceptImage = /^AI-концепт\s*[·—-]/i.test(item.alt); const conceptNote = c.p.lang.startsWith('en') ? 'AI concept illustration — not a photo of completed work' : 'AI-концепт, иллюстрация — не фото выполненной работы'; return `<article class="uds-case" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('case', item.id)}" data-reveal>${item.image ? `<img ${artStyle(c.p, 'cases', index)} src="${esc(item.image)}" alt="${esc(item.alt || item.title)}" loading="lazy" decoding="async">` : ''}<div><h3>${esc(item.title)}</h3>${conceptImage ? `<small class="uds-case__concept-note">${conceptNote}</small>` : ''}${item.text ? `<p>${esc(item.text)}</p>` : ''}</div></article>`; }).join('');
     return wrap(c, 'cases', `<div class="uds-cases">${entries}</div>`);
   },
   gallery(c) {
@@ -463,7 +472,7 @@ const SECTION = {
     const form = leadForm(c, 'contact');
     const ext = c.p.ctaUrl && !c.p.ctaUrl.startsWith('#') ? `<div class="actions">${cta(c)}</div>` : '';
     const composition = c.vs.sectionCompositions?.contact || 'split';
-    return `<section id="contact" class="${sectionClass(c, 'contact')}" data-motion-section aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''} contact--layout-${esc(composition)}"><div data-reveal><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form ? `<div data-reveal>${form}</div>` : ''}</div></section>`;
+    return `<section id="contact" class="${sectionClass(c, 'contact')}" data-motion-section aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''} contact--layout-${esc(composition)}"><div data-reveal><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${contactActions(c)}${ext}</div>${form ? `<div data-reveal>${form}</div>` : ''}</div></section>`;
   },
 };
 
@@ -574,9 +583,11 @@ const siteRevealActive = vs => siteMotionActive(vs) || Boolean(vs.variety?.revea
 
 const siteMotionCss = (vs, hasHeroBackground) => siteMotionActive(vs) ? `@media(prefers-reduced-motion:no-preference){.ds-section[data-motion-section],.foot[data-motion-section]{transition:box-shadow 900ms cubic-bezier(.2,.7,.2,1)}.ds-section.is-motion-active,.hero.is-motion-active,.foot.is-motion-active{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-accent) 14%,transparent),inset 0 40px 100px -90px color-mix(in srgb,var(--ds-accent) 16%,transparent)}.uds-reading-progress{position:fixed;inset:0 0 auto;height:2px;z-index:100;transform-origin:left center;transform:scaleX(var(--m-p,0));background:linear-gradient(90deg,color-mix(in srgb,var(--ds-accent) 72%,transparent),var(--ds-accent));pointer-events:none;opacity:.78}.hero__bg img,${hasHeroBackground ? '.hero__photo-bg img,' : ''}.item__media img,.gallery img{translate:0 var(--uds-photo-shift,0px);scale:1.025;transition:translate 700ms cubic-bezier(.2,.7,.2,1),scale 900ms cubic-bezier(.2,.7,.2,1)}.uds-photo-parallax{will-change:translate}.item,.ds-card,.uds-pricing-card,.uds-case,.uds-team-card,.uds-testimonial{transition:translate 450ms cubic-bezier(.2,.7,.2,1),box-shadow 450ms cubic-bezier(.2,.7,.2,1)}}@media(prefers-reduced-motion:no-preference) and (hover:hover) and (pointer:fine){.item:hover,.ds-card:hover,.uds-pricing-card:hover,.uds-case:hover,.uds-team-card:hover,.uds-testimonial:hover{translate:0 -3px;box-shadow:0 18px 46px color-mix(in srgb,var(--ds-text) 11%,transparent)}}` : '';
 
-export function renderCss(concept, scene = null, identity = null) {
+export function renderCss(concept, scene = null, identity = null, project = {}) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
+  const speedMs = (key, fallback) => Math.round(fallback * 100 / Math.min(200, Math.max(50, Number(project?.[key]) || 100)));
+  const motionSpeedCss = `:root{--uds-reveal-duration:${speedMs('revealSpeed', 650)}ms;--uds-text-reveal-duration:${speedMs('textRevealSpeed', 1200)}ms}.hero h1,.hero .kicker{animation-duration:var(--uds-text-reveal-duration,1.2s)!important}`;
   return [
     CORE_CSS, tokensCss(vs), visualIdentityCss(identity), themeCss(concept, identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HEADER_OVERLAY_CSS, HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
     '.uds-testimonials,.uds-team,.uds-stats,.uds-pricing,.uds-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat,.uds-pricing-card,.uds-case{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span,.uds-case p,.uds-pricing-card p{color:var(--ds-text-muted)}.uds-team-card img,.uds-case img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3,.uds-case h3,.uds-pricing-card h3{margin:0 0 8px}.uds-team-card p,.uds-case p,.uds-pricing-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong,.uds-pricing-card__price{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}.uds-pricing-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px}.uds-pricing-card__index{font-size:.8rem;color:var(--ds-text-muted)}.uds-pricing-card__price{margin-top:auto;padding-top:12px;color:var(--ds-text)}.uds-pricing-card .ds-button{margin-top:8px}.uds-case{display:grid;align-content:start;gap:14px}.uds-quiz{display:grid;gap:22px;max-width:820px}.uds-quiz fieldset{margin:0;padding:0;border:0}.uds-quiz legend{margin-bottom:12px;font-weight:700}.uds-quiz__choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}.uds-quiz__choice{display:flex;align-items:flex-start;gap:10px;min-height:48px;padding:13px 15px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);cursor:pointer}.uds-quiz__choice:has(input:checked){border-color:var(--ds-accent);box-shadow:0 0 0 1px var(--ds-accent)}.uds-quiz__choice input{margin:4px 0 0;accent-color:var(--ds-accent)}.uds-quiz__result{padding:14px 16px;border-left:3px solid var(--ds-accent);background:var(--ds-surface);border-radius:var(--ds-radius-sm)}@media(prefers-reduced-motion:reduce){.uds-quiz__choice{scroll-behavior:auto}}',
@@ -605,6 +616,7 @@ export function renderCss(concept, scene = null, identity = null) {
     siteRevealActive(vs) ? revealCss(vs.variety?.revealForced ? vs.variety.reveal : 'luxury-reveal') : '',
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
     vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
+    motionSpeedCss,
     '.ds-button{border-radius:999px!important}',
     TEXT_FIT_CSS,
   ].join('\n').replace(/\n\s*/g, '');
@@ -672,7 +684,7 @@ ${desc ? `<meta property="og:description" content="${esc(desc)}">` : ''}
 ${shareImage ? `<meta property="og:image" content="${esc(shareImage)}">` : ''}
 <meta name="theme-color" content="${vs.palette.bg}">
 <meta name="generator" content="Unique Design Studio">
-${fontLinks(visualIdentity ? visualIdentityFonts(visualIdentity) : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity)}</style>
+${fontLinks(visualIdentity ? visualIdentityFonts(visualIdentity) : vs.typography.webFonts)}<style>${renderCss(concept, scene, visualIdentity, project.passthrough)}</style>
 ${jsonLd(c)}
 </head>
 <body id="top" class="arch-${vs.archetype} nav-${vs.nav} section-layout-${vs.sectionLayout || 'editorial'}">

@@ -208,6 +208,12 @@ export function photoPrompt(slot, project, graphicDirection) {
   } else if (slot.role === 'service') {
     subject = itemSubject(slot.label, visual, visualHints(project)); angle = visual.cuisine ? 'close-up from 45 degrees, the plate fills most of the frame' : 'front or three-quarter view, the subject fills most of the frame';
     background = visual.cuisine ? `a table in ${visual.setting}, softly blurred` : 'a simple consistent background, the same for every product card';
+  } else if (slot.role === 'case') {
+    const hinted = visualHints(project)?.items?.[slot.label];
+    const conceptScene = hinted || `${itemSubject(slot.label, visual, visualHints(project))}; context: ${translit(slot.subject || slot.label)}`;
+    subject = `an illustrative AI concept visualization inspired by this case: ${conceptScene}. It is not documentary evidence and must not look like a specific identifiable real client site`;
+    angle = 'medium three-quarter composition with a clear focal point';
+    background = `a believable ${visual.setting}, composed as a conceptual example`;
   } else {
     const n = Number(String(slot.id).split('-')[1]) || 0;
     // Сцена от AI для этой ниши (visualHints.gallery), иначе — общий сюжет. Каждый кадр — новый сюжет.
@@ -224,7 +230,9 @@ export function photoPrompt(slot, project, graphicDirection) {
     `Camera: ${angle}, ${ASPECT[slot.aspect] || 'balanced frame'}. Light: ${light}.`,
     ART_STYLE[graphicDirection?.id || graphicDirection] ? `Art direction: ${ART_STYLE[graphicDirection.id || graphicDirection]}.` : '',
     luxury ? 'Luxury editorial quality, still a real unretouched photograph.' : premium ? 'Premium magazine-quality photo of a real place and real people.' : 'Looks like a real unedited photo: natural skin and material textures, small real-world imperfections, believable proportions.',
-    'Not CGI, not a 3D render, not an illustration; no plastic or airbrushed skin, no oversaturated colors, no HDR glow, no lens flare.',
+    slot.role === 'case'
+      ? 'Clearly an illustrative concept visualization, not a photo of completed work, not evidence of a real client project, no identifying client details.'
+      : 'Not CGI, not a 3D render, not an illustration; no plastic or airbrushed skin, no oversaturated colors, no HDR glow, no lens flare.',
     visual.avoid ? `Avoid: ${visual.avoid}.` : '',
     'No text, no letters, no logos, no watermarks, no invented brand names or labels.',
   ];

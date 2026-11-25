@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { generate } from '../src/engine/index.js';
 import { autopilot } from '../src/engine/autopilot.js';
 import { qualityReport } from '../src/engine/quality.js';
-import { HERO_AS_BACKGROUND, imageSlots, imageTaskPackage, reviewImageSet, slotBrief } from '../src/engine/image-director.js';
+import { CASE_IMAGE_LIMIT, HERO_AS_BACKGROUND, imageSlots, imageTaskPackage, reviewImageSet, slotBrief } from '../src/engine/image-director.js';
 
 const site = (input, arch) => {
   const p = { ...autopilot({ email: 'hello@example.com', ...input }, { registry: [] }).project };
@@ -114,4 +114,21 @@ test('галерея планирует 8 кадров с разными сюж�
   assert.equal(GALLERY_FRAMES, 8);
   assert.equal(gallery.length, 8);
   assert.equal(new Set(gallery.map(slot => slot.subject)).size, 8, 'сюжеты кадров повторяются');
+});
+
+test('кейсы получают отдельные AI-концепты с явной маркировкой и лимитом в три фото', () => {
+  const g = generate({ niche: 'дизайн интерьера', brand: 'Студия', contacts: { email: 'hello@example.com' }, cases: [
+    ['Квартира у парка', 'Тёплый дуб, мягкий свет и удобное хранение'],
+    ['Дом для семьи', 'Спокойная палитра и зонирование общей комнаты'],
+    ['Небольшая студия', 'Компактная кухня и рабочее место'],
+    ['Четвёртый проект', 'Не должен создавать дополнительный запрос'],
+  ] });
+  const slots = imageSlots(g.project, g.concept).slots.filter(slot => slot.role === 'case');
+  assert.equal(CASE_IMAGE_LIMIT, 3);
+  assert.equal(slots.length, 3);
+  assert.equal(slots[0].sourceIndex, 0);
+  assert.match(slots[0].composition, /not imply.*verified/i);
+  assert.match(slotBrief(slots[0], g.project), /AI-концепт.*не фотография подтверждённой/);
+  const generated = generate({ ...g.project, cases: [[slots[0].label, 'Иллюстрация', '', 'https://example.com/case.jpg', 'AI-концепт · иллюстрация для проекта; не фото выполненной работы']] });
+  assert.match(generated.html, /AI-концепт, иллюстрация — не фото выполненной работы/);
 });
