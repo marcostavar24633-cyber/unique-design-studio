@@ -104,6 +104,7 @@ try {
       };
       window.addEventListener('message', window.__udsPreviewRestoreHandler);
     });
+    await firstChoice.scrollIntoViewIfNeeded();
     await firstChoice.hover();
     await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(() => Boolean(window.__udsLastPreviewRestore), null, { timeout: 10000 });
@@ -119,6 +120,7 @@ try {
     check(previewA.transition.includes('opacity'), `плавное появление предпросмотра не настроено: ${previewA.transition}`);
     check(Math.abs(Number(previewA.restored.targetY) - scrollTarget.y) < 8, `предпросмотр не получил текущую прокрутку: ожидалось ${scrollTarget.y}, получено ${previewA.restored.targetY}`);
     check(scrollTarget.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
+    await secondChoice.scrollIntoViewIfNeeded();
     await secondChoice.hover();
     await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(() => document.querySelectorAll('#view-preview iframe.visual-option-preview-frame').length === 1, null, { timeout: 10000 });
