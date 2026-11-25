@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Validate, deploy private staging Worker, or run one real image probe
+        description: Validate staging, run private browser diagnostics, deploy, or run one real image probe
         type: choice
         required: true
         default: validate
         options:
           - validate
+          - browser-diagnostics
           - deploy
           - probe
   issue_comment:
@@ -34,6 +35,47 @@ jobs:
           node-version: 22
       - name: Validate staging bundle
         run: npx --yes wrangler@4 deploy --dry-run --config config/wrangler.ai-staging.json
+      - name: Check browser CORS against temporary staging runtime
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'browser-diagnostics' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
+          npm install --no-save playwright
+          npx playwright install chromium
+          log_file="$(mktemp)"
+          npx --yes wrangler@4 dev --remote --config config/wrangler.ai-staging.json --ip 127.0.0.1 --port 8787 >"$log_file" 2>&1 &
+          wrangler_pid=$!
+          cleanup() {
+            kill "$wrangler_pid" 2>/dev/null || true
+            wait "$wrangler_pid" 2>/dev/null || true
+            rm -f "$log_file"
+          }
+          trap cleanup EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if ! kill -0 "$wrangler_pid" 2>/dev/null; then
+              echo "Temporary remote Worker exited before readiness."
+              exit 1
+            fi
+            if curl --silent --fail http://127.0.0.1:8787/health >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Temporary remote Worker did not become ready."
+            exit 1
+          fi
+          STAGING_LOCAL_URL='http://127.0.0.1:8787' \
+          STAGING_WORKER_PUBLIC_URL='https://unique-design-studio-ai.marcostavar24633.workers.dev' \
+          STUDIO_URL='https://marcostavar24633-cyber.github.io/unique-design-studio/' \
+          STUDIO_ORIGIN='https://marcostavar24633-cyber.github.io' \
+            node tests/e2e/staging-browser-diagnostics.mjs
       - name: Deploy private staging Worker
         if: ${{ inputs.operation == 'deploy' }}
         env:

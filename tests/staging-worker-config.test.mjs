@@ -22,3 +22,18 @@ test('staging Worker uses direct Workers AI without paid fallbacks', () => {
   assert.equal(staging.services, undefined, 'staging must not depend on the production Gateway');
   assert.equal(existsSync(resolve(dirname(stagingPath), staging.main)), true);
 });
+
+test('staging offers a private browser diagnostics operation without deploying or invoking image inference', () => {
+  const workflow = readFileSync(resolve(root, '.github/workflows/deploy-ai-staging.yml'), 'utf8');
+  const browserCheck = readFileSync(resolve(root, 'tests/e2e/staging-browser-diagnostics.mjs'), 'utf8');
+  assert.match(workflow, /- browser-diagnostics/);
+  assert.match(workflow, /inputs\.operation == 'browser-diagnostics'/);
+  assert.match(workflow, /wrangler@4 dev --remote/);
+  assert.match(workflow, /tests\/e2e\/staging-browser-diagnostics\.mjs/);
+  assert.match(browserCheck, /fetch\(`\$\{workerUrl\}\/api\/diagnostics`/);
+  assert.match(browserCheck, /access-control-allow-origin/);
+  assert.match(browserCheck, /workersAiBindingConfigured/);
+  assert.doesNotMatch(browserCheck, /api\/generate-image/);
+  assert.equal(staging.workers_dev, false);
+  assert.equal(staging.preview_urls, false);
+});
