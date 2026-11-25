@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T02:51:46.602Z
+Время обновления: 2026-11-25T02:57:15.377Z
 Ветка: main
-Последний commit: 2f0751cf87d7718b1e62769ef651d4331fc82f51
-Дата коммита: 2026-11-25T06:51:33+04:00
-Сообщение: Merge pull request #259 from marcostavar24633-cyber/codex/image-journal-inferred-provider
+Последний commit: e9a261582ee2080ec27b6dcd930590e04deaeb28
+Дата коммита: 2026-11-25T06:57:03+04:00
+Сообщение: Merge pull request #258 from marcostavar24633-cyber/codex/text-fit-container-resize
 
 Последние коммиты:
+- e9a2615 · 2026-11-25 · Merge pull request #258 from marcostavar24633-cyber/codex/text-fit-container-resize
+- 5d4d3c4 · 2026-11-25 · docs: refresh project handoff
 - 2f0751c · 2026-11-25 · Merge pull request #259 from marcostavar24633-cyber/codex/image-journal-inferred-provider
 - 8a1b3b8 · 2026-11-25 · fix: report inferred provider and unknown image usage
+- 2cb9b9f · 2026-11-25 · feat: refit generated text when containers resize
 - 8c2a817 · 2026-11-25 · docs: refresh project handoff
 - bb2508f · 2026-11-25 · Merge pull request #253 from marcostavar24633-cyber/codex/auto-fit-generated-text
 - f266ad4 · 2026-11-25 · test: verify preserved resize start position
-- a080ebf · 2026-11-25 · fix: preserve viewport from resize drag start
-- e716086 · 2026-11-25 · test: report editor scroll restoration values
-- aac4805 · 2026-11-25 · fix: restore editor viewport after page fonts settle
 <!-- HANDOFF:AUTO:END -->
