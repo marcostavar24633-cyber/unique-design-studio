@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T13:43:47.464Z
+Время обновления: 2026-11-25T14:00:12.340Z
 Ветка: main
-Последний commit: 11e1de58a61ddf9bca641e509087ac5b9ebeb3d7
-Дата коммита: 2026-11-25T17:43:33+04:00
-Сообщение: fix: stabilize live visual option previews
+Последний commit: 8d2391598a3d47f683c99a1930f542f92ddbafbf
+Дата коммита: 2026-11-25T17:59:55+04:00
+Сообщение: refactor: remove duplicate effect preview samples
 
 Последние коммиты:
+- 8d23915 · 2026-11-25 · refactor: remove duplicate effect preview samples
+- c680cb3 · 2026-11-25 · docs: refresh project handoff
 - 11e1de5 · 2026-11-25 · fix: stabilize live visual option previews
 - 1a0be02 · 2026-11-25 · docs: refresh project handoff
 - 4f73958 · 2026-11-25 · fix: wait for fault-test Worker edge cleanup
 - aab8e67 · 2026-11-25 · docs: refresh project handoff
 - a286b2a · 2026-11-25 · fix: safely clean up synthetic fault-test Worker
 - e5b19df · 2026-11-25 · docs: refresh project handoff
-- e1267af · 2026-11-25 · test: verify live diagnostics fault handling
-- 785df55 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
