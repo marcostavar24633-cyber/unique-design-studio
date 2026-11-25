@@ -358,7 +358,7 @@ export const NAV_LABELS = {
 
 export const ROLES = {
   hero: 'привлечь внимание', about: 'объяснить ценность', items: 'помочь выбрать', advantages: 'доказать',
-  process: 'объяснить путь клиента', gallery: 'доказать результатом', faq: 'снять возражение', contact: 'привести к действию',
+  process: 'объяснить путь клиента', gallery: 'доказать результатом', faq: 'снять возражение', pricing: 'объяснить стоимость', cases: 'показать опыт', quiz: 'помочь подобрать', contact: 'привести к действию',
 };
 
 export const MOTION_LABELS = {

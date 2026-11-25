@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ARCHETYPE_IDS, auditSite, generate } from '../src/engine/index.js';
+import { ARCHETYPE_IDS, auditSite, exportProject, generate } from '../src/engine/index.js';
 import { CORE_CSS } from '../src/engine/core-css.js';
 import { buildCoreModule } from '../scripts/sync-core.mjs';
 import { examples, full, root } from './helpers.mjs';
@@ -169,6 +169,48 @@ test('дополнительные блоки контента выводятс�
   assert.match(html, /class="uds-team-card"/);
   assert.match(html, /class="uds-stat"/);
   assert.ok(!generate({ ...full }).html.includes('id="testimonials"'));
+});
+
+test('тарифы, кейсы и необязательный квиз строятся только из явно введённых данных', () => {
+  const raw = {
+    ...full,
+    pricing: [['Старт', 'Базовый пакет', '12 000 ₽'], ['Про', 'Расширенный пакет', '25 000 ₽']],
+    cases: [['Дом у озера', 'Спроектировали дом и завершили строительство в согласованный срок.']],
+    quiz: { enabled: true },
+    formAction: 'https://example.com/lead',
+  };
+  const result = generate(raw);
+  for (const id of ['pricing', 'cases', 'quiz']) assert.ok(result.concept.homepage.sectionOrder.includes(id), `${id}: секция доступна`);
+  assert.match(result.html, /id="pricing"/);
+  assert.match(result.html, /12 000 ₽/);
+  assert.match(result.html, /id="cases"/);
+  assert.match(result.html, /Дом у озера/);
+  assert.match(result.html, /data-uds-quiz/);
+  assert.match(result.html, /name="quiz_summary"/);
+  assert.match(result.html, /data-uds-quiz-result/);
+  assert.ok(!result.audit.errors.some(error => error.id === 'form-labels'), 'поля квиза доступны и не блокируют публикацию');
+
+  const disabled = generate({ ...raw, quiz: { enabled: false } });
+  assert.ok(!disabled.concept.homepage.sectionOrder.includes('quiz'));
+  assert.ok(!disabled.html.includes('data-uds-quiz'));
+  const noPrices = generate({ ...full, pricing: [['Без цены', 'Условия по запросу', '']] });
+  assert.ok(!noPrices.concept.homepage.sectionOrder.includes('pricing'), 'раздел цен не появляется без подтверждённой цены');
+
+  const hiddenContacts = generate({ ...raw, quiz: { enabled: false }, hiddenSections: ['contact'], ctaUrl: '' });
+  const pricingHtml = hiddenContacts.html.match(/<section[^>]*id="pricing"[\s\S]*?<\/section>/)?.[0] || '';
+  assert.ok(pricingHtml && !pricingHtml.includes('<a '), 'тарифы не показывают ссылку на скрытые контакты');
+  const externalEnquiry = generate({ ...raw, hiddenSections: ['contact'], ctaUrl: 'https://example.com/request' });
+  const externalPricing = externalEnquiry.html.match(/<section[^>]*id="pricing"[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(externalPricing, /href="https:\/\/example\.com\/request"/, 'тарифы используют доступную внешнюю ссылку для заявки');
+
+  const placedBlock = generate({ ...raw, canvasBlocks: [{ id: 'after-pricing', type: 'text', title: 'Дополнение к тарифам', text: 'Детали', after: 'pricing' }] });
+  assert.ok(placedBlock.html.indexOf('id="after-pricing"') > placedBlock.html.indexOf('id="pricing"'), 'пользовательский блок сохраняет размещение после тарифов');
+
+  const exported = exportProject(result.project, result.concept);
+  const restored = generate(JSON.parse(JSON.stringify(exported)));
+  assert.ok(restored.concept.homepage.sectionOrder.includes('pricing'));
+  assert.ok(restored.concept.homepage.sectionOrder.includes('cases'));
+  assert.ok(restored.concept.homepage.sectionOrder.includes('quiz'));
 });
 
 test('переключение темы и выбор стиля навигации попадают в сайт', () => {

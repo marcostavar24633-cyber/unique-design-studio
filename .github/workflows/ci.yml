@@ -42,6 +42,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save playwright
-      - run: npx playwright install chromium
+      - run: npm run install:e2e-browser
       - run: npm run test:e2e
 

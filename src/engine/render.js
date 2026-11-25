@@ -62,6 +62,9 @@ function context(project, concept) {
   const copy = key => systemCopy(project.lang, key);
   const labels = {
     about: copy('about'), items: localizedItemsLabel(project.lang, vs.itemsLabel), advantages: copy('advantages'), process: copy('process'),
+    pricing: project.lang.startsWith('en') ? 'Pricing and packages' : 'Тарифы и пакеты',
+    cases: project.lang.startsWith('en') ? 'Selected work' : 'Кейсы и результаты',
+    quiz: project.lang.startsWith('en') ? 'Find the right option' : 'Подберите подходящий вариант',
     gallery: vs.nicheId === 'photo' ? copy('portfolioWork') : copy('gallery'), faq: copy('faq'), contact: copy('contactSection'),
     testimonials: project.lang.startsWith('en') ? 'Testimonials' : 'Отзывы', team: project.lang.startsWith('en') ? 'Team' : 'Команда', stats: project.lang.startsWith('en') ? 'By the numbers' : 'Факты и цифры',
   };
@@ -69,6 +72,8 @@ function context(project, concept) {
     about: project.aboutTitle || labels.about, items: project.servicesTitle || labels.items,
     advantages: project.advantagesTitle || labels.advantages, process: project.processTitle || labels.process,
     gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || labels.faq,
+    pricing: project.pricingTitle || labels.pricing, cases: project.casesTitle || labels.cases,
+    quiz: project.quizTitle || labels.quiz,
     contact: project.contactTitle || (project.lang.startsWith('en') ? labels.contact : concept.homepage.primaryCTA),
     testimonials: project.lang.startsWith('en') ? 'What clients say' : 'Отзывы клиентов', team: project.lang.startsWith('en') ? 'Our team' : 'Наша команда', stats: project.lang.startsWith('en') ? 'Our track record' : 'В цифрах',
   };
@@ -166,6 +171,7 @@ function leadForm(c, prefix) {
 <label for="${prefix}-name">${systemCopy(c.p.lang, 'name')}<input class="ds-field" id="${prefix}-name" name="name" autocomplete="name" required></label>
 <label for="${prefix}-contact">${systemCopy(c.p.lang, 'contact')}<input class="ds-field" id="${prefix}-contact" name="contact" autocomplete="tel" required></label>
 ${opts ? `<label for="${prefix}-topic">${esc(c.labels.items)}<select class="ds-field" id="${prefix}-topic" name="topic" data-topic><option value="">${systemCopy(c.p.lang, 'unselected')}</option>${opts}</select></label>` : ''}
+<input type="hidden" name="quiz_summary" data-quiz-summary>
 <button class="ds-button" type="submit">${esc(c.cta)}</button>
 <p class="form__status" data-form-status role="status" aria-live="polite" hidden></p>
 </form>`;
@@ -400,12 +406,32 @@ const SECTION = {
     const li = c.p.process.map(a => `<li data-uds-item-id="${esc(a.id)}" data-uds-edit-scope="${canvasEditScope('process', a.id)}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
+  pricing(c) {
+    const entries = c.p.pricing.filter(item => item.price).map((item, index) => `<article class="uds-pricing-card" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('pricing', item.id)}" data-reveal><span class="uds-pricing-card__index">${String(index + 1).padStart(2, '0')}</span><h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}<strong class="uds-pricing-card__price">${esc(item.price)}</strong>${c.ctaHref ? `<a class="ds-button ds-button--secondary" href="${esc(c.ctaHref)}">${c.p.lang.startsWith('en') ? 'Ask about this option' : 'Уточнить условия'}</a>` : ''}</article>`).join('');
+    return wrap(c, 'pricing', `<div class="uds-pricing">${entries}</div>`);
+  },
+  cases(c) {
+    const entries = c.p.cases.map(item => `<article class="uds-case" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('case', item.id)}" data-reveal>${item.image ? `<img src="${esc(item.image)}" alt="${esc(item.alt || item.title)}" loading="lazy" decoding="async">` : ''}<div><h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div></article>`).join('');
+    return wrap(c, 'cases', `<div class="uds-cases">${entries}</div>`);
+  },
   gallery(c) {
     const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-item-id="${esc(g.id)}" data-uds-edit-scope="${canvasEditScope('gallery', g.id)}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
     const composition = c.vs.photoComposition || 'grid';
     const countClass = composition === 'fan' ? ` gallery--fan--count-${c.p.gallery.length}` : '';
     const scrollLabel = composition === 'filmstrip' ? ` tabindex="0" aria-label="${esc(systemCopy(c.p.lang, 'galleryScroll'))}"` : '';
     return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list"${scrollLabel}>${li}</ul>`);
+  },
+  quiz(c) {
+    const services = c.p.services.filter(item => item.title);
+    const serviceChoices = services.map((item, index) => `<label class="uds-quiz__choice"><input type="radio" name="uds-quiz-service" value="${esc(item.title)}" aria-label="${esc(item.title)}"${index === 0 ? ' required' : ''}><span>${esc(item.title)}</span></label>`).join('');
+    const priorities = c.p.lang.startsWith('en')
+      ? [['cost', 'Understand the cost'], ['speed', 'Find the fastest option'], ['custom', 'Discuss a tailored solution']]
+      : [['cost', 'Сначала узнать стоимость'], ['speed', 'Найти самый быстрый вариант'], ['custom', 'Обсудить индивидуальное решение']];
+    const priorityChoices = priorities.map(([value, label], index) => `<label class="uds-quiz__choice"><input type="radio" name="uds-quiz-priority" value="${esc(value)}" aria-label="${esc(label)}"${index === 0 ? ' required' : ''}><span>${esc(label)}</span></label>`).join('');
+    const title = c.p.lang.startsWith('en') ? 'What are you looking for?' : 'Что вы хотите подобрать?';
+    const priority = c.p.lang.startsWith('en') ? 'What matters most?' : 'Что для вас важнее?';
+    const submit = c.p.lang.startsWith('en') ? 'Show my selection' : 'Показать мой подбор';
+    return wrap(c, 'quiz', `<form class="uds-quiz" data-uds-quiz><fieldset><legend>${title}</legend><div class="uds-quiz__choices">${serviceChoices}</div></fieldset><fieldset><legend>${priority}</legend><div class="uds-quiz__choices uds-quiz__choices--priority">${priorityChoices}</div></fieldset><button class="ds-button" type="submit">${submit}</button><p class="uds-quiz__result" data-uds-quiz-result role="status" aria-live="polite" hidden></p></form>`);
   },
   faq(c) {
     const d = c.p.faqs.map(f => `<details data-uds-item-id="${esc(f.id)}" data-uds-edit-scope="${canvasEditScope('faq', f.id)}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
@@ -449,6 +475,12 @@ function script(c, scene) {
   if (c.form) {
     const copy = ['sending', 'sent', 'failed'].map(key => JSON.stringify(systemCopy(c.p.lang, key))).join(',');
     parts.push(`document.querySelectorAll('form[data-form-delivery="endpoint-configured"]').forEach(function(f){var u;try{u=new URL(f.action,location.href)}catch(e){return}if(u.origin!==location.origin)return;var status=f.querySelector('[data-form-status]'),button=f.querySelector('[type="submit"]');if(!status||!button)return;var msg=[${copy}];f.addEventListener('submit',function(e){e.preventDefault();status.hidden=false;status.textContent=msg[0];status.dataset.state='sending';button.disabled=true;fetch(f.action,{method:f.method||'POST',body:new FormData(f),credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){if(!r.ok||r.redirected)throw new Error('delivery');f.reset();status.textContent=msg[1];status.dataset.state='success'}).catch(function(){status.textContent=msg[2];status.dataset.state='error'}).finally(function(){button.disabled=false})})})`);
+  }
+  if (c.order.includes('quiz')) {
+    const messages = c.p.lang.startsWith('en')
+      ? ['Your selection: ', '. We will use this when you contact us.']
+      : ['Ваш подбор: ', '. Он будет добавлен к заявке.'];
+    parts.push(`document.querySelectorAll('[data-uds-quiz]').forEach(function(q){q.addEventListener('submit',function(e){e.preventDefault();if(!q.reportValidity())return;var service=q.querySelector('[name="uds-quiz-service"]:checked'),priority=q.querySelector('[name="uds-quiz-priority"]:checked');if(!service||!priority)return;var labels={cost:${JSON.stringify(c.p.lang.startsWith('en') ? 'understand the cost' : 'узнать стоимость')},speed:${JSON.stringify(c.p.lang.startsWith('en') ? 'find the fastest option' : 'найти быстрый вариант')},custom:${JSON.stringify(c.p.lang.startsWith('en') ? 'discuss a tailored solution' : 'обсудить индивидуальное решение')}};var summary=service.value+'; '+(labels[priority.value]||priority.value),out=q.querySelector('[data-uds-quiz-result]');out.textContent=${JSON.stringify(messages[0])}+summary+${JSON.stringify(messages[1])};out.hidden=false;document.querySelectorAll('[data-quiz-summary]').forEach(function(input){input.value=summary});document.querySelectorAll('[name="topic"]').forEach(function(select){if(Array.from(select.options).some(function(option){return option.value===service.value}))select.value=service.value});var contact=document.getElementById('contact');if(contact)contact.scrollIntoView({behavior:${reduce}?'auto':'smooth',block:'start'})})})`);
   }
   if (c.p.services.length > 12) parts.push(`document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var target;try{target=document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))}catch(_){return}var more=target&&target.closest('details.items__more');if(more&&!more.open){e.preventDefault();more.open=true;history.pushState(null,'',a.getAttribute('href'));requestAnimationFrame(function(){target.scrollIntoView({behavior:'smooth',block:'center'})})}})`);
   if (revealActive(c.vs)) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
@@ -533,7 +565,7 @@ export function renderCss(concept, scene = null, identity = null) {
   const used = concept.homepage.sectionOrder;
   return [
     CORE_CSS, tokensCss(vs), visualIdentityCss(identity), themeCss(concept, identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HEADER_OVERLAY_CSS, HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
-    '.uds-testimonials,.uds-team,.uds-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span{color:var(--ds-text-muted)}.uds-team-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3{margin:0 0 6px}.uds-team-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}',
+    '.uds-testimonials,.uds-team,.uds-stats,.uds-pricing,.uds-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat,.uds-pricing-card,.uds-case{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span,.uds-case p,.uds-pricing-card p{color:var(--ds-text-muted)}.uds-team-card img,.uds-case img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3,.uds-case h3,.uds-pricing-card h3{margin:0 0 8px}.uds-team-card p,.uds-case p,.uds-pricing-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong,.uds-pricing-card__price{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}.uds-pricing-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px}.uds-pricing-card__index{font-size:.8rem;color:var(--ds-text-muted)}.uds-pricing-card__price{margin-top:auto;padding-top:12px;color:var(--ds-text)}.uds-pricing-card .ds-button{margin-top:8px}.uds-case{display:grid;align-content:start;gap:14px}.uds-quiz{display:grid;gap:22px;max-width:820px}.uds-quiz fieldset{margin:0;padding:0;border:0}.uds-quiz legend{margin-bottom:12px;font-weight:700}.uds-quiz__choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}.uds-quiz__choice{display:flex;align-items:flex-start;gap:10px;min-height:48px;padding:13px 15px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);cursor:pointer}.uds-quiz__choice:has(input:checked){border-color:var(--ds-accent);box-shadow:0 0 0 1px var(--ds-accent)}.uds-quiz__choice input{margin:4px 0 0;accent-color:var(--ds-accent)}.uds-quiz__result{padding:14px 16px;border-left:3px solid var(--ds-accent);background:var(--ds-surface);border-radius:var(--ds-radius-sm)}@media(prefers-reduced-motion:reduce){.uds-quiz__choice{scroll-behavior:auto}}',
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}.nav__brand{display:inline-flex;align-items:center;gap:10px}.nav__tagline{display:block;font-size:.72em;color:var(--ds-text-muted)}.form__status{margin:0;padding:10px 12px;border:1px solid var(--ds-border);border-left:3px solid var(--ds-accent);border-radius:var(--ds-radius-sm);color:var(--ds-text)}.form__status[data-state="error"]{border-left-color:#b42318}.form__status[data-state="success"]{border-left-color:#147d46}.foot__links{display:flex;flex-wrap:wrap;gap:8px 14px}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
