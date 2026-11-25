@@ -415,6 +415,7 @@ try {
       return { y, max };
     });
     await page.waitForTimeout(140);
+    const stableScroll = await preview.locator('body').evaluate(() => window.scrollY);
     await page.evaluate(() => {
       window.__udsLastPreviewRestore = null;
       window.__udsPreviewRestoreHandler = event => {
@@ -436,7 +437,7 @@ try {
     });
     check(previewA.differs, 'наведение не меняет визуальный вариант относительно текущего сайта');
     check(previewA.transition.includes('opacity'), `плавное появление предпросмотра не настроено: ${previewA.transition}`);
-    check(Math.abs(Number(previewA.restored.targetY) - scrollTarget.y) < 8, `предпросмотр не получил текущую прокрутку: ожидалось ${scrollTarget.y}, получено ${previewA.restored.targetY}`);
+    check(Math.abs(Number(previewA.restored.targetY) - stableScroll) < 8, `предпросмотр не восстановил текущую прокрутку: ожидалось ${stableScroll}, получено ${previewA.restored.targetY}`);
     check(scrollTarget.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
     await secondChoice.scrollIntoViewIfNeeded();
     await secondChoice.hover();
