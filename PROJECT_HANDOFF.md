@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T08:56:30.389Z
+Время обновления: 2026-11-25T08:59:00.426Z
 Ветка: main
-Последний commit: a8b374f2e5c004669a325def4dbd61324b20346e
-Дата коммита: 2026-11-25T12:55:51+04:00
-Сообщение: ci: verify staging diagnostics from browser
+Последний commit: d74732ab03a82bb34f9c1defdc08b8573d02ab2a
+Дата коммита: 2026-11-25T12:58:36+04:00
+Сообщение: test: use stable studio URL for staging browser check
 
 Последние коммиты:
+- d74732a · 2026-11-25 · test: use stable studio URL for staging browser check
+- 94893e1 · 2026-11-25 · docs: refresh project handoff
 - a8b374f · 2026-11-25 · ci: verify staging diagnostics from browser
 - 043fb89 · 2026-11-25 · docs: refresh project handoff
 - 18c3637 · 2026-11-25 · fix editor resize and smooth visual option previews
 - 97a8729 · 2026-11-25 · docs: refresh project handoff
 - 3c4e1c9 · 2026-11-25 · Merge pull request #260 from marcostavar24633-cyber/codex/text-fit-tight-container
 - 202a7d4 · 2026-11-25 · test: cover narrow text fit fallback and safety margin
-- 10464f1 · 2026-11-25 · fix: wrap fitted labels in extremely narrow containers
-- 1c38874 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
