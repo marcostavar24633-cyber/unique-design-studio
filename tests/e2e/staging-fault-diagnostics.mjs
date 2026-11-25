@@ -9,6 +9,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();
   await page.goto(studioUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.locator('#ptab-own').click();
   const endpointInput = page.locator('#auto-endpoint');
   const checkButton = page.locator('#ai-connection-check');
   const status = page.locator('#ai-connection-status');
@@ -29,3 +30,4 @@ try {
 } finally {
   await browser.close();
 }
+
