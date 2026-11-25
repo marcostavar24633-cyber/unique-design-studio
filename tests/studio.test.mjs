@@ -91,6 +91,8 @@ test('визуальные варианты доступны прямо в на�
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
   assert.match(source, /list\.hidden = false/);
   assert.doesNotMatch(source, /Предпросмотр вариантов/);
+  assert.doesNotMatch(source, /type === 'effectPreview'/);
+  assert.doesNotMatch(css, /effect-preview-(?:grid|sample)/);
   assert.match(source, /frame\.className = 'visual-option-preview-frame'/);
   assert.match(source, /frame\.srcdoc = previewHtml\(html\)/);
   assert.match(source, /uds-canvas-restore-scroll/);
