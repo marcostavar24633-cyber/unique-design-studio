@@ -22,8 +22,8 @@ export function canvasEditScope(prefix, value) {
 /** Safe, self-contained custom sections added from the visual editor. */
 export function canvasBlocksHtml(value, after = 'contact', elementsBySection = {}) {
   if (!Array.isArray(value)) return '';
-  const placements = new Set(['hero', 'about', 'items', 'advantages', 'process', 'gallery', 'faq', 'contact']);
-  const usedIds = new Set(['main', 'top', 'hero', 'about', 'items', 'advantages', 'process', 'gallery', 'faq', 'contact']);
+  const placements = new Set(['hero', 'about', 'items', 'advantages', 'process', 'gallery', 'pricing', 'cases', 'quiz', 'faq', 'contact']);
+  const usedIds = new Set(['main', 'top', 'hero', 'about', 'items', 'advantages', 'process', 'gallery', 'pricing', 'cases', 'quiz', 'faq', 'contact']);
   return value.slice(0, 30).map((block, index) => {
     if (!block || typeof block !== 'object') return '';
     const anchor = placements.has(block.after) ? block.after : 'contact';

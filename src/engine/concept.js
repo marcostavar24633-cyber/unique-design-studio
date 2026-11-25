@@ -55,6 +55,9 @@ function contentSignals(p) {
     testimonials: p.testimonials.length,
     team: p.team.length,
     stats: p.stats.length,
+    pricing: p.pricing.filter(item => item.price).length,
+    cases: p.cases.length,
+    quiz: p.passthrough?.quiz?.enabled === true && p.services.filter(item => item.title).length >= 2,
     contacts: Boolean(p.contacts.phone || p.contacts.email || p.contacts.address),
   };
 }
@@ -251,28 +254,28 @@ export function similarity(a, b) {
 function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', seed = hash(project.id || project.brand)) {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
-    gallery: s.gallery > 0, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
+    gallery: s.gallery > 0, pricing: s.pricing > 0, cases: s.cases > 0, quiz: s.quiz, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
   };
   // Ведущие секции ниши сохраняют приоритет. Внутри выбранного ритма есть
   // два редакционных маршрута: порядок не сводится к одной схеме на всю нишу.
   const lead = uniq(profile.lead || []).filter(id => id !== 'contact' && has[id]);
-  const base = uniq([...arch.order, 'testimonials', 'team', 'stats']).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
+  const base = uniq([...arch.order, 'pricing', 'cases', 'quiz', 'testimonials', 'team', 'stats']).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
   const preferences = {
     editorial: [
-      ['about', 'gallery', 'items', 'testimonials', 'advantages', 'process', 'team', 'stats', 'faq'],
-      ['gallery', 'about', 'advantages', 'items', 'testimonials', 'process', 'stats', 'team', 'faq'],
+      ['about', 'gallery', 'items', 'pricing', 'cases', 'quiz', 'testimonials', 'advantages', 'process', 'team', 'stats', 'faq'],
+      ['gallery', 'about', 'advantages', 'items', 'cases', 'pricing', 'testimonials', 'process', 'stats', 'team', 'quiz', 'faq'],
     ],
     offset: [
-      ['gallery', 'advantages', 'about', 'items', 'faq', 'process'],
-      ['advantages', 'gallery', 'items', 'about', 'process', 'faq'],
+      ['gallery', 'advantages', 'about', 'items', 'pricing', 'cases', 'faq', 'process'],
+      ['advantages', 'gallery', 'items', 'about', 'cases', 'pricing', 'process', 'faq'],
     ],
     framed: [
-      ['items', 'advantages', 'process', 'gallery', 'about', 'faq'],
-      ['process', 'items', 'gallery', 'advantages', 'about', 'faq'],
+      ['items', 'advantages', 'process', 'gallery', 'pricing', 'cases', 'about', 'faq'],
+      ['process', 'items', 'gallery', 'advantages', 'pricing', 'cases', 'about', 'faq'],
     ],
     quiet: [
-      ['about', 'process', 'faq', 'advantages', 'items', 'gallery'],
-      ['faq', 'about', 'advantages', 'process', 'gallery', 'items'],
+      ['about', 'process', 'pricing', 'cases', 'faq', 'advantages', 'items', 'gallery'],
+      ['faq', 'about', 'advantages', 'process', 'cases', 'pricing', 'gallery', 'items'],
     ],
   }[LAYOUT_ORDER_FAMILY[sectionLayout] || sectionLayout] || [['about', 'items', 'advantages', 'process', 'gallery', 'faq']];
   const preference = pick(stream(seed, 'section-order-variant'), preferences);

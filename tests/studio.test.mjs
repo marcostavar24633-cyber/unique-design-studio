@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
+test('старые сайты больше не предлагаются как готовые стили генератора', () => {
+  const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\['@brand',\s*'Фирменный стиль'/);
+  assert.doesNotMatch(source, /Object\.entries\(BRANDS\)/);
+  // Импортированные проекты сохраняют поддержку прежнего brandProfile в движке.
+  const project = readFileSync(new URL('../src/engine/project.js', import.meta.url), 'utf8');
+  assert.match(project, /Object\.hasOwn\(BRANDS, brandId\)/);
+});
+
 test('код веб-редактора синтаксически корректен и содержит загрузку фотографий', () => {
   const check = spawnSync(process.execPath, ['--check', 'studio/studio.js'], { encoding: 'utf8' });
   assert.equal(check.status, 0, check.stderr || check.stdout);
@@ -89,7 +98,10 @@ test('код веб-редактора синтаксически коррект
 test('визуальные варианты доступны прямо в настройках и переключаются отдельным плавным слоем', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
-  assert.match(source, /list\.hidden = false/);
+  assert.match(source, /const group = document\.createElement\('details'\)/);
+  assert.match(source, /group\.className = 'visual-option-preview'/);
+  assert.match(source, /select\.hidden = true/);
+  assert.match(source, /group\.open = false/);
   assert.doesNotMatch(source, /Предпросмотр вариантов/);
   assert.doesNotMatch(source, /type === 'effectPreview'/);
   assert.doesNotMatch(css, /effect-preview-(?:grid|sample)/);

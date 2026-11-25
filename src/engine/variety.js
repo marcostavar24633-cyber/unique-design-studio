@@ -77,7 +77,7 @@ export const PHOTO_COMPOSITIONS = Object.freeze({
   overlap: 'Слоистая раскладка',
   stagger: 'Шахматный ритм',
   masonry: 'Редакционная колонная сетка',
-  filmstrip: 'Лента с прокруткой',
+  filmstrip: 'Горизонтальная карусель',
   feature: 'Один крупный кадр',
 });
 
@@ -129,10 +129,10 @@ export function photoCompositionCss(id) {
     overlap: `@media(min-width:761px){.gallery--overlap{grid-template-columns:repeat(12,minmax(0,1fr));gap:0 10px;align-items:center;padding-block:16px}.gallery--overlap>li{position:relative;grid-column:span 4;margin-block:10px;transition:transform .25s var(--ds-ease),z-index .25s}.gallery--overlap>li:nth-child(3n+2){transform:translate(-12px,18px);z-index:2}.gallery--overlap>li:nth-child(3n){transform:translate(-24px,-10px);z-index:1}.gallery--overlap>li:nth-child(3n+2):hover,.gallery--overlap>li:nth-child(3n):hover{z-index:5;transform:translateY(-8px) scale(1.035)}.gallery--overlap>li[data-reveal].is-in:nth-child(3n+2){transform:translate(-12px,18px);z-index:2}.gallery--overlap>li[data-reveal].is-in:nth-child(3n){transform:translate(-24px,-10px);z-index:1}.gallery--overlap>li[data-reveal].is-in:nth-child(3n+2):hover,.gallery--overlap>li[data-reveal].is-in:nth-child(3n):hover{transform:translateY(-8px) scale(1.035);z-index:5}.gallery--overlap img{aspect-ratio:4/5}}@media(prefers-reduced-motion:reduce){.gallery--overlap>li{transition:none}.gallery--overlap>li:nth-child(3n+2):hover,.gallery--overlap>li:nth-child(3n):hover,.gallery--overlap>li[data-reveal].is-in:nth-child(3n+2):hover,.gallery--overlap>li[data-reveal].is-in:nth-child(3n):hover{transform:none}}`,
     stagger: `@media(min-width:761px){.gallery--stagger{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}.gallery--stagger>li:nth-child(even){margin-top:clamp(24px,5vw,64px)}.gallery--stagger>li:nth-child(4n+3){margin-top:clamp(12px,2.5vw,32px)}.gallery--stagger img{aspect-ratio:4/5}}`,
     masonry: `@media(min-width:761px){.gallery--masonry{display:block;columns:3;column-gap:clamp(12px,2vw,24px)}.gallery--masonry>li{break-inside:avoid;margin:0 0 clamp(12px,2vw,24px)}.gallery--masonry img{aspect-ratio:auto;max-height:460px;object-fit:cover}.gallery--masonry>li:nth-child(3n+2) img{aspect-ratio:4/3}}@media(min-width:761px) and (max-width:1000px){.gallery--masonry{columns:2}}`,
-    filmstrip: `.gallery--filmstrip:focus-visible{outline:3px solid var(--ds-accent);outline-offset:4px}@media(min-width:761px){.gallery--filmstrip{display:flex;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x mandatory;scrollbar-width:thin;padding:4px 2px 18px}.gallery--filmstrip>li{flex:0 0 clamp(240px,28vw,360px);scroll-snap-align:start}.gallery--filmstrip img{aspect-ratio:4/5}}`,
+    filmstrip: `.gallery-carousel{position:relative;min-width:0}.gallery--filmstrip{display:flex;gap:clamp(12px,2vw,22px);overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;overscroll-behavior-y:none;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px 2px 16px;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}.gallery--filmstrip::-webkit-scrollbar{display:none}.gallery--filmstrip>li{flex:0 0 min(82%,360px);min-width:0;scroll-snap-align:start}.gallery--filmstrip img{aspect-ratio:4/5}.gallery-carousel__controls{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.gallery-carousel__button{display:grid;place-items:center;width:42px;min-height:42px;padding:0;border:1px solid var(--ds-border);border-radius:999px;background:var(--ds-surface);color:var(--ds-text);cursor:pointer}.gallery-carousel__button:hover:not(:disabled){border-color:var(--ds-accent);color:var(--ds-accent)}.gallery-carousel__button:disabled{opacity:.4;cursor:default}.gallery-carousel__button:focus-visible{outline:2px solid var(--ds-accent);outline-offset:3px}`,
     feature: `@media(min-width:761px){.gallery--feature{grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-rows:minmax(110px,auto);align-items:stretch}.gallery--feature>li{grid-column:span 4}.gallery--feature>li:first-child{grid-column:span 8;grid-row:span 2}.gallery--feature>li:first-child img{height:100%;min-height:320px;aspect-ratio:auto}.gallery--feature>li:nth-child(2) img,.gallery--feature>li:nth-child(3) img{aspect-ratio:4/3}}`,
   };
-  const mobile = id && id !== 'grid'
+  const mobile = id && id !== 'grid' && id !== 'filmstrip'
     ? `@media(max-width:760px){.gallery--${id}{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(10px,2vw,16px);overflow:visible}.gallery--${id}>li{position:static;grid-column:auto;grid-row:auto;flex:initial;transform:none!important;margin:0}.gallery--${id} img{aspect-ratio:4/5}.gallery--${id}>li:first-child img{min-height:0;aspect-ratio:4/5}}@media(max-width:420px){.gallery--${id}{grid-template-columns:1fr}}`
     : '';
   return shared + (desktop[id] || '') + mobile;
@@ -210,15 +210,16 @@ const REVEAL_FROM = {
   'clip-center': 'opacity:.001;clip-path:inset(50% 50% 50% 50%)',
   'fold-open': 'opacity:0;transform:perspective(900px) rotateX(-32deg);transform-origin:top center',
   'soft-pop': 'opacity:0;transform:translateY(10px) scale(.88)',
+  'luxury-reveal': 'opacity:0;transform:translateY(9px);filter:blur(6px)',
 };
 
 /** CSS эффекта появления. Перекрывает базовое появление; при reduced-motion всё сразу видно. */
 export function revealCss(id) {
   const from = REVEAL_FROM[id];
   if (!from) return '';
-  return `html.js-reveal [data-reveal]{${from};transition:opacity var(--ds-duration-slow) var(--ds-ease),transform var(--ds-duration-slow) var(--ds-ease),filter var(--ds-duration-slow) var(--ds-ease),clip-path var(--ds-duration-slow) var(--ds-ease)}`
+  return `html.js-reveal [data-reveal]{${from};transition:opacity var(--ds-duration-slow) var(--ds-ease),transform var(--ds-duration-slow) var(--ds-ease),filter var(--ds-duration-slow) var(--ds-ease),clip-path var(--ds-duration-slow) var(--ds-ease);transition-delay:var(--uds-reveal-delay,0ms)}`
     + 'html.js-reveal [data-reveal].is-in{opacity:1;transform:none;filter:none;clip-path:inset(0 0 0 0)}'
-    + 'html.js-reveal li[data-reveal]:nth-child(2){transition-delay:70ms}html.js-reveal li[data-reveal]:nth-child(3){transition-delay:140ms}html.js-reveal li[data-reveal]:nth-child(n+4){transition-delay:200ms}'
+    + 'html.js-reveal li[data-reveal]:nth-child(2){--uds-reveal-delay:70ms}html.js-reveal li[data-reveal]:nth-child(3){--uds-reveal-delay:140ms}html.js-reveal li[data-reveal]:nth-child(n+4){--uds-reveal-delay:200ms}'
     + '@media(prefers-reduced-motion:reduce){html.js-reveal [data-reveal]{opacity:1;transform:none;filter:none;clip-path:none;transition:none}}';
 }
 

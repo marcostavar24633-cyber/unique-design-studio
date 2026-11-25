@@ -62,6 +62,9 @@ function context(project, concept) {
   const copy = key => systemCopy(project.lang, key);
   const labels = {
     about: copy('about'), items: localizedItemsLabel(project.lang, vs.itemsLabel), advantages: copy('advantages'), process: copy('process'),
+    pricing: project.lang.startsWith('en') ? 'Pricing and packages' : 'Тарифы и пакеты',
+    cases: project.lang.startsWith('en') ? 'Selected work' : 'Кейсы и результаты',
+    quiz: project.lang.startsWith('en') ? 'Find the right option' : 'Подберите подходящий вариант',
     gallery: vs.nicheId === 'photo' ? copy('portfolioWork') : copy('gallery'), faq: copy('faq'), contact: copy('contactSection'),
     testimonials: project.lang.startsWith('en') ? 'Testimonials' : 'Отзывы', team: project.lang.startsWith('en') ? 'Team' : 'Команда', stats: project.lang.startsWith('en') ? 'By the numbers' : 'Факты и цифры',
   };
@@ -69,6 +72,8 @@ function context(project, concept) {
     about: project.aboutTitle || labels.about, items: project.servicesTitle || labels.items,
     advantages: project.advantagesTitle || labels.advantages, process: project.processTitle || labels.process,
     gallery: project.galleryTitle || labels.gallery, faq: project.faqTitle || labels.faq,
+    pricing: project.pricingTitle || labels.pricing, cases: project.casesTitle || labels.cases,
+    quiz: project.quizTitle || labels.quiz,
     contact: project.contactTitle || (project.lang.startsWith('en') ? labels.contact : concept.homepage.primaryCTA),
     testimonials: project.lang.startsWith('en') ? 'What clients say' : 'Отзывы клиентов', team: project.lang.startsWith('en') ? 'Our team' : 'Наша команда', stats: project.lang.startsWith('en') ? 'Our track record' : 'В цифрах',
   };
@@ -166,6 +171,7 @@ function leadForm(c, prefix) {
 <label for="${prefix}-name">${systemCopy(c.p.lang, 'name')}<input class="ds-field" id="${prefix}-name" name="name" autocomplete="name" required></label>
 <label for="${prefix}-contact">${systemCopy(c.p.lang, 'contact')}<input class="ds-field" id="${prefix}-contact" name="contact" autocomplete="tel" required></label>
 ${opts ? `<label for="${prefix}-topic">${esc(c.labels.items)}<select class="ds-field" id="${prefix}-topic" name="topic" data-topic><option value="">${systemCopy(c.p.lang, 'unselected')}</option>${opts}</select></label>` : ''}
+<input type="hidden" name="quiz_summary" data-quiz-summary>
 <button class="ds-button" type="submit">${esc(c.cta)}</button>
 <p class="form__status" data-form-status role="status" aria-live="polite" hidden></p>
 </form>`;
@@ -362,10 +368,10 @@ const HERO = {
 };
 
 // ---------- Секции ----------
-const wrap = (c, id, inner, intro = '') => `<section id="${id}" class="${sectionClass(c, id)}" aria-labelledby="${id}-h"><div class="ds-container"><header class="sec__head"><h2 id="${id}-h">${esc(c.titles[id])}</h2>${intro ? `<p class="sec__intro">${esc(intro)}</p>` : ''}</header>${inner}</div></section>`;
+const wrap = (c, id, inner, intro = '') => `<section id="${id}" class="${sectionClass(c, id)}" data-motion-section aria-labelledby="${id}-h"><div class="ds-container"><header class="sec__head" data-reveal><h2 id="${id}-h">${esc(c.titles[id])}</h2>${intro ? `<p class="sec__intro">${esc(intro)}</p>` : ''}</header>${inner}</div></section>`;
 
 const SECTION = {
-  about: c => `<section id="about" class="${sectionClass(c, 'about')}" aria-labelledby="about-h"><div class="ds-container"><header class="sec__head"><h2 id="about-h">${esc(c.titles.about)}</h2></header><p class="about__text" data-reveal>${esc(c.p.aboutText)}</p></div></section>`,
+  about: c => `<section id="about" class="${sectionClass(c, 'about')}" data-motion-section aria-labelledby="about-h"><div class="ds-container"><header class="sec__head" data-reveal><h2 id="about-h">${esc(c.titles.about)}</h2></header><p class="about__text" data-reveal>${esc(c.p.aboutText)}</p></div></section>`,
   items(c) {
     const v = c.vs.variants.items;
     const mech = c.vs.variants.itemsMechanic || 'none';
@@ -400,12 +406,36 @@ const SECTION = {
     const li = c.p.process.map(a => `<li data-uds-item-id="${esc(a.id)}" data-uds-edit-scope="${canvasEditScope('process', a.id)}" data-reveal><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(a.text)}</p>` : ''}</li>`).join('');
     return wrap(c, 'process', `<ol class="proc proc--${c.vs.variants.process}" role="list">${li}</ol>`);
   },
+  pricing(c) {
+    const entries = c.p.pricing.filter(item => item.price).map((item, index) => `<article class="uds-pricing-card" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('pricing', item.id)}" data-reveal><span class="uds-pricing-card__index">${String(index + 1).padStart(2, '0')}</span><h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}<strong class="uds-pricing-card__price">${esc(item.price)}</strong>${c.ctaHref ? `<a class="ds-button ds-button--secondary" href="${esc(c.ctaHref)}">${c.p.lang.startsWith('en') ? 'Ask about this option' : 'Уточнить условия'}</a>` : ''}</article>`).join('');
+    return wrap(c, 'pricing', `<div class="uds-pricing">${entries}</div>`);
+  },
+  cases(c) {
+    const entries = c.p.cases.map(item => `<article class="uds-case" data-uds-item-id="${esc(item.id)}" data-uds-edit-scope="${canvasEditScope('case', item.id)}" data-reveal>${item.image ? `<img src="${esc(item.image)}" alt="${esc(item.alt || item.title)}" loading="lazy" decoding="async">` : ''}<div><h3>${esc(item.title)}</h3>${item.text ? `<p>${esc(item.text)}</p>` : ''}</div></article>`).join('');
+    return wrap(c, 'cases', `<div class="uds-cases">${entries}</div>`);
+  },
   gallery(c) {
     const li = c.p.gallery.map((g, n) => { const mobile = c.p.passthrough?.imageArtDirection?.mobileSources?.gallery?.[n]; const img = mobile ? `<picture><source media="(max-width:600px)" srcset="${esc(mobile)}"><img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async"></picture>` : `<img ${artStyle(c.p, "gallery", n)} src="${esc(g.src)}" alt="${esc(g.alt || g.caption)}" loading="lazy" decoding="async">`; return `<li data-uds-item-id="${esc(g.id)}" data-uds-edit-scope="${canvasEditScope('gallery', g.id)}" data-reveal><figure>${img}${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''} </figure></li>`; }).join('');
     const composition = c.vs.photoComposition || 'grid';
     const countClass = composition === 'fan' ? ` gallery--fan--count-${c.p.gallery.length}` : '';
-    const scrollLabel = composition === 'filmstrip' ? ` tabindex="0" aria-label="${esc(systemCopy(c.p.lang, 'galleryScroll'))}"` : '';
-    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list"${scrollLabel}>${li}</ul>`);
+    if (composition === 'filmstrip') {
+      const prev = c.p.lang.startsWith('en') ? 'Previous photos' : 'Предыдущие фотографии';
+      const next = c.p.lang.startsWith('en') ? 'Next photos' : 'Следующие фотографии';
+      return wrap(c, 'gallery', `<div class="gallery-carousel"><ul class="gallery gallery--filmstrip${countClass}" role="list" tabindex="0" aria-label="${esc(c.p.lang.startsWith('en') ? 'Photo gallery. Swipe or use arrows to see more.' : 'Галерея фотографий. Листайте или используйте стрелки, чтобы увидеть остальные.')}" data-gallery-track>${li}</ul><div class="gallery-carousel__controls" data-gallery-controls><button class="gallery-carousel__button" type="button" data-gallery-prev aria-label="${esc(prev)}" disabled>←</button><button class="gallery-carousel__button" type="button" data-gallery-next aria-label="${esc(next)}">→</button></div></div>`);
+    }
+    return wrap(c, 'gallery', `<ul class="gallery gallery--${esc(composition)}${countClass}" role="list">${li}</ul>`);
+  },
+  quiz(c) {
+    const services = c.p.services.filter(item => item.title);
+    const serviceChoices = services.map((item, index) => `<label class="uds-quiz__choice"><input type="radio" name="uds-quiz-service" value="${esc(item.title)}" aria-label="${esc(item.title)}"${index === 0 ? ' required' : ''}><span>${esc(item.title)}</span></label>`).join('');
+    const priorities = c.p.lang.startsWith('en')
+      ? [['cost', 'Understand the cost'], ['speed', 'Find the fastest option'], ['custom', 'Discuss a tailored solution']]
+      : [['cost', 'Сначала узнать стоимость'], ['speed', 'Найти самый быстрый вариант'], ['custom', 'Обсудить индивидуальное решение']];
+    const priorityChoices = priorities.map(([value, label], index) => `<label class="uds-quiz__choice"><input type="radio" name="uds-quiz-priority" value="${esc(value)}" aria-label="${esc(label)}"${index === 0 ? ' required' : ''}><span>${esc(label)}</span></label>`).join('');
+    const title = c.p.lang.startsWith('en') ? 'What are you looking for?' : 'Что вы хотите подобрать?';
+    const priority = c.p.lang.startsWith('en') ? 'What matters most?' : 'Что для вас важнее?';
+    const submit = c.p.lang.startsWith('en') ? 'Show my selection' : 'Показать мой подбор';
+    return wrap(c, 'quiz', `<form class="uds-quiz" data-uds-quiz><fieldset><legend>${title}</legend><div class="uds-quiz__choices">${serviceChoices}</div></fieldset><fieldset><legend>${priority}</legend><div class="uds-quiz__choices uds-quiz__choices--priority">${priorityChoices}</div></fieldset><button class="ds-button" type="submit">${submit}</button><p class="uds-quiz__result" data-uds-quiz-result role="status" aria-live="polite" hidden></p></form>`);
   },
   faq(c) {
     const d = c.p.faqs.map(f => `<details data-uds-item-id="${esc(f.id)}" data-uds-edit-scope="${canvasEditScope('faq', f.id)}"><summary>${esc(f.title)}</summary><p>${esc(f.text)}</p></details>`).join('');
@@ -433,7 +463,7 @@ const SECTION = {
     const form = leadForm(c, 'contact');
     const ext = c.p.ctaUrl && !c.p.ctaUrl.startsWith('#') ? `<div class="actions">${cta(c)}</div>` : '';
     const composition = c.vs.sectionCompositions?.contact || 'split';
-    return `<section id="contact" class="${sectionClass(c, 'contact')}" aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''} contact--layout-${esc(composition)}"><div><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form}</div></section>`;
+    return `<section id="contact" class="${sectionClass(c, 'contact')}" data-motion-section aria-labelledby="contact-h"><div class="ds-container contact${form ? ' contact--two' : ''} contact--layout-${esc(composition)}"><div data-reveal><h2 id="contact-h">${esc(c.titles.contact)}</h2>${c.p.contactText ? `<p class="lede">${esc(c.p.contactText)}</p>` : ''}${rows.length ? `<ul class="contact__list">${rows.join('')}</ul>` : ''}${ext}</div>${form ? `<div data-reveal>${form}</div>` : ''}</div></section>`;
   },
 };
 
@@ -446,12 +476,24 @@ function script(c, scene) {
   const themeKey = JSON.stringify(`uds:theme:${c.p.id || 'site'}`);
   parts.push(`(function(){var root=document.documentElement,key=${themeKey},button=document.querySelector('[data-theme-toggle]'),saved='';try{saved=localStorage.getItem(key)||''}catch(e){}if(saved==='alternate')root.dataset.udsTheme='alternate';if(button){button.setAttribute('aria-pressed',String(root.dataset.udsTheme==='alternate'));button.addEventListener('click',function(){var alternate=root.dataset.udsTheme!=='alternate';if(alternate)root.dataset.udsTheme='alternate';else delete root.dataset.udsTheme;button.setAttribute('aria-pressed',String(alternate));try{localStorage.setItem(key,alternate?'alternate':'default')}catch(e){}})}})()`);
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
+  if (c.order.includes('gallery') && c.vs.photoComposition === 'filmstrip') parts.push(`document.querySelectorAll('.gallery-carousel').forEach(function(carousel){var track=carousel.querySelector('[data-gallery-track]'),prev=carousel.querySelector('[data-gallery-prev]'),next=carousel.querySelector('[data-gallery-next]'),controls=carousel.querySelector('[data-gallery-controls]');if(!track||!prev||!next||!controls)return;var update=function(){var max=track.scrollWidth-track.clientWidth;controls.hidden=max<2;prev.disabled=track.scrollLeft<2;next.disabled=track.scrollLeft>=max-2};var move=function(direction){track.scrollBy({left:direction*Math.max(220,track.clientWidth*.82),behavior:${reduce}?'auto':'smooth'})};prev.addEventListener('click',function(){move(-1)});next.addEventListener('click',function(){move(1)});track.addEventListener('scroll',update,{passive:true});track.addEventListener('keydown',function(event){if(event.key==='ArrowLeft'){event.preventDefault();move(-1)}else if(event.key==='ArrowRight'){event.preventDefault();move(1)}});if('ResizeObserver'in window)new ResizeObserver(update).observe(track);addEventListener('load',update,{once:true});update()})`);
   if (c.form) {
     const copy = ['sending', 'sent', 'failed'].map(key => JSON.stringify(systemCopy(c.p.lang, key))).join(',');
     parts.push(`document.querySelectorAll('form[data-form-delivery="endpoint-configured"]').forEach(function(f){var u;try{u=new URL(f.action,location.href)}catch(e){return}if(u.origin!==location.origin)return;var status=f.querySelector('[data-form-status]'),button=f.querySelector('[type="submit"]');if(!status||!button)return;var msg=[${copy}];f.addEventListener('submit',function(e){e.preventDefault();status.hidden=false;status.textContent=msg[0];status.dataset.state='sending';button.disabled=true;fetch(f.action,{method:f.method||'POST',body:new FormData(f),credentials:'same-origin',headers:{Accept:'application/json'}}).then(function(r){if(!r.ok||r.redirected)throw new Error('delivery');f.reset();status.textContent=msg[1];status.dataset.state='success'}).catch(function(){status.textContent=msg[2];status.dataset.state='error'}).finally(function(){button.disabled=false})})})`);
   }
+  if (c.order.includes('quiz')) {
+    const messages = c.p.lang.startsWith('en')
+      ? ['Your selection: ', '. We will use this when you contact us.']
+      : ['Ваш подбор: ', '. Он будет добавлен к заявке.'];
+    parts.push(`document.querySelectorAll('[data-uds-quiz]').forEach(function(q){q.addEventListener('submit',function(e){e.preventDefault();if(!q.reportValidity())return;var service=q.querySelector('[name="uds-quiz-service"]:checked'),priority=q.querySelector('[name="uds-quiz-priority"]:checked');if(!service||!priority)return;var labels={cost:${JSON.stringify(c.p.lang.startsWith('en') ? 'understand the cost' : 'узнать стоимость')},speed:${JSON.stringify(c.p.lang.startsWith('en') ? 'find the fastest option' : 'найти быстрый вариант')},custom:${JSON.stringify(c.p.lang.startsWith('en') ? 'discuss a tailored solution' : 'обсудить индивидуальное решение')}};var summary=service.value+'; '+(labels[priority.value]||priority.value),out=q.querySelector('[data-uds-quiz-result]');out.textContent=${JSON.stringify(messages[0])}+summary+${JSON.stringify(messages[1])};out.hidden=false;document.querySelectorAll('[data-quiz-summary]').forEach(function(input){input.value=summary});document.querySelectorAll('[name="topic"]').forEach(function(select){if(Array.from(select.options).some(function(option){return option.value===service.value}))select.value=service.value});var contact=document.getElementById('contact');if(contact)contact.scrollIntoView({behavior:${reduce}?'auto':'smooth',block:'start'})})})`);
+  }
   if (c.p.services.length > 12) parts.push(`document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var target;try{target=document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)))}catch(_){return}var more=target&&target.closest('details.items__more');if(more&&!more.open){e.preventDefault();more.open=true;history.pushState(null,'',a.getAttribute('href'));requestAnimationFrame(function(){target.scrollIntoView({behavior:'smooth',block:'center'})})}})`);
-  if (revealActive(c.vs)) parts.push(`if('IntersectionObserver'in window&&!${reduce}){document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});document.querySelectorAll('[data-reveal]').forEach(function(el){io.observe(el)})}`);
+  if (siteRevealActive(c.vs)) parts.push(`if('IntersectionObserver'in window&&!${reduce}){var targets=document.querySelectorAll('[data-motion-section]');targets.forEach(function(section,index){section.dataset.motionIndex=String(index);var box=section.querySelector('.ds-container');if(box)Array.from(box.children).forEach(function(child){if(!child.matches('.sec__head[data-reveal]')&&!child.hasAttribute('data-reveal')&&!child.matches('[data-uds-edit-key],[class*="uds-added-element"]')&&!child.querySelector('[data-reveal],[data-uds-edit-key],[class*="uds-added-element"]'))child.setAttribute('data-reveal','')})});var reveals=Array.from(document.querySelectorAll('[data-motion-section] [data-reveal],.hero [data-reveal]')).filter(function(el){return !el.closest('[data-uds-edit-key],[class*="uds-added-element"]')});reveals.forEach(function(el){var siblings=el.parentElement?Array.from(el.parentElement.children):[],index=Math.max(0,siblings.indexOf(el));el.style.setProperty('--uds-reveal-delay',Math.min(index*85,340)+'ms')});document.documentElement.classList.add('js-reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -10% 0px'});reveals.forEach(function(el){io.observe(el)});if(${siteMotionActive(c.vs)}){var active=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){targets.forEach(function(s){s.classList.toggle('is-motion-active',s===e.target)})}})},{rootMargin:'-42% 0px -42% 0px',threshold:0});targets.forEach(function(s){active.observe(s)})}}`);
+  if (siteMotionActive(c.vs)) {
+    if (!c.vs.motionPlan?.mechanics.includes('scroll-progress')) parts.push(`if(!${reduce}){var bar=document.createElement('div');bar.className='m-progress uds-reading-progress';bar.setAttribute('aria-hidden','true');document.body.appendChild(bar);var queued=false,update=function(){if(queued)return;queued=true;requestAnimationFrame(function(){var max=document.documentElement.scrollHeight-innerHeight,progress=max>0?Math.max(0,Math.min(1,scrollY/max)):0;bar.style.setProperty('--m-p',String(progress));queued=false})};addEventListener('scroll',update,{passive:true});addEventListener('resize',update,{passive:true});update()}`);
+    const photoTargets = ['.hero__bg img', ...(HERO_PHOTO_BG.has(c.vs.archetype) ? ['.hero__photo-bg img'] : []), '.item__media img', '.gallery img'].join(',');
+    parts.push(`if(!${reduce}&&'IntersectionObserver'in window){var photos=document.querySelectorAll(${JSON.stringify(photoTargets)}),visible=new Set(),photoIO=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){visible.add(e.target);e.target.classList.add('uds-photo-parallax')}else{visible.delete(e.target);e.target.classList.remove('uds-photo-parallax');e.target.style.removeProperty('--uds-photo-shift')}})},{rootMargin:'80px 0px'});photos.forEach(function(img){photoIO.observe(img)});var photoQueued=false,movePhotos=function(){if(photoQueued)return;photoQueued=true;requestAnimationFrame(function(){visible.forEach(function(img){var r=img.getBoundingClientRect(),shift=Math.max(-7,Math.min(7,(innerHeight/2-(r.top+r.height/2))*.012));img.style.setProperty('--uds-photo-shift',shift.toFixed(1)+'px')});photoQueued=false})};addEventListener('scroll',movePhotos,{passive:true});addEventListener('resize',movePhotos,{passive:true});movePhotos()}`);
+  }
   if (c.vs.motionPlan?.mechanics.includes('parallax')) parts.push(`var px=document.querySelector('[data-parallax]');if(px&&!${reduce}){var tick=false;addEventListener('scroll',function(){if(tick)return;tick=true;requestAnimationFrame(function(){px.style.transform='translate3d(0,'+Math.min(scrollY*.08,40)+'px,0)';tick=false})},{passive:true})}`);
   if (c.vs.archetype === 'catalog' && c.p.services.length >= 4) parts.push(`var sf=document.querySelector('[data-search]');if(sf){sf.hidden=false;var st=document.querySelector('[data-search-status]');sf.addEventListener('submit',function(e){e.preventDefault();document.getElementById('items').scrollIntoView()});sf.querySelector('input').addEventListener('input',function(e){var q=e.target.value.trim().toLowerCase(),n=0;var items=document.querySelectorAll('#items .item'),tools=document.querySelector('[data-catalog-tools]');if(tools){items.forEach(function(li){if(!q||li.textContent.toLowerCase().indexOf(q)>-1)n++});tools.dispatchEvent(new CustomEvent('uds:catalog-search'));}else{items.forEach(function(li){var ok=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!ok;if(ok)n++})}if(!tools)st.textContent=q?'Найдено: '+n:''})}`);
   if ((c.vs.commerce?.tools || c.vs.commerce?.cart) && c.order.includes('items')) parts.push(commerceScript(c.p));
@@ -526,14 +568,18 @@ function compatibleButtonAnimation(vs) {
 }
 
 /** Появление при прокрутке: по плану движения или по ручному выбору эффекта владельцем. */
-const revealActive = vs => Boolean(vs.motionPlan?.mechanics.includes('scroll-reveal') || vs.variety?.revealForced);
+// Универсальное появление действует для всех ниш; отключается только явным статичным режимом.
+const siteMotionActive = vs => vs.motionPlan?.mode !== 'static';
+const siteRevealActive = vs => siteMotionActive(vs) || Boolean(vs.variety?.revealForced);
+
+const siteMotionCss = (vs, hasHeroBackground) => siteMotionActive(vs) ? `@media(prefers-reduced-motion:no-preference){.ds-section[data-motion-section],.foot[data-motion-section]{transition:box-shadow 900ms cubic-bezier(.2,.7,.2,1)}.ds-section.is-motion-active,.hero.is-motion-active,.foot.is-motion-active{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ds-accent) 14%,transparent),inset 0 40px 100px -90px color-mix(in srgb,var(--ds-accent) 16%,transparent)}.uds-reading-progress{position:fixed;inset:0 0 auto;height:2px;z-index:100;transform-origin:left center;transform:scaleX(var(--m-p,0));background:linear-gradient(90deg,color-mix(in srgb,var(--ds-accent) 72%,transparent),var(--ds-accent));pointer-events:none;opacity:.78}.hero__bg img,${hasHeroBackground ? '.hero__photo-bg img,' : ''}.item__media img,.gallery img{translate:0 var(--uds-photo-shift,0px);scale:1.025;transition:translate 700ms cubic-bezier(.2,.7,.2,1),scale 900ms cubic-bezier(.2,.7,.2,1)}.uds-photo-parallax{will-change:translate}.item,.ds-card,.uds-pricing-card,.uds-case,.uds-team-card,.uds-testimonial{transition:translate 450ms cubic-bezier(.2,.7,.2,1),box-shadow 450ms cubic-bezier(.2,.7,.2,1)}}@media(prefers-reduced-motion:no-preference) and (hover:hover) and (pointer:fine){.item:hover,.ds-card:hover,.uds-pricing-card:hover,.uds-case:hover,.uds-team-card:hover,.uds-testimonial:hover{translate:0 -3px;box-shadow:0 18px 46px color-mix(in srgb,var(--ds-text) 11%,transparent)}}` : '';
 
 export function renderCss(concept, scene = null, identity = null) {
   const vs = concept.visualSystem;
   const used = concept.homepage.sectionOrder;
   return [
     CORE_CSS, tokensCss(vs), visualIdentityCss(identity), themeCss(concept, identity), BASE_CSS, BUTTON_CSS[vs.button.id], NAV_CSS[vs.nav], HEADER_OVERLAY_CSS, HERO_CSS[vs.archetype], sectionLayoutCss(vs.sectionLayout),
-    '.uds-testimonials,.uds-team,.uds-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span{color:var(--ds-text-muted)}.uds-team-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3{margin:0 0 6px}.uds-team-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}',
+    '.uds-testimonials,.uds-team,.uds-stats,.uds-pricing,.uds-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(16px,2.5vw,28px)}.uds-testimonial,.uds-team-card,.uds-stat,.uds-pricing-card,.uds-case{margin:0;padding:clamp(18px,2.5vw,28px);border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);color:var(--ds-text)}.uds-testimonial blockquote{margin:0 0 14px;font:inherit}.uds-testimonial figcaption,.uds-team-card p,.uds-stat span,.uds-case p,.uds-pricing-card p{color:var(--ds-text-muted)}.uds-team-card img,.uds-case img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ds-radius-md);margin-bottom:14px}.uds-team-card h3,.uds-case h3,.uds-pricing-card h3{margin:0 0 8px}.uds-team-card p,.uds-case p,.uds-pricing-card p{margin:0}.uds-stats{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}.uds-stat{display:grid;gap:8px}.uds-stat strong,.uds-pricing-card__price{font:600 clamp(1.5rem,3vw,2.4rem)/1.1 var(--ds-font-display)}.uds-pricing-card{display:flex;flex-direction:column;align-items:flex-start;gap:14px}.uds-pricing-card__index{font-size:.8rem;color:var(--ds-text-muted)}.uds-pricing-card__price{margin-top:auto;padding-top:12px;color:var(--ds-text)}.uds-pricing-card .ds-button{margin-top:8px}.uds-case{display:grid;align-content:start;gap:14px}.uds-quiz{display:grid;gap:22px;max-width:820px}.uds-quiz fieldset{margin:0;padding:0;border:0}.uds-quiz legend{margin-bottom:12px;font-weight:700}.uds-quiz__choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}.uds-quiz__choice{display:flex;align-items:flex-start;gap:10px;min-height:48px;padding:13px 15px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);background:var(--ds-surface);cursor:pointer}.uds-quiz__choice:has(input:checked){border-color:var(--ds-accent);box-shadow:0 0 0 1px var(--ds-accent)}.uds-quiz__choice input{margin:4px 0 0;accent-color:var(--ds-accent)}.uds-quiz__result{padding:14px 16px;border-left:3px solid var(--ds-accent);background:var(--ds-surface);border-radius:var(--ds-radius-sm)}@media(prefers-reduced-motion:reduce){.uds-quiz__choice{scroll-behavior:auto}}',
     '.ds-art{object-position:var(--ds-crop-desktop,50% 50%)}@media(max-width:900px){.ds-art{object-position:var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%))}}@media(max-width:600px){.ds-art{object-position:var(--ds-crop-mobile,var(--ds-crop-tablet,var(--ds-crop-desktop,50% 50%)))}}.nav__brand{display:inline-flex;align-items:center;gap:10px}.nav__tagline{display:block;font-size:.72em;color:var(--ds-text-muted)}.form__status{margin:0;padding:10px 12px;border:1px solid var(--ds-border);border-left:3px solid var(--ds-accent);border-radius:var(--ds-radius-sm);color:var(--ds-text)}.form__status[data-state="error"]{border-left-color:#b42318}.form__status[data-state="success"]{border-left-color:#147d46}.foot__links{display:flex;flex-wrap:wrap;gap:8px 14px}',
     // Фото фоном первого экрана: вуаль цвета фона держит контраст текста. Без color-mix — почти сплошной фон.
     HERO_PHOTO_BG.has(vs.archetype) ? '.hero.has-photo-bg{isolation:isolate;overflow:hidden}.hero__photo-bg{position:absolute;inset:0;z-index:-1}.hero__photo-bg img,.hero__photo-bg picture{display:block;width:100%;height:100%;object-fit:cover}.hero__photo-bg::after{content:"";position:absolute;inset:0;background:var(--ds-bg);opacity:.9}@supports (background:color-mix(in srgb,red 50%,transparent)){.hero__photo-bg::after{opacity:1;background:linear-gradient(90deg,color-mix(in srgb,var(--ds-bg) 92%,transparent),color-mix(in srgb,var(--ds-bg) 78%,transparent))}}' : '',
@@ -548,6 +594,7 @@ export function renderCss(concept, scene = null, identity = null) {
     used.includes('items') ? '.items__more{margin-top:16px}.items__more>summary{width:max-content;max-width:100%;padding:10px 16px;border:1px solid var(--ds-border);border-radius:var(--ds-radius-md);cursor:pointer}.items__more[open]>summary{margin-bottom:16px}' : '',
     // Motion CSS подключается последним: стеклянные поверхности сохраняются поверх базовых стилей карточек.
     motionCss(vs.motionPlan),
+    siteMotionCss(vs, HERO_PHOTO_BG.has(vs.archetype)),
     sceneCss(scene),
     cinematicLayersCss(vs.cinematicLayers),
     sectionBackdropsCss(vs.sectionBackdrops),
@@ -555,7 +602,7 @@ export function renderCss(concept, scene = null, identity = null) {
     cardShapeCss('rounded'),
     photoCompositionCss(vs.photoComposition),
     sectionCompositionsCss(vs.sectionCompositions),
-    revealActive(vs) ? revealCss(vs.variety?.reveal) : '',
+    siteRevealActive(vs) ? revealCss(vs.variety?.revealForced ? vs.variety.reveal : 'luxury-reveal') : '',
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
     vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
     '.ds-button{border-radius:999px!important}',
@@ -632,11 +679,11 @@ ${jsonLd(c)}
 <a class="skip" href="#main">${systemCopy(project.lang, 'skip')}</a>
 ${nav(c)}
 <main id="main">
-${placeElements(`<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>`, 'hero')}
+${placeElements(`<section class="hero hero--${vs.archetype} is-${vs.placement}${heroBackground(c) ? ' has-photo-bg' : ''}" data-scene="${scene.type}" data-motion-section aria-labelledby="hero-h">${sceneLayer}${heroBackground(c)}${HERO[vs.archetype](c)}</section>`, 'hero')}
 ${transitionHtml(c.vs.transition)}
 ${sections}
 </main>
-<footer class="foot"><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}${project.site.footer.note ? ` · ${esc(project.site.footer.note)}` : ''}${project.site.footer.copyright ? ` · ${esc(project.site.footer.copyright)}` : ''}</span>${foot ? `<span>${foot}</span>` : ''}${siteLinks ? `<nav class="foot__links" aria-label="${project.lang.startsWith('en') ? 'Site links' : 'Ссылки сайта'}">${siteLinks}</nav>` : ''}</div></footer>
+<footer class="foot" data-motion-section><div class="ds-container"><span>${esc(c.brand)}${project.niche ? ' — ' + esc(project.niche) : ''}${project.site.footer.note ? ` · ${esc(project.site.footer.note)}` : ''}${project.site.footer.copyright ? ` · ${esc(project.site.footer.copyright)}` : ''}</span>${foot ? `<span>${foot}</span>` : ''}${siteLinks ? `<nav class="foot__links" aria-label="${project.lang.startsWith('en') ? 'Site links' : 'Ссылки сайта'}">${siteLinks}</nav>` : ''}</div></footer>
 ${vs.commerce?.cart && c.order.includes('items') ? cartPanel(project) : ''}
 ${script(c, scene)}
 ${canvasOrderRuntime(project.passthrough.canvasOrder)}

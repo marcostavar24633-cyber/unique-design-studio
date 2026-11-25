@@ -2,7 +2,7 @@
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
 import { STYLE_PRESETS } from '../src/style-presets.js';
-import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, ART_DIRECTION_PRESETS, NAV_LABELS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, qualityStageStatus, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS, CARD_EFFECTS, HERO_EFFECTS, describeEffects, TYPE_STYLES, SECTION_LAYOUTS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS, canvasFanPlacements } from '../src/engine/index.js';
+import { ARCHETYPES, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS, TEXT_EFFECTS, WEB_FONT_PAIRS, GRAPHIC_DIRECTIONS, ART_DIRECTION_PRESETS, NAV_LABELS, autopilot, buildConcept, buildSpec, fromAiLanding, buildPrompt, exportProject, generate, normalizeLibrary, normalizeProject, referencesFor, similarity, qualityReport, qualityStageStatus, fixAndRecheck, QUALITY_CATEGORIES, SEVERITY_LABELS, imageSlots, GALLERY_FRAMES, slotBrief, imageTaskPackage, applyApprovedDesignPatch, photoPrompt, loadPromptRegistry, activePrompt, reviewGeneratedContent, listVisualIdentityOptions, CINEMATIC_PRESETS, describeCinematicLayers, TRANSITION_LIMITS, describeTransition, CARD_SHAPES, REVEALS, BUTTONS, CARD_EFFECTS, HERO_EFFECTS, describeEffects, TYPE_STYLES, SECTION_LAYOUTS, TEXT_ANIMATIONS, BUTTON_ANIMATIONS, canvasFanPlacements } from '../src/engine/index.js';
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
@@ -656,7 +656,6 @@ const GROUPS = [
     ['@arch', 'Архитектура главной страницы', 'arch'], ['@palette', 'Палитра', 'palette'], ['@accent', 'Акцентный цвет', 'accent'],
     ['@visualIdentity', 'Новая визуальная система', 'visualIdentity', 'Новая система: палитры по нише, геометрия, типографика и интервалы. Можно включить отдельно, не меняя старые проекты.'],
     ['@tier', 'Класс', 'tier', 'Премиум и люкс меняют композицию, шрифты, палитру, кнопки и тон текстов'],
-    ['@brand', 'Фирменный стиль', 'brand', 'Цвета, шрифты и скругления живого проекта. Композицию по-прежнему выбирает движок. Перекрывает «Палитру»'],
     ['@mechanic', 'Поведение карточек', 'mechanic', 'Авто — движок выбирает по архитектуре и данным: раскрытие, переворот, колода, лента или мозаика. Всё работает с клавиатуры и без анимации'],
     ['@imageMask', 'Форма фотографий', 'imageMask', 'Авто — по форме углов и характеру бренда. Маска применяется только к фото, рамки фокуса не обрезаются'],
     ['@graphicDirection', 'Направление графики', 'graphicDirection', 'Стиль фото и заданий на графику: кинематографичная съёмка, макрофактура, студийная съёмка товара и др. Авто — по нише'],
@@ -698,6 +697,10 @@ const GROUPS = [
     ['aboutTitle', 'Заголовок «О нас»'], ['aboutText', 'Текст «О нас»', 'area'],
     ['advantagesTitle', 'Заголовок преимуществ'], ['advantages', 'Преимущества', 'list', LIST_HINT],
     ['processTitle', 'Заголовок этапов работы'], ['process', 'Этапы работы', 'list', LIST_HINT],
+    ['pricingTitle', 'Заголовок тарифов и пакетов'], ['pricing', 'Тарифы и пакеты', 'list', 'Название | Описание | Цена | URL картинки (необязательно). Показываются только введённые цены — движок ничего не придумывает.'],
+    ['casesTitle', 'Заголовок кейсов'], ['cases', 'Кейсы и результаты', 'list', 'Проект или задача | Что сделали и какой подтверждённый результат получили | (пусто) | URL изображения (необязательно) | ALT-текст. Добавляйте только реальные результаты.'],
+    ['@quiz', 'Подбор по квизу', 'quiz', 'Необязательный короткий подбор: услуги из каталога + приоритет клиента. Результат можно перенести в заявку; внешние сервисы не нужны. Требуется не менее двух позиций.'],
+    ['quizTitle', 'Заголовок квиза'],
     ['faqs', 'Вопросы и ответы', 'list', 'Один вопрос на строку: Вопрос | Ответ'],
     ['testimonials', 'Отзывы клиентов', 'list', 'Только реальные отзывы с разрешением на публикацию: Имя или подпись | Текст'],
     ['team', 'Команда', 'list', 'Имя | Роль | Цена (оставьте пустой) | URL фотографии | ALT-текст'],
@@ -748,7 +751,7 @@ function textToRows(text, path) {
     if (oldId) row[7] = oldId;
     return row;
   });
-  if (['advantages', 'process', 'faqs', 'testimonials', 'team', 'stats'].includes(path)) {
+  if (['advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'pricing', 'cases'].includes(path)) {
     const current = state.raw[path] || [];
     return rows.map((row, i) => {
       const old = current.find(item => (Array.isArray(item) ? item[0] : item.title) === row[0]) || (rows.length === current.length ? current[i] : null);
@@ -827,24 +830,20 @@ function enhanceVisualOptionControls() {
     const special = select.dataset.special;
     if (!VISUAL_PREVIEW_CONTROLS.has(special) || select.disabled || select.dataset.previewEnhanced) continue;
     select.dataset.previewEnhanced = 'true';
-    const group = document.createElement('div');
+    const selectedOption = () => [...select.options].find(option => option.value === select.value)?.textContent.trim() || 'Авто';
+    const group = document.createElement('details');
     group.className = 'visual-option-preview';
+    group.dataset.special = special;
+    group.open = false;
+    const summary = document.createElement('summary');
+    summary.className = 'visual-option-preview__summary';
+    summary.textContent = `Варианты оформления · ${selectedOption()}`;
+    const listWrap = document.createElement('div');
+    listWrap.className = 'visual-option-preview__content';
     const list = document.createElement('div');
     list.className = 'visual-option-preview__list';
-    list.hidden = false;
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-label', 'Варианты оформления: наведите для предпросмотра, нажмите для выбора');
-    list.addEventListener('wheel', event => {
-      const panel = list.closest('.panel');
-      if (!panel || !event.deltaY) return;
-      const maxScroll = Math.max(0, list.scrollHeight - list.clientHeight);
-      const atTop = list.scrollTop <= 0;
-      const atBottom = list.scrollTop >= maxScroll - 1;
-      if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
-        panel.scrollTop += event.deltaY;
-        event.preventDefault();
-      }
-    }, { passive: false });
     for (const option of select.options) {
       if (option.disabled) continue;
       const choice = document.createElement('button');
@@ -858,10 +857,15 @@ function enhanceVisualOptionControls() {
     }
     const hint = document.createElement('small');
     hint.textContent = 'Наведите или перейдите клавишей Tab для просмотра на холсте; нажмите, чтобы применить.';
-    group.append(list, hint);
-    select.after(group);
+    listWrap.append(list, hint);
+    group.append(summary, listWrap);
+    select.hidden = true;
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+    (select.closest('.field') || select.parentElement).after(group);
     select.addEventListener('change', () => {
       list.querySelectorAll('[role="option"]').forEach(item => item.setAttribute('aria-selected', String(item.dataset.previewValue === select.value)));
+      summary.textContent = `Варианты оформления · ${selectedOption()}`;
       dismissVisualPreview();
     });
     const previewChoice = event => {
@@ -876,13 +880,13 @@ function enhanceVisualOptionControls() {
       const changed = select.value !== choice.dataset.previewValue;
       select.value = choice.dataset.previewValue;
       list.querySelectorAll('[role="option"]').forEach(item => item.setAttribute('aria-selected', String(item === choice)));
-      dismissVisualPreview();
       if (changed) {
         select.dispatchEvent(new Event('input', { bubbles: true }));
         select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      } else dismissVisualPreview();
+      group.open = false;
     });
-    group.addEventListener('pointerleave', dismissVisualPreview);
+    group.addEventListener('pointerleave', event => { if (!group.contains(event.relatedTarget)) dismissVisualPreview(); });
     group.addEventListener('focusout', event => { if (!group.contains(event.relatedTarget)) dismissVisualPreview(); });
   }
 }
@@ -989,7 +993,7 @@ function buildForm() {
   const p = normalizeProject(state.raw);
   const effectMode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
   const autoEffectsAvailable = effectMode === 'auto' || (effectMode === 'mixed' && (!state.raw.cardEffect || !state.raw.heroEffect));
-  const quickActions = `<section class="editor-quick-actions" aria-label="Быстрая смена оформления"><strong>Варианты оформления</strong><small>Новая композиция и эффекты сохраняют введённое содержание.</small><button type="button" data-refresh-design>Новый вариант дизайна</button><button type="button" data-refresh-effects${autoEffectsAvailable ? '' : ' disabled'} title="${autoEffectsAvailable ? 'Обновить автоматически подобранные эффекты' : 'Переключите режим эффектов на «Авто» или «Смешанный»'}">Новый вариант эффектов</button></section>`;
+  const quickActions = `<section class="editor-quick-actions" aria-label="Быстрые действия"><strong>Быстрые действия</strong><small>Новая композиция и эффекты сохраняют введённое содержание.</small><button type="button" data-demo-fill title="Заполнит проект вымышленными демонстрационными данными">Заполнить вымышленным примером</button><button type="button" data-refresh-design>Новый вариант дизайна</button><button type="button" data-refresh-effects${autoEffectsAvailable ? '' : ' disabled'} title="${autoEffectsAvailable ? 'Обновить автоматически подобранные эффекты' : 'Переключите режим эффектов на «Авто» или «Смешанный»'}">Новый вариант эффектов</button></section>`;
   const html = quickActions + GROUPS.map(([title, open, fields]) => `<details class="group"${open ? ' open' : ''}><summary>${title}</summary><div class="fields">${fields.map(([path, label, type = 'text', hint = '']) => {
     const id = 'f-' + path.replace(/[^a-z]/gi, '-');
     const small = hint ? `<small id="${id}-h">${hint}</small>` : '';
@@ -997,6 +1001,7 @@ function buildForm() {
     let control;
     if (type === 'area') control = `<textarea id="${id}" data-path="${path}"${d}>${esc(get(path))}</textarea>`;
     else if (type === 'hideCTA') control = `<label class="row"><input type="checkbox" data-hide-cta${state.raw.fieldStates?.cta === 'hidden' ? ' checked' : ''}> Не показывать CTA</label>`;
+    else if (type === 'quiz') control = `<label class="row"><input type="checkbox" data-special="quizEnabled"${state.raw.quiz?.enabled === true ? ' checked' : ''}> Добавить квиз на страницу</label>`;
     else if (type === 'list') control = `<textarea id="${id}" class="list" data-list="${path}"${d} spellcheck="false">${esc(rowsToText(get(path), path))}</textarea>`;
     else if (type === 'arch') control = `<select id="${id}" data-special="arch">
 <option value="auto">${LEGACY_LABELS.auto}</option>
@@ -1017,7 +1022,6 @@ function buildForm() {
     }
     else if (type === 'tier') control = `<select id="${id}" data-special="tier"${d}>${Object.entries(TIERS).map(([k, v]) => `<option value="${k}"${p.tier === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     else if (type === 'promptMode') control = `<select id="${id}" data-special="promptMode">${[['append', 'Дополнить стандартный — мои указания важнее'], ['replace', 'Заменить стандартный моим']].map(([k, v]) => `<option value="${k}"${p.customPromptMode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
-    else if (type === 'brand') control = `<select id="${id}" data-special="brand"${d}>${[['', 'Нет — подобрать по нише'], ...Object.entries(BRANDS).map(([k, b]) => [k, b.name])].map(([k, v]) => `<option value="${k}"${p.brandProfile === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
     else if (type === 'mechanic') control = `<select id="${id}" data-special="mechanic"${d}><option value="">Авто</option>${Object.entries(MECHANICS).map(([k, v]) => `<option value="${k}"${state.raw.itemsMechanic === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`;
     else if (type === 'imageMask') { const dict = MASKS; control = `<select id="${id}" data-special="${type}"${d}><option value="">Авто</option>${Object.entries(dict).map(([k, v]) => `<option value="${k}"${state.raw[type] === k ? ' selected' : ''}>${esc(v.split(':')[0])}</option>`).join('')}</select>`; }
     else if (type === 'transition') {
@@ -2738,16 +2742,13 @@ $('#form').addEventListener('input', e => {
   else if (t.dataset.special === 'imageMask') { if (t.value) state.raw.imageMask = t.value; else delete state.raw.imageMask; }
   else if (t.dataset.special === 'mechanic') { if (t.value) state.raw.itemsMechanic = t.value; else delete state.raw.itemsMechanic; }
   else if (t.dataset.special === 'visualIdentityEnabled') state.raw.visualIdentityEnabled = t.checked;
+  else if (t.dataset.special === 'quizEnabled') {
+    state.raw.quiz = { ...(state.raw.quiz || {}), enabled: t.checked };
+  }
   else if (t.dataset.special === 'visualIdentityPalette') { if (t.value) state.raw.visualIdentityPaletteId = t.value; else delete state.raw.visualIdentityPaletteId; }
   else if (t.dataset.special === 'visualIdentityShape') { if (t.value) state.raw.visualIdentityShapeId = t.value; else delete state.raw.visualIdentityShapeId; }
   else if (t.dataset.special === 'tier') state.raw.tier = t.value;
   else if (t.dataset.special === 'promptMode') state.raw.customPromptMode = t.value;
-  else if (t.dataset.special === 'brand') {
-    if (t.value) state.raw.brandProfile = t.value; else delete state.raw.brandProfile;
-    // С брендом шрифты по умолчанию веб: обновляем переключатель, чтобы он показывал фактическое значение.
-    const fontsSel = document.querySelector('[data-special="fonts"]');
-    if (fontsSel && !state.raw.fonts) fontsSel.value = normalizeProject(state.raw).fonts;
-  }
   else if (t.dataset.special === 'accent') { state.raw.accent = t.value; state.raw.accentLocked = true; }
   else if (t.dataset.special === 'accent-auto') {
     const color = t.closest('.row').querySelector('[type=color]');
@@ -3050,9 +3051,9 @@ function moveGalleryImage(from, direction) {
   buildForm(); run(); toast('Порядок фотографий обновлён');
 }
 // ---------- Расположение блоков: перетаскивание и кнопки ↑↓ ----------
-const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', faq: 'Вопросы и ответы', testimonials: 'Отзывы', team: 'Команда', stats: 'Факты и цифры' };
-const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle' };
-const ORDER_LISTS = [['services', 'Позиции каталога'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['testimonials', 'Отзывы'], ['team', 'Команда'], ['stats', 'Факты и цифры'], ['canvasBlocks', 'Добавленные блоки']];
+const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', pricing: 'Тарифы и пакеты', cases: 'Кейсы и результаты', quiz: 'Подбор по квизу', faq: 'Вопросы и ответы', testimonials: 'Отзывы', team: 'Команда', stats: 'Факты и цифры' };
+const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle', pricing: 'pricingTitle', cases: 'casesTitle', quiz: 'quizTitle' };
+const ORDER_LISTS = [['services', 'Позиции каталога'], ['pricing', 'Тарифы и пакеты'], ['cases', 'Кейсы и результаты'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['testimonials', 'Отзывы'], ['team', 'Команда'], ['stats', 'Факты и цифры'], ['canvasBlocks', 'Добавленные блоки']];
 const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r ?? '').trim() || 'Без названия';
 function currentSectionOrder() {
   return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
@@ -4058,6 +4059,35 @@ $('#view-audit').addEventListener('click', async e => {
 $('#form').addEventListener('submit', e => e.preventDefault());
 // Сброс цвета перехода к «Авто»: поле удаляется из проекта, цвет снова берётся из палитры.
 $('#form').addEventListener('click', e => {
+  const demoFill = e.target.closest('[data-demo-fill]');
+  if (demoFill) {
+    Object.assign(state.raw, {
+      brand: 'Демо: студия «Линия»', niche: 'дизайн интерьера',
+      title: 'Интерьеры, в которых удобно жить',
+      description: 'Демонстрационный проект вымышленной студии. Данные и цены придуманы для примера — замените их перед публикацией.',
+      mainOffer: 'Проектируем спокойные и функциональные пространства под ваш образ жизни.',
+      cta: 'Обсудить проект', targetAudience: 'Демонстрационная аудитория: владельцы квартир и домов',
+      servicesTitle: 'Услуги студии',
+      services: [['Планировка', 'Функциональная схема и сценарии жизни', 'от 15 000 ₽'], ['Дизайн-проект', 'Планировочные и визуальные решения', 'от 45 000 ₽'], ['Комплектация', 'Подбор материалов и предметов интерьера', 'от 20 000 ₽']],
+      advantages: [['Внимание к деталям', 'Учитываем привычки и ежедневные сценарии.'], ['Прозрачные этапы', 'Показываем ход работы и согласуем решения.'], ['Цельная концепция', 'Связываем материалы, свет и мебель в единую систему.']],
+      process: [['Знакомство', 'Обсуждаем задачу и пожелания.'], ['Планировка', 'Готовим и согласуем варианты.'], ['Дизайн', 'Разрабатываем визуальную концепцию.'], ['Реализация', 'Помогаем пройти путь от проекта к готовому интерьеру.']],
+      pricingTitle: 'Демонстрационные пакеты',
+      pricing: [['Планировка', 'Пример наполнения пакета', '15 000 ₽'], ['Полный проект', 'Пример расширенного пакета', '45 000 ₽']],
+      casesTitle: 'Пример кейса — вымышленный',
+      cases: [['Демо: квартира 68 м²', 'Учебный пример: зонирование пространства и подбор материалов. Это не реальный проект.', '', '', '']],
+      testimonials: [], team: [], stats: [], gallery: [],
+      quiz: { enabled: true }, quizTitle: 'Подберём формат проекта',
+      aboutTitle: 'О демонстрационной студии',
+      aboutText: 'Вымышленный пример для знакомства с возможностями генератора. Замените название, тексты, цены и кейсы на подтверждённую информацию о вашем бизнесе.',
+      faqTitle: 'Частые вопросы',
+      faqs: [['Сколько стоит проект?', 'В этом примере указаны вымышленные демонстрационные цены.'], ['С чего начать?', 'Опишите задачу — студия предложит подходящий формат работы.']],
+    });
+    state.raw.demoContent = true;
+    buildForm();
+    schedule();
+    toast('Добавлен вымышленный пример. Замените демонстрационные данные перед публикацией.');
+    return;
+  }
   const refreshDesign = e.target.closest('[data-refresh-design]');
   if (refreshDesign) {
     state.raw.designVariant = Math.min(1_000_000, Math.max(0, Math.trunc(Number(state.raw.designVariant) || 0)) + 1);
