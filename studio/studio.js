@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 104860)
-Total output lines: 4383
-
 // Веб-студия: редактор проекта, живой предпросмотр, концепция, проверка и реестр проектов.
 import { listProjectVersions, saveProjectVersion, getProjectVersion, deleteProjectVersion, compareProjectSnapshots } from './project-history.js';
 import { scheduleEmergencyBackup, loadEmergencyBackup } from './project-storage.js';
@@ -1107,7 +1104,2085 @@ function run() {
   const nextResult = generate(state.raw, { registry: registry() });
   if (previousResult && previousRaw && previousResult.project.id === nextResult.project.id && previousResult.html !== nextResult.html) {
     // Keep comparison snapshots in memory while editing. Serializing two complete
-    // HTML documents (often containing embedded photos) into localStorage her…54860 tokens truncated…')||n.querySelector('img'));const images=[...section.querySelectorAll('img')].filter(n=>!n.closest('figure'));const photos=[...new Set([...figures,...images])].slice(0,5);if(photos.length<5){parent.postMessage({type:'uds-canvas-fan-error',message:'Для веера в выбранной секции нужно минимум пять фотографий'},'*');return}send({type:'uds-canvas-fan',sectionId:m.sectionId,photos:photos.map(key)})}if(m.type==='uds-canvas-select-element'){const n=[...document.querySelectorAll('[data-uds-element]')].find(x=>x.dataset.udsElement===m.elementId);if(n)pick(n)}if(m.type==='uds-canvas-select-key'){const n=candidates().find(x=>key(x)===m.key);if(n)pick(n)}if(m.type==='uds-canvas-select-block'){const block=[...document.querySelectorAll('[data-uds-block]')].find(x=>x.dataset.udsBlock===m.blockId);const n=block?.querySelector('h2,h3,p');if(n)pick(n)}if(m.type==='uds-canvas-select-duplicate'){const original=candidates().find(n=>key(n)===m.key);const duplicate=original?.nextElementSibling;if(duplicate&&candidates().includes(duplicate))pick(duplicate)}if(m.type==='uds-canvas-preview'){const n=candidates().find(x=>key(x)===m.key);if(!n)return;const p=m.patch||{};if(typeof p.text==='string')n.textContent=p.text;if(typeof p.alt==='string'&&n.tagName==='IMG')n.alt=p.alt.slice(0,240);if(typeof p.href==='string'&&n.matches('a')&&!p.href.startsWith('//')&&/^(?:https?:\\/\\/|mailto:|tel:|\\/(?!\\/)|#)/i.test(p.href))n.setAttribute('href',p.href.slice(0,2048));if(/^#[\\da-f]{6}$/i.test(p.color||''))n.style.color=p.color;if(/^#[\da-f]{6}$/i.test(p.background||''))n.style.backgroundColor=p.background;if(Number.isFinite(+p.translateX)||Number.isFinite(+p.translateY)){const x=Math.max(-1600,Math.min(1600,Number(p.translateX)||0)),y=Math.max(-1200,Math.min(1200,Number(p.translateY)||0));n.style.translate=n.closest('[data-uds-free-canvas]')?'calc(-50% + '+x+'px) calc(-50% + '+y+'px)':x+'px '+y+'px';}if(Number.isFinite(+p.rotation))n.style.rotate=Math.max(-45,Math.min(45,+p.rotation))+'deg';if(Number.isFinite(+p.fontSize))n.style.fontSize=Math.max(12,Math.min(96,+p.fontSize))+'px';if(Number.isFinite(+p.opacity))n.style.opacity=Math.max(0,Math.min(1,+p.opacity));if(p.width===null)n.style.width='';else if(Number.isFinite(+p.width))n.style.width=Math.max(0,Math.min(1600,+p.width))+'px';if(p.height===null)n.style.height='';else if(Number.isFinite(+p.height))n.style.height=Math.max(0,Math.min(1200,+p.height))+'px';if(['left','center','right'].includes(p.align))n.style.textAlign=p.align;if(p.tag&&['h2','h3','p','a','button'].includes(p.tag)){const r=document.createElement(p.tag);for(const a of [...n.attributes])r.setAttribute(a.name,a.value);r.textContent=n.textContent;n.replaceWith(r);pick(r)}}});refresh()})();<\/script>`;
+    // HTML documents (often containing embedded photos) into localStorage here
+    // blocks wheel input and the editor's main thread after every visual change.
+    changedPreview = {
+      version: 1, projectId: nextResult.project.id,
+      projectName: nextResult.project.brand || nextResult.project.niche || 'Проект',
+      changedAt: new Date().toISOString(),
+      beforeHtml: previousResult.html, afterHtml: nextResult.html,
+      beforeRaw: previousRaw,
+      concept: nextResult.concept
+    };
+  }
+  result = nextResult;
+  lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
+  if (changedPreview) pendingDesignPreview = { ...changedPreview, afterRaw: lastRenderedRaw };
+  $('#frame').srcdoc = previewHtml(result.html);
+  renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
+  renderPublishManager();
+  updateChangePreviewButton();
+  schedulePersist();
+}
+
+// ---------- Publish Manager: local deployment history only ---------- 
+const PUBLISH_HISTORY_KEY = 'uds:publish-history:v1';
+const PUBLISH_SETTINGS_KEY = 'uds:publish:v1';
+let publishFilter = 'all';
+function publishEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function readPublishHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PUBLISH_HISTORY_KEY) || '[]');
+    return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && typeof item.url === 'string') : [];
+  } catch { return []; }
+}
+function writePublishHistory(items) {
+  try { localStorage.setItem(PUBLISH_HISTORY_KEY, JSON.stringify(items.slice(0, 50))); return true; }
+  catch { toast('Не удалось сохранить историю публикаций в этом браузере.'); return false; }
+}
+function validPublishUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.hostname === 'localhost' || url.hostname.endsWith('.localhost')) return null;
+    return url.href;
+  } catch { return null; }
+}
+function publishKind(item) {
+  let host = '';
+  try { host = new URL(item.url).hostname.toLowerCase(); } catch {}
+  if (host.endsWith('.pages.dev')) return item.branch === 'production' ? 'production' : 'preview';
+  return 'domain';
+}
+function renderPublishManager() {
+  const host = $('#view-publish');
+  if (!host || !result) return;
+  let settings = {};
+  try { settings = JSON.parse(localStorage.getItem(PUBLISH_SETTINGS_KEY) || '{}') || {}; } catch {}
+  const projectName = String(settings.projectName || result.project.id || '').toLowerCase();
+  const branch = String(settings.branch || 'production');
+  const safeName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(projectName);
+  const safeBranch = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branch) && !branch.includes('..') && !branch.endsWith('/') && !branch.endsWith('.');
+  const ready = Boolean(result.html && result.audit?.ok && safeName && safeBranch);
+  const history = readPublishHistory();
+  const shown = history.filter(item => publishFilter === 'all' || publishKind(item) === publishFilter);
+  const stats = {all:history.length,production:0,preview:0,domain:0};
+  history.forEach(item => stats[publishKind(item)]++);
+  const rows = shown.map(item => {
+    const kind = publishKind(item);
+    const label = kind === 'production' ? 'Production' : kind === 'preview' ? 'Preview' : 'Собственный домен';
+    const status = item.checkState === 'reachable' ? 'Доступен · HTTP ' + item.httpStatus
+      : item.checkState === 'http-error' ? 'HTTP-ошибка · ' + item.httpStatus
+      : item.checkState === 'blocked' ? 'Ответ не прочитан (CORS / сеть)' : 'Проверка не выполнялась';
+    return '<article class="pm-history-item"><div class="pm-history-meta"><b>' + publishEscape(item.projectName || 'Проект') + ' · ' + label + '</b><small>' + publishEscape(item.branch || '—') + ' · ' + publishEscape(new Date(item.createdAt).toLocaleString('ru-RU')) + '</small><a href="' + publishEscape(item.url) + '" target="_blank" rel="noopener noreferrer">' + publishEscape(item.url) + '</a><small>' + publishEscape(status) + (item.checkedAt ? ' · ' + publishEscape(new Date(item.checkedAt).toLocaleString('ru-RU')) : '') + '</small></div><div class="pm-history-actions"><button type="button" data-pm-check="' + publishEscape(item.id) + '">Проверить</button><button type="button" data-pm-open="' + publishEscape(item.id) + '">Открыть</button><button type="button" data-pm-delete="' + publishEscape(item.id) + '">Удалить</button></div></article>';
+  }).join('');
+  const command = 'node bin/uds.js deploy uds-project.json --project-name ' + (safeName ? projectName : '<имя-pages-проекта>') + ' --branch ' + (safeBranch ? branch : 'production');
+  host.innerHTML = '<section class="publish-manager"><header class="pm-head"><div><span class="pm-eyebrow">PRODUCTION CONTROL</span><h2>Центр публикации</h2><p>Подготовка проекта, проверка аудита и локальная история фактических deployment.</p></div><span class="pm-state ' + (ready ? 'is-ready' : 'is-blocked') + '">' + (ready ? 'Готов к передаче' : 'Требует внимания') + '</span></header>' +
+    '<div class="pm-checks"><div><b>' + (result.html ? '✓' : '!') + ' HTML сформирован</b><small>Текущий проект: ' + publishEscape(result.project.id) + '</small></div><div><b>' + (result.audit?.ok ? '✓' : '!') + ' Аудит ' + (result.audit?.ok ? 'пройден' : 'не пройден') + '</b><small>' + (result.audit?.errors?.length || 0) + ' ошибок · ' + (result.audit?.warnings?.length || 0) + ' предупреждений</small></div></div>' +
+    '<div class="pm-settings"><label>Cloudflare Pages project name<input id="pm-project-name" value="' + publishEscape(projectName) + '" maxlength="63" autocomplete="off"></label><label>Ветка deployment<select id="pm-branch"><option value="production"' + (branch === 'production' ? ' selected' : '') + '>production</option><option value="preview/review"' + (branch === 'preview/review' ? ' selected' : '') + '>preview/review</option><option value="preview/staging"' + (branch === 'preview/staging' ? ' selected' : '') + '>preview/staging</option></select></label></div>' +
+    '<div class="pm-actions"><button type="button" id="pm-save-settings">Сохранить настройки</button><button type="button" id="pm-download-json">Скачать JSON проекта</button><button type="button" id="pm-download-html">Скачать HTML</button><button type="button" id="pm-copy-command" ' + (ready ? '' : 'disabled') + '>Копировать команду</button></div>' +
+    '<div class="pm-command"><b>Команда для локального терминала</b><code>' + publishEscape(command) + '</code><p>Скачайте JSON под именем <code>uds-project.json</code>, поместите его в корень локальной копии репозитория. Нужны Node.js 20+, созданный Pages project и авторизация <code>npx wrangler login</code>. Команда остановится, если аудит проекта не пройден.</p></div>' +
+    '<p class="pm-note">Панель не подключается к Cloudflare и не публикует сайт сама. URL можно добавить в историю только после успешного завершения Wrangler и отдельного подтверждения ниже. История хранится только в localStorage этого браузера.</p>' +
+    '<section class="pm-history"><h3>История публикаций</h3><p>До 50 записей. Проверка URL выполняется из браузера; CORS и сетевые ограничения отображаются как «ответ не прочитан», а не как отказ сайта.</p>' +
+    '<form id="pm-record-form" class="pm-record"><label>Фактический HTTPS URL из вывода Wrangler<input id="pm-deployment-url" type="url" placeholder="https://project.pages.dev/" required></label><label class="pm-confirm"><input id="pm-confirm-success" type="checkbox" required> Я проверил успешное завершение Wrangler и открыл этот deployment.</label><button type="submit">Зафиксировать deployment</button></form>' +
+    '<div class="pm-stats">' + [['all','Все'],['production','Production'],['preview','Preview'],['domain','Домены']].map(([key,label])=>'<button type="button" data-pm-filter="' + key + '" aria-pressed="' + (publishFilter === key) + '">' + label + ' · ' + stats[key] + '</button>').join('') + '</div>' +
+    '<div class="pm-history-list">' + (rows || '<p class="pm-empty">' + (history.length ? 'В этой категории пока нет записей.' : 'История пока пуста.') + '</p>') + '</div></section></section>';
+}
+$('#view-publish')?.addEventListener('click', async event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  if (button.dataset.pmFilter) { publishFilter = button.dataset.pmFilter; renderPublishManager(); return; }
+  if (button.id === 'pm-save-settings') {
+    const projectName = String($('#pm-project-name')?.value || '').trim().toLowerCase();
+    const branch = String($('#pm-branch')?.value || 'production');
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(projectName)) return toast('Укажите корректное имя Pages project: строчные латинские буквы, цифры и дефисы.');
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(branch) || branch.includes('..') || branch.endsWith('/') || branch.endsWith('.')) return toast('Некорректное имя ветки.');
+    try { localStorage.setItem(PUBLISH_SETTINGS_KEY, JSON.stringify({projectName,branch})); }
+    catch { return toast('Не удалось сохранить настройки публикации: хранилище браузера недоступно или переполнено.'); }
+    renderPublishManager(); toast('Настройки публикации сохранены в этом браузере.'); return;
+  }
+  if (button.id === 'pm-download-json') {
+    const exported = {...(result.exported || result.project), __udsAnalysis: currentAnalysis() ? {data:currentAnalysis()} : null};
+    download('uds-project.json', JSON.stringify(exported,null,2)+'\n', 'application/json'); return;
+  }
+  if (button.id === 'pm-download-html') { download((result.project.id || 'site')+'.html',result.html,'text/html'); return; }
+  if (button.id === 'pm-copy-command') {
+    const name = String($('#pm-project-name')?.value || '').trim().toLowerCase();
+    const branch = String($('#pm-branch')?.value || 'production');
+    if (!result.audit?.ok || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(name)) return toast('Сначала исправьте ошибки аудита и имя Pages project.');
+    const command = 'node bin/uds.js deploy uds-project.json --project-name ' + name + ' --branch ' + branch;
+    try { await navigator.clipboard.writeText(command); toast('Команда публикации скопирована.'); }
+    catch { download('publish-command.txt',command+'\n','text/plain'); toast('Буфер обмена недоступен — команда скачана.'); }
+    return;
+  }
+  const id = button.dataset.pmDelete || button.dataset.pmOpen || button.dataset.pmCheck;
+  if (id) {
+    const items = readPublishHistory(), item = items.find(entry => entry.id === id);
+    if (!item) return;
+    if (button.dataset.pmDelete) { writePublishHistory(items.filter(entry => entry.id !== id)); renderPublishManager(); return; }
+    if (button.dataset.pmOpen) { window.open(item.url,'_blank','noopener,noreferrer'); return; }
+    if (button.dataset.pmCheck) {
+      button.disabled = true; button.textContent = 'Проверяю…';
+      let state = 'blocked', status = null;
+      const check = async method => {
+        const controller = new AbortController(), timeout = setTimeout(()=>controller.abort(),9000);
+        try { return await fetch(item.url,{method,mode:'cors',cache:'no-store',redirect:'follow',signal:controller.signal}); }
+        finally { clearTimeout(timeout); }
+      };
+      try {
+        let response = await check('HEAD');
+        if (response.status === 405 || response.status === 501) response = await check('GET');
+        status = response.status; state = response.ok ? 'reachable' : 'http-error';
+      } catch { state = 'blocked'; }
+      const latest = readPublishHistory().map(entry => entry.id === id ? {...entry,checkState:state,httpStatus:status,checkedAt:new Date().toISOString()} : entry);
+      writePublishHistory(latest); renderPublishManager(); return;
+    }
+  }
+});
+$('#view-publish')?.addEventListener('submit', event => {
+  if (event.target.id !== 'pm-record-form') return;
+  event.preventDefault();
+  const url = validPublishUrl($('#pm-deployment-url')?.value);
+  if (!url) return toast('Укажите корректный HTTPS URL без логина и пароля.');
+  if (!$('#pm-confirm-success')?.checked) return toast('Подтвердите успешный deployment в Wrangler.');
+  const settings = (()=>{try{return JSON.parse(localStorage.getItem(PUBLISH_SETTINGS_KEY)||'{}')}catch{return {}}})();
+  const items = readPublishHistory();
+  items.unshift({id:crypto.randomUUID(),projectName:settings.projectName || result.project.brand || result.project.id,projectId:result.project.id,branch:settings.branch || 'production',url,createdAt:new Date().toISOString(),checkState:'unchecked',httpStatus:null,checkedAt:null});
+  if (writePublishHistory(items)) { renderPublishManager(); toast('Deployment добавлен в локальную историю.'); }
+});
+
+// ---------- ТЗ и анализ ----------
+// Анализ хранится вместе с проектом, для которого его сделал автопилот; у проектов из редактора — пусто.
+const currentAnalysis = () => {
+  if (state.analysis && state.analysis.data) return state.analysis.data;
+  // Восстанавливаем анализ из записи реестра, если рабочая сессия была открыта повторно.
+  const projectId = result?.project?.id;
+  if (!projectId) return null;
+  const saved = state.library.find(item => item?.raw && normalizeProject(item.raw).id === projectId && item.analysis);
+  return saved?.analysis || null;
+};
+const CONTENT_FIELD_OPTIONS = [
+  ['title','Заголовок первого экрана'],['description','Описание предложения'],['cta','Текст кнопки'],
+  ['targetAudience','Целевая аудитория'],['mainOffer','Основное предложение'],['strategySummary','Стратегия'],
+  ['aboutTitle','Заголовок «О компании»'],['aboutText','Текст «О компании»'],
+  ['servicesTitle','Заголовок услуг'],['servicesIntro','Вступление к услугам'],
+  ['advantagesTitle','Заголовок преимуществ'],['processTitle','Заголовок процесса'],
+  ['contactTitle','Заголовок контактов'],['contactText','Текст контактов'],
+  ['seoTitle','SEO Title'],['seoDescription','SEO Description'],
+];
+function renderSpec() {
+  const a = currentAnalysis();
+  const spec = buildSpec(result.project, result.concept, a || {});
+  const src = a && a.sources && a.sources.length
+    ? `<h2>Источники исследования</h2><ul class="chips-src">${a.sources.map(s => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ul>` : '';
+  const contentFields = ['brand','niche','title','description','cta','seoTitle','seoDescription','audience','offer','advantages','services','products','steps','faq','reviews','contacts'];
+  const contentSnapshot = Object.fromEntries(contentFields.filter(key => result.project[key] !== undefined && result.project[key] !== '').map(key => [key, result.project[key]]));
+  const textValues = contentFields.map(key => result.project[key]).flatMap(value => Array.isArray(value) ? value.flat(Infinity) : [value]).filter(value => typeof value === 'string' && value.trim());
+  const genericTerms = ['лучший','номер один','уникальный','гарантируем результат','индивидуальный подход'];
+  const flags = [];
+  if (!String(result.project.title || '').trim()) flags.push('Не заполнен главный заголовок');
+  if (String(result.project.title || '').length > 75) flags.push('Главный заголовок длиннее 75 символов');
+  if (!String(result.project.description || '').trim()) flags.push('Нет пояснения к предложению');
+  if (!String(result.project.cta || '').trim()) flags.push('Не задан текст основного действия');
+  if (String(result.project.seoTitle || '').length > 60) flags.push('SEO Title длиннее 60 символов');
+  if (String(result.project.seoDescription || '').length > 160) flags.push('SEO Description длиннее 160 символов');
+  const foundGeneric = [...new Set(textValues.flatMap(value => genericTerms.filter(term => value.toLowerCase().includes(term))))];
+  let selectedEditField = 'title';
+  try {
+    const savedField = localStorage.getItem('uds:content-edit-field');
+    if (CONTENT_FIELD_OPTIONS.some(([key]) => key === savedField)) selectedEditField = savedField;
+  } catch {}
+
+  if (foundGeneric.length) flags.push('Проверьте неподтверждённые или шаблонные формулировки: ' + foundGeneric.join(', '));
+  contentPrompt = () => {
+    const direction = ($('#content-direction')?.value || '').trim();
+    return [
+      'РОЛЬ: AI Content Director — старший UX-копирайтер и редактор коммерческих сайтов.',
+      'ЗАДАЧА: улучшить тексты текущего проекта, не меняя структуру и смысл подтверждённых фактов.',
+      'ПРАВИЛА: не выдумывай цены, сроки, отзывы, гарантии, сертификаты, адреса, статистику и преимущества. Не используй пустые превосходные степени. Если данных недостаточно — оставь поле без выдумки и укажи, что нужно уточнить.',
+      'Сделай заголовок конкретным, объясни ценность предложения, пиши для указанной аудитории, убери повторы и канцелярит. Сохрани русский язык и адаптируй длину текста под веб-интерфейс.',
+      'Верни результат строго JSON с теми же ключами, которые есть во входных данных; не удаляй неизвестные поля. Для каждого изменённого текста добавь краткое обоснование отдельно в поле editorialNotes. Не переписывай массивы изображений и технические настройки.',
+      direction ? 'ДОПОЛНИТЕЛЬНОЕ НАПРАВЛЕНИЕ: ' + direction : '',
+      'ТЕКУЩИЕ ДАННЫЕ ПРОЕКТА: ' + JSON.stringify(contentSnapshot),
+      a ? 'КОНТЕКСТ АНАЛИЗА: ' + JSON.stringify({ audience:a.audience, pains:a.pains, objections:a.objections, positioning:a.positioning, sources:a.sources }) : 'Контекст аудитории и рынка не подтверждён — не выдавай предположения за факты.'
+    ].filter(Boolean).join('\n\n');
+  };
+  $('#view-spec').innerHTML = `
+<div class="spec-actions"><button type="button" data-spec="copy">Скопировать ТЗ</button><button type="button" data-spec="md">Скачать ТЗ (.md)</button><button type="button" data-spec="prompt">Скопировать промт для нейросети</button></div>
+<p class="note">${a ? (a.source === 'ai' ? 'Тексты и структура подготовлены AI по вашему брифу. Веб-поиск не выполнялся: рыночные данные, конкуренты и частотность ключевых запросов требуют отдельной проверки.' : 'Анализ и тексты собраны локальным автопилотом по знаниям о нише — это стартовая гипотеза. Для исследования в интернете укажите адрес AI-сервера в автопилоте или отдайте промт нейросети.') : 'ТЗ собрано по текущему проекту. Автопилот добавит сюда анализ аудитории, возражения, поводы и ключевые запросы.'}</p>
+<section class="content-director" aria-labelledby="content-director-title">
+  <div class="content-director__head"><div><span class="eyebrow">AI CONTENT DIRECTOR</span><h2 id="content-director-title">Редактор коммерческих текстов</h2><p class="note">Анализирует заполненность и готовит точное задание для AI. Тексты автоматически не меняются: результат можно проверить перед импортом.</p></div><span class="content-director__mark" aria-hidden="true">✦</span></div>
+  <div class="content-director__stats"><div><b>${textValues.length}</b><small>текстовых значений</small></div><div><b>${flags.length}</b><small>замечаний</small></div><div><b>${a?.sources?.length || 0}</b><small>источников анализа</small></div></div>
+  <div class="content-quality-review">
+    <button type="button" data-content-quality-review>Проверить качество текста и SEO с AI</button>
+    <p class="note">Проверка оценит ясность предложения, повторы, CTA и SEO-поля. Тексты не меняются; веб-поиск и проверка частотности запросов не выполняются.</p>
+    <div id="content-quality-review-result" class="note" role="status" aria-live="polite"></div>
+  </div>
+  <ul class="content-director__checks">${flags.length ? flags.map(item => '<li>! ' + esc(item) + '</li>').join('') : '<li class="is-ok">✓ Базовые проверки заполненности пройдены. Это не подтверждает фактическую достоверность текста.</li>'}</ul>
+  <label class="content-director__label" for="content-direction">Редакторское направление</label>
+  <textarea id="content-direction" rows="3" maxlength="2000" placeholder="Например: спокойный премиальный тон, меньше прилагательных, больше конкретики и пользы для клиента…"></textarea>
+  <div class="spec-actions"><button type="button" data-content="copy">Скопировать задание AI</button><button type="button" data-content="download">Скачать задание (.txt)</button></div>
+  <div class="content-regenerate">
+    <h3>Перегенерация разделов</h3>
+    <p class="note">AI изменит только выбранный раздел. Остальные тексты, изображения и настройки проекта останутся нетронутыми. Новый вариант сразу применится; последнее изменение можно отменить.</p>
+    <div class="content-regenerate__actions">
+      <button type="button" data-regenerate-stage="strategy">Первый экран</button>
+      <button type="button" data-regenerate-stage="about">О компании</button>
+      <button type="button" data-regenerate-stage="services">Услуги</button>
+      <button type="button" data-regenerate-stage="trust">Преимущества и FAQ</button>
+      <button type="button" data-regenerate-stage="seo">Контакты и SEO</button>
+    </div>
+    <p id="content-regenerate-status" class="note" role="status" aria-live="polite"></p>
+    <div class="spec-actions"><button type="button" data-content-undo ${contentHistoryForProject().length ? '' : 'disabled'}>Отменить последнюю AI-правку</button></div>
+  </div>
+  <div class="content-field-editor">
+    <h3>Редактирование отдельного текста</h3>
+    <p class="note">Выберите поле, при необходимости поправьте исходный текст и запустите одну команду. AI вернёт только новый текст этого поля.</p>
+    <label class="content-director__label" for="content-edit-field">Текстовое поле</label>
+    <select id="content-edit-field">${CONTENT_FIELD_OPTIONS.map(([key,label]) => '<option value="' + key + '"' + (key === selectedEditField ? ' selected' : '') + '>' + esc(label) + '</option>').join('')}</select>
+    <label class="content-director__label" for="content-edit-value">Исходный текст</label>
+    <textarea id="content-edit-value" rows="4" maxlength="3000">${esc(result.project[selectedEditField] || '')}</textarea>
+    <div class="content-regenerate__actions">
+      <button type="button" data-content-edit-action="rewrite">Переписать</button>
+      <button type="button" data-content-edit-action="expand">Расширить</button>
+      <button type="button" data-content-edit-action="shorten">Сократить</button>
+    </div>
+    <p id="content-edit-status" class="note" role="status" aria-live="polite"></p>
+  </div>
+</section>
+<pre class="spec">${esc(spec)}</pre>${src}`;
+  try { $('#content-direction').value = localStorage.getItem('uds:content-direction') || ''; } catch {}
+}
+$('#view-spec').addEventListener('input', e => {
+  if (e.target.id === 'content-direction') { try { localStorage.setItem('uds:content-direction', e.target.value); } catch {} }
+});
+$('#view-spec').addEventListener('change', e => {
+  if (e.target.id === 'content-edit-field') {
+    const field = e.target.value;
+    try { localStorage.setItem('uds:content-edit-field', field); } catch {}
+    const value = $('#content-edit-value');
+    if (value) value.value = String(result?.project?.[field] || '');
+  }
+});
+const CONTENT_HISTORY_KEY = 'uds:content-history:v1';
+function contentHistoryForProject() {
+  try { return JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId === state.raw.id).slice(-10); } catch { return []; }
+}
+function writeContentHistory(items) {
+  try {
+    const all = JSON.parse(localStorage.getItem(CONTENT_HISTORY_KEY) || '[]').filter(item => item && item.projectId !== state.raw.id);
+    localStorage.setItem(CONTENT_HISTORY_KEY, JSON.stringify([...all, ...items].slice(-50)));
+  } catch { toast('Не удалось сохранить историю AI-правок в браузере.'); }
+}
+const STAGE_PROJECT_FIELDS = {
+  strategy: ['title','description','cta','targetAudience','mainOffer','visualDirection','strategySummary'],
+  about: ['aboutTitle','aboutText'],
+  services: ['servicesTitle','servicesIntro','services'],
+  trust: ['advantagesTitle','advantages','processTitle','process','faqs'],
+  seo: ['contactTitle','contactText','assumptions','marketResearch','researchSources','seoTitle','seoDescription'],
+};
+const STAGE_ANALYSIS_FIELDS = { seo: ['segments','objections','triggers','keywords','competitors','imagePrompts'] };
+function projectContentForStage() {
+  const p = result.project;
+  return {
+    brand:p.brand,niche:p.niche,title:p.title,description:p.description,cta:p.cta,targetAudience:p.targetAudience,
+    mainOffer:p.mainOffer,visualDirection:p.visualDirection,strategySummary:p.strategySummary,
+    aboutTitle:p.aboutTitle,aboutText:p.aboutText,servicesTitle:p.servicesTitle,servicesIntro:p.servicesIntro,services:p.services,
+    advantagesTitle:p.advantagesTitle,advantages:p.advantages,processTitle:p.processTitle,process:p.process,faqs:p.faqs,
+    contactTitle:p.contactTitle,contactText:p.contactText,assumptions:p.assumptions,marketResearch:p.marketResearch,
+    researchSources:p.researchSources,segments:currentAnalysis()?.segments || [],objections:currentAnalysis()?.objections || [],
+    triggers:currentAnalysis()?.triggers || [],keywords:currentAnalysis()?.keywords || [],competitors:currentAnalysis()?.competitors || [],
+    seoTitle:p.seoTitle,seoDescription:p.seoDescription,imagePrompts:currentAnalysis()?.imagePrompts || [],
+  };
+}
+async function regenerateProjectStage(stageId) {
+  if (!result || !STAGE_PROJECT_FIELDS[stageId]) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-regenerate-stage]')];
+  const status = $('#content-regenerate-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI перегенерирует раздел. Остальные части проекта не меняются…';
+  const fields = STAGE_PROJECT_FIELDS[stageId];
+  const analysisFields = STAGE_ANALYSIS_FIELDS[stageId] || [];
+  const before = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(result.project,key) ? result.project[key] : null]));
+  const analysisBefore = Object.fromEntries(analysisFields.map(key => [key, Object.prototype.hasOwnProperty.call(currentAnalysis() || {},key) ? currentAnalysis()[key] : null]));
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        niche: result.project.niche, brand: result.project.brand, tier: result.project.tier,
+        city: currentAnalysis()?.city || '', details: result.project.mainOffer || '',
+        contentStage: stageId, existingLanding: projectContentForStage(),
+        editorialDirection: ($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + (CONTENT_STAGE_LABELS[stageId] || stageId), status:response.ok && payload.content ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.stage?.attempts || null });
+    if (!response.ok || !payload.content) throw new Error(payload.error || 'HTTP ' + response.status);
+    const patch = {};
+    for (const key of fields) if (Object.prototype.hasOwnProperty.call(payload.content, key)) patch[key] = payload.content[key];
+    if (!Object.keys(patch).length) throw new Error('AI не вернул поля выбранного раздела');
+    const analysisPatch = Object.fromEntries(analysisFields.filter(key => Object.prototype.hasOwnProperty.call(payload.content,key)).map(key => [key,payload.content[key]]));
+    const after = Object.fromEntries(fields.map(key => [key, Object.prototype.hasOwnProperty.call(patch,key) ? patch[key] : before[key]]));
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId, before, after, analysisBefore, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    Object.assign(state.raw, patch);
+    if (analysisFields.length && !state.analysis?.data) state.analysis = { projectId: state.raw.id, data: { source: 'ai', niche: state.raw.niche, city: '', tier: state.raw.tier, audience: state.raw.targetAudience || '' } };
+    if (analysisFields.length && state.analysis?.data) Object.assign(state.analysis.data, analysisPatch);
+    run();
+    persist();
+    refreshAiUsage();
+    toast('Раздел «' + (CONTENT_STAGE_LABELS[stageId] || stageId) + '» обновлён. Остальные разделы сохранены.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось обновить раздел: ' + error.message;
+    toast('Ошибка перегенерации: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+const CONTENT_STAGE_LABELS = { strategy:'Первый экран', about:'О компании', services:'Услуги', trust:'Преимущества и FAQ', seo:'Контакты и SEO' };
+async function runContentQualityReview() {
+  if (!result) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  const output = $('#content-quality-review-result');
+  const button = $('#view-spec').querySelector('[data-content-quality-review]');
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  if (button) button.disabled = true;
+  if (output) output.textContent = 'AI анализирует текст и SEO-поля…';
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, contentQualityReview:true,
+        project:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: проверка качества контента и SEO', status:response.ok && payload.review ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP '+response.status), ms:payload.durationMs || Date.now()-started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null });
+    if (!response.ok || !payload.review) throw new Error(payload.error || 'Не удалось получить отчёт');
+    const review = payload.review;
+    const items = [
+      ...(review.findings || []).map(item => ({ priority:item.severity, category:item.category, issue:item.message, recommendation:item.action })),
+      ...(review.recommendations || []).map(item => ({ priority:item.priority, category:item.category, issue:item.issue, recommendation:item.recommendation })),
+    ];
+    if (output) output.innerHTML = '<strong>Оценка контента: '+Number(review.score || 0)+'/100</strong><ul>'+(
+      items.length ? items.map(item => '<li><b>'+esc(String(item.priority || ''))+' · '+esc(String(item.category || ''))+'</b>: '+esc(String(item.issue || ''))+'<br><small>'+esc(String(item.recommendation || ''))+'</small></li>').join('')
+      : '<li>Существенных замечаний не найдено. Фактическую достоверность всё равно нужно проверить вручную.</li>'
+    )+'</ul><small>AI-проверка не меняла проект. Веб-поиск не выполнялся.</small>';
+    toast('Проверка качества завершена. Контент не изменён.');
+  } catch (error) {
+    if (output) output.textContent = 'Не удалось выполнить проверку: '+error.message;
+    toast('Ошибка проверки качества: '+error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+async function editProjectField(action) {
+  const field = $('#content-edit-field')?.value;
+  const currentValue = $('#content-edit-value')?.value || '';
+  if (!result || !CONTENT_FIELD_OPTIONS.some(([key]) => key === field)) return;
+  const endpoint = ($('#auto-endpoint')?.value || localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint()).trim();
+  if (!endpoint) { toast('Сначала укажите адрес AI-сервера в настройках автопилота.'); return; }
+  let url;
+  try {
+    url = new URL(endpoint, location.href);
+    if (!/\/api\/generate-landing\/?$/i.test(url.pathname)) throw new Error('Неверный путь Worker');
+  } catch { toast('Проверьте адрес AI-сервера: нужен путь /api/generate-landing.'); return; }
+  const buttons = [...$('#view-spec').querySelectorAll('[data-content-edit-action]')];
+  const status = $('#content-edit-status');
+  buttons.forEach(button => { button.disabled = true; });
+  if (status) status.textContent = 'AI редактирует выбранный текст…';
+  const before = { [field]: Object.prototype.hasOwnProperty.call(result.project,field) ? result.project[field] : null };
+  const started = Date.now();
+  try {
+    const response = await fetch(url.href, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        niche:result.project.niche, brand:result.project.brand, tier:result.project.tier,
+        contentField:field, editAction:action, currentValue,
+        existingLanding:projectContentForStage(),
+        editorialDirection:($('#content-direction')?.value || '').trim(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    logAi({ kind:'text', label:'AI: ' + field + ' (' + action + ')', status:response.ok && typeof payload.value === 'string' ? 'ok' : 'error',
+      error:payload.error || (response.ok ? '' : 'HTTP ' + response.status), ms:payload.durationMs || Date.now() - started,
+      model:payload.model || '', tokens:payload.usage?.totalTokens || null, attempts:payload.attempts || null });
+    if (!response.ok || typeof payload.value !== 'string' || !payload.value.trim()) throw new Error(payload.error || 'AI не вернул новый текст');
+    const history = contentHistoryForProject();
+    history.push({ projectId:state.raw.id, stageId:'field', field, action, before, after:{[field]:payload.value}, at:new Date().toISOString() });
+    writeContentHistory(history.slice(-10));
+    state.raw[field] = payload.value;
+    run(); persist(); refreshAiUsage();
+    toast('Текст обновлён: ' + (CONTENT_FIELD_OPTIONS.find(([key]) => key === field)?.[1] || field) + '. Остальные поля не менялись.');
+  } catch (error) {
+    if (status) status.textContent = 'Не удалось отредактировать текст: ' + error.message;
+    toast('Ошибка AI-редактора: ' + error.message);
+  } finally {
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+
+$('#view-spec').addEventListener('click', async e => {
+  const b = e.target.closest('[data-spec], [data-content], [data-regenerate-stage], [data-content-undo], [data-content-quality-review], [data-content-edit-action]'); if (!b) return;
+  if (b.hasAttribute('data-content-quality-review')) { runContentQualityReview(); return; }
+  if (b.hasAttribute('data-content-edit-action')) { editProjectField(b.dataset.contentEditAction); return; }
+  if (b.hasAttribute('data-regenerate-stage')) { regenerateProjectStage(b.dataset.regenerateStage); return; }
+  if (b.hasAttribute('data-content-undo')) {
+    const history = contentHistoryForProject();
+    const last = history.pop();
+    if (!last) return;
+    for (const [key,value] of Object.entries(last.before)) { if (value === null) delete state.raw[key]; else state.raw[key] = value; }
+    if (last.analysisBefore && state.analysis?.data) {
+      for (const [key,value] of Object.entries(last.analysisBefore)) { if (value === null) delete state.analysis.data[key]; else state.analysis.data[key] = value; }
+    }
+    writeContentHistory(history);
+    run(); persist();
+    toast('Последняя AI-правка отменена.');
+    return;
+  }
+  const a = currentAnalysis() || {};
+  const copy = async (text, ok, file) => { try { await navigator.clipboard.writeText(text); toast(ok); } catch { download(file, text, 'text/plain'); } };
+  if (b.dataset.spec === 'copy') copy(buildSpec(result.project, result.concept, a), 'ТЗ скопировано', `${result.project.id}-tz.md`);
+  if (b.dataset.spec === 'md') download(`${result.project.id}-tz.md`, buildSpec(result.project, result.concept, a), 'text/markdown');
+  if (b.dataset.spec === 'prompt') copy(buildPrompt(result.project, result.concept, a), 'Промт скопирован', `${result.project.id}-prompt.txt`);
+  if (b.dataset.content === 'copy') copy(contentPrompt(), 'Задание AI Content Director скопировано', `${result.project.id}-content-director.txt`);
+  if (b.dataset.content === 'download') download(`${result.project.id}-content-director.txt`, contentPrompt(), 'text/plain');
+});
+
+// ---------- Производство: конвейер, контроль качества и безопасные исправления ----------
+const QUALITY_HISTORY = 'uds:quality-history:v1';
+function qualityHistory() {
+  try { return JSON.parse(localStorage.getItem(QUALITY_HISTORY) || '[]').filter(e => e && e.projectId === state.raw.id).slice(-10); } catch { return []; }
+}
+function recordQualityHistory(entry) {
+  try {
+    const all = JSON.parse(localStorage.getItem(QUALITY_HISTORY) || '[]');
+    all.push({ ...entry, projectId: state.raw.id, at: new Date().toISOString() });
+    localStorage.setItem(QUALITY_HISTORY, JSON.stringify(all.slice(-50)));
+  } catch { /* история — удобство, без неё работа продолжается */ }
+}
+const STAGE_LABEL = { done: 'Готово', attention: 'Нужно внимание', review: 'Есть замечания', input: 'Нужны данные', manual: 'Вручную' };
+function renderProduction() {
+  const host = $('#view-production');
+  if (!host || !result) return;
+  const q = qualityReport(result);
+  const p = result.project;
+  const a = currentAnalysis();
+  const photos = [p.images?.hero, ...(p.gallery || []).map(g => g.src), ...(p.services || []).map(s => s.image)].filter(Boolean).length;
+  const director = q.findings.filter(f => f.source === 'design-director');
+  const fixable = q.findings.filter(f => f.autoFix);
+  const kb = Math.round(new TextEncoder().encode(result.html).length / 1024);
+  const arch = ARCHETYPES[result.concept.designDNA.primaryArchetype];
+  const stages = [
+    ['Бриф', p.niche ? 'done' : 'input', p.niche ? `${esc(p.brand || 'Без названия')} · ${esc(p.niche)}` : 'Укажите нишу проекта'],
+    ['Анализ', a ? 'done' : 'manual', a ? (a.source === 'ai' ? 'AI-генерация по брифу' : 'Локальный автопилот') : 'Проект из редактора: анализ не запускался. Используйте автопилот.'],
+    ['Design DNA', 'done', `${esc(arch.name)} — ${esc(result.concept.homepage.heroComposition)}`],
+    ['Визуальный бриф', photos ? 'done' : 'input', photos ? `Фотографий: ${photos}` : 'Фото не загружены: на странице абстрактный мотив. Задание для съёмки — во вкладке «Проверка».'],
+    ['HTML', 'done', `Самодостаточная страница, ${kb} КБ`],
+    ['Аудит', result.audit.errors.length ? 'attention' : result.audit.warnings.length ? 'review' : 'done', `Ошибок: ${result.audit.errors.length}, предупреждений: ${result.audit.warnings.length}`],
+    ['Контроль качества', qualityStageStatus(q), `Critical ${q.counts.critical} · High ${q.counts.high} · Medium ${q.counts.medium} · Low ${q.counts.low}`],
+    ['Design Director', director.length ? 'attention' : 'done', director.length ? `Рекомендаций: ${director.length}. Применяются только вручную.` : 'Рекомендаций нет'],
+    ['Исправления', fixable.length ? 'attention' : 'done', fixable.length ? `Можно исправить автоматически: ${fixable.length}` : 'Автоматически исправлять нечего'],
+    ['Экспорт', 'done', 'HTML и JSON проекта доступны'],
+    ['Публикация', 'manual', 'Хостинг не подключён: скачайте HTML и загрузите его на свой хостинг. Студия не считает сайт опубликованным.'],
+  ];
+  const badge = $('#production-badge');
+  if (badge) { const n = q.counts.critical + q.counts.high; badge.textContent = n || '✓'; badge.className = 'badge ' + (n ? 'err' : 'ok'); }
+  const groups = Object.entries(QUALITY_CATEGORIES).map(([id, label]) => [label, q.byCategory[id]]).filter(([, list]) => list.length);
+  const history = qualityHistory();
+  host.innerHTML = `<div class="production">
+  <div class="production__head"><div><span class="eyebrow">PRODUCTION PIPELINE</span><h2>Производственный конвейер</h2>
+    <p class="note">Статусы считаются по текущему проекту. Ориентир качества: ${q.score} из 100 — он нужен для сравнения версий, а не как оценка дизайна.</p></div>
+    <div class="production__actions"><button type="button" class="primary" data-production="fix"${fixable.length ? '' : ' disabled'}>Исправить автоматически${fixable.length ? ` (${fixable.length})` : ''}</button><button type="button" data-production="html">Скачать HTML</button><button type="button" data-production="json">Экспорт JSON</button></div></div>
+  <ol class="production__stages">${stages.map(([name, st, detail]) => `<li class="is-${st}"><b>${name}</b><span class="production__state">${STAGE_LABEL[st]}</span><small>${detail}</small></li>`).join('')}</ol>
+  <h3>Замечания по направлениям</h3>
+  ${groups.length ? groups.map(([label, list]) => `<section class="production__group"><h4>${esc(label)} <span class="note">${list.length}</span></h4><ul>${list.map(f => `<li><span class="sev sev--${f.severity}">${SEVERITY_LABELS[f.severity]}</span><span>${esc(f.message)}${f.action ? `<br><small class="note">${esc(f.action)}</small>` : ''}</span>${f.autoFix ? '<em class="production__auto">исправится автоматически</em>' : ''}</li>`).join('')}</ul></section>`).join('') : '<p class="summary ok">Замечаний нет.</p>'}
+  <h3>История проверок</h3>
+  ${history.length ? `<ul class="production__history">${history.slice().reverse().map(h => `<li>${new Date(h.at).toLocaleString('ru-RU')}: ${esc(h.text)}</li>`).join('')}</ul>` : '<p class="note">Автоисправления ещё не запускались.</p>'}
+</div>`;
+}
+$('#view-production').addEventListener('click', e => {
+  const b = e.target.closest('[data-production]'); if (!b || b.disabled) return;
+  if (b.dataset.production === 'html') { $('#download').click(); return; }
+  if (b.dataset.production === 'json') { $('#export').click(); return; }
+  // Безопасные исправления с повторной проверкой: не больше двух проходов, остановка, если менять нечего.
+  const r = fixAndRecheck(state.raw, raw => generate(raw, { registry: registry() }), { maxPasses: 2 });
+  if (!r.passes.length) { toast('Автоматически исправлять нечего'); return; }
+  const fields = [...new Set(r.passes.flatMap(x => x.applied.flatMap(a => a.fields)))];
+  const text = `исправлено полей: ${fields.join(', ')}; замечаний было ${r.before.findings.length}, стало ${r.after.findings.length}`;
+  recordQualityHistory({ text, before: r.before.counts, after: r.after.counts });
+  load(r.project, `Исправлено автоматически: ${fields.join(', ')}. Повторная проверка: было ${r.before.findings.length}, стало ${r.after.findings.length}.`);
+  selectTab($('#tab-production'));
+});
+
+// ---------- Библиотека шаблонов в автопилоте ----------
+function readTemplateLibrary() {
+  try { return normalizeLibrary(JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]')); } catch { return []; }
+}
+function renderLibraryHint() {
+  const hint = $('#auto-library-h'); if (!hint) return;
+  const mode = $('#auto-library').value;
+  const library = readTemplateLibrary();
+  const filled = library.filter(t => t.status !== 'source-saved');
+  const select = $('#auto-library-profile');
+  const field = $('#auto-library-profile-field');
+  const savedId = (() => { try { return localStorage.getItem('uds:selected-template-profile') || ''; } catch { return ''; } })();
+  const selectedId = select.value || savedId;
+  select.innerHTML = '<option value="">Выберите профиль</option>' + filled.map(t => '<option value="' + esc(t.id) + '">' + esc(t.name) + ' · ' + esc(t.category) + '</option>').join('');
+  if (filled.some(t => t.id === selectedId)) select.value = selectedId;
+  field.hidden = mode !== 'specific';
+  select.disabled = !filled.length;
+  const link = '<a href="templates.html">Открыть библиотеку</a>';
+  if (mode === 'off') hint.innerHTML = 'Концепция строится только по нише и контенту. ' + link;
+  else if (mode === 'specific') {
+    const selected = filled.find(t => t.id === select.value);
+    hint.innerHTML = selected ? 'Будут переосмыслены структурные и UX-принципы профиля «' + esc(selected.name) + '»; композиция страницы останется самостоятельной. ' + link
+      : filled.length ? 'Выберите заполненный профиль для генерации. ' + link : 'Сначала добавьте и заполните профиль в библиотеке. ' + link;
+  } else hint.innerHTML = filled.length ? 'Заполненных профилей: ' + filled.length + '. Движок выберет подходящие и переосмыслит их принципы. ' + link
+    : 'В библиотеке пока нет заполненных профилей. ' + link;
+}
+try {
+  const mode = localStorage.getItem('uds:use-library');
+  $('#auto-library').value = ['off', 'specific'].includes(mode) ? mode : 'auto';
+} catch {}
+$('#auto-library').addEventListener('change', () => { try { localStorage.setItem('uds:use-library', $('#auto-library').value); } catch {} renderLibraryHint(); });
+$('#auto-library-profile').addEventListener('change', () => { try { localStorage.setItem('uds:selected-template-profile', $('#auto-library-profile').value); } catch {} renderLibraryHint(); });
+window.addEventListener('storage', e => { if (e.key === LIBRARY_KEY) renderLibraryHint(); });
+window.addEventListener('pageshow', renderLibraryHint);
+renderLibraryHint();
+
+// ---------- Автопилот ----------
+try {
+  $('#auto-endpoint').value = localStorage.getItem('uds:ai-endpoint') || getDefaultAiEndpoint();
+  $('#auto-prompt').value = localStorage.getItem('uds:custom-prompt') || '';
+  $('#auto-prompt-mode').value = localStorage.getItem('uds:custom-prompt-mode') === 'replace' ? 'replace' : 'append';
+  if ($('#auto-prompt').value) $('#auto-prompt-box').open = true;
+} catch { /* нет хранилища */ }
+$('#auto').addEventListener('submit', async e => {
+  e.preventDefault();
+  userStartedProject = true;
+  const input = {
+    niche: $('#auto-niche').value.trim(), tier: $('#auto-tier').value, brand: $('#auto-brand').value.trim(), city: $('#auto-city').value.trim(),
+    details: $('#auto-details').value.trim(), mainOffer: $('#auto-offer').value.trim(), targetAudience: $('#auto-audience').value.trim(),
+    services: $('#auto-services').value.trim(), email: $('#auto-email').value.trim(), phone: $('#auto-phone').value.trim(),
+    customPrompt: $('#auto-prompt').value.trim().slice(0, 8000), customPromptMode: $('#auto-prompt-mode').value,
+  };
+  if (!input.niche) return $('#auto-niche').focus();
+  const libraryMode = $('#auto-library').value;
+  const library = readTemplateLibrary();
+  const profileId = $('#auto-library-profile').value;
+  if (libraryMode === 'specific' && !profileId) {
+    $('#auto-status').textContent = 'Выберите конкретный заполненный профиль или добавьте его в библиотеку.';
+    $('#auto-library-profile').focus();
+    return;
+  }
+  const references = libraryMode === 'off' ? [] : referencesFor(library, input, libraryMode === 'specific' ? { profileId } : undefined);
+  if (libraryMode === 'specific' && !references.length) {
+    $('#auto-status').textContent = 'Выбранный профиль пуст или уже удалён. Обновите список и выберите заполненный профиль.';
+    renderLibraryHint();
+    $('#auto-library-profile').focus();
+    return;
+  }
+  if (references.length) input.designReferences = references;
+  const endpoint = $('#auto-endpoint').value.trim();
+  try {
+    localStorage.setItem('uds:ai-endpoint', endpoint);
+    localStorage.setItem('uds:custom-prompt', input.customPrompt);
+    localStorage.setItem('uds:custom-prompt-mode', input.customPromptMode);
+  } catch { /* нет хранилища */ }
+  const setAutoStatus = value => { const node = $('#auto-status'); if (node) node.textContent = value; };
+  const setAutoProgress = (percent, stage, detail = '') => {
+    const root = $('#auto-progress'), bar = $('#auto-progress-bar');
+    const value = $('#auto-progress-value'), label = $('#auto-progress-stage');
+    const extra = $('#auto-progress-detail');
+    if (!root || !bar || !value || !label) return;
+    root.hidden = false;
+    const safe = Math.max(0, Math.min(100, Math.round(percent)));
+    bar.style.width = safe + '%';
+    const track = root.querySelector('[role="progressbar"]');
+    if (track) track.setAttribute('aria-valuenow', String(safe));
+    value.textContent = safe + '%';
+    label.textContent = stage;
+    if (extra) extra.textContent = detail;
+    root.dataset.state = safe >= 100 ? (/предупреждения/i.test(stage) ? 'warning' : 'complete') : 'running';
+  };
+  const go = $('#auto-go');
+  go.disabled = true;
+  setAutoProgress(3, 'Подготовка проекта', 'Проверяем бриф и параметры генерации');
+  renderContentQaReview(null); // Не показываем результаты предыдущей генерации во время новой.
+  let draft = null, note = '';
+  if (endpoint) {
+    setAutoStatus('AI формирует тексты и структуру проекта по вашему брифу — ход генерации отображается ниже…');
+    setAutoProgress(12, 'AI формирует тексты и структуру', 'Отправляем бриф в Cloudflare Workers AI');
+    try {
+      // В append-режиме пользовательская инструкция передаётся отдельно: иначе длинный промт
+      // обрезал её по лимиту studioPrompt. Worker добавит её к брифу после контекста студии.
+      const promptInput = input.customPromptMode === 'append' && input.customPrompt
+        ? { ...input, customPrompt: '' }
+        : input;
+      const contentBrief = autopilot(promptInput, { registry: registry(), forWorker: true });
+      const studioPrompt = contentBrief.prompt.slice(0, 16000);
+      // Передаём только данные, которые Worker действительно использует; большие локальные объекты
+      // из полного input не нужны. customPrompt отдельно нужен Worker, если его нет в studioPrompt.
+      const aiPayload = {
+        niche: input.niche,
+        brand: input.brand,
+        city: input.city,
+        tier: input.tier,
+        details: input.details.length > 2000
+          ? input.details.slice(0, 1999).replace(/\s+\S*$/, '').trim() + '…'
+          : input.details,
+        mainOffer: input.mainOffer,
+        targetAudience: input.targetAudience,
+        services: input.services,
+        studioPrompt,
+        customPrompt: input.customPrompt || '',
+        customPromptMode: input.customPromptMode || 'append',
+        contentEngine: 'auto',
+      };
+      const aiStarted = Date.now();
+      // Пока сервер пишет тексты (обычно 20–40 с), шкала движется и показывает прошедшее время, а не стоит на 12%.
+      const aiTicker = setInterval(() => {
+        const seconds = Math.round((Date.now() - aiStarted) / 1000);
+        setAutoProgress(Math.min(45, 12 + seconds * 0.8), 'AI пишет тексты и структуру', 'Прошло ' + seconds + ' с · обычно 20–40 с');
+      }, 1000);
+      let res, body;
+      try {
+        // Повторяем только временные сбои сети, 429 и 5xx; не повторяем ошибки валидации 4xx.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const controller = new AbortController();
+          // Генерация текста идёт 20–60 с, а с запасным поэтапным режимом — до нескольких минут: не обрываем её раньше.
+          const timeout = setTimeout(() => controller.abort(), 240_000);
+          try {
+            res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aiPayload), signal: controller.signal });
+            body = await res.json().catch(() => ({}));
+          } catch (error) {
+            if (attempt === 1) throw error;
+            setAutoStatus('Сетевая ошибка AI-сервера. Повторяем запрос…');
+            await new Promise(resolve => setTimeout(resolve, 2_000));
+            continue;
+          } finally { clearTimeout(timeout); }
+          if (res.ok || (res.status < 500 && res.status !== 429) || attempt === 1) break;
+          const retryAfter = Number(res.headers.get('Retry-After'));
+          const delay = res.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 2_000;
+          setAutoStatus(res.status === 429 ? 'AI-сервер ограничил частоту запросов. Повторяем через минуту…' : 'Временная ошибка AI-сервера. Повторяем запрос…');
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        clearInterval(aiTicker);
+      } catch (error) {
+        clearInterval(aiTicker); logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: 'error', error: 'сеть: ' + error.message, ms: Date.now() - aiStarted }); throw error; }
+      logAi({ kind: 'text', label: 'Тексты сайта: ' + input.niche, status: res.ok && body.landing && body.generation?.status === 'completed' ? 'ok' : 'error', error: body.error || (body.generation?.status === 'partial' ? 'Частичная генерация: ' + (body.generation.failedStage || 'этап не завершён') : res.ok ? '' : 'HTTP ' + res.status), ms: body.durationMs || Date.now() - aiStarted, model: body.model || '', tokens: body.usage?.totalTokens || null, attempts: body.attempts || body.generation?.stages?.reduce((n, stage) => n + (stage.attempts || 0), 0) || null, route: body.route || '', provider: body.provider || '' });
+      if (!res.ok || !body.landing) throw new Error(body.error || `сервер ответил ${res.status}`);
+      setAutoProgress(48, 'AI подготовил ответ', 'Проверяем тексты: полнота, штампы и неподтверждённые обещания');
+      draft = fromAiLanding(body.landing, {
+        ...input,
+        plannedSectionIds: contentBrief.concept.homepage.sections.map(section => section.id),
+      });
+      const contentReview = reviewGeneratedContent({ ...body.landing, ...draft.project }, {
+        sectionIds: contentBrief.concept.homepage.sections.map(section => section.id),
+        forWorker: true,
+      });
+      renderContentQaReview(contentReview);
+      refreshAiUsage();
+      note = body.generation?.status === 'partial'
+        ? `AI создал основную часть сайта, но этап «${body.generation.failedStage}» не завершён. Готовые разделы включены в проект; недостающий этап можно будет повторить отдельно.`
+        : `Готово: AI сформировал тексты и структуру проекта по вашему брифу.`;
+    } catch (err) {
+      note = `AI-сервер недоступен (${err.message}). Собрал сайт локальным автопилотом без интернета.`;
+      setAutoProgress(35, 'Переключение на локальный режим', 'AI недоступен — продолжаем без сервера');
+    }
+  }
+  if (!draft) {
+    setAutoProgress(52, 'Локальная сборка проекта', 'Формируем структуру и контент');
+    const local = autopilot(input, { registry: registry() });
+    draft = { project: local.project, analysis: local.analysis };
+    renderContentQaReview(reviewGeneratedContent(local.project, {
+      sectionIds: local.concept.homepage.sections.map(section => section.id),
+    }));
+    if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
+  }
+  note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
+  setAutoProgress(58, 'Сборка сайта', 'Подготавливаем предпросмотр, SEO и проверку качества');
+  state.analysis = { projectId: draft.project.id, data: draft.analysis };
+  load(draft.project);
+  if (endpoint) {
+    setAutoStatus(note + ' Подготавливаю фотографии для сайта…');
+    setAutoProgress(65, 'Генерация изображений', 'Подготавливаем визуальные материалы');
+    try {
+      const images = await generateProjectImages(endpoint, draft.project.id, (done, total, subject) => setAutoProgress(65 + (done / Math.max(1, total)) * 30, 'Генерация изображений', 'Готово ' + done + ' из ' + total + ': ' + subject));
+      if (images.generated) note += ' Автоматически созданы и вставлены изображения: ' + images.generated + '.' + (images.failed ? ' Не удалось создать: ' + images.failed + ' — их можно перегенерировать или загрузить свои фото.' : '');
+      else note += ' Для выбранной композиции отдельные фотографии не требуются.';
+    } catch (error) {
+      note += ' Генерация фотографий не завершена: ' + error.message + ' Можно повторить позже или загрузить свои снимки.';
+    }
+    setAutoStatus(note);
+    refreshAiUsage();
+  }
+  // Статус обязателен и для локального режима без AI endpoint.
+  // Иначе генерация проходит, но пользователь и E2E-тест не видят завершения.
+  setAutoStatus(note);
+  const hasWarnings = /AI-сервер недоступен|не завершена|Не удалось создать|не удалось/i.test(note);
+  setAutoProgress(100, hasWarnings ? 'Завершено с предупреждениями' : 'Генерация завершена', note);
+  go.disabled = false;
+  selectTab($('#tab-preview'));
+  toast(note);
+});
+let timer;
+const schedule = () => { clearTimeout(timer); timer = setTimeout(run, 220); };
+
+const ul = arr => (arr.length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="note">—</span>');
+const kv = rows => `<dl class="kv">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+
+function renderVisualAssetLibrary() {
+  const mobile = state.raw.imageArtDirection?.mobileSources || {};
+  const assets = [];
+  const hero = state.raw.images?.hero;
+  if (hero) assets.push({ role: 'Первый экран', name: 'Hero', desktop: hero, phone: state.raw.images?.heroMobile || '', detail: 'Главная фотография сайта', index: 0 });
+  (state.raw.gallery || []).forEach((item, index) => {
+    if (item?.src) assets.push({ role: 'Галерея', name: item.caption || `Фото ${index + 1}`, desktop: item.src, phone: mobile.gallery?.[index] || '', detail: `Изображение ${index + 1}`, index });
+  });
+  (state.raw.services || []).forEach((item, index) => {
+    const src = Array.isArray(item) ? item[3] : item?.image;
+    if (src) assets.push({ role: 'Карточка', name: Array.isArray(item) ? item[0] : item.title || `Позиция ${index + 1}`, desktop: src, phone: mobile.services?.[index] || '', detail: 'Товар или услуга', index });
+  });
+  const mobileCount = assets.filter(item => item.phone).length;
+  const cropPreview = (item, role, index) => {
+    const entry = role === 'hero' ? state.raw.imageArtDirection?.hero : state.raw.imageArtDirection?.[role]?.[index];
+    const viewports = [['desktop','Компьютер','16 / 9'],['tablet','Планшет','4 / 3'],['mobile','Телефон','3 / 4']];
+    return '<div class="asset-library__crops">' + viewports.map(([viewport,label,ratio]) => {
+      const focal = entry?.[viewport] || {};
+      const src = viewport === 'mobile' && item.phone ? item.phone : item.desktop;
+      const position = cropCoordinate(focal.x) + '% ' + cropCoordinate(focal.y) + '%';
+      return `<figure><div class="asset-library__crop-frame" style="aspect-ratio:${ratio}"><img src="${esc(src)}" alt="" loading="lazy" style="object-position:${position}"></div><figcaption>${label}</figcaption></figure>`;
+    }).join('') + `</div><button type="button" class="asset-library__crop-action" data-open-crop-role="${role}" data-open-crop-index="${index}">Настроить кадрирование</button>`;
+  };
+  return `<section class="asset-library" aria-labelledby="asset-library-title">
+    <div class="asset-library__head"><div><h2 id="asset-library-title">Библиотека изображений</h2><p class="note">Фотографии проекта: назначение, десктопная версия и отдельный кадр для телефона.</p></div>
+    <div class="asset-library__stats"><b>${assets.length}</b><span>фото</span><b>${mobileCount}</b><span>мобильных версий</span></div></div>
+    ${assets.length ? `<div class="asset-library__grid">${assets.map(item => `<article class="asset-library__item">
+      <div class="asset-library__meta"><span class="asset-library__role">${esc(item.role)}</span><b>${esc(item.name)}</b><small>${esc(item.detail)}</small></div>
+      ${cropPreview(item, item.role === 'Первый экран' ? 'hero' : item.role === 'Галерея' ? 'gallery' : 'services', item.index)}
+      <div class="asset-library__mobile">${item.phone ? `<img src="${esc(item.phone)}" alt="" loading="lazy"><span class="is-ready">Отдельное фото для телефона</span>` : `<span class="is-empty">Мобильная версия использует основной кадр</span>`}</div>
+    </article>`).join('')}</div>` : '<p class="note asset-library__empty">Фотографий пока нет. Добавьте Hero, изображения галереи или фото карточек.</p>'}
+    <div class="asset-library__actions"><button type="button" data-open-image-settings>Управлять фотографиями</button><button type="button" data-open-image-audit>Проверить качество фото</button></div>
+  </section>`;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#drop-references') || !result?.concept?.libraryUse) return;
+  delete result.concept.libraryUse;
+  result.concept.designBrief.contextFactors = (result.concept.designBrief.contextFactors || []).filter(x => !x.includes('Конкурентная среда:'));
+  renderConcept();
+  toast('Референсы исключены из текущей концепции');
+});
+
+function renderConcept() {
+  const c = result.concept, b = c.designBrief, d = c.designDNA, h = c.homepage, u = c.uniquenessCheck, vs = c.visualSystem;
+  const name = id => (id ? `${ARCHETYPES[id].name} <span class="note">(${ARCHETYPES[id].ru})</span>` : '<span class="note">—</span>');
+  const pal = vs.palette;
+  const sw = [['Фон', pal.bg, pal.text], ['Поверхность', pal.surface, pal.text], ['Текст', pal.text, pal.bg], ['Вторичный текст', pal.muted, pal.bg], ['Акцент', pal.accent, pal.accentText], ['Тон', pal.tint, pal.text]];
+  $('#view-concept').innerHTML = `
+<h2>Design Brief</h2><div class="card">${kv([
+    ['Бизнес', esc(b.businessType)], ['Продукт', esc(b.product) || '—'], ['Аудитория', esc(b.audience)], ['Целевое действие', esc(b.primaryGoal)],
+    ['Характер бренда', esc(b.brandCharacter)], ['Приоритет контента', `<div class="chips">${b.contentPriority.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`],
+    ['Доказательства доверия', ul(b.trustProofs)], ['Ограничения', ul(b.constraints)], ['Гипотезы', ul(b.assumptions)],
+  ])}</div>
+${renderVisualAssetLibrary()}
+${c.libraryUse ? `<section class="card" id="library-reference-panel"><h2>Библиотека шаблонов</h2><p><b>Использованы профили:</b> ${ul(c.libraryUse.references.map(r => `«${r.name}» — ${r.category}`))}</p><h3>Применённые принципы</h3>${ul(c.libraryUse.applied)}<h3>Чем проект отличается</h3>${ul(c.libraryUse.divergence)}<button type="button" id="drop-references">Убрать референсы из проекта</button></section>` : ''}
+<h2>Design DNA</h2><div class="card">${kv([
+    ['Концепция', '<b>' + esc(d.conceptName || '') + '</b> <span class="note">— ' + esc(d.conceptFormula || '') + '</span>'], ['Что учтено', ul(b.contextFactors || [])],
+    ['Основная архитектура', name(d.primaryArchetype)], ['Вспомогательная', name(d.secondaryArchetype)], ['Обоснование', esc(d.selectionRationale)],
+    ['Цвет', esc(d.colorDirection)], ['Типографика', esc(d.typographyDirection)], ['Изображения', esc(d.imageDirection)], ['Движение', esc(d.motionDirection)],
+    ['Арт-дирекция', esc(vs.artDirection?.label || 'Авто по нише и содержимому')], ['Шапка', esc(c.homepage.navigationPattern)], ['Положение заголовка', esc(c.homepage.heroComposition)],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Переходы', esc(describeTransition(vs.transition))], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+    ['Форма', esc(vs.shape.label)], ['Кнопки', esc(vs.button.label)], ['Карточки', esc(MECHANICS[vs.variants.itemsMechanic || 'none'] || '')], ['Фото', esc(MASKS[vs.forms?.mask || 'none'] || '')], ['Эффект текста', esc(TEXT_EFFECTS[vs.textEffect || 'none'] || '')], ['Эффекты', esc(describeEffects(vs.effects))], ['Фон секции', esc(Object.entries(vs.sectionBackdrops || {}).map(([id, style]) => `${id}: ${{'accent-glow':'мягкое свечение','soft-wash':'градиентная вуаль','technical-grid':'тонкая сетка'}[style] || style}`).join(' · ') || 'без дополнительного акцента')], ['Типографика', esc(TYPE_STYLES[vs.typography2?.typeStyle] || 'без доп. оформления')], ['Раскладка секций', esc(SECTION_LAYOUTS[vs.sectionLayout] || vs.sectionLayout)], ['Анимации', esc('текст — ' + (TEXT_ANIMATIONS[vs.typography2?.textAnimation] || 'без') + '; кнопки — ' + (BUTTON_ANIMATIONS[vs.typography2?.buttonAnimation] || 'без'))], ['Форма карточек', esc(CARD_SHAPES[vs.variety?.cardShape] || '—')], ['Появление', esc(REVEALS[vs.variety?.reveal] || '—') + (vs.variety?.revealForced || vs.motionPlan?.mechanics.includes('scroll-reveal') ? '' : ' <span class="note">— не включено планом движения</span>')], ['Фактура и свет', esc(describeCinematicLayers(vs.cinematicLayers)) + (vs.cinematicLayers ? ' <span class="note">— ' + esc(vs.cinematicLayers.rationale) + '</span>' : '')], ['Графика', vs.graphicDirection ? esc(vs.graphicDirection.ru) + ' <span class="note">— ' + esc(vs.graphicDirection.assetBrief || '') + '</span>' : ''], ['Пара шрифтов', esc(vs.typography.pair || 'системные шрифты')],
+  ])}</div>
+<h2>Палитра и контраст</h2>
+<div class="swatches">${sw.map(([n, bg, fg]) => `<div class="swatch" style="background:${bg};color:${fg}"><b>${n}</b>${bg}</div>`).join('')}</div>
+<table style="margin-top:12px"><thead><tr><th>Пара</th><th>Контраст</th></tr></thead><tbody>${pal.pairs.map(p => `<tr><td>${esc(p.name)}</td><td>${p.ratio}:1 ${p.ratio >= 4.5 ? '✓' : '✗'}</td></tr>`).join('')}</tbody></table>
+<h2>Главная страница</h2><div class="card">${kv([
+    ['Первый экран', esc(h.heroComposition)], ['Навигация', esc(h.navigationPattern)], ['Основной CTA', esc(h.primaryCTA)],
+    ['Секции', `<ol style="margin:0;padding-left:20px">${h.sections.map(s => `<li><b>${esc(s.id)}</b> — ${esc(s.role)}</li>`).join('')}</ol>`],
+  ])}</div>
+<h2>Антишаблонная проверка</h2><div class="card">${kv([
+    ['Шаблонность', u.templateReuseDetected ? '<b style="color:var(--err)">обнаружена и не устранена</b>' : 'не обнаружена или устранена'],
+    ['Найденные повторы', ul(u.repeatedPatterns)], ['Что изменено', ul(u.differentiationActions)],
+    ['Сравнение с соседями', u.comparedWith.length ? ul(u.comparedWith.map(x => `${x.brand}: сходство ${Math.round(x.similarity * 100)}%`)) : '<span class="note">Реестр пуст — сохраните проекты кнопкой «В реестр», чтобы следующие генерации сравнивались с ними.</span>'],
+  ])}</div>`;
+}
+
+let imageAuditRun = 0;
+function collectImageAssets() {
+  const out = [];
+  const hero = state.raw.images?.hero;
+  if (hero) out.push({ role: 'hero', label: 'Первый экран', src: hero });
+  (state.raw.gallery || []).forEach((g, i) => { if (g?.src) out.push({ role: 'gallery', label: g.caption || `Галерея ${i + 1}`, src: g.src }); });
+  (state.raw.services || []).forEach((s, i) => {
+    const src = Array.isArray(s) ? s[3] : s?.image;
+    if (src) out.push({ role: 'service', label: Array.isArray(s) ? s[0] : s.title || `Позиция ${i + 1}`, src });
+  });
+  return out;
+}
+function inspectImage(asset) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const width = img.naturalWidth, height = img.naturalHeight, ratio = width / Math.max(1, height);
+      const warnings = [], tips = [], minSide = Math.min(width, height);
+      if (asset.role === 'hero' && (width < 1200 || height < 650)) warnings.push('Для первого экрана разрешение может быть маловато; ориентир — от 1600 × 900 px.');
+      if (asset.role === 'gallery' && minSide < 700) warnings.push('Для галереи желательно не менее 700 px по короткой стороне.');
+      if (asset.role === 'service' && minSide < 600) warnings.push('Для карточки товара или услуги желательно не менее 600 px по короткой стороне.');
+      if (asset.role === 'hero') {
+        if (ratio < 1.25) tips.push('Широкий экран: кадр может выглядеть тесно. Подготовьте горизонтальную версию около 16:9.');
+        if (ratio > 2.1) tips.push('Мобильный экран: при заполнении блока по ширине верх и низ могут обрезаться. Проверьте важный объект в центральной безопасной зоне или подготовьте вертикальный кадр 4:5.');
+        else tips.push('Мобильный экран: проверьте, что главный объект остаётся в центральной части кадра; для портретного блока лучше отдельный кадр 4:5.');
+      } else if (asset.role === 'service') {
+        if (ratio < 0.78 || ratio > 1.35) tips.push('Карточка обычно лучше смотрится с квадратным кадром 1:1; при обрезке проверьте, что товар целиком виден.');
+      } else if (ratio < 0.72 || ratio > 1.8) tips.push('Галерея: необычные пропорции могут обрезаться в сетке. Проверьте кадрирование и главный объект.');
+      let brightness = null, detail = null, visualHash = '';
+      if (asset.src.startsWith('data:image/')) {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 64; canvas.height = 64;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const pixels = ctx.getImageData(0, 0, 64, 64).data;
+            let sum = 0, count = 0, edges = 0, edgeCount = 0, prev = null;
+            const zoneSums = [0,0,0], zoneCounts = [0,0,0];
+            let minLuminance = 255, maxLuminance = 0;
+            for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+              const i = (y * 64 + x) * 4;
+              const l = .2126 * pixels[i] + .7152 * pixels[i + 1] + .0722 * pixels[i + 2];
+              sum += l; count++;
+              const zone = Math.min(2, Math.floor(x / (64 / 3)));
+              zoneSums[zone] += l; zoneCounts[zone]++;
+              minLuminance = Math.min(minLuminance, l); maxLuminance = Math.max(maxLuminance, l);
+              if (x && prev !== null) { edges += Math.abs(l - prev); edgeCount++; }
+              if (y) { const up = ((y - 1) * 64 + x) * 4; const ul = .2126 * pixels[up] + .7152 * pixels[up + 1] + .0722 * pixels[up + 2]; edges += Math.abs(l - ul); edgeCount++; }
+              prev = l;
+            }
+            brightness = count ? sum / count : null;
+            detail = edgeCount ? edges / edgeCount : null;
+            asset._brightnessZones = zoneSums.map((value,index) => zoneCounts[index] ? value / zoneCounts[index] : null);
+            asset._luminanceRange = maxLuminance - minLuminance;
+            const hashCanvas = document.createElement('canvas');
+            hashCanvas.width = 8; hashCanvas.height = 8;
+            const hashContext = hashCanvas.getContext('2d', { willReadFrequently: true });
+            if (hashContext) {
+              hashContext.drawImage(img, 0, 0, 8, 8);
+              const sample = hashContext.getImageData(0, 0, 8, 8).data;
+              const luminance = [];
+              for (let i = 0; i < sample.length; i += 4) luminance.push(.2126 * sample[i] + .7152 * sample[i + 1] + .0722 * sample[i + 2]);
+              const average = luminance.reduce((a, b) => a + b, 0) / luminance.length;
+              if (Math.max(...luminance) - Math.min(...luminance) > 8) visualHash = luminance.map(v => v >= average ? '1' : '0').join('');
+            }
+          }
+        } catch { /* Проверка пикселей может быть недоступна для отдельных форматов. */ }
+      }
+      if (brightness !== null && brightness < 48) warnings.push('Кадр выглядит очень тёмным по средней яркости; проверьте детали в тенях.');
+      if (detail !== null && detail < 5) warnings.push('Мало мелких деталей на уменьшенной копии: возможна мягкость или расфокус. Проверьте фото визуально.');
+      resolve({ ...asset, width, height, ratio, warnings, tips, brightness, detail, visualHash, brightnessZones: asset._brightnessZones || null, luminanceRange: asset._luminanceRange ?? null });
+    };
+    img.onerror = () => resolve({ ...asset, error: 'Не удалось прочитать изображение. Проверьте ссылку или формат.', warnings: [], tips: [] });
+    img.src = asset.src;
+  });
+}
+function hammingDistance(a, b) {
+  if (!a || !b || a.length !== b.length) return Infinity;
+  let distance = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) distance++;
+  return distance;
+}
+// AI Image Director PRO: задание на каждое место для изображения на странице — и до загрузки фото тоже.
+function renderImageTasks() {
+  if (!result) return '';
+  const { slots, filled, total } = imageSlots(result.project, result.concept);
+  return `<section class="image-tasks" aria-labelledby="image-tasks-title">
+    <h3 id="image-tasks-title">Задания на изображения</h3>
+    <p class="note">Заполнено мест: <b>${filled} из ${total}</b>. Для каждого места — сюжет, ракурс, свет, фон, композиция и формат под выбранную раскладку. Студия не генерирует изображения: задание можно отдать фотографу или во внешний генератор.</p>
+    <div class="spec-actions"><button type="button" data-image-tasks="copy">Скопировать все задания</button><button type="button" data-image-tasks="download">Скачать задания (.txt)</button></div>
+    <div class="image-tasks__list">${slots.map(slot => `<details class="image-task ${slot.filled ? 'is-filled' : 'is-missing'}"><summary><b>${esc(slot.label)}</b><span>${slot.filled ? 'фото есть' : 'нужно фото'} · ${esc(slot.aspect)}</span></summary><pre>${esc(slotBrief(slot, result.project))}</pre></details>`).join('')}</div>
+  </section>`;
+}
+async function renderImageIntelligence() {
+  const host = $('#image-intelligence');
+  if (!host) return;
+  const token = ++imageAuditRun;
+  const assets = collectImageAssets();
+  if (!assets.length) { host.innerHTML = '<p class="note">Фотографии пока не добавлены. Загрузите снимки в разделе «Изображения», чтобы проверить их качество и кадрирование.</p>' + renderImageTasks(); return; }
+  host.innerHTML = '<p class="note">Проверяем разрешение, пропорции, яркость и детализацию загруженных фотографий…</p>';
+  const reports = await Promise.all(assets.map(inspectImage));
+  if (token !== imageAuditRun || !host.isConnected) return;
+  const warningCount = reports.reduce((n, r) => n + r.warnings.length, 0);
+  const sourceCounts = new Map();
+  reports.forEach(r => sourceCounts.set(r.src, (sourceCounts.get(r.src) || 0) + 1));
+  const duplicateCount = [...sourceCounts.values()].filter(n => n > 1).reduce((n, count) => n + count - 1, 0);
+  const comparable = reports.filter(r => r.visualHash && !r.error);
+  const nearDuplicatePairs = [];
+  for (let i = 0; i < comparable.length; i++) for (let j = i + 1; j < comparable.length; j++) {
+    if (comparable[i].src === comparable[j].src) continue;
+    const distance = hammingDistance(comparable[i].visualHash, comparable[j].visualHash);
+    if (distance <= 5) nearDuplicatePairs.push([comparable[i], comparable[j], distance]);
+  }
+  const nearDuplicateCount = nearDuplicatePairs.length;
+  const missingRoles = ['hero','gallery','service'].filter(role => !reports.some(r => r.role === role));
+  const visual = renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs);
+  host.innerHTML = `<p class="summary ${warningCount || duplicateCount ? 'err' : 'ok'}">Проверено изображений: ${reports.length}. Замечаний по качеству: ${warningCount}. Точных повторов: ${duplicateCount}. Похожих кадров: ${nearDuplicateCount}.</p>
+  <div class="image-audit-grid">${reports.map(r => `<article class="image-audit-card">
+    <div class="image-audit-head"><b>${esc(r.label)}</b><span class="note">${r.role === 'hero' ? 'Первый экран' : r.role === 'service' ? 'Карточка' : 'Галерея'}</span></div>
+    <div class="image-audit-body"><img src="${esc(r.src)}" alt="" loading="lazy"><div><b>${r.error ? 'Не удалось проверить' : `${r.width} × ${r.height} px`}</b><span class="note">${r.error ? esc(r.error) : `Пропорции: ${r.ratio.toFixed(2)}:1`}</span>
+    ${r.warnings.map(w => `<p class="image-audit-warning">${esc(w)}</p>`).join('')}${r.tips.map(t => `<p class="image-audit-tip">${esc(t)}</p>`).join('')}${!r.warnings.length && !r.tips.length && !r.error ? '<p class="image-audit-ok">Явных проблем по базовым параметрам не обнаружено.</p>' : ''}</div></div>
+  </article>`).join('')}</div>
+  ${visual}
+  ${renderImageTasks()}
+  <p class="note">Автоматическая оценка — ориентир, а не экспертное распознавание сюжета. Реальное размытие, важный объект и точку обрезки обязательно проверьте в предпросмотре на ширине 320, 768 и 1280 px.</p>`;
+}
+
+function buildVisualQualityReport(reports) {
+  const valid = reports.filter(r => !r.error);
+  const hero = valid.find(r => r.role === 'hero');
+  const gallery = valid.filter(r => r.role === 'gallery');
+  const items = [];
+  if (hero?.brightnessZones) {
+    const names = ['Левая зона','Центр','Правая зона'];
+    const zones = hero.brightnessZones.map((value,index) => ({ name:names[index], value })).filter(z => z.value !== null);
+    const dark = zones.filter(z => z.value < 55);
+    const bright = zones.filter(z => z.value > 205);
+    if (dark.length) items.push({level:'check',title:'Тёмные зоны на Hero',text:dark.map(z => z.name.toLowerCase()).join(', ') + ' заметно темнее. Светлый текст может читаться лучше, но проверьте реальный контраст.'});
+    if (bright.length) items.push({level:'check',title:'Светлые зоны на Hero',text:bright.map(z => z.name.toLowerCase()).join(', ') + ' очень светлые. Для белого текста может понадобиться затемняющий overlay.'});
+    if (!dark.length && !bright.length) items.push({level:'manual',title:'Проверить контраст текста на Hero',text:'Средняя яркость зон без крайних значений. Проверьте фактический цвет текста, градиент и читаемость на реальном макете.'});
+    if (hero.luminanceRange !== null && hero.luminanceRange < 55) items.push({level:'check',title:'Низкий тональный диапазон Hero',text:'Кадр выглядит довольно равномерным. Убедитесь, что текст не теряется на похожем по яркости фоне.'});
+  } else if (hero) items.push({level:'manual',title:'Контраст Hero не измерен',text:'Для этого источника пиксельный анализ недоступен. Проверьте контраст заголовка вручную.'});
+  const tonal = gallery.filter(r => Number.isFinite(r.brightness));
+  if (tonal.length >= 2) {
+    const values = tonal.map(r => r.brightness);
+    const spread = Math.max(...values) - Math.min(...values);
+    if (spread > 75) items.push({level:'check',title:'Разный тональный характер галереи',text:'Разброс средней яркости кадров около ' + Math.round(spread) + ' пунктов. Проверьте единообразие экспозиции и цветокоррекции.'});
+    else items.push({level:'good',title:'Тональная серия выглядит согласованно',text:'Разброс средней яркости невелик. Дополнительно проверьте баланс белого и насыщенность глазами.'});
+  } else if (gallery.length) items.push({level:'manual',title:'Согласованность галереи',text:'Недостаточно доступных измерений для сравнения тональности. Сверьте баланс белого и цветокоррекцию вручную.'});
+  if (!items.length) items.push({level:'manual',title:'Визуальная проверка',text:'Добавьте изображения с доступным локальным анализом или проверьте освещение и читаемость вручную.'});
+  return items;
+}
+
+function scoreAssetForRole(report, role) {
+  if (!report || report.error) return { score: 0, reasons: ['Изображение не удалось проверить'] };
+  const reasons = [];
+  const ratio = Number(report.ratio) || 0;
+  const minSide = Math.min(Number(report.width) || 0, Number(report.height) || 0);
+  let score = 35;
+  if (role === 'hero') {
+    const ratioScore = ratio >= 1.45 && ratio <= 2.05 ? 25 : ratio >= 1.25 && ratio <= 2.3 ? 15 : 0;
+    score += ratioScore; reasons.push(ratioScore ? 'Подходит широкий формат' : 'Для Hero лучше отдельный широкий кадр');
+    const sizeScore = report.width >= 1600 && report.height >= 900 ? 25 : report.width >= 1200 && report.height >= 650 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Достаточное разрешение для большого экрана' : 'Нужно изображение большего разрешения');
+  } else if (role === 'gallery') {
+    const ratioScore = ratio >= 0.65 && ratio <= 2.0 ? 25 : 8;
+    score += ratioScore; reasons.push(ratioScore > 10 ? 'Формат пригоден для галерейной сетки' : 'Проверьте необычную пропорцию');
+    const sizeScore = minSide >= 1000 ? 25 : minSide >= 700 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Хороший запас разрешения' : 'Для крупного просмотра желательно больше пикселей');
+  } else {
+    const ratioScore = ratio >= 0.82 && ratio <= 1.25 ? 25 : ratio >= 0.65 && ratio <= 1.5 ? 15 : 0;
+    score += ratioScore; reasons.push(ratioScore ? 'Близко к квадратному формату карточки' : 'Подготовьте квадратный вариант 1:1');
+    const sizeScore = minSide >= 900 ? 25 : minSide >= 600 ? 15 : 0;
+    score += sizeScore; reasons.push(sizeScore ? 'Достаточное разрешение для карточки' : 'Нужно большее разрешение');
+  }
+  if (report.brightness !== null && report.brightness !== undefined) {
+    const lightScore = report.brightness >= 55 && report.brightness <= 220 ? 10 : 0;
+    score += lightScore; reasons.push(lightScore ? 'Средняя яркость в рабочем диапазоне' : 'Проверьте экспозицию и читаемость деталей');
+  }
+  if (report.detail !== null && report.detail !== undefined) {
+    const detailScore = report.detail >= 7 ? 5 : 0;
+    score += detailScore; reasons.push(detailScore ? 'Есть локальная детализация' : 'Проверьте резкость вручную');
+  }
+  return { score: Math.min(100, score), reasons };
+}
+function buildSmartImageMatches(reports) {
+  return ['hero','gallery','service'].map(role => {
+    const candidates = reports.map(report => ({ report, ...scoreAssetForRole(report, role) }))
+      .filter(item => !item.report.error).sort((a,b) => b.score - a.score);
+    return { role, best: candidates[0] || null, current: reports.filter(r => r.role === role).length };
+  });
+}
+function buildAssetRecommendations(reports, nearDuplicateCount = 0) {
+  const recommendations = [];
+  const hero = reports.find(r => r.role === 'hero');
+  const gallery = reports.filter(r => r.role === 'gallery' && !r.error);
+  const serviceImages = reports.filter(r => r.role === 'service' && !r.error);
+  const serviceCount = Array.isArray(state.raw.services) ? state.raw.services.length : 0;
+  if (!hero) recommendations.push({ level: 'important', title: 'Главный кадр не добавлен', text: 'Добавьте горизонтальную фотографию 16:9 от 1600 × 900 px. Оставьте свободную область под заголовок и кнопку.' });
+  else {
+    if (hero.width < 1600 || hero.height < 900) recommendations.push({ level: 'check', title: 'Усилить главный кадр', text: 'Для большого экрана подготовьте исходник от 1600 × 900 px, чтобы сохранить детализацию.' });
+    if (hero.ratio < 1.35 || hero.ratio > 2.2) recommendations.push({ level: 'check', title: 'Проверить пропорции Hero', text: 'Подготовьте отдельный горизонтальный вариант 16:9 и проверьте мобильную обрезку.' });
+    recommendations.push({ level: 'manual', title: 'Проверить свободную зону под текст', text: 'Убедитесь, что заголовок и CTA не закрывают лицо, товар или важную деталь. Алгоритм не распознаёт сюжет и свободное пространство на фотографии.' });
+  }
+  if (gallery.length < 4) recommendations.push({ level: 'important', title: 'Расширить фотогалерею', text: 'Добавьте 4–6 разных кадров: общий план, средний план, деталь, процесс и атмосферный контекст.' });
+  else {
+    const formats = new Set(gallery.map(r => r.ratio < 0.82 ? 'portrait' : r.ratio > 1.25 ? 'landscape' : 'square'));
+    if (formats.size === 1) recommendations.push({ level: 'check', title: 'Разнообразить композицию галереи', text: 'Добавьте вертикальный или квадратный ракурс, чередуйте общие планы и крупные детали.' });
+    else recommendations.push({ level: 'good', title: 'Форматы галереи разнообразны', text: 'В наборе есть разные пропорции. Проверьте, что каждый кадр показывает новую сторону работы или продукта.' });
+  }
+  if (nearDuplicateCount) recommendations.push({ level: 'important', title: 'Заменить похожие кадры', text: 'Оставьте наиболее сильный кадр, а похожий замените другим ракурсом или сценой.' });
+  if (serviceCount && serviceImages.length < serviceCount) recommendations.push({ level: 'check', title: 'Добавить фото к позициям', text: 'Не у каждой позиции есть фотография. Добавьте отдельное изображение для каждого товара или услуги, если это уместно.' });
+  if (!serviceCount && !serviceImages.length) recommendations.push({ level: 'manual', title: 'Фото карточек не обязательны', text: 'Если сайт не показывает отдельные товары или услуги карточками, этот тип изображений можно не добавлять.' });
+  return recommendations;
+}
+function buildPhotoShotList(niche, tier) {
+  const subject = String(niche || 'предложение бизнеса').trim();
+  const luxury = tier === 'luxury';
+  const premium = luxury || tier === 'premium';
+  const light = luxury ? 'Большой мягкий источник сбоку, контролируемые глубокие тени и чистые блики.' : premium ? 'Естественный направленный свет из окна или большой рассеиватель; мягкое заполнение теней.' : 'Мягкий естественный свет без жёсткой вспышки и цветных рефлексов.';
+  const background = luxury ? 'Минимальная сценография, натуральные материалы, чистый фон и осознанное пустое пространство.' : premium ? 'Спокойный фактурный фон, ограниченный реквизит, палитра согласована с сайтом.' : 'Реальная аккуратная среда без визуального шума.';
+  return [
+    {title:'Hero — ключевой образ',scene:'Один главный сюжет, раскрывающий ' + subject + '; объект или результат читается с первого взгляда.',plan:'Общий / средне-общий',angle:'На уровне объекта, лёгкий диагональный ракурс',light,background,composition:'Оставить 35–45% спокойной зоны с одной стороны под заголовок и CTA; важные детали не помещать под текст.',format:'Горизонталь 16:9',resolution:'От 2400 × 1350 px, желательно RAW'},
+    {title:'Контекст и пространство',scene:'Показать реальное место, окружение или контекст использования.',plan:'Общий план',angle:'Прямой или из угла помещения, вертикали без завала',light,background,composition:'Сохранить глубину переднего, среднего и заднего плана.',format:'Горизонталь 3:2',resolution:'От 2400 px по длинной стороне'},
+    {title:'Процесс / работа',scene:'Зафиксировать реальный этап работы; не инсценировать несуществующие действия.',plan:'Средний план',angle:'¾ сбоку, на уровне действия',light,background,composition:'Главное действие в фокусе, руки и инструмент не обрезать случайно.',format:'Вертикаль 4:5 и горизонталь 3:2',resolution:'От 2000 px по длинной стороне'},
+    {title:'Макродеталь / фактура',scene:'Показать материал, текстуру, отделку или важную деталь реального объекта.',plan:'Крупный / макро',angle:'Боковой скользящий угол для проявления фактуры',light:'Мягкий боковой свет, подчёркивающий рельеф без искусственного блеска.',background:'Нейтральная поверхность, минимум отвлекающих элементов.',composition:'Одна деталь занимает кадр; оставить запас по краям.',format:'Квадрат 1:1',resolution:'От 2000 × 2000 px'},
+    {title:'Результат / готовый объект',scene:'Показать реальный итог работы или объект целиком без неподтверждённых характеристик.',plan:'Средний и общий — два кадра',angle:'Фронтальный плюс ¾',light,background,composition:'Объект целиком, ровная перспектива, понятный масштаб.',format:'Квадрат 1:1 и вертикаль 4:5',resolution:'От 2000 px по длинной стороне'},
+    {title:'Человек / автор / команда (если уместно)',scene:'Естественный портрет специалиста или команды только при наличии согласия.',plan:'Поясной и крупный портрет',angle:'На уровне глаз, лёгкий поворот корпуса',light:'Мягкий боковой свет, естественный оттенок кожи.',background:'Реальная рабочая среда с мягким размытием.',composition:'Оставить пространство вокруг головы; не обрезать суставы по краю.',format:'Вертикаль 4:5',resolution:'От 2000 × 2500 px'},
+    {title:'Атмосферный кадр',scene:'Передать настроение бренда через реальную среду, свет и связанные с предложением детали.',plan:'Общий или деталь',angle:'Свободный авторский ракурс',light,background,composition:'Слоистая композиция, один визуальный акцент.',format:'Горизонталь 16:9 и вертикаль 4:5',resolution:'От 2400 px по длинной стороне'},
+    {title:'Мобильный вертикальный кадр',scene:'Отдельная композиция для мобильного экрана: ' + subject + ' крупно и ясно.',plan:'Средний план',angle:'Вертикальная съёмка с запасом сверху и снизу',light,background,composition:'Центральная безопасная зона; не полагаться только на обрезку горизонтального Hero.',format:'Вертикаль 4:5 или 3:4',resolution:'От 1600 × 2000 px'}
+  ];
+}
+function formatPhotoShotList(shots) {
+  return ['PHOTO ART DIRECTION — ПЛАН ФОТОСЪЁМКИ'].concat(shots.map((s,i) => (i+1)+'. '+s.title+'\nСюжет: '+s.scene+'\nПлан: '+s.plan+'\nРакурс: '+s.angle+'\nСвет: '+s.light+'\nФон: '+s.background+'\nКомпозиция: '+s.composition+'\nФормат: '+s.format+'\nРазрешение: '+s.resolution)).join('\n\n');
+}
+function renderVisualAssetDirector(reports, duplicateCount, nearDuplicateCount, missingRoles, nearDuplicatePairs = []) {
+  const p = normalizeProject(state.raw);
+  const dna = result.concept?.designDNA || {};
+  const direction = dna.imageDirection || result.analysis?.imageDirection || 'естественный свет, выразительная композиция и честные детали';
+  const style = [p.tier === 'luxury' ? 'авторская журнальная съёмка, сдержанная палитра, выразительный свет и много воздуха' : p.tier === 'premium' ? 'коммерческая editorial-съёмка, естественный направленный свет, точная работа с фактурами' : 'чистый естественный свет, достоверные цвета и аккуратная композиция', dna.colorDirection].filter(Boolean).join('; ');
+  const sourcePrompts = result.analysis?.imagePrompts || [];
+  const roleLabels = { hero: 'Первый экран', gallery: 'Галерея и детали', service: 'Товары и услуги' };
+  const tierDirection = p.tier === 'luxury'
+    ? 'Люкс-арт-дирекшн: кадр как для печатного интерьерного или fashion-журнала; контролируемые тени, натуральные материалы, точная цветопередача, минимум предметов, визуальная тишина. Не использовать дешёвый стоковый вид, чрезмерную ретушь, искусственный блеск и постановочные улыбки.'
+    : p.tier === 'premium'
+      ? 'Премиум-арт-дирекшн: правдоподобная профессиональная съёмка, выразительная глубина, натуральные фактуры, аккуратный фон и согласованная цветовая температура. Избегать клипарта, шаблонных стоковых сцен и чрезмерной обработки.'
+      : 'Съёмка должна выглядеть достоверно и соответствовать реальному предложению бизнеса.';
+  const subject = `Ниша: «${p.niche || 'уточнить нишу'}». Бренд: «${p.brand || 'не указан'}». Визуальное направление: ${direction}. Палитра и характер: ${style}.`;
+  const fallback = {
+    hero: `Создать главный коммерческий фотокадр для сайта. ${subject} Покажите узнаваемый ключевой объект бизнеса или результат услуги в реальной среде, один ясный визуальный сюжет и сильную точку внимания. Композиция: горизонтальный широкий кадр 16:9; оставьте спокойную свободную область под заголовок и CTA, не перекрывайте главный объект текстом интерфейса. Камера на естественной перспективе, выразительный направленный свет, реалистичные материалы. ${tierDirection} Без текста, логотипов, водяных знаков и вымышленных наград.`,
+    gallery: `Серия из 4–6 РАЗНЫХ фотографий для портфолио и галереи сайта. ${subject} Снимите разные сюжеты, а не дубли одного кадра: общий план пространства или результата; средний план ключевой работы; макродеталь материала или фактуры; рабочий процесс и руки специалиста; атмосферный контекст; при наличии реальных согласованных материалов — команда или автор. Чередуйте широкий, вертикальный и квадратный кадр, меняйте дистанцию и точку съёмки. ${tierDirection} Все кадры должны выглядеть частью одной фотосессии, но каждый раскрывать новую сторону предложения. Без текста и водяных знаков.`,
+    service: `Достоверная фотография конкретного товара или результата услуги для отдельной карточки. ${subject} Покажите один объект полностью, затем его конструктивную или тактильную деталь; не заменяйте реальный товар абстрактной иллюстрацией и не добавляйте несуществующие функции, аксессуары или маркировку. Квадратный кадр 1:1, объект читается в маленьком размере, фон поддерживает палитру и не отвлекает. ${tierDirection} Без текста, водяных знаков и декоративных надписей.`
+  };
+  const roleDirections = {
+    hero: 'Фокус: один сильный сюжет и свободное пространство для текста первого экрана.',
+    gallery: 'Фокус: визуальное разнообразие ракурсов, планов и фактур; каждый кадр должен добавлять новую информацию.',
+    service: 'Фокус: точное соответствие реальному товару или услуге, понятный силуэт и читаемая деталь.'
+  };
+  const buildRolePrompt = (role, source, fallbackPrompt) => [source || fallbackPrompt, roleDirections[role], tierDirection].filter(Boolean).join('\n\n');
+  const prompts = {
+    hero: buildRolePrompt('hero', sourcePrompts[0], fallback.hero),
+    gallery: buildRolePrompt('gallery', sourcePrompts[4], fallback.gallery),
+    service: buildRolePrompt('service', sourcePrompts[1], fallback.service)
+  };
+  const recommendations = buildAssetRecommendations(reports, nearDuplicateCount);
+  const visualQuality = buildVisualQualityReport(reports);
+  const visualQualityCards = visualQuality.map(item => `<article class="visual-quality-card is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('');
+  const smartMatches = buildSmartImageMatches(reports);
+  const smartMatchCards = smartMatches.map(match => {
+    const label = roleLabels[match.role];
+    if (!match.best) return `<article class="smart-match"><b>${esc(label)}</b><p>Нет изображений, которые удалось проверить.</p></article>`;
+    const item = match.best;
+    const scoreLabel = item.score >= 80 ? 'Хорошее техническое соответствие' : item.score >= 60 ? 'Можно использовать после проверки' : 'Лучше подготовить другой кадр';
+    return `<article class="smart-match"><div class="smart-match__head"><b>${esc(label)}</b><strong>${item.score}/100</strong></div><p><b>Кандидат:</b> ${esc(item.report.label)} <span class="note">(${item.report.width} × ${item.report.height} px)</span></p><p>${scoreLabel}</p><ul>${item.reasons.map(reason => `<li>${esc(reason)}</li>`).join('')}</ul></article>`;
+  }).join('');
+  const shotList = buildPhotoShotList(p.niche, p.tier);
+  const shotCards = shotList.map((shot,index) => '<article class="photo-shot"><div class="photo-shot__head"><b>'+(index+1)+'. '+esc(shot.title)+'</b><span>'+esc(shot.format)+'</span></div><p><b>Сюжет:</b> '+esc(shot.scene)+'</p><p><b>План и ракурс:</b> '+esc(shot.plan)+'; '+esc(shot.angle)+'.</p><p><b>Свет:</b> '+esc(shot.light)+'</p><p><b>Фон:</b> '+esc(shot.background)+'</p><p><b>Композиция:</b> '+esc(shot.composition)+'</p><p><b>Файл:</b> '+esc(shot.resolution)+'</p></article>').join('');
+  const shotListText = formatPhotoShotList(shotList);
+  const coverage = ['hero','gallery','service'].map(role => {
+    const count = reports.filter(r => r.role === role).length;
+    return `<span class="asset-coverage ${count ? 'is-present' : 'is-missing'}">${esc(roleLabels[role])}: ${count ? count + ' шт.' : 'нет'}</span>`;
+  }).join('');
+  const notes = [];
+  if (duplicateCount) notes.push(`Обнаружено ${duplicateCount} точных повторов одного и того же источника. Проверьте, не используется ли один кадр вместо разных ракурсов.`);
+  if (nearDuplicateCount) notes.push(`Локальное сравнение обнаружило ${nearDuplicateCount} пар визуально похожих кадров. Это могут быть повторные ракурсы или близкие по композиции изображения — проверьте их вручную.`);
+  if (missingRoles.length) notes.push(`Не заполнены роли: ${missingRoles.map(r => roleLabels[r]).join(', ')}. Это не ошибка для каждого типа сайта, но проверьте, нужны ли эти материалы.`);
+  const similarityDetails = nearDuplicatePairs.slice(0, 8).map(([a, b, distance]) => `<li>${esc(a.label)} ↔ ${esc(b.label)} (различие hash: ${distance}/64)</li>`).join('');
+  const promptCards = Object.entries(prompts).map(([role,prompt]) => `<article class="asset-prompt"><div><b>${esc(roleLabels[role])}</b><p>${esc(prompt)}</p></div><button type="button" data-copy-asset-prompt="${esc(prompt)}">Копировать промпт</button></article>`).join('');
+  return `<section class="visual-asset-director" aria-labelledby="visual-asset-title">
+    <h3 id="visual-asset-title">Visual Asset Director</h3>
+    <p class="note">Сверка состава и визуального задания проекта. Ниша: <b>${esc(p.niche || 'не указана')}</b>; бренд: <b>${esc(p.brand || 'не указан')}</b>. Направление: ${esc(direction)}. Стиль: ${esc(style || 'автоматический')}.</p>
+    <div class="asset-coverage-list">${coverage}</div>
+    <h4>Smart Image Matching — подбор по техническим параметрам</h4>\n    <p class="note">Система ранжирует уже добавленные фотографии по пропорциям, разрешению, средней яркости и локальной детализации. Балл не означает, что сюжет фотографии подходит нише: содержание и композицию проверяйте глазами.</p>\n    <div class="smart-match-list">${smartMatchCards}</div>\n    <h4>Visual Quality Control — визуальный контроль</h4>
+    <p class="note">Локально оцениваются средняя яркость трёх вертикальных зон Hero и разброс яркости фотографий галереи. Это предварительная подсказка, а не измерение WCAG-контраста: итоговую читаемость проверяйте на реальном макете.</p>
+    <div class="visual-quality-list">${visualQualityCards}</div>
+    <h4>Рекомендации по фотоконтенту</h4>
+    <div class="asset-recommendations">${recommendations.map(item => `<article class="asset-recommendation is-${esc(item.level)}"><b>${esc(item.title)}</b><p>${esc(item.text)}</p></article>`).join('')}</div>
+    ${similarityDetails ? `<h4>Похожие кадры — проверьте разнообразие</h4><ul class="asset-director-notes">${similarityDetails}</ul>` : ''}
+    ${notes.length ? `<ul class="asset-director-notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<p class="image-audit-ok">Повторов источника не обнаружено; все основные роли представлены.</p>'}
+    <h4>Photo Art Direction — план фотосессии</h4>\n    <p class="note">Shot list для фотографа: сюжеты, планы, ракурсы, свет, фон, композиция, ориентация и разрешение. Список учитывает нишу и уровень проекта, не выдумывая свойства товара или услуги.</p>\n    <div class="photo-shot-actions"><button type="button" data-copy-photo-shotlist="${esc(shotListText)}">Скопировать весь план фотосъёмки</button></div>\n    <div class="photo-shot-list">${shotCards}</div>\n    <h4>AI Image Director — уточнение арт-дирекшна</h4><p class="note">Дополните промты конкретным сюжетом, настроением и обязательными деталями. Уточнения сохраняются в проекте и учитываются при копировании полного пакета заданий.</p><div class="image-director-brief"><label>Сюжет и объект съёмки<textarea rows="2" maxlength="1200" data-image-brief="subject" placeholder="Какой объект или результат нужно показать?">${esc(state.raw.imageArtDirection?.brief?.subject || '')}</textarea></label><label>Настроение и художественный приём<input type="text" maxlength="500" data-image-brief="mood" value="${esc(state.raw.imageArtDirection?.brief?.mood || '')}" placeholder="Например: тёплый минимализм, мягкий утренний свет"></label><label>Что обязательно показать<textarea rows="2" maxlength="800" data-image-brief="mustShow" placeholder="Реальные детали, материал, ракурс, окружение">${esc(state.raw.imageArtDirection?.brief?.mustShow || '')}</textarea></label><label>Чего избегать<textarea rows="2" maxlength="800" data-image-brief="avoid" placeholder="Лишний декор, вымышленные детали, надписи…">${esc(state.raw.imageArtDirection?.brief?.avoid || '')}</textarea></label><div class="image-director-actions"><button type="button" data-image-director="copy">Скопировать полный пакет промтов</button><button type="button" data-image-director="download">Скачать пакет (.txt)</button></div></div>
+     <h4>Задания на замену или новую съёмку</h4>
+    <p class="note">Промпты учитывают нишу и дизайн-направление проекта. Перед публикацией проверьте, что изображение действительно показывает ваш товар, услугу, помещение или команду.</p>
+    <div class="asset-prompt-list">${promptCards}</div>
+    <p class="note">Проверка не видит семантическое содержание фотографии и не может подтвердить соответствие сюжета нише. Локальное сравнение похожести работает для встроенных в проект изображений; внешние URL не анализируются по пикселям из-за ограничений безопасности браузера. Технические признаки и повторы — ориентир, визуальную релевантность подтверждает человек.</p>
+  </section>`;
+}
+
+function parseRgb(color) {
+  const match = String(color || '').match(/rgba?\\(([^)]+)\\)/i);
+  if (!match) return null;
+  const values = match[1].split(',').map(v => Number.parseFloat(v.trim()));
+  if (values.length < 3 || values.slice(0,3).some(v => !Number.isFinite(v)) || (values.length > 3 && values[3] < .999)) return null;
+  return values.slice(0,3).map(v => Math.max(0,Math.min(255,v)));
+}
+function relativeLuminance(rgb) {
+  const channels = rgb.map(v => { const n = v / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; });
+  return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+}
+function contrastRatio(a,b) {
+  if (!a || !b) return null;
+  const values = [relativeLuminance(a),relativeLuminance(b)].sort((x,y) => y-x);
+  return (values[0] + .05) / (values[1] + .05);
+}
+function auditHeroReadability() {
+  const frame = $('#frame');
+  const doc = frame?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки страницы в окне предпросмотра.'}];
+  const originalWidth = frame.style.width;
+  const originalHeight = frame.style.height;
+  const originalMaxWidth = frame.style.maxWidth;
+  const checks = [];
+  const viewports = [{width:320,label:'Телефон 320 px'},{width:360,label:'Телефон 360 px'},{width:375,label:'Телефон 375 px'},{width:390,label:'Телефон 390 px'},{width:768,label:'Планшет 768 px'},{width:1024,label:'Ноутбук 1024 px'},{width:1280,label:'Компьютер 1280 px'}];
+  const rectsOverlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  // Проверяем именно фотографию Hero, а не все изображения страницы.
+  // SVG-мотив без фотографии допустим для части архитектур и не считается ошибкой.
+  const heroImages = [...doc.querySelectorAll('.hero img')];
+  if (!heroImages.length) {
+    checks.push({level:'manual',title:'Hero без фотографии',text:'В первом экране не найдено img. Это допустимо для графической концепции; если нужна фотография, добавьте её в поле «Изображение первого экрана».'});
+  }
+  heroImages.forEach((img,index) => {
+    const label = 'Hero-фото' + (heroImages.length > 1 ? ' ' + (index + 1) : '');
+    if (!img.complete) checks.push({level:'manual',title:label + ': загрузка не завершена',text:'Браузер ещё загружает изображение. Повторите QA после завершения загрузки.'});
+    else if (img.naturalWidth === 0) checks.push({level:'check',title:label + ': изображение не загрузилось',text:'Браузер не получил изображение. Проверьте URL, доступность файла и формат.'});
+    else {
+      checks.push({level:'good',title:label + ': изображение загружено',text:'Исходный размер: ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px.'});
+      // Проверка фактического размера выполняется отдельно для каждого viewport ниже.
+    }
+    if (!img.hasAttribute('alt')) checks.push({level:'check',title:label + ': отсутствует ALT',text:'Добавьте текстовое описание фотографии. Для смыслового изображения пустой alt нежелателен.'});
+    else if (!img.getAttribute('alt').trim()) checks.push({level:'check',title:label + ': пустой ALT',text:'Hero-фотография помечена как декоративная. Если она передаёт содержание, добавьте краткое описание.'});
+    if (img.getAttribute('loading') === 'lazy') checks.push({level:'check',title:label + ': отложенная загрузка',text:'Главное изображение находится на первом экране. Уберите loading="lazy", чтобы не задерживать его появление.'});
+    if (img.getAttribute('fetchpriority') !== 'high') checks.push({level:'manual',title:label + ': приоритет загрузки не повышен',text:'Проверьте, стоит ли задать fetchpriority="high" для главной фотографии. Это рекомендация, а не измерение скорости.'});
+  });
+  try {
+    for (const viewport of viewports) {
+      frame.style.width = viewport.width + 'px';
+      frame.style.maxWidth = 'none';
+      const actualWidth = doc.defaultView.innerWidth;
+      if (!Number.isFinite(actualWidth) || Math.abs(actualWidth - viewport.width) > 2) {
+        checks.push({level:'manual',title:viewport.label + ': ширина тестового окна не подтверждена',text:'Не удалось установить фактическую ширину предпросмотра ' + viewport.width + ' px. Проверка этого размера пропущена, чтобы не выдавать результат другого viewport за точный.'});
+        continue;
+      }
+      heroImages.forEach((img,index) => {
+        if (!img.complete || img.naturalWidth === 0) return;
+        const rect = img.getBoundingClientRect();
+        const dpr = Math.max(1, Number(doc.defaultView.devicePixelRatio) || 1);
+        if (rect.width > 0 && rect.height > 0 && (img.naturalWidth + 1 < rect.width * dpr || img.naturalHeight + 1 < rect.height * dpr)) {
+          const label = 'Hero-фото' + (heroImages.length > 1 ? ' ' + (index + 1) : '');
+          checks.push({level:'check',title:viewport.label + ': ' + label + ' — возможно недостаточно разрешения',text:'Исходник ' + img.naturalWidth + ' × ' + img.naturalHeight + ' px отображается примерно в ' + Math.round(rect.width) + ' × ' + Math.round(rect.height) + ' CSS px при DPR ' + dpr + '. Проверьте резкость на этом размере экрана.'});
+        }
+      });
+      const heading = doc.querySelector('.hero h1');
+      const lede = doc.querySelector('.hero .lede');
+      const button = doc.querySelector('.hero .actions .ds-button, .hero .ds-button');
+      if (!heading) {
+        checks.push({level:'manual',title:viewport.label,text:'Заголовок первого экрана не найден — проверьте структуру Hero.'});
+        continue;
+      }
+      const headingStyle = doc.defaultView.getComputedStyle(heading);
+      const buttonStyle = button ? doc.defaultView.getComputedStyle(button) : null;
+      const headingRect = heading.getBoundingClientRect();
+      const ledeRect = lede?.getBoundingClientRect();
+      const buttonRect = button?.getBoundingClientRect();
+      if (heading.scrollWidth > heading.clientWidth + 1) checks.push({level:'check',title:viewport.label + ': заголовок может обрезаться',text:'Ширина текста превышает доступную ширину блока. Уменьшите размер, измените перенос или расширьте контейнер.'});
+      if (lede && buttonRect && ledeRect && rectsOverlap(ledeRect,buttonRect)) checks.push({level:'check',title:viewport.label + ': текст пересекается с CTA',text:'Описание и кнопка занимают пересекающиеся области. Проверьте отступы и вертикальное расположение.'});
+      if (button && (buttonRect.width < 44 || buttonRect.height < 44)) checks.push({level:'check',title:viewport.label + ': малая область нажатия',text:'Основная кнопка меньше ориентира 44 × 44 px. Увеличьте высоту или внутренние отступы.'});
+      const buttonBg = parseRgb(buttonStyle?.backgroundColor);
+      const buttonFg = parseRgb(buttonStyle?.color);
+      const buttonContrast = contrastRatio(buttonFg,buttonBg);
+      if (button && buttonContrast !== null) checks.push({level:buttonContrast >= 4.5 ? 'good' : 'check',title:viewport.label + ': контраст кнопки ' + buttonContrast.toFixed(2) + ':1',text:buttonContrast >= 4.5 ? 'Цвет текста и сплошной фон кнопки проходят ориентир WCAG AA для обычного текста.' : 'Контраст текста кнопки ниже 4.5:1. Усильте различие цветов.'});
+      else if (button) checks.push({level:'manual',title:viewport.label + ': фон кнопки сложный или прозрачный',text:'Автоматически измерить пару цветов нельзя. Проверьте контраст кнопки на реальном фоне.'});
+      const headingBg = parseRgb(headingStyle.backgroundColor);
+      const headingFg = parseRgb(headingStyle.color);
+      const headingContrast = contrastRatio(headingFg,headingBg);
+      if (headingContrast !== null && headingStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') checks.push({level:headingContrast >= 4.5 ? 'good' : 'check',title:viewport.label + ': контраст заголовка ' + headingContrast.toFixed(2) + ':1',text:headingContrast >= 4.5 ? 'Контраст текста относительно собственного сплошного фона проходит ориентир WCAG AA.' : 'Контраст заголовка ниже 4.5:1 относительно его фона.'});
+      else checks.push({level:'manual',title:viewport.label + ': проверить заголовок на фотографии',text:'У заголовка прозрачный фон или под ним изображение/градиент. Проверка по одному цвету невозможна — оцените читаемость на самом кадре.'});
+      if (headingRect.width <= 0 || headingRect.height <= 0) checks.push({level:'check',title:viewport.label + ': заголовок не виден',text:'Проверьте скрытие, позиционирование и размеры первого экрана.'});
+    }
+  } catch (error) {
+    checks.push({level:'manual',title:'Не удалось завершить проверку',text:'Предпросмотр изменил состояние во время анализа. Запустите проверку ещё раз.'});
+  } finally {
+    frame.style.width = originalWidth;
+    frame.style.height = originalHeight;
+    frame.style.maxWidth = originalMaxWidth;
+  }
+  return checks;
+}
+function renderHeroReadabilityChecks() {
+  const host = $('#hero-readability-results');
+  if (!host) return;
+  const checks = qaRunResults.hero = auditHeroReadability();
+  qaRunTimes.hero = Date.now();
+  host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+  renderQaOverview();
+}
+
+
+function previewAccessibleName(el, doc) {
+  if (!el) return '';
+  const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+  const referenced = (el.getAttribute('aria-labelledby') || '').trim().split(/\s+/).filter(Boolean)
+    .map(id => doc.getElementById(id)).filter(Boolean)
+    .map(node => node.textContent || '').join(' ');
+  if (clean(referenced)) return clean(referenced);
+  const ariaLabel = clean(el.getAttribute('aria-label'));
+  if (ariaLabel) return ariaLabel;
+  if (el.labels && el.labels.length) {
+    const labels = [...el.labels].map(label => label.textContent || '').join(' ');
+    if (clean(labels)) return clean(labels);
+  }
+  if (el.tagName === 'IMG') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && el.type === 'image') return clean(el.getAttribute('alt'));
+  if (el.tagName === 'INPUT' && ['button','submit','reset'].includes(el.type)) return clean(el.value);
+  const content = [
+    typeof el.innerText === 'string' ? el.innerText : (el.textContent || ''),
+    ...[...(el.querySelectorAll?.('img[alt]') || [])].map(img => img.getAttribute('alt') || ''),
+    ...[...(el.querySelectorAll?.('svg title') || [])].map(title => title.textContent || ''),
+  ].join(' ');
+  if (clean(content)) return clean(content);
+  return clean(el.getAttribute('title'));
+}
+
+const qaRunResults = { content: null, responsive: null, hero: null };
+const qaRunTimes = { content: null, responsive: null, hero: null };
+function qaCheckStatus(items, checkedAt) {
+  if (!items) return { level: 'manual', status: 'Не проверено', detail: 'Проверка ещё не запускалась.', notRun: true };
+  const time = checkedAt ? new Date(checkedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+  const suffix = time ? ` Запуск: ${time}.` : '';
+  const failed = items.filter(item => item.level === 'error');
+  const warnings = items.filter(item => item.level === 'check');
+  const manual = items.filter(item => item.level === 'manual');
+  if (failed.length) return { level: 'check', status: 'Есть ошибки', detail: `Ошибок: ${failed.length}; замечаний: ${warnings.length}.${suffix}` };
+  if (warnings.length) return { level: 'check', status: 'Нужны исправления', detail: `Замечаний: ${warnings.length}; ручных проверок: ${manual.length}.${suffix}` };
+  if (manual.length) return { level: 'manual', status: 'Нужен просмотр', detail: `Ручных проверок: ${manual.length}; автоматических замечаний нет.${suffix}` };
+  return { level: 'good', status: 'Пройдена', detail: `Автоматические проверки не нашли замечаний.${suffix}` };
+}
+function renderQaOverview() {
+  const host = $('#qa-overview-results');
+  if (!host || !result) return;
+  const audit = result.audit;
+  const staticState = audit.errors.length
+    ? { level: 'check', status: 'Есть ошибки', detail: `Ошибок: ${audit.errors.length}; предупреждений: ${audit.warnings.length}.` }
+    : audit.warnings.length
+      ? { level: 'check', status: 'Нужен просмотр', detail: `Предупреждений: ${audit.warnings.length}.` }
+      : { level: 'good', status: 'Пройдена', detail: 'Статическая проверка генератора без ошибок и предупреждений.' };
+  const rows = [
+    ['Сборка и статический аудит', staticState],
+    ['Контент, ссылки и действия', qaCheckStatus(qaRunResults.content, qaRunTimes.content)],
+    ['Адаптивность и доступность', qaCheckStatus(qaRunResults.responsive, qaRunTimes.responsive)],
+    ['Первый экран и читаемость', qaCheckStatus(qaRunResults.hero, qaRunTimes.hero)],
+  ];
+  host.innerHTML = rows.map(([label, state]) => `<article class="qa-overview__item is-${state.level}"><span>${esc(label)}</span><b>${esc(state.status)}</b><small>${esc(state.detail)}</small></article>`).join('');
+  const states = rows.map(([, state]) => state);
+  const overall = states.some(state => state.level === 'check')
+    ? { level: 'check', text: 'Найдены замечания. Исправьте их и повторите проверки.' }
+    : states.some(state => state.notRun)
+      ? { level: 'manual', text: 'Проверки не завершены: запустите остальные проверки для полной картины.' }
+      : states.some(state => state.level === 'manual')
+        ? { level: 'manual', text: 'Автоматические проверки выполнены; остались пункты для ручной оценки.' }
+        : { level: 'good', text: 'Все запущенные проверки пройдены без автоматических замечаний.' };
+  const overallHost = $('#qa-overall-results');
+  if (overallHost) overallHost.innerHTML = `<b class="is-${overall.level}">${esc(overall.text)}</b>`;
+}
+function auditResponsiveLayoutAndAccessibility() {
+  const frame = $('#frame');
+  const doc = frame?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки страницы в окне предпросмотра.'}];
+  const originalWidth = frame.style.width;
+  const originalHeight = frame.style.height;
+  const originalMaxWidth = frame.style.maxWidth;
+  const results = [];
+  const sizes = [{width:320,label:'Телефон 320 px'},{width:360,label:'Телефон 360 px'},{width:375,label:'Телефон 375 px'},{width:390,label:'Телефон 390 px'},{width:768,label:'Планшет 768 px'},{width:1024,label:'Ноутбук 1024 px'},{width:1280,label:'Компьютер 1280 px'}];
+  const visible = el => {
+    const style = doc.defaultView.getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity) !== 0 && rect.width > 0 && rect.height > 0;
+  };
+  const hasName = el => Boolean(previewAccessibleName(el, doc));
+  const intersects = (a,b) => a.left < b.right - 2 && a.right > b.left + 2 && a.top < b.bottom - 2 && a.bottom > b.top + 2;
+  try {
+    for (const size of sizes) {
+      frame.style.width = size.width + 'px';
+      frame.style.maxWidth = 'none';
+      const viewportWidth = doc.defaultView.innerWidth;
+      if (!Number.isFinite(viewportWidth) || Math.abs(viewportWidth - size.width) > 2) {
+        results.push({level:'manual',title:size.label + ': ширина тестового окна не подтверждена',text:'Не удалось установить фактическую ширину предпросмотра ' + size.width + ' px. Проверки для этого размера пропущены, чтобы не выдавать результаты другого viewport за точные.'});
+        continue;
+      }
+      const root = doc.documentElement;
+      const body = doc.body;
+      const pageWidth = Math.max(root.scrollWidth,body.scrollWidth);
+      if (pageWidth > viewportWidth + 2) results.push({level:'check',title:size.label + ': горизонтальная прокрутка',text:'Контент шире окна на ' + (pageWidth - viewportWidth) + ' px. Проверьте фиксированные ширины, длинные строки и сетки.'});
+      else results.push({level:'good',title:size.label + ': ширина страницы',text:'Горизонтальное переполнение на уровне документа не обнаружено.'});
+      const controls = [...doc.querySelectorAll('a[href],button,input,select,textarea,[role="button"],[tabindex]')].filter(visible);
+      const unnamed = controls.filter(el => !hasName(el));
+      if (unnamed.length) results.push({level:'check',title:size.label + ': элементы без доступного имени',text:'Найдено ' + unnamed.length + ' ссылок или элементов управления без видимого текста, подписи, aria-label или title.'});
+      const smallTargets = controls.filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.width < 44 || r.height < 44;
+      });
+      if (smallTargets.length) results.push({level:'manual',title:size.label + ': маленькие интерактивные области',text:smallTargets.length + ' элементов меньше рекомендуемого ориентира 44 × 44 px. Это не само по себе доказательство нарушения WCAG 2.2 AA: учитывайте применимые исключения и расстояние между целями.'});
+      const offscreen = controls.filter(el => {
+        const r = el.getBoundingClientRect();
+        return r.right < 0 || r.left > viewportWidth || r.bottom < 0;
+      });
+      if (offscreen.length) results.push({level:'check',title:size.label + ': элементы за пределами экрана',text:offscreen.length + ' интерактивных элементов находятся за видимой областью. Проверьте меню, CTA и горизонтальные списки.'});
+      const overlapping = [];
+      const candidates = controls
+        .filter(el => el.tagName !== 'INPUT' || !['hidden','checkbox','radio'].includes(el.type))
+        .map(el => ({el,rect:el.getBoundingClientRect()}))
+        .sort((a,b) => a.rect.left - b.rect.left);
+      const active = [];
+      for (const current of candidates) {
+        for (let i=active.length-1;i>=0;i--) {
+          if (active[i].rect.right <= current.rect.left + 2) active.splice(i,1);
+        }
+        for (const previous of active) {
+          if (previous.el.contains(current.el) || current.el.contains(previous.el)) continue;
+          if (intersects(previous.rect,current.rect)) overlapping.push([previous.el,current.el]);
+        }
+        active.push(current);
+      }
+      if (overlapping.length) results.push({level:'check',title:size.label + ': пересечение интерактивных элементов',text:'Обнаружено ' + overlapping.length + ' пар пересекающихся ссылок и элементов управления. Проверьте, не мешают ли они друг другу нажиматься.'});
+      const unlabeledFields = [...doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea')].filter(visible).filter(el => !hasName(el));
+      if (unlabeledFields.length) results.push({level:'check',title:size.label + ': поля без подписи',text:'Найдено ' + unlabeledFields.length + ' видимых полей без label, aria-label или title.'});
+    }
+    const focusableControls = [...doc.querySelectorAll('a[href],button,input,select,textarea,[role="button"],[tabindex]')].filter(visible);
+    if (focusableControls.length) results.push({level:'manual',title:'Проверить клавиатурный фокус',text:'Для ' + focusableControls.length + ' видимых интерактивных элементов требуется ручная проверка навигацией клавишей Tab: убедитесь, что :focus-visible заметен и порядок фокуса логичен. Отсутствие outline в обычном состоянии не считается ошибкой.'});
+  } catch {
+    results.push({level:'manual',title:'Проверка прервана',text:'Предпросмотр обновился во время диагностики. Запустите проверку ещё раз.'});
+  } finally {
+    frame.style.width = originalWidth;
+    frame.style.height = originalHeight;
+    frame.style.maxWidth = originalMaxWidth;
+  }
+  if (!results.length) results.push({level:'manual',title:'Нет результатов',text:'Не удалось собрать диагностические данные.'});
+  return results;
+}
+function renderResponsiveAccessibilityChecks() {
+  const host = $('#responsive-a11y-results');
+  if (!host) return;
+  const checks = qaRunResults.responsive = auditResponsiveLayoutAndAccessibility();
+  qaRunTimes.responsive = Date.now();
+  host.innerHTML = checks.map(item => '<article class="visual-quality-card is-' + esc(item.level) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.text) + '</p></article>').join('');
+  renderQaOverview();
+}
+
+
+function auditSiteContentAndInteractions() {
+  const doc = $('#frame')?.contentDocument;
+  if (!doc?.body) return [{level:'manual',title:'Предпросмотр недоступен',text:'Сначала дождитесь загрузки готовой страницы в окне предпросмотра.'}];
+  const results = [];
+  const add = (level,title,text) => results.push({level,title,text});
+  const visible = el => { const s=doc.defaultView.getComputedStyle(el),r=el.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0; };
+  const nameOf = el => previewAccessibleName(el, doc);
+  const ids = new Set([...doc.querySelectorAll('[id]')].map(el=>el.id));
+  const images = [...doc.querySelectorAll('img')];
+  const broken = images.filter(img=>img.complete&&img.naturalWidth===0);
+  const pending = images.filter(img=>!img.complete);
+  if(broken.length) add('check','Изображения не загрузились','Не удалось загрузить '+broken.length+' из '+images.length+' изображений. Проверьте URL, формат и доступ к файлам.');
+  else if(images.length) add('good','Изображения загружены','Браузер подтвердил загрузку '+(images.length-pending.length)+' из '+images.length+' изображений.');
+  else add('manual','Изображения отсутствуют','На странице нет элементов img. Проверьте, требуется ли фотографии место в этой концепции.');
+  if(pending.length) add('manual','Изображения ещё загружаются',pending.length+' изображений не завершили загрузку. Повторите проверку позже.');
+  const missingAlt=images.filter(img=>!img.hasAttribute('alt')), emptyAlt=images.filter(img=>img.hasAttribute('alt')&&!img.getAttribute('alt').trim());
+  if(missingAlt.length) add('check','Нет атрибута ALT',missingAlt.length+' изображений не имеют alt. Добавьте описание смысловым изображениям; декоративным задайте alt="".');
+  else add('good','ALT-атрибуты присутствуют','У всех '+images.length+' изображений есть alt. Пустой alt допустим для декоративной графики.');
+  if(emptyAlt.length) add('manual','Проверить пустые ALT',emptyAlt.length+' изображений имеют alt="". Это правильно для декора, но проверьте, не скрывает ли описание важные фотографии.');
+  const links=[...doc.querySelectorAll('a')], invalid=[], missingAnchors=[], external=[];
+  for(const link of links){
+    const href=(link.getAttribute('href')||'').trim();
+    if(!href||href==='#'||href.toLowerCase().startsWith('javascript:')){invalid.push(href||'(пусто)');continue;}
+    if(href.startsWith('#')) { try { if(!ids.has(decodeURIComponent(href.slice(1)))) missingAnchors.push(href); } catch { missingAnchors.push(href); } }
+    if(href.startsWith('http://')||href.startsWith('https://')) { try { const u=new URL(href,doc.baseURI); if(['http:','https:'].includes(u.protocol)) external.push(href); else invalid.push(href); } catch { invalid.push(href); } }
+  }
+  if(invalid.length) add('check','Пустые или небезопасные ссылки',invalid.length+' ссылок имеют пустой href, href="#" или javascript:. Исправьте назначение.');
+  else add('good','Формат ссылок проверен','Пустые ссылки и схема javascript: не обнаружены.');
+  if(missingAnchors.length) add('check','Не найдены якорные разделы',missingAnchors.length+' ссылок ведут к отсутствующим id: '+[...new Set(missingAnchors)].slice(0,5).join(', '));
+  else add('good','Внутренние якоря существуют','Все проверенные ссылки на #раздел ведут к существующим id.');
+  if(external.length) add('manual','Внешние адреса требуют проверки','Формат '+external.length+' внешних URL корректен. Доступность серверов и конечных страниц не проверялась.');
+  const ctas=[...doc.querySelectorAll('[data-cta],.ds-button,button')].filter(visible);
+  const unnamed=ctas.filter(el=>!nameOf(el)), disabled=ctas.filter(el=>el.disabled||el.getAttribute('aria-disabled')==='true'), dead=ctas.filter(el=>el.tagName==='A'&&(!el.getAttribute('href')||el.getAttribute('href')==='#'));
+  if(ctas.length) add('good','CTA найдены','В предпросмотре обнаружено '+ctas.length+' видимых элементов действия.');
+  else add('manual','CTA не найдены','Не обнаружены видимые кнопки и элементы с data-cta. Проверьте целевой сценарий страницы.');
+  if(unnamed.length) add('check','CTA без названия',unnamed.length+' кнопок не имеют доступного текстового имени.');
+  if(disabled.length) add('check','Неактивные CTA',disabled.length+' кнопок отключены или имеют aria-disabled="true".');
+  if(dead.length) add('check','CTA без рабочего назначения',dead.length+' ссылок-кнопок не имеют назначения или ведут на #.');
+  const forms=[...doc.querySelectorAll('form')];
+  if(!forms.length) add('manual','Формы не обнаружены','На странице нет form. Если заявки должны собираться через контакты или мессенджер, проверьте этот сценарий отдельно.');
+  forms.forEach((form,index)=>{
+    const controls=[...form.querySelectorAll('input:not([type="hidden"]):not([type="submit"]),select,textarea,button[type="submit"]')];
+    const unlabeled=controls.filter(el=>!el.disabled&&!el.getAttribute('aria-label')&&!el.getAttribute('title')&&!(el.labels&&[...el.labels].length));
+    const action=(form.getAttribute('action')||'').trim(), method=(form.getAttribute('method')||'get').toLowerCase();
+    if(!controls.length) add('check','Форма '+(index+1)+': нет полей','Форма не содержит пользовательских полей или кнопки отправки.');
+    else add('good','Форма '+(index+1)+': поля обнаружены','Элементов формы: '+controls.length+'; обязательных: '+controls.filter(el=>el.required).length+'.');
+    if(unlabeled.length) add('check','Форма '+(index+1)+': поля без подписи',unlabeled.length+' полей не связаны с label и не имеют aria-label/title.');
+    if(!action) add('manual','Форма '+(index+1)+': адрес отправки не задан','Атрибут action пуст. Проверьте обработчик формы и фактическую доставку заявки.');
+    else if(action.toLowerCase().startsWith('javascript:')) add('check','Форма '+(index+1)+': небезопасный action','У формы указан javascript: в action.');
+    else add('manual','Форма '+(index+1)+': доставка не подтверждена','Указан action и метод '+method.toUpperCase()+', но реальная отправка и получение заявки не тестировались.');
+    if(!['get','post','dialog'].includes(method)) add('check','Форма '+(index+1)+': неизвестный метод','Проверьте атрибут method формы.');
+  });
+  return results.length?results:[{level:'manual',title:'Нет результатов',text:'Не удалось собрать диагностические данные.'}];
+}
+function renderSiteContentInteractionChecks() {
+  const host=$('#site-content-qa-results'); if(!host) return;
+  const checks = qaRunResults.content = auditSiteContentAndInteractions();
+  qaRunTimes.content = Date.now();
+  host.innerHTML=checks.map(item=>'<article class="visual-quality-card is-'+esc(item.level)+'"><b>'+esc(item.title)+'</b><p>'+esc(item.text)+'</p></article>').join('');
+  renderQaOverview();
+}
+
+function renderAiDesignReview() {
+  const root = $('#ai-design-review-results');
+  if (!root) return;
+  if (aiDesignReviewLoading) {
+    root.innerHTML = '<p class="note">AI Design Director анализирует проект…</p>';
+    return;
+  }
+  if (!aiDesignReview) {
+    root.innerHTML = '<p class="note">AI-рекомендации появятся здесь. Они не применяются автоматически.</p>';
+    return;
+  }
+  const items = aiDesignReview.recommendations || [];
+  root.innerHTML = items.length ? items.map((item, index) => {
+    const patch = item.patch && Object.keys(item.patch).length;
+    return '<article class="visual-quality-card is-' + esc(item.priority) + '"><b>' + esc(item.title) + '</b><p>' + esc(item.reason) + '</p><p>' + esc(item.action) + '</p>' +
+      (patch ? '<button type="button" data-apply-ai-review="' + index + '">Применить предложенный текст</button>' : '<span class="note">Рекомендация без готового изменения</span>') +
+      '</article>';
+  }).join('') : '<p class="note">AI не нашёл дополнительных рекомендаций.</p>';
+}
+function renderAudit() {
+  const a = result.audit;
+  qaRunResults.content = qaRunResults.responsive = qaRunResults.hero = null;
+  qaRunTimes.content = qaRunTimes.responsive = qaRunTimes.hero = null;
+  const badge = $('#audit-badge');
+  badge.textContent = a.ok ? '✓' : a.errors.length; badge.className = 'badge ' + (a.ok ? 'ok' : 'err');
+  $('#view-audit').innerHTML = `<section class="qa-overview" aria-labelledby="qa-overview-title"><h3 id="qa-overview-title">Сводка QA текущей версии</h3><p class="note">Незапущенные проверки отмечены отдельно. Результаты ручных проверок относятся к текущему предпросмотру.</p><div id="qa-overall-results" class="qa-overview__overall" role="status" aria-live="polite"></div><div id="qa-overview-results" class="qa-overview__grid" aria-live="polite"></div></section><section class="ai-design-review"><h3>AI Design Director</h3><p class="note">Нейросеть оценивает предложение, структуру и тексты сайта. Каждое изменение можно отдельно проверить и применить вручную.</p><button type="button" data-run-ai-design-review>Запустить AI-аудит дизайна и контента</button><div id="ai-design-review-results" class="visual-quality-list" aria-live="polite"></div></section><section class="site-content-qa"><h3>Site Content & Interaction QA</h3><p class="note">Проверяет загрузку изображений, ALT-тексты, ссылки и якоря, видимые CTA, поля и настройки форм. Внешние сайты и фактическая доставка заявок сетевым запросом не проверяются.</p><button type="button" data-run-site-content-qa>Проверить контент, ссылки и действия</button><div id="site-content-qa-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для проверки текущей страницы.</p></div></section><section class="responsive-a11y"><h3>Responsive Layout & Accessibility QA</h3><p class="note">Проверяет горизонтальное переполнение, пересечения элементов управления, доступные имена, подписи полей, область нажатия и элементы за экраном на телефонах 320, 360 и 390 px, планшете 768 px, ноутбуке 1024 px и компьютере 1280 px.</p><button type="button" data-run-responsive-a11y>Проверить адаптивность и доступность</button><div id="responsive-a11y-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку для диагностики текущего предпросмотра.</p></div></section><section class="hero-readability"><h3>Hero Readability QA</h3><p class="note">Проверяет заголовок, описание, основную кнопку и контраст кнопки на ширинах 320, 360, 390, 768, 1024 и 1280 px. Если под текстом фотография или градиент, контраст заголовка требует визуальной проверки.</p><button type="button" data-run-hero-readability>Проверить Hero на 6 размерах</button><div id="hero-readability-results" class="visual-quality-list" aria-live="polite"><p class="note">Нажмите кнопку, чтобы выполнить проверку готового предпросмотра.</p></div></section><p class="summary ${a.ok ? 'ok' : 'err'}">${a.ok ? `Проверка пройдена. Предупреждений: ${a.warnings.length}.` : `Проверка не пройдена. Ошибок: ${a.errors.length}, предупреждений: ${a.warnings.length}.`}</p>
+<ul class="checks">${[...a.errors, ...a.warnings, ...a.checks.filter(c => c.level === 'ok')].map(c => `<li class="${c.level}"><span>${esc(c.message)}</span></li>`).join('')}</ul>
+<h2 class="audit-section-title">Performance & Core Web Vitals</h2><p class="note">Статическая проверка веса HTML, встроенных изображений и атрибутов загрузки. Это технические индикаторы, а не измерение LCP, INP или CLS.</p>
+<h2 class="audit-section-title">Image SEO & Accessibility</h2><p class="note">Проверка ALT-текстов, SEO-метаданных и доступности изображений.</p><h3 class="audit-section-title">Image Intelligence — проверка фотографий</h3><div id="image-intelligence" aria-live="polite"></div>
+<p class="note" style="margin-top:16px">Статическая проверка не заменяет просмотр на реальных устройствах: используйте переключатель ширины 320 / 768 в предпросмотре.</p>`;
+  renderImageIntelligence();
+  renderQaOverview();
+  renderAiDesignReview();
+}
+
+function renderRegistry() {
+  const badge = $('#registry-badge');
+  badge.textContent = state.library.length || ''; badge.className = 'badge n';
+  const fp = result.concept.uniquenessCheck.fingerprint;
+  $('#view-registry').innerHTML = state.library.length ? `
+<p class="note">Проекты в порядке сохранения. Новая генерация сравнивается с двумя последними: нельзя одновременно повторять архитектуру, расположение визуала и характер типографики.</p>
+<table><thead><tr><th>Проект</th><th>Архитектура</th><th>Сходство с текущим</th><th></th></tr></thead><tbody>${state.library.map((l, i) => {
+    const s = l.entry.id === result.project.id ? null : similarity(fp, l.entry.fingerprint);
+    return `<tr><td><b>${esc(l.entry.brand)}</b></td><td>${esc(ARCHETYPES[l.entry.fingerprint.archetype]?.name || '')}</td><td>${s === null ? '<span class="note">это текущий проект</span>' : `<span class="meter"><i style="width:${s * 100}%"></i></span>${Math.round(s * 100)}%`}</td><td><button type="button" data-load="${i}">Открыть</button> <button type="button" data-del="${i}" aria-label="Удалить ${esc(l.entry.brand)} из реестра">Удалить</button></td></tr>`;
+  }).join('')}</tbody></table>` : '<p class="note">Реестр пуст. Кнопка «В реестр» сохраняет проект и его визуальный «отпечаток» в этом браузере — следующие проекты будут проверяться на шаблонность относительно него.</p>';
+  $('#view-registry').insertAdjacentHTML('beforeend', `
+    <section class="project-history" aria-labelledby="project-history-title">
+      <div class="project-history__head"><div><h3 id="project-history-title">История версий текущего проекта</h3><p class="note">Снимки сохраняются отдельно в браузере. Можно восстановить или сравнить любую из последних 10 версий.</p></div></div>
+      <div class="project-history__save"><label for="history-label">Название версии <span class="note">(необязательно)</span></label><input id="history-label" maxlength="80" placeholder="Например: До изменения главного экрана"><button type="button" data-history-save>Сохранить версию</button></div>
+      <div id="project-history-list" aria-live="polite"><p class="note">Загружаем историю…</p></div>
+      <div id="project-history-diff" aria-live="polite"></div>
+    </section>`);
+  renderProjectHistory();
+}
+async function renderProjectHistory() {
+  const host = $('#project-history-list');
+  if (!host || !result) return;
+  const requestId = ++projectHistoryRenderVersion;
+  host.innerHTML = '<p class="note">Загружаем историю версий…</p>';
+  try {
+    const versions = await listProjectVersions(result.project.id);
+    if (requestId !== projectHistoryRenderVersion || !host.isConnected) return;
+    host.innerHTML = versions.length ? '<div class="project-history__list">' + versions.map(version => {
+      const date = new Date(version.createdAt);
+      const stamp = Number.isNaN(date.getTime()) ? 'Дата неизвестна' : date.toLocaleString('ru-RU');
+      const label = version.label || 'Сохранённая версия';
+      return '<article class="project-history__item"><div class="project-history__meta"><b>' + esc(label) + '</b><small>' + esc(stamp) + '</small></div><div class="project-history__actions"><button type="button" data-history-compare="' + esc(version.id) + '">Сравнить</button><button type="button" data-history-restore="' + esc(version.id) + '">Восстановить</button><button type="button" data-history-delete="' + esc(version.id) + '" aria-label="Удалить версию ' + esc(label) + '">Удалить</button></div></article>';
+    }).join('') + '</div>' : '<p class="project-history__empty">Сохранённых версий пока нет. Создайте первый снимок перед крупными изменениями.</p>';
+  } catch (error) {
+    if (requestId === projectHistoryRenderVersion) host.innerHTML = '<p class="project-history__error">История версий недоступна: ' + esc(error.message || 'ошибка IndexedDB') + '</p>';
+  }
+}
+
+
+// ---------- События ----------
+function toast(msg) {
+  // Пока последнее сохранение не удалось, любое сообщение об успехе дополняется предупреждением.
+  if (persistFailed && msg !== PERSIST_ERROR && !msg.includes(PERSIST_PENDING) && !msg.includes(PERSIST_ERROR)) msg = `${msg}. ${persistBackupFailed ? PERSIST_ERROR : PERSIST_PENDING}`;
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2600); }
+function load(raw, message) {
+  const hasAttachedAnalysis = raw && Object.prototype.hasOwnProperty.call(raw, '__udsAnalysis');
+  const attachedAnalysis = hasAttachedAnalysis ? raw.__udsAnalysis : undefined;
+  const cleanRaw = raw && typeof raw === 'object' ? { ...raw } : raw;
+  if (cleanRaw && typeof cleanRaw === 'object') delete cleanRaw.__udsAnalysis;
+  state.raw = exportProject(normalizeProject(cleanRaw));
+  if (typeof canvasUndo !== 'undefined') { canvasUndo.length = 0; canvasRedo.length = 0; refreshCanvasHistory(); }
+  selectedCanvasKey = ''; selectedCanvasMeta = null; $('#canvas-inspector').hidden = true;
+  if (hasAttachedAnalysis) state.analysis = attachedAnalysis && attachedAnalysis.data ? { projectId: state.raw.id, data: attachedAnalysis.data } : null;
+  else if (state.analysis?.data) {
+    // При открытии записи реестра raw.id может отличаться от нормализованного ID проекта.
+    // Анализ уже выбранной записи привязываем к каноническому ID после нормализации.
+    const sourceId = String(cleanRaw?.id || '');
+    const selected = state.library.find(item => item?.raw && String(item.raw.id || '') === sourceId && item.analysis);
+    if (selected) state.analysis = { projectId: state.raw.id, data: selected.analysis };
+    else if (state.analysis.projectId === sourceId) {
+      // Сохраняем анализ при нормализации экспортированного проекта:
+      // исходный ID может отличаться от канонического ID после normalizeProject().
+      state.analysis = { projectId: state.raw.id, data: state.analysis.data };
+    } else if (state.analysis.projectId !== state.raw.id) state.analysis = null;
+  }
+  buildForm(); run();
+  if (message) toast(message);
+}
+function download(name, text, type) {
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$('#form').addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.crop) {
+    const role = t.dataset.crop, index = Number(t.dataset.cropIndex), viewport = t.dataset.cropViewport, axis = t.dataset.cropAxis;
+    writeCrop(role, index, viewport, axis, t.value);
+    const output = t.parentElement.querySelector('output');
+    if (output) output.value = t.value + '%';
+    const editor = t.closest('.crop-editor');
+    const preview = editor?.querySelector('[data-crop-preview-role="' + role + '"][data-crop-preview-index="' + index + '"][data-crop-preview-viewport="' + viewport + '"]');
+    if (preview) {
+      const current = preview.style.objectPosition.split(/\\s+/);
+      const x = axis === 'x' ? t.value : (current[0] || '50%').replace('%','');
+      const y = axis === 'y' ? t.value : (current[1] || '50%').replace('%','');
+      preview.style.objectPosition = x + '% ' + y + '%';
+    }
+  }
+  else if (t.dataset.path) {
+    set(t.dataset.path, t.value);
+    if (t.dataset.path.startsWith('site.contacts.')) {
+      const key = `contacts.${t.dataset.path.slice('site.contacts.'.length)}`;
+      const states = { ...(state.raw.site?.fieldStates || {}) };
+      if (t.value.trim()) states[key] = 'manual'; else if (states[key] === 'manual') delete states[key];
+      state.raw.site = { ...(state.raw.site || {}), fieldStates: states };
+    } else {
+      const states = { ...(state.raw.fieldStates || {}) };
+      if (t.value.trim()) states[t.dataset.path] = 'manual'; else if (states[t.dataset.path] === 'manual') delete states[t.dataset.path];
+      state.raw.fieldStates = states;
+    }
+  }
+  else if (t.dataset.list) set(t.dataset.list, textToRows(t.value, t.dataset.list));
+  else if (t.dataset.special === 'stylePreset') {
+    const preset = STYLE_PRESETS.find(item => item.id === t.value);
+    if (preset) {
+      state.raw.stylePresetId = preset.id;
+      state.raw.architecture = preset.architecture; state.raw.architectureMode = 'exact'; delete state.raw.designArchitecture;
+      state.raw.visualIdentityEnabled = true;
+      state.raw.visualIdentityPaletteId = preset.palette;
+      state.raw.visualIdentityShapeId = preset.shape;
+      state.raw.cinematicLayers = preset.background;
+    }
+  } else if (t.dataset.special === 'navStyle') { if (t.value) state.raw.navStyle = t.value; else delete state.raw.navStyle; }
+  else if (t.dataset.special === 'arch') {
+    const [mode, id] = t.value.split(':');
+    delete state.raw.designArchitecture;
+    state.raw.architectureMode = mode; state.raw.architecture = mode === 'exact' ? id : 'auto';
+    if (mode === 'family') state.raw.designArchitecture = id;
+  } else if (t.dataset.special === 'palette') { state.raw.palette = { light: 'Светлая', dark: 'Тёмная', auto: '' }[t.value]; state.raw.paletteLocked = t.value !== 'auto'; }
+  else if (t.dataset.special === 'fonts') state.raw.fonts = t.value;
+  else if (t.dataset.special === 'transitionFrom' || t.dataset.special === 'transitionTo') {
+    state.raw[t.dataset.special] = t.value;
+    const st = $('#form').querySelector(`[data-transition-state="${t.dataset.special}"]`); if (st) st.textContent = t.value;
+    const rb = $('#form').querySelector(`[data-transition-reset="${t.dataset.special}"]`); if (rb) rb.disabled = false;
+  }
+  else if (['transitionAngle', 'transitionHeight', 'transitionIntensity'].includes(t.dataset.special)) {
+    state.raw[t.dataset.special] = Number(t.value);
+    const out = $('#form').querySelector(`[data-transition-out="${t.dataset.special}"]`); if (out) out.value = t.value + (t.dataset.unit || '');
+  }
+  else if (t.dataset.special === 'effectMode') {
+    state.raw.effectMode = t.value;
+    if (t.value === 'auto') { delete state.raw.cardEffect; delete state.raw.heroEffect; delete state.raw.effectsAvoid; }
+    if (t.value === 'manual') {
+      if (!state.raw.cardEffect) state.raw.cardEffect = 'layered-shadow';
+      if (!state.raw.heroEffect) state.raw.heroEffect = 'none';
+    }
+  }
+  else if (['revealEffect', 'buttonStyle', 'cardEffect', 'heroEffect', 'motionStyle', 'artDirectionPreset', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; }
+  else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
+  else if (t.dataset.special === 'graphicDirection') { if (t.value) state.raw.graphicDirection = t.value; else delete state.raw.graphicDirection; }
+  else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
+  else if (t.dataset.special === 'imageMask') { if (t.value) state.raw.imageMask = t.value; else delete state.raw.imageMask; }
+  else if (t.dataset.special === 'mechanic') { if (t.value) state.raw.itemsMechanic = t.value; else delete state.raw.itemsMechanic; }
+  else if (t.dataset.special === 'visualIdentityEnabled') state.raw.visualIdentityEnabled = t.checked;
+  else if (t.dataset.special === 'quizEnabled') {
+    state.raw.quiz = { ...(state.raw.quiz || {}), enabled: t.checked };
+  }
+  else if (t.dataset.special === 'visualIdentityPalette') { if (t.value) state.raw.visualIdentityPaletteId = t.value; else delete state.raw.visualIdentityPaletteId; }
+  else if (t.dataset.special === 'visualIdentityShape') { if (t.value) state.raw.visualIdentityShapeId = t.value; else delete state.raw.visualIdentityShapeId; }
+  else if (t.dataset.special === 'tier') state.raw.tier = t.value;
+  else if (t.dataset.special === 'promptMode') state.raw.customPromptMode = t.value;
+  else if (t.dataset.special === 'accent') { state.raw.accent = t.value; state.raw.accentLocked = true; }
+  else if (t.dataset.special === 'accent-auto') {
+    const color = t.closest('.row').querySelector('[type=color]');
+    color.disabled = t.checked; state.raw.accentLocked = !t.checked; state.raw.accent = t.checked ? '' : color.value;
+  }
+  schedule();
+});
+function imageDataSize() {
+  const values = [state.raw.images?.hero, state.raw.images?.heroMobile, ...Object.values(state.raw.imageArtDirection?.mobileSources?.gallery || {}), ...Object.values(state.raw.imageArtDirection?.mobileSources?.services || {}), ...(state.raw.gallery || []).map(g => g.src), ...(state.raw.services || []).map(s => Array.isArray(s) ? s[3] : s.image), ...Object.values(state.raw.canvasElements || {}).flatMap(items => (Array.isArray(items) ? items : []).map(item => item?.src))];
+  return values.filter(v => typeof v === 'string' && v.startsWith('data:image/')).reduce((n, v) => n + v.length, 0);
+}
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Не удалось прочитать обработанное изображение.'));
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.readAsDataURL(blob);
+  });
+}
+function canvasBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+async function optimizeImage(file, maxEdge = MAX_IMAGE_EDGE) {
+  if (!IMAGE_TYPES.has(file.type)) throw new Error('Формат не поддерживается. Выберите JPG, PNG, WebP, GIF или AVIF.');
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Исходный файл больше 8 МБ. Выберите изображение меньшего размера.');
+  const preserveOriginal = file.type === 'image/gif' || file.type === 'image/avif';
+  if (preserveOriginal) {
+    if (file.size > MAX_IMAGE_BYTES) throw new Error('GIF и AVIF сохраняются без преобразования, чтобы не потерять анимацию или особенности формата. Для этого файла нужен размер до 1 МБ.');
+    return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+  }
+  if (typeof createImageBitmap !== 'function') {
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Этот браузер не поддерживает оптимизацию изображений. Попробуйте современный Chrome, Edge или Firefox.');
+  }
+  let bitmap;
+  try { bitmap = await createImageBitmap(file); }
+  catch { 
+    if (file.size <= MAX_IMAGE_BYTES) return { data: await blobToDataUrl(file), originalBytes: file.size, finalBytes: file.size, optimized: false };
+    throw new Error('Не удалось открыть изображение для оптимизации. Проверьте файл или сохраните его как JPG/PNG.');
+  }
+  try {
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const initialWidth = Math.max(1, Math.round(bitmap.width * scale));
+    const initialHeight = Math.max(1, Math.round(bitmap.height * scale));
+    const edges = [...new Set([Math.max(initialWidth, initialHeight), 1400, 1100, 900, 720, 540, 360, 240].filter(n => n <= Math.max(initialWidth, initialHeight) && n > 0))];
+    for (const edge of edges) {
+      const factor = Math.min(1, edge / Math.max(initialWidth, initialHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(initialWidth * factor));
+      canvas.height = Math.max(1, Math.round(initialHeight * factor));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Не удалось создать холст для оптимизации фотографии.');
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.82, 0.72, 0.62, 0.52]) {
+        const blob = await canvasBlob(canvas, 'image/webp', quality);
+        if (!blob || blob.type !== 'image/webp') break;
+        if (blob.size <= MAX_IMAGE_BYTES) {
+          const data = await blobToDataUrl(blob);
+          return { data, originalBytes: file.size, finalBytes: blob.size, optimized: true, width: canvas.width, height: canvas.height };
+        }
+      }
+    }
+    throw new Error('После оптимизации фото всё ещё больше 1 МБ. Выберите другой снимок или уменьшите исходное разрешение.');
+  } finally { bitmap.close?.(); }
+}
+async function optimizeGeneratedImage(dataUri, maxEdge = MAX_IMAGE_EDGE) {
+  const response = await fetch(dataUri);
+  if (!response.ok) throw new Error('Не удалось прочитать изображение от AI.');
+  const blob = await response.blob();
+  const file = new File([blob], 'ai-generated.jpg', { type: blob.type || 'image/jpeg' });
+  return optimizeImage(file, maxEdge);
+}
+// ALT для созданного фото: что видит посетитель, а не служебный текст задания для фотографа.
+function generatedAlt(slot, project) {
+  const place = [project.brand, project.niche].filter(Boolean).join(' — ') || 'Наш проект';
+  if (slot.role === 'service') return slot.label + ' — ' + (project.niche || project.brand || 'позиция каталога');
+  if (slot.role === 'gallery') return place + ': ' + slot.label.toLowerCase();
+  return place;
+}
+async function generateProjectImages(endpoint, expectedProjectId, onProgress = () => {}) {
+  const parsedEndpoint = new URL(endpoint, location.href);
+  if (!/\/api\/generate-landing\/?$/i.test(parsedEndpoint.pathname)) throw new Error('В адресе AI-сервера должен быть путь /api/generate-landing.');
+  parsedEndpoint.pathname = parsedEndpoint.pathname.replace(/\/api\/generate-landing\/?$/i, '/api/generate-image');
+  const imageEndpoint = parsedEndpoint.toString();
+  const slots = imageSlots(result.project, result.concept).slots;
+  const hero = slots.find(slot => slot.id === 'hero');
+  // Фото для всех карточек услуг (до 6): раньше только первые 2, и сетка карточек выглядела наполовину пустой.
+  const products = slots.filter(slot => slot.role === 'service' && !slot.filled).slice(0, MAX_SERVICE_PHOTOS);
+  // Все кадры галереи (8) плюс главное фото и 2 карточки — до 15 изображений.
+  const gallery = slots.filter(slot => slot.role === 'gallery' && !slot.filled).slice(0, GALLERY_FRAMES);
+  const targets = [...(hero ? [hero] : []), ...products, ...gallery];
+  if (!targets.length) return { generated: 0, skipped: true };
+  // Английские описания ниши и позиций для генератора фото. Без них незнакомые нише слова уходили
+  // транслитом («kofeynya»), и FLUX рисовал кадры, не относящиеся к бизнесу. Ошибка не прерывает генерацию.
+  let visualHints = null;
+  try {
+    const hintsEndpoint = new URL(imageEndpoint); hintsEndpoint.pathname = hintsEndpoint.pathname.replace(/\/api\/generate-image\/?$/i, '/api/visual-hints');
+    const photoAnalysis = currentAnalysis() || {};
+    const photoPrompts = Array.isArray(photoAnalysis.imagePrompts) ? photoAnalysis.imagePrompts.slice(0, 5) : [];
+    const photoDetails = [result.project.mainOffer || result.project.description, ...photoPrompts]
+      .filter(Boolean).join('\n').slice(0, 600);
+    const hintsResponse = await fetch(hintsEndpoint.toString(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      niche: result.project.niche || '', details: photoDetails,
+      items: targets.filter(slot => slot.role === 'service').map(slot => slot.label),
+    }) });
+    const hintsPayload = await hintsResponse.json().catch(() => ({}));
+    if (hintsResponse.ok && hintsPayload.hints) visualHints = hintsPayload.hints;
+  } catch { /* остаются словарь ниш и транслит */ }
+  const photoProject = visualHints ? { ...result.project, visualHints } : result.project;
+  let generated = 0, failed = 0, lastImageError = '', done = 0;
+  // FLUX.2 klein реалистичнее, но тратит 10–15 с на кадр: 15 кадров подряд шли бы ~3 минуты.
+  // Кадры запрашиваются по IMAGE_CONCURRENCY одновременно и сжимаются сразу; в проект записываются по порядку.
+  const fetchSlotImage = async slot => {
+    // Генератор (FLUX) понимает только английский: сюжет, обстановка и блюда переводятся по профилю ниши.
+    const prompt = photoPrompt(slot, photoProject, result.concept.visualSystem.graphicDirection); // photoPrompt preserves managed instructions within the Worker 2,000-character limit.
+    const imageStarted = Date.now();
+    let response, payload;
+    // Вторая попытка: Workers AI иногда отвечает временной ошибкой за секунду (живой прогон 20.11.2026).
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await fetch(imageEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, aspect: slot.aspect }) });
+        payload = await response.json().catch(() => ({}));
+      } catch (error) { response = null; payload = { error: 'сеть: ' + error.message }; }
+      if (response?.ok && payload.image) break;
+      if (response && response.status < 500 && response.status !== 429) break;
+      if (attempt === 0) {
+        // 429 — лимит Workers AI: ждём минуту, а не повторяем запрос через 1,5 с.
+        const retryAfter = Number(response?.headers?.get('Retry-After'));
+        const delay = response?.status === 429 ? (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000) : 1_500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    const ok = Boolean(response?.ok && payload.image);
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || (String(payload.model || '').startsWith('@cf/') ? 'direct' : ''), provider: payload.provider || (String(payload.model || '').startsWith('@cf/') ? 'cloudflare' : '') });
+    onProgress(++done, targets.length, slot.label);
+    if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
+    // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.
+    const optimized = await optimizeGeneratedImage('data:' + (payload.mimeType || 'image/jpeg') + ';base64,' + payload.image, slot.role === 'gallery' ? 1100 : MAX_IMAGE_EDGE);
+    return { data: optimized.data };
+  };
+  const fetched = new Array(targets.length);
+  let nextSlot = 0;
+  const worker = async () => { while (nextSlot < targets.length) { const index = nextSlot++; fetched[index] = await fetchSlotImage(targets[index]); } };
+  await Promise.all(Array.from({ length: Math.min(IMAGE_CONCURRENCY, targets.length) }, worker));
+  for (let index = 0; index < targets.length; index++) {
+    const slot = targets[index];
+    const alt = generatedAlt(slot, result.project);
+    const outcome = fetched[index];
+    // Один неудачный кадр не обрывает остальные: его можно перегенерировать или загрузить своё фото.
+    if (!outcome?.data) { failed++; lastImageError = outcome?.error || lastImageError; continue; }
+    if (state.raw.id !== expectedProjectId) throw new Error('Проект изменён во время генерации. Фото не добавлены в другой проект.');
+    const data = outcome.data;
+    if (imageDataSize() + data.length > MAX_IMAGE_DATA) { if (generated) { lastImageError = 'Достигнут лимит хранилища изображений проекта (3,8 МБ).'; failed += targets.length - index; break; } throw new Error('Достигнут лимит хранилища изображений проекта (3,8 МБ). Остальные фото не добавлены.'); }
+    if (slot.id === 'hero') {
+      state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: alt };
+    } else if (slot.role === 'service') {
+      const services = Array.isArray(state.raw.services) ? [...state.raw.services] : [];
+      const sourceIndex = Number.isInteger(slot.sourceIndex) ? slot.sourceIndex : Number(slot.id.split('-')[1]);
+      const current = services[sourceIndex];
+      if (Array.isArray(current)) {
+        const row = [...current]; row[3] = data; row[4] = alt; services[sourceIndex] = row;
+      } else if (current && typeof current === 'object') {
+        services[sourceIndex] = { ...current, image: data, alt };
+      }
+      state.raw.services = services;
+    } else if (slot.role === 'gallery') {
+      const items = Array.isArray(state.raw.gallery) ? [...state.raw.gallery] : [];
+      const galleryIndex = Number(slot.id.split('-')[1]);
+      const existing = items[galleryIndex] || {};
+      items[galleryIndex] = { ...existing, src: data, alt, caption: String(existing.caption || '').trim() || slot.label };
+      state.raw.gallery = items;
+    }
+    generated++;
+  }
+  $('#auto-status').textContent = 'AI создал изображений: ' + generated + ' из ' + targets.length + '…';
+  if (!generated && failed) throw new Error(lastImageError || 'AI не вернул изображения.');
+  buildForm();
+  run();
+  return { generated, failed, skipped: false };
+}
+async function handleImageUpload(input) {
+  const kind = input.dataset.upload, files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length) return;
+  const imageIndex = Number(input.dataset.imageIndex);
+  const services = Array.isArray(state.raw.services) ? state.raw.services : [];
+  if (kind === 'service' && !services.length) return toast('Сначала добавьте позиции в разделе «Каталог / услуги / меню».');
+  if (['gallery-mobile', 'service-mobile'].includes(kind) && (!Number.isInteger(imageIndex) || imageIndex < 0)) return toast('Не удалось определить фотографию для мобильной версии.');
+  const target = kind === 'service' ? Number($('#f--serviceUpload-target')?.value) : -1;
+  if (kind === 'service' && (!Number.isInteger(target) || target < 0 || target >= services.length)) return toast('Выберите позицию товара или услуги.');
+  if (kind === 'service-mobile' && imageIndex >= services.length) return toast('Позиция товара или услуги больше не существует.');
+  if (kind === 'gallery-mobile' && imageIndex >= (state.raw.gallery || []).length) return toast('Фотография галереи больше не существует.');
+  let added = 0;
+  for (const file of files) {
+    try {
+      const optimized = await optimizeImage(file);
+      const data = optimized.data;
+      const mobileSources = state.raw.imageArtDirection?.mobileSources || {};
+      const current = kind === 'hero' ? state.raw.images?.hero
+        : kind === 'hero-mobile' ? state.raw.images?.heroMobile
+        : kind === 'gallery-mobile' ? mobileSources.gallery?.[imageIndex]
+        : kind === 'service-mobile' ? mobileSources.services?.[imageIndex]
+        : kind === 'service' ? (Array.isArray(services[target]) ? services[target][3] : services[target].image)
+        : '';
+      const replacingSize = typeof current === 'string' && current.startsWith('data:image/') ? current.length : 0;
+      if (imageDataSize() - replacingSize + data.length > MAX_IMAGE_DATA) throw new Error('Общий объём загруженных фото превышает лимит 3,8 МБ. Удалите лишние снимки или уменьшите их размер.');
+      const imageName = file.name.replace(/\.[^.]+$/, '');
+      if (kind === 'hero') {
+        state.raw.images = { ...(state.raw.images || {}), hero: data, heroAlt: state.raw.images?.heroAlt || '' };
+      } else if (kind === 'hero-mobile') {
+        state.raw.images = { ...(state.raw.images || {}), heroMobile: data };
+      } else if (kind === 'gallery') {
+        state.raw.gallery = [...(state.raw.gallery || []), { src: data, caption: imageName, alt: '' }];
+      } else if (kind === 'gallery-mobile' || kind === 'service-mobile') {
+        const root = state.raw.imageArtDirection || (state.raw.imageArtDirection = {});
+        root.mobileSources = root.mobileSources || {};
+        const key = kind === 'gallery-mobile' ? 'gallery' : 'services';
+        root.mobileSources[key] = root.mobileSources[key] || {};
+        root.mobileSources[key][imageIndex] = data;
+      } else if (kind === 'service') {
+        const row = services[target];
+        const cells = Array.isArray(row) ? [...row] : [row.title || '', row.text || row.description || '', row.price || '', row.image || '', row.alt || ''];
+        cells[3] = data;
+        cells[4] = cells[4] || cells[0];
+        state.raw.services[target] = cells;
+      }
+      added++;
+      if (optimized.optimized) toast('Фото оптимизировано: ' + (optimized.width + '×' + optimized.height) + ', ' + Math.round(optimized.finalBytes / 1024) + ' КБ вместо ' + Math.round(optimized.originalBytes / 1024) + ' КБ');
+    } catch (err) { toast(err.message); }
+  }
+  if (added) { buildForm(); run(); toast(added === 1 ? 'Фотография добавлена в проект' : 'Добавлено фотографий: ' + added); }
+}
+$('#form').addEventListener('change', e => {
+  const input = e.target;
+  if (input.matches('[data-hide-cta]')) {
+    const states = { ...(state.raw.fieldStates || {}) };
+    if (input.checked) states.cta = 'hidden'; else delete states.cta;
+    state.raw.fieldStates = states;
+    run(); buildForm(); toast(input.checked ? 'Главная кнопка скрыта вручную' : 'Главная кнопка снова подбирается автоматически');
+    return;
+  }
+  let photoTextChanged = false;
+  if (input.matches('[data-hero-alt]')) { state.raw.images = { ...(state.raw.images || {}), heroAlt: input.value }; photoTextChanged = true; }
+  if (input.matches('[data-gallery-caption]')) { const g = state.raw.gallery[Number(input.dataset.galleryCaption)]; if (g) { g.caption = input.value.slice(0, 180); photoTextChanged = true; } }
+  if (input.matches('[data-gallery-alt]')) { const g = state.raw.gallery[Number(input.dataset.galleryAlt)]; if (g) { g.alt = input.value; photoTextChanged = true; } }
+  if (input.matches('[data-service-alt]')) { const row = state.raw.services[Number(input.dataset.serviceAlt)]; if (row) { if (Array.isArray(row)) row[4] = input.value; else row.alt = input.value; photoTextChanged = true; } }
+  if (photoTextChanged) run();
+  const upload = input.closest('[data-upload]'); if (upload) handleImageUpload(upload);
+});
+function swapIndexedEntries(bucket, from, to) {
+  if (!bucket || typeof bucket !== 'object') return;
+  if (Array.isArray(bucket)) {
+    [bucket[from], bucket[to]] = [bucket[to], bucket[from]];
+    return;
+  }
+  const a = Object.prototype.hasOwnProperty.call(bucket, from) ? bucket[from] : undefined;
+  const b = Object.prototype.hasOwnProperty.call(bucket, to) ? bucket[to] : undefined;
+  if (b === undefined) delete bucket[from]; else bucket[from] = b;
+  if (a === undefined) delete bucket[to]; else bucket[to] = a;
+}
+function reorderIndexedEntries(bucket, from, to) {
+  if (!bucket || typeof bucket !== 'object' || from === to) return;
+  if (Array.isArray(bucket)) {
+    const value = bucket.splice(from, 1)[0];
+    bucket.splice(to, 0, value);
+    return;
+  }
+  const numeric = Object.entries(bucket).filter(([key]) => Number.isInteger(Number(key)) && String(Number(key)) === key);
+  const values = new Map(numeric.map(([key, value]) => [Number(key), value]));
+  const next = new Map();
+  for (const [key, value] of Object.entries(bucket)) if (!(Number.isInteger(Number(key)) && String(Number(key)) === key)) next.set(key, value);
+  for (const [index, value] of values) {
+    let target = index;
+    if (index === from) target = to;
+    else if (from < to && index > from && index <= to) target = index - 1;
+    else if (from > to && index >= to && index < from) target = index + 1;
+    next.set(String(target), value);
+  }
+  for (const key of Object.keys(bucket)) delete bucket[key];
+  for (const [key, value] of next) bucket[key] = value;
+}
+function reorderGalleryImage(from, to) {
+  const gallery = state.raw.gallery;
+  if (!Array.isArray(gallery) || from === to || from < 0 || to < 0 || from >= gallery.length || to >= gallery.length) return;
+  gallery.splice(to, 0, gallery.splice(from, 1)[0]);
+  const art = state.raw.imageArtDirection || {};
+  reorderIndexedEntries(art.gallery, from, to);
+  reorderIndexedEntries(art.mobileSources?.gallery, from, to);
+  buildForm(); run(); toast('Порядок фотографий обновлён');
+}
+function moveGalleryImage(from, direction) {
+  const gallery = state.raw.gallery;
+  const to = from + direction;
+  if (!Array.isArray(gallery) || from < 0 || to < 0 || from >= gallery.length || to >= gallery.length) return;
+  [gallery[from], gallery[to]] = [gallery[to], gallery[from]];
+  const art = state.raw.imageArtDirection || {};
+  swapIndexedEntries(art.gallery, from, to);
+  const mobile = art.mobileSources?.gallery;
+  swapIndexedEntries(mobile, from, to);
+  buildForm(); run(); toast('Порядок фотографий обновлён');
+}
+// ---------- Расположение блоков: перетаскивание и кнопки ↑↓ ----------
+const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', pricing: 'Тарифы и пакеты', cases: 'Кейсы и результаты', quiz: 'Подбор по квизу', faq: 'Вопросы и ответы', testimonials: 'Отзывы', team: 'Команда', stats: 'Факты и цифры' };
+const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle', pricing: 'pricingTitle', cases: 'casesTitle', quiz: 'quizTitle' };
+const ORDER_LISTS = [['services', 'Позиции каталога'], ['pricing', 'Тарифы и пакеты'], ['cases', 'Кейсы и результаты'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['testimonials', 'Отзывы'], ['team', 'Команда'], ['stats', 'Факты и цифры'], ['canvasBlocks', 'Добавленные блоки']];
+const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r ?? '').trim() || 'Без названия';
+function currentSectionOrder() {
+  return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
+}
+function orderedCanvasBlocks() {
+  const anchors = ['hero', ...currentSectionOrder(), 'contact'];
+  const rank = new Map(anchors.map((anchor, index) => [anchor, index]));
+  return (Array.isArray(state.raw.canvasBlocks) ? state.raw.canvasBlocks : [])
+    .map((block, index) => ({ block, index, rank: rank.get(block.after) ?? rank.get('contact') }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(entry => entry.block);
+}
+function orderList(kind, label, titles) {
+  if (titles.length < 2) return '';
+  const last = titles.length - 1;
+  const reset = kind === 'sections' && state.raw.sectionOrder ? '<button type="button" data-order-reset>Вернуть автоматический порядок</button>' : '';
+  return `<div class="order-block"><p class="order-block__title">${esc(label)}${kind === 'sections' ? (state.raw.sectionOrder ? ' · вручную' : ' · авто') : ''}</p><ol class="order-list" data-order-list="${kind}">${titles.map((t, i) => `<li draggable="true" data-order-item="${i}"><span class="order-list__grip" aria-hidden="true">⋮⋮</span><span class="order-list__name">${esc(t)}</span><span class="order-list__btns"><button type="button" data-order-move="${i}" data-direction="-1" ${i === 0 ? 'disabled' : ''} aria-label="«${esc(t)}» выше" title="Выше">↑</button><button type="button" data-order-move="${i}" data-direction="1" ${i === last ? 'disabled' : ''} aria-label="«${esc(t)}» ниже" title="Ниже">↓</button></span></li>`).join('')}</ol>${reset}</div>`;
+}
+function sectionVisibilityControl() {
+  const available = new Set(result?.concept?.homepage?.sectionOrder || []);
+  const hidden = new Set([...(Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []), ...Object.keys(state.raw.fieldStates || {}).filter(key => key.startsWith('sections.') && state.raw.fieldStates[key] === 'hidden').map(key => key.slice(9))]);
+  const labels = { ...ORDER_SECTION_LABELS, contact: 'Контакты' };
+  const choices = Object.entries(labels).filter(([id]) => available.has(id) || hidden.has(id));
+  if (!choices.length) return '';
+  return `<fieldset class="order-block section-visibility"><legend class="order-block__title">Показывать секции</legend><div class="section-visibility__list">${choices.map(([id, label]) => `<label><input type="checkbox" data-section-visibility="${id}"${hidden.has(id) ? '' : ' checked'}> ${esc(label)}</label>`).join('')}</div></fieldset>`;
+}
+function layoutControl() {
+  const sections = currentSectionOrder().map(sid => {
+    const custom = ORDER_SECTION_TITLES[sid] && String(state.raw[ORDER_SECTION_TITLES[sid]] || '').trim();
+    return custom ? `${ORDER_SECTION_LABELS[sid] || sid}: ${custom}` : ORDER_SECTION_LABELS[sid] || sid;
+  });
+  const html = orderList('sections', 'Секции страницы (первый экран всегда сверху)', sections) + sectionVisibilityControl()
+    + ORDER_LISTS.map(([key, label]) => {
+      const rows = key === 'canvasBlocks' ? orderedCanvasBlocks() : (Array.isArray(state.raw[key]) ? state.raw[key] : []);
+      return orderList(key, label, rows.map(orderItemTitle));
+    }).join('');
+  return html || '<span class="note">Пока нечего переставлять: добавьте секции и позиции.</span>';
+}
+/** Переставляет элемент from → to в секциях или в списке проекта и пересобирает страницу. */
+function reorderLayout(kind, from, to) {
+  if (from === to || to < 0) return;
+  if (kind === 'sections') {
+    const order = currentSectionOrder();
+    if (from >= order.length || to >= order.length) return;
+    rememberCanvasChange();
+    order.splice(to, 0, order.splice(from, 1)[0]);
+    state.raw.sectionOrder = order;
+  } else if (kind === 'canvasBlocks') {
+    const list = orderedCanvasBlocks();
+    if (from >= list.length || to >= list.length) return;
+    rememberCanvasChange();
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    const neighbor = list[to - 1] || list[to + 1];
+    if (neighbor) moved.after = neighbor.after || 'contact';
+    state.raw.canvasBlocks = list;
+  } else {
+    const list = state.raw[kind];
+    if (!Array.isArray(list) || from >= list.length || to >= list.length) return;
+    rememberCanvasChange();
+    list.splice(to, 0, list.splice(from, 1)[0]);
+    if (kind === 'services') {
+      const art = state.raw.imageArtDirection || {};
+      reorderIndexedEntries(art.services, from, to);
+      reorderIndexedEntries(art.mobileSources?.services, from, to);
+    }
+  }
+  run(); buildForm(); toast('Расположение сохранено');
+  requestAnimationFrame(() => $(`[data-order-list="${kind}"] [data-order-item="${to}"] [data-order-move]:not([disabled])`)?.focus());
+}
+let orderDrag = null;
+$('#form').addEventListener('dragstart', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item) return;
+  orderDrag = { kind: item.parentElement.dataset.orderList, from: Number(item.dataset.orderItem) };
+  item.classList.add('is-dragging');
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(orderDrag.from)); }
+});
+$('#form').addEventListener('dragover', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item || !orderDrag || item.parentElement.dataset.orderList !== orderDrag.kind) return;
+  e.preventDefault();
+  $('#form').querySelectorAll('[data-order-item].is-drop-target').forEach(n => n.classList.remove('is-drop-target'));
+  if (Number(item.dataset.orderItem) !== orderDrag.from) item.classList.add('is-drop-target');
+});
+$('#form').addEventListener('drop', e => {
+  const item = e.target.closest?.('[data-order-item]');
+  if (!item || !orderDrag || item.parentElement.dataset.orderList !== orderDrag.kind) return;
+  e.preventDefault();
+  const { kind, from } = orderDrag; orderDrag = null;
+  reorderLayout(kind, from, Number(item.dataset.orderItem));
+});
+$('#form').addEventListener('dragend', () => {
+  orderDrag = null;
+  $('#form').querySelectorAll('[data-order-item].is-dragging,[data-order-item].is-drop-target').forEach(n => n.classList.remove('is-dragging', 'is-drop-target'));
+});
+$('#form').addEventListener('change', e => {
+  const input = e.target.closest('[data-section-visibility]');
+  if (!input) return;
+  const id = input.dataset.sectionVisibility;
+  const states = { ...(state.raw.fieldStates || {}) };
+  if (input.checked) { delete states[`sections.${id}`]; state.raw.hiddenSections = (Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []).filter(value => value !== id); }
+  else { states[`sections.${id}`] = 'hidden'; state.raw.hiddenSections = [...new Set([...(Array.isArray(state.raw.hiddenSections) ? state.raw.hiddenSections : []), id])]; }
+  state.raw.fieldStates = states;
+  rememberCanvasChange(); run(); buildForm();
+  toast(input.checked ? 'Секция снова будет подбираться движком' : 'Секция скрыта вручную');
+});
+$('#form').addEventListener('click', e => {
+  const move = e.target.closest('[data-order-move]');
+  if (move) { const from = Number(move.dataset.orderMove); reorderLayout(move.closest('[data-order-list]').dataset.orderList, from, from + Number(move.dataset.direction)); return; }
+  if (e.target.closest('[data-order-reset]')) { rememberCanvasChange(); delete state.raw.sectionOrder; run(); buildForm(); toast('Порядок секций снова подбирает движок'); }
+});
+
+// Перетаскивание прямо в предпросмотре: в страницу добавляется служебный скрипт (только в редакторе, не в экспорт).
+let arrangeMode = false;
+const ARRANGE_SCRIPT = `<script>(()=>{const css=document.createElement('style');css.textContent='.uds-arrange [data-arrange]{outline:2px dashed rgba(80,120,255,.55);outline-offset:-4px;cursor:grab;position:relative}.uds-arrange [data-arrange].is-over{outline:3px solid #3b6cff}.uds-arrange [data-arrange].is-drag{opacity:.45}.uds-arrange [data-arrange]>.uds-arrange-tag{position:absolute;top:8px;left:8px;z-index:50;padding:3px 8px;border-radius:6px;background:#3b6cff;color:#fff;font:600 12px/1.4 system-ui;display:flex;gap:6px;align-items:center}.uds-arrange-tag button{all:unset;cursor:pointer;min-width:24px;min-height:24px;text-align:center;border-radius:4px;background:rgba(255,255,255,.2)}.uds-arrange-tag button:focus-visible{outline:2px solid #fff}';document.head.append(css);document.documentElement.classList.add('uds-arrange');document.querySelectorAll('[data-reveal]').forEach(n=>n.classList.add('is-in'));
+const order=()=>secs.map(s=>([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));const send=(kind,from,to)=>parent.postMessage({type:'uds-arrange',kind,from,to,order:order()},'*');
+const mark=(nodes,kind,label)=>nodes.forEach((n,i)=>{n.dataset.arrange=kind;n.dataset.arrangeIndex=i;n.draggable=true;if(label){const t=document.createElement('span');t.className='uds-arrange-tag';t.textContent=label(n,i);[['↑',-1],['↓',1]].forEach(([s,d])=>{if(i+d<0||i+d>=nodes.length)return;const b=document.createElement('button');b.type='button';b.textContent=s;b.setAttribute('aria-label',(d<0?'Выше: ':'Ниже: ')+label(n,i).slice(2));b.addEventListener('click',()=>send(kind,i,i+d));t.append(b);});n.prepend(t);}});
+const secs=[...document.querySelectorAll('main section.ds-section')].filter(s=>!s.classList.contains('sec--contact')&&!s.classList.contains('sec--custom')&&[...s.classList].some(c=>c.startsWith('sec--')));
+mark(secs,'section',s=>'⇅ '+([...s.classList].find(c=>c.startsWith('sec--'))||'').slice(5));
+mark([...document.querySelectorAll('section[data-uds-block]')],'custom-block',s=>'⇅ '+(s.querySelector('h2')?.textContent||'Блок'));
+mark([...document.querySelectorAll('li.item[id^="item-"]')],'item');
+let drag=null;addEventListener('dragstart',e=>{if(e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')&&!e.target.closest('.uds-arrange-tag,li.item'))return;const n=e.target.closest&&e.target.closest('[data-arrange]');if(!n)return;e.stopPropagation();drag=n;n.classList.add('is-drag');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x');},true);
+const dropTarget=e=>{if(drag?.dataset.arrange==='custom-block')return e.target.closest('main section:not(.sec--contact)');if(drag?.dataset.arrange==='item'){const section=e.target.closest('main section');if(section&&section!==drag.closest('section'))return section}return e.target.closest('[data-arrange="'+drag?.dataset.arrange+'"]')};
+addEventListener('dragover',e=>{if(!drag)return;const n=dropTarget(e);document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));if(!n)return;e.preventDefault();if(n!==drag)n.classList.add('is-over');});
+addEventListener('drop',e=>{if(!drag)return;const kind=drag.dataset.arrange;const n=dropTarget(e);if(!n)return;e.preventDefault();if(kind==='item'&&n.matches('main section')&&n!==drag.closest('section')){const rect=n.getBoundingClientRect();parent.postMessage({type:'uds-canvas-move',key:drag.dataset.udsEditKey,sectionId:n.classList.contains('hero')?'hero':n.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))},'*');return}if(kind==='custom-block'){if(n===drag)return;const detail={type:'uds-arrange',kind:'custom-place',blockId:drag.dataset.udsBlock};if(n.dataset.udsBlock)detail.targetBlockId=n.dataset.udsBlock;else detail.after=n.classList.contains('hero')?'hero':n.id;parent.postMessage(detail,'*');return}const from=kind==='item'?Number(drag.dataset.udsItemIndex):Number(drag.dataset.arrangeIndex);const to=kind==='item'?Number(n.dataset.udsItemIndex):Number(n.dataset.arrangeIndex);send(kind,from,to);});
+addEventListener('dragend',()=>{if(drag)drag.classList.remove('is-drag');drag=null;document.querySelectorAll('.is-over').forEach(x=>x.classList.remove('is-over'));});
+addEventListener('click',e=>{if(e.target.closest('a,button'))e.preventDefault();},true);})();<\/script>`;
+const CANVAS_SCRIPT = `<script>(()=>{const editCss=document.createElement('style');editCss.textContent='.uds-edit-selected{outline:2px solid #4d7cff!important;outline-offset:3px!important;border-radius:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote,.uds-arrange a,.uds-arrange button{cursor:text}.uds-arrange h1:hover:not(.uds-edit-selected),.uds-arrange h2:hover:not(.uds-edit-selected),.uds-arrange h3:hover:not(.uds-edit-selected),.uds-arrange h4:hover:not(.uds-edit-selected),.uds-arrange p:hover:not(.uds-edit-selected),.uds-arrange blockquote:hover:not(.uds-edit-selected),.uds-arrange a:hover:not(.uds-edit-selected),.uds-arrange button:hover:not(.uds-edit-selected){outline:1px dashed #4d7cff88!important;outline-offset:3px}.uds-arrange h1,.uds-arrange h2,.uds-arrange h3,.uds-arrange h4,.uds-arrange p,.uds-arrange blockquote{user-select:none;-webkit-user-select:none}[contenteditable="true"]{outline:2px solid #4d7cff!important;outline-offset:3px;user-select:text!important;-webkit-user-select:text!important;cursor:text}';document.head.append(editCss);const send=(type,data={})=>parent.postMessage({type,...data},'*');/* scroll position is reported by the debounced preview listener */const pathKey=n=>{const a=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';a.unshift([...p.children].filter(x=>!x.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return a.join('.')};const key=n=>n.dataset.udsEditKey||pathKey(n);const candidates=()=>[...document.querySelectorAll('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,figcaption,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const assignKeys=()=>{const list=candidates(),counts=new Map(),used=new Set(),keep=new Set();for(const n of list){const key=n.dataset.udsEditKey,match=String(key||'').match(/^u:([\\w-]+):(\\d+)$/);if(match&&!used.has(key)){used.add(key);keep.add(n);counts.set(match[1],Math.max(counts.get(match[1])||0,Number(match[2])))}}for(const n of list){if(keep.has(n))continue;const itemScope=n.closest('[data-uds-edit-scope]')?.dataset.udsEditScope;const section=n.closest('[data-uds-block]')||n.closest('section');const namedSection=itemScope||section?.id||[...(section?.classList||[])].find(c=>c.startsWith('sec--'))?.slice(5)||(n.closest('.hero')?'hero':'main');const prefix=n.matches('img,figure,svg')?'media-':n.matches('span,strong,em')?'inline-':n.matches('dialog,[role=dialog]')?'dialog-':n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')?'layout-':'';const scope=prefix+(n.id?'id-'+n.id:namedSection).replace(/[^\\w-]/g,'-').slice(0,48);let value=counts.get(scope)||0;do{value++}while(used.has('u:'+scope+':'+value));const key='u:'+scope+':'+value;n.dataset.udsEditKey=key;used.add(key);counts.set(scope,value)}};assignKeys();const label=n=>(n.tagName.toLowerCase()+': '+n.textContent.trim()).slice(0,90);const pick=n=>{if(!n)return;document.querySelectorAll('.uds-edit-selected').forEach(x=>x.classList.remove('uds-edit-selected'));n.classList.add('uds-edit-selected');const r=n.getBoundingClientRect();send('uds-canvas-select',{key:key(n),tag:n.tagName.toLowerCase(),button:n.matches('button,a.ds-button'),layout:n.matches('section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element,dialog,[role=dialog]'),text:n.textContent.trim(),alt:n.matches('img')?n.alt:'',href:n.matches('a')?n.getAttribute('href')||'':'',label:label(n),color:getComputedStyle(n).color,background:getComputedStyle(n).backgroundColor,fontSize:parseFloat(getComputedStyle(n).fontSize)||24,opacity:parseFloat(getComputedStyle(n).opacity)||0,align:getComputedStyle(n).textAlign,blockId:n.closest('[data-uds-block]')?.dataset.udsBlock||'',sectionId:n.closest('section')?.id||(n.closest('.hero')?'hero':''),elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',rect:{center:r.left+r.width/2,viewport:innerWidth,width:n.offsetWidth,height:n.offsetHeight}})};const refresh=()=>send('uds-canvas-layers',{layers:candidates().map(n=>({key:key(n),label:label(n)}))});const editable=e=>{const n=e.target.closest('h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,figcaption,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element');return n&&(n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element')||!n.children.length||/^H[1-4]$/.test(n.tagName))?n:null};document.addEventListener('dblclick',e=>{const n=editable(e);if(!n||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))return;e.preventDefault();e.stopPropagation();n.dataset.udsBeforeInline=n.textContent;n.contentEditable='true';n.focus()});document.addEventListener('keydown',e=>{const n=e.target.closest('[contenteditable="true"]');if(!n)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();n.blur()}if(e.key==='Escape'){e.preventDefault();n.textContent=n.dataset.udsBeforeInline||'';n.dataset.udsCancelInline='1';n.blur()}});document.addEventListener('blur',e=>{const n=e.target.closest?.('[contenteditable="true"]');if(!n)return;n.contentEditable='false';if(n.dataset.udsCancelInline){delete n.dataset.udsCancelInline;return}send('uds-canvas-inline-commit',{key:key(n),text:n.textContent.slice(0,2000)})},true);document.addEventListener('keydown',e=>{const editing=e.target.closest?.('[contenteditable="true"]'),key=e.key.toLowerCase(),modifier=e.ctrlKey||e.metaKey;if(!editing&&(key==='contextmenu'||(key==='f10'&&e.shiftKey))){e.preventDefault();const selected=document.querySelector('.uds-edit-selected');send(selected?'uds-canvas-options':'uds-canvas-menu',selected?{key:key(selected)}:{});return}if(editing){if(modifier&&key==='d')e.preventDefault();return}if((modifier&&['z','y','d'].includes(key))||key==='delete'||(['arrowleft','arrowright','arrowup','arrowdown'].includes(key)&&document.querySelector('.uds-edit-selected'))){e.preventDefault();send('uds-canvas-shortcut',{key,modifier,shift:e.shiftKey})}},true);document.addEventListener('click',e=>{if(document.documentElement.dataset.udsCanvasDragged){e.preventDefault();e.stopPropagation();return}if(e.target.closest('[contenteditable="true"]'))return;if(e.target.closest('.uds-arrange-tag'))return;e.preventDefault();e.stopPropagation();const n=editable(e);if(n)pick(n);else send('uds-canvas-menu',{key:''})},true);document.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();const n=editable(e);if(n){pick(n);send('uds-canvas-options',{key:key(n)})}else send('uds-canvas-menu',{key:''})},true);let pressTimer=null;document.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;const n=editable(e);if(!n)return;pressTimer=setTimeout(()=>{pick(n);send('uds-canvas-options',{key:key(n)});pressTimer=null},560)},{passive:false});for(const ev of ['pointerup','pointercancel','pointermove'])document.addEventListener(ev,()=>{clearTimeout(pressTimer);pressTimer=null},{passive:true});addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data||{};if(m.type==='uds-canvas-restore-scroll'){const style=document.documentElement.style,previous=style.getPropertyValue('scroll-behavior'),priority=style.getPropertyPriority('scroll-behavior');style.setProperty('scroll-behavior','auto','important');document.documentElement.getBoundingClientRect();scrollTo({left:Math.max(0,Number(m.x)||0),top:Math.max(0,Number(m.y)||0),behavior:'instant'});requestAnimationFrame(()=>{if(previous)style.setProperty('scroll-behavior',previous,priority);else style.removeProperty('scroll-behavior')});return}if(m.type==='uds-canvas-arrange-fan'){const section=m.sectionId==='hero'?document.querySelector('.hero'):document.getElementById(m.sectionId);if(!section)return;const figures=[...section.querySelectorAll('figure')].filter(n=>n.querySelector('img')&&!n.closest('[data-uds-free-canvas]')||n.querySelector('img'));const images=[...section.querySelectorAll('img')].filter(n=>!n.closest('figure'));const photos=[...new Set([...figures,...images])].slice(0,5);if(photos.length<5){parent.postMessage({type:'uds-canvas-fan-error',message:'Для веера в выбранной секции нужно минимум пять фотографий'},'*');return}send({type:'uds-canvas-fan',sectionId:m.sectionId,photos:photos.map(key)})}if(m.type==='uds-canvas-select-element'){const n=[...document.querySelectorAll('[data-uds-element]')].find(x=>x.dataset.udsElement===m.elementId);if(n)pick(n)}if(m.type==='uds-canvas-select-key'){const n=candidates().find(x=>key(x)===m.key);if(n)pick(n)}if(m.type==='uds-canvas-select-block'){const block=[...document.querySelectorAll('[data-uds-block]')].find(x=>x.dataset.udsBlock===m.blockId);const n=block?.querySelector('h2,h3,p');if(n)pick(n)}if(m.type==='uds-canvas-select-duplicate'){const original=candidates().find(n=>key(n)===m.key);const duplicate=original?.nextElementSibling;if(duplicate&&candidates().includes(duplicate))pick(duplicate)}if(m.type==='uds-canvas-preview'){const n=candidates().find(x=>key(x)===m.key);if(!n)return;const p=m.patch||{};if(typeof p.text==='string')n.textContent=p.text;if(typeof p.alt==='string'&&n.tagName==='IMG')n.alt=p.alt.slice(0,240);if(typeof p.href==='string'&&n.matches('a')&&!p.href.startsWith('//')&&/^(?:https?:\\/\\/|mailto:|tel:|\\/(?!\\/)|#)/i.test(p.href))n.setAttribute('href',p.href.slice(0,2048));if(/^#[\\da-f]{6}$/i.test(p.color||''))n.style.color=p.color;if(/^#[\da-f]{6}$/i.test(p.background||''))n.style.backgroundColor=p.background;if(Number.isFinite(+p.translateX)||Number.isFinite(+p.translateY)){const x=Math.max(-1600,Math.min(1600,Number(p.translateX)||0)),y=Math.max(-1200,Math.min(1200,Number(p.translateY)||0));n.style.translate=n.closest('[data-uds-free-canvas]')?'calc(-50% + '+x+'px) calc(-50% + '+y+'px)':x+'px '+y+'px';}if(Number.isFinite(+p.rotation))n.style.rotate=Math.max(-45,Math.min(45,+p.rotation))+'deg';if(Number.isFinite(+p.fontSize))n.style.fontSize=Math.max(12,Math.min(96,+p.fontSize))+'px';if(Number.isFinite(+p.opacity))n.style.opacity=Math.max(0,Math.min(1,+p.opacity));if(p.width===null)n.style.width='';else if(Number.isFinite(+p.width))n.style.width=Math.max(0,Math.min(1600,+p.width))+'px';if(p.height===null)n.style.height='';else if(Number.isFinite(+p.height))n.style.height=Math.max(0,Math.min(1200,+p.height))+'px';if(['left','center','right'].includes(p.align))n.style.textAlign=p.align;if(p.tag&&['h2','h3','p','a','button'].includes(p.tag)){const r=document.createElement(p.tag);for(const a of [...n.attributes])r.setAttribute(a.name,a.value);r.textContent=n.textContent;n.replaceWith(r);pick(r)}}});refresh()})();<\/script>`;
 const CANVAS_DRAG_SCRIPT = `<script>(()=>{const selector='h1,h2,h3,h4,p,blockquote,a,button,li,img,figure,svg,span,strong,em,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element';const nodes=()=>[...document.querySelectorAll(selector)].filter(n=>(n.textContent.trim()||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&(!n.children.length||/^H[1-4]$/.test(n.tagName)||n.matches('img,figure,svg,dialog,[role=dialog],section.ds-section,.hero,.ds-card,.item,.spotlight,.tool,.bento__cell,nav,.site-head,footer,.foot,address,form,.form,.uds-added-element'))&&!n.closest('.uds-arrange-tag'));const path=n=>{const parts=[];while(n&&n!==document.body){const p=n.parentElement;if(!p)return'';parts.unshift([...p.children].filter(c=>!c.classList.contains('uds-arrange-tag')).indexOf(n));n=p}return parts.join('.')};const send=(payload,keys)=>parent.postMessage(typeof payload==='string'?{type:'uds-arrange',kind:'canvas-order',group:payload,keys}:payload,'*');let drag=null;const candidate=e=>e.target.closest?.('.uds-added-element,.item,.ds-card,.spotlight,.tool,.bento__cell,[data-uds-element]')||e.target.closest?.(selector);const atPoint=(x,y,ignore=drag?.node)=>document.elementsFromPoint(x,y).map(el=>el.closest?.(selector)).find(n=>n&&n!==ignore&&nodes().includes(n));const translation=n=>{const value=getComputedStyle(n).translate;if(!value||value==='none')return[0,0];const parts=value.split(/\\s+/).map(parseFloat);return[Number.isFinite(parts[0])?parts[0]:0,Number.isFinite(parts[1])?parts[1]:0]};const dragDelta=(state,e)=>{let x=e.clientX-state.x,y=e.clientY-state.y;if(state.bounds){const minX=state.bounds.left-state.rect.left,maxX=state.bounds.right-state.rect.right,minY=state.bounds.top-state.rect.top,maxY=state.bounds.bottom-state.rect.bottom;x=maxX>=minX?Math.max(minX,Math.min(maxX,x)):0;y=maxY>=minY?Math.max(minY,Math.min(maxY,y)):0}return[x,y]};document.addEventListener('dragstart',e=>{if(drag){e.preventDefault();e.stopImmediatePropagation()}},true);nodes().forEach(n=>n.classList.add('uds-canvas-draggable'));document.addEventListener('pointerdown',e=>{const n=candidate(e);if(!n||!nodes().includes(n)||e.target.closest('.uds-arrange-tag,[contenteditable=true]')||n.matches('dialog,[role=dialog]'))return;const [baseX,baseY]=translation(n),rect=n.getBoundingClientRect(),container=n.parentElement?.closest('section,.hero,.site-head,nav,footer,.foot,main'),bounds=container?.getBoundingClientRect(),freeCanvas=n.closest('[data-uds-free-canvas]');drag={node:n,id:e.pointerId,x:e.clientX,y:e.clientY,baseX,baseY,rect,bounds:null,freeCanvas,freeSection:freeCanvas?.closest('section'),active:false};},{capture:true,passive:true});document.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;if(!drag.active&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<7)return;const n=drag.node;if(!drag.active){drag.active=true;n.classList.add('uds-canvas-dragging')}e.preventDefault();const [dx,dy]=dragDelta(drag,e);if(drag.freeCanvas&&drag.freeSection){const r=drag.freeSection.getBoundingClientRect();n.style.left=Math.max(0,Math.min(100,(e.clientX-r.left)/Math.max(1,r.width)*100))+'%';n.style.top=Math.max(0,Math.min(100,(e.clientY-r.top)/Math.max(1,r.height)*100))+'%'}else n.style.translate=Math.max(-1600,Math.min(1600,drag.baseX+dx))+'px '+Math.max(-1200,Math.min(1200,drag.baseY+dy))+'px';const target=atPoint(e.clientX,e.clientY);document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));if(target&&target!==n&&nodes().includes(target)&&target.parentElement===n.parentElement)target.classList.add('uds-canvas-drop');},{capture:true,passive:false});document.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;const state=drag;drag=null;if(!state.active)return;document.documentElement.dataset.udsCanvasDragged='1';setTimeout(()=>delete document.documentElement.dataset.udsCanvasDragged,500);const n=state.node;let target=atPoint(e.clientX,e.clientY,state.node);if(n.matches('li.item')){const sibling=nodes().find(x=>x!==n&&x.matches('li.item')&&x.parentElement===n.parentElement&&(()=>{const r=x.getBoundingClientRect();return e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom})());if(sibling)target=sibling}n.classList.remove('uds-canvas-dragging');document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));const fromSection=n.closest('section'),sourceHeader=n.closest('.site-head,nav'),toSection=target?.closest('section');if(target&&(!fromSection?Boolean(sourceHeader):true)&&toSection&&fromSection!==toSection&&!n.matches('section,.hero')){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection?(fromSection.classList.contains('hero')?'hero':fromSection.id):'header',sectionId:toSection.classList.contains('hero')?'hero':toSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(target&&toSection&&fromSection===toSection&&!n.matches('section,.hero')&&target.parentElement!==n.parentElement){const rect=toSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(state.freeCanvas&&state.freeSection&&toSection===fromSection){const rect=state.freeSection.getBoundingClientRect();send({type:'uds-canvas-move',key:n.dataset.udsEditKey,elementId:n.closest('[data-uds-element]')?.dataset.udsElement||'',fromSectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,sectionId:fromSection.classList.contains('hero')?'hero':fromSection.id,x:Math.max(0,Math.min(100,(e.clientX-rect.left)/Math.max(1,rect.width)*100)),y:Math.max(0,Math.min(100,(e.clientY-rect.top)/Math.max(1,rect.height)*100))});return}if(!target||target===n||!nodes().includes(target)||target.parentElement!==n.parentElement){send({type:'uds-canvas-position',key:n.dataset.udsEditKey,translateX:Math.max(-1600,Math.min(1600,state.baseX+dragDelta(state,e)[0])),translateY:Math.max(-1200,Math.min(1200,state.baseY+dragDelta(state,e)[1]))});return}if(n.matches('li.item')&&target?.matches('li.item')&&target.parentElement===n.parentElement){const from=Number(n.dataset.udsItemIndex),to=Number(target.dataset.udsItemIndex);if(Number.isInteger(from)&&Number.isInteger(to))send({type:'uds-arrange',kind:'item',from,to});return}const siblings=nodes().filter(x=>x.parentElement===n.parentElement),rect=target.getBoundingClientRect(),layout=getComputedStyle(n.parentElement),horizontal=(layout.display==='flex'&&layout.flexDirection.startsWith('row'))||(layout.display==='grid'&&layout.gridTemplateColumns.split(' ').length>1),after=horizontal?e.clientX>rect.left+rect.width/2:e.clientY>rect.top+rect.height/2;const ordered=siblings.filter(x=>x!==n);ordered.splice(ordered.indexOf(target)+(after?1:0),0,n);const keys=ordered.map(x=>x.dataset.udsEditKey);if(keys.length<2||keys.some(k=>!/^u:[\\w-]+:\\d+$/.test(k||'')))return;send('path:'+path(n.parentElement),keys);},{capture:true,passive:true});document.addEventListener('pointercancel',()=>{if(drag?.active){drag.node.classList.remove('uds-canvas-dragging');drag.node.style.translate=drag.baseX||drag.baseY?drag.baseX+'px '+drag.baseY+'px':''}drag=null;document.querySelectorAll('.uds-canvas-drop').forEach(x=>x.classList.remove('uds-canvas-drop'));});const style=document.createElement('style');style.textContent='.uds-canvas-draggable{cursor:grab!important;touch-action:none}.uds-canvas-dragging{opacity:.45!important;cursor:grabbing!important}.uds-canvas-drop{outline:3px solid #3b6cff!important;outline-offset:3px!important}';document.head.append(style)})();<\/script>`;
 const CANVAS_RESIZE_SCRIPT = `<script>(()=>{const handle=document.createElement('button');handle.type='button';handle.className='uds-arrange-tag uds-resize-handle';handle.setAttribute('aria-label','Изменить размер элемента');handle.title='Тяните, чтобы изменить размер · Shift — свободные пропорции';handle.style.cssText='position:fixed;z-index:2147483647;width:18px;height:18px;padding:0;border:2px solid #fff;border-radius:5px;background:#3478f6;box-shadow:0 1px 8px #0008;touch-action:none;cursor:nwse-resize;display:none';document.body.append(handle);let selected=null,drag=null,placeFrame=0;const schedulePlace=()=>{if(placeFrame)return;placeFrame=requestAnimationFrame(()=>{placeFrame=0;place()})};const fitPhoto=n=>{if(!n)return;const img=n.matches('img')?n:n.querySelector('img');if(!img)return;if(img===n){img.style.objectFit='cover';img.style.maxWidth='none';const frame=n.closest('figure,.uds-added-element--image,[class*="media"],[class*="image"],[class*="visual"],[class*="photo"]');if(frame&&frame!==n){frame.style.width=n.style.width;frame.style.height=n.style.height;frame.style.boxSizing='border-box';frame.style.overflow='hidden';frame.style.background='transparent';if(frame.querySelector(':scope > figcaption'))n.style.height='calc(100% - 2.5em)'}return}if(!n.matches('figure,.uds-added-element--image')&&n.children.length>1)return;n.style.overflow='hidden';n.style.background='transparent';img.style.width='100%';img.style.height=n.querySelector(':scope > figcaption')?'calc(100% - 2.5em)':'100%';img.style.maxWidth='none';img.style.maxHeight='none';img.style.objectFit='cover';img.style.display='block'};const place=()=>{if(!selected){handle.style.display='none';return}if(drag)return;const r=selected.getBoundingClientRect();handle.style.left=Math.max(0,Math.min(innerWidth-18,r.right-9))+'px';handle.style.top=Math.max(0,Math.min(innerHeight-18,r.bottom-9))+'px';handle.style.display='block'};const observer=new MutationObserver(()=>{const next=document.querySelector('.uds-edit-selected');if(next!==selected){selected=next;place()}});observer.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});addEventListener('scroll',schedulePlace,true);addEventListener('resize',schedulePlace);handle.addEventListener('pointerdown',e=>{if(!selected||e.button!==0)return;e.preventDefault();e.stopPropagation();const r=selected.getBoundingClientRect(),photo=selected.matches('img,figure')||Boolean(selected.querySelector('img'));drag={id:e.pointerId,node:selected,x:e.clientX,y:e.clientY,width:r.width,height:r.height,ratio:r.width/Math.max(1,r.height),photo,display:getComputedStyle(selected).display,scrollX,scrollY};handle.setPointerCapture(e.pointerId);parent.postMessage({type:'uds-canvas-resize-start'},'*')});handle.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;e.preventDefault();let width=Math.max(40,Math.min(1600,drag.width+e.clientX-drag.x)),height=Math.max(24,Math.min(1200,drag.height+e.clientY-drag.y));if(drag.photo&&!e.shiftKey)height=Math.max(24,Math.min(1200,width/drag.ratio));const n=drag.node;if(drag.display==='inline')n.style.display='inline-block';n.style.boxSizing='border-box';n.style.width=width+'px';n.style.height=height+'px';fitPhoto(n);const r=n.getBoundingClientRect();handle.style.left=Math.max(0,Math.min(innerWidth-18,r.right-9))+'px';handle.style.top=Math.max(0,Math.min(innerHeight-18,r.bottom-9))+'px'});const finish=e=>{if(!drag||(e.pointerId!=null&&e.pointerId!==drag.id))return;const state=drag;drag=null;parent.postMessage({type:'uds-canvas-resize-end'},'*');const r=state.node.getBoundingClientRect();parent.postMessage({type:'uds-canvas-resize',key:state.node.dataset.udsEditKey,width:Math.round(r.width),height:Math.round(r.height),boxSizing:'border-box',scrollX:state.scrollX,scrollY:state.scrollY},'*');place()};handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);handle.addEventListener('lostpointercapture',finish);addEventListener('pointerup',finish,true);addEventListener('pointercancel',finish,true);})();<\/script>`;
 const PREVIEW_SCROLL_SCRIPT = `<script>(()=>{let timer=0;addEventListener('scroll',()=>{clearTimeout(timer);timer=setTimeout(()=>parent.postMessage({type:'uds-canvas-scroll',x:scrollX,y:scrollY},'*'),40)},{passive:true});const afterLayout=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));Promise.resolve(document.fonts?.ready).then(afterLayout).then(()=>parent.postMessage({type:'uds-canvas-preview-ready'},'*'));addEventListener('message',e=>{const m=e.data;if(m?.type!=='uds-canvas-restore-scroll'||!Number.isFinite(m.x)||!Number.isFinite(m.y))return;const x=Math.max(0,m.x),y=Math.max(0,m.y);Promise.resolve(document.fonts?.ready).then(afterLayout).then(()=>{const style=document.documentElement.style,previous=style.getPropertyValue('scroll-behavior'),priority=style.getPropertyPriority('scroll-behavior'),anchor=style.getPropertyValue('overflow-anchor'),anchorPriority=style.getPropertyPriority('overflow-anchor');style.setProperty('scroll-behavior','auto','important');style.setProperty('overflow-anchor','none','important');document.documentElement.getBoundingClientRect();scrollTo({left:x,top:y,behavior:'instant'});requestAnimationFrame(()=>requestAnimationFrame(()=>{if(previous)style.setProperty('scroll-behavior',previous,priority);else style.removeProperty('scroll-behavior');if(anchor)style.setProperty('overflow-anchor',anchor,anchorPriority);else style.removeProperty('overflow-anchor');parent.postMessage({type:'uds-canvas-scroll-restored',x:scrollX,y:scrollY,targetX:x,targetY:y},'*')}))})})})();<\/script>`;
@@ -2305,4 +4380,3 @@ document.querySelector('.top-more')?.addEventListener('toggle', e => {
   if (r.right > innerWidth - 8) { menu.style.left = 'auto'; menu.style.right = '0'; }
   else if (r.left < 8) { menu.style.left = '0'; menu.style.right = 'auto'; }
 });
-
