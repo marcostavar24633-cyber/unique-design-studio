@@ -834,6 +834,7 @@ function enhanceVisualOptionControls() {
     const selectedOption = () => [...select.options].find(option => option.value === select.value)?.textContent.trim() || 'Авто';
     const group = document.createElement('details');
     group.className = 'visual-option-preview';
+    group.dataset.special = special;
     group.open = false;
     const summary = document.createElement('summary');
     summary.className = 'visual-option-preview__summary';
@@ -844,17 +845,6 @@ function enhanceVisualOptionControls() {
     list.className = 'visual-option-preview__list';
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-label', 'Варианты оформления: наведите для предпросмотра, нажмите для выбора');
-    list.addEventListener('wheel', event => {
-      const panel = list.closest('.panel');
-      if (!panel || !event.deltaY) return;
-      const maxScroll = Math.max(0, list.scrollHeight - list.clientHeight);
-      const atTop = list.scrollTop <= 0;
-      const atBottom = list.scrollTop >= maxScroll - 1;
-      if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
-        panel.scrollTop += event.deltaY;
-        event.preventDefault();
-      }
-    }, { passive: false });
     for (const option of select.options) {
       if (option.disabled) continue;
       const choice = document.createElement('button');

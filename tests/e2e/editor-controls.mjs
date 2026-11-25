@@ -398,12 +398,12 @@ try {
   const previewControl = await previewSelect.evaluate(select => ({
     special: select.dataset.special,
     current: select.value,
-    values: [...select.nextElementSibling.querySelectorAll('[data-preview-value]')].map(option => option.dataset.previewValue).filter(value => value && value !== select.value)
+    values: [...select.closest('.field')?.nextElementSibling?.querySelectorAll('[data-preview-value]') || []].map(option => option.dataset.previewValue).filter(value => value && value !== select.value)
   }));
   check(previewControl.values.length >= 2, 'для живого предпросмотра доступны менее двух вариантов');
   if (previewControl.values.length >= 2) {
-    await previewSelect.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
-    const optionGroup = previewSelect.locator('xpath=following-sibling::*[1]');
+    await previewSelect.evaluate(select => { const section = select.closest('details.group'); if (section) section.open = true; const group = select.closest('.field')?.nextElementSibling; if (group?.matches('details.visual-option-preview')) group.open = true; });
+    const optionGroup = page.locator(`#form details.visual-option-preview[data-special="${previewControl.special}"]`).first();
     const firstChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[0]}"]`);
     const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
     await firstChoice.scrollIntoViewIfNeeded();
@@ -469,8 +469,8 @@ try {
     await identityRender;
   }
   const geometrySelect = page.locator('#form select[data-special="visualIdentityShape"][data-preview-enhanced="true"]');
-  await geometrySelect.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
-  const geometryGroup = geometrySelect.locator('xpath=following-sibling::*[1]');
+  await geometrySelect.evaluate(select => { const section = select.closest('details.group'); if (section) section.open = true; const group = select.closest('.field')?.nextElementSibling; if (group?.matches('details.visual-option-preview')) group.open = true; });
+  const geometryGroup = page.locator('#form details.visual-option-preview[data-special="visualIdentityShape"]');
   const geometryChoice = geometryGroup.locator('[data-preview-value]').filter({ hasNotText: 'Автоматически' }).first();
   await geometryChoice.scrollIntoViewIfNeeded();
   const geometryRender = canvasRender();
@@ -483,7 +483,6 @@ try {
   if (panelBox) {
     const optionList = geometryGroup.locator('[role="listbox"]');
     await optionList.scrollIntoViewIfNeeded();
-    await optionList.evaluate(node => { node.scrollTop = node.scrollHeight; });
     const optionBox = await optionList.boundingBox();
     check(Boolean(optionBox), 'список вариантов геометрии не имеет видимой области прокрутки');
     const point = { x: optionBox.x + optionBox.width / 2, y: optionBox.y + optionBox.height / 2 };
@@ -491,14 +490,9 @@ try {
     await page.mouse.move(point.x, point.y);
     await page.mouse.wheel(0, 360);
     await page.waitForTimeout(100);
-    const scrollState = await editorPanel.evaluate(panel => {
-      const list = panel.querySelector('select[data-special="visualIdentityShape"]')
-        ?.parentElement?.querySelector('[role="listbox"]');
-      return { panelTop: panel.scrollTop, panelHeight: panel.clientHeight, panelScrollHeight: panel.scrollHeight,
-        listTop: list?.scrollTop ?? null, listHeight: list?.clientHeight ?? null, listScrollHeight: list?.scrollHeight ?? null };
-    });
+    const scrollState = await editorPanel.evaluate(panel => ({ panelTop: panel.scrollTop, panelHeight: panel.clientHeight, panelScrollHeight: panel.scrollHeight }));
     check(scrollState.panelTop > panelScrollBefore,
-      `колесо над видимым списком геометрии не прокрутило панель: ${JSON.stringify({ panelScrollBefore, ...scrollState })}`);
+      `колесо над вариантами геометрии не прокрутило панель: ${JSON.stringify({ panelScrollBefore, ...scrollState })}`);
   }
   const siteScrollBefore = await preview.locator('html').evaluate(() => {
     const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
