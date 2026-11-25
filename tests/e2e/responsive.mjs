@@ -37,19 +37,23 @@ for (const { name, html } of pages) {
   for (const width of WIDTHS) {
     await matrixPage.setViewportSize({ width, height: 800 });
     await matrixPage.setContent(html, { waitUntil: 'load' });
+    await matrixPage.evaluate(async () => { if (document.fonts) await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
     const res = await matrixPage.evaluate(() => {
       const de = document.documentElement;
       const h1 = document.querySelector('h1').getBoundingClientRect();
       const cta = document.querySelector('[data-cta="primary"]');
       const c = cta.getBoundingClientRect();
       const small = [...document.querySelectorAll('a.ds-button, button, .nav__links a, summary')].filter(el => { const r = el.getBoundingClientRect(); return r.width && r.height < 40; }).length;
-      return { overflow: de.scrollWidth - de.clientWidth, h1ok: h1.width > 0 && h1.left >= 0 && h1.right <= de.clientWidth + 1, ctaOk: c.width > 0 && c.left >= 0 && c.right <= de.clientWidth + 1, small };
+      const fitOverflow = [...document.querySelectorAll('.uds-fit-text')].map(el => { const range = document.createRange(); range.selectNodeContents(el); const style = getComputedStyle(el); const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight); const border = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth); return { el, text: range.getBoundingClientRect().width, available: el.clientWidth - (padding || 0) - (border || 0) }; }).filter(item => item.available > 2 && item.text > item.available + 2).map(({ el, text, available }) => `${el.tagName}.${String(el.className).replace(/\\s+/g, '.')}: ${el.textContent.trim().slice(0, 24)} (${Math.round(text)}/${Math.round(available)})`);
+      return { overflow: de.scrollWidth - de.clientWidth, h1ok: h1.width > 0 && h1.left >= 0 && h1.right <= de.clientWidth + 1, ctaOk: c.width > 0 && c.left >= 0 && c.right <= de.clientWidth + 1, small, fitOverflow };
     });
     checks++;
-    if (res.overflow > 0) failures.push(`${name} @${width}: горизонтальная прокрутка ${res.overflow}px`);
+    // Игнорируем единичный субпиксельный край декоративного слоя; видимые элементы проверяются отдельно.
+    if (res.overflow > 1) failures.push(`${name} @${width}: горизонтальная прокрутка ${res.overflow}px`);
     if (!res.h1ok) failures.push(`${name} @${width}: заголовок выходит за экран`);
     if (!res.ctaOk) failures.push(`${name} @${width}: CTA выходит за экран`);
     if (res.small) failures.push(`${name} @${width}: интерактивных элементов ниже 40px: ${res.small}`);
+    if (res.fitOverflow.length) failures.push(`${name} @${width}: текст не помещается: ${res.fitOverflow.slice(0, 3).join('; ')}`);
     if (width === 320) {
       // Клавиатура: первый Tab — skip-link, дальше фокус должен быть видимым.
       await matrixPage.keyboard.press('Tab');

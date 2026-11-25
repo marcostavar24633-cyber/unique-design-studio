@@ -20,6 +20,7 @@ import { cardEffectCss, effectsScript, heroEffectCss, heroEffectMarkup, heroMarq
 import { EXTRA_LAYOUT_CSS, LAYOUT_ORDER_FAMILY, buttonAnimationCss, buttonAnimationScript, textAnimationCss, typeStyleCss } from './typography-layout.js';
 import { createVisualIdentity } from '../visual-identity.js';
 import { contrast, ensureContrast, readableOn, mix } from './color.js';
+import { TEXT_FIT_CSS, textFitScript } from './text-fit.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -433,7 +434,7 @@ const SECTION = {
 
 // ---------- Скрипт страницы: только нужные фрагменты ----------
 function script(c, scene) {
-  const parts = [];
+  const parts = [textFitScript()];
   const themeKey = JSON.stringify(`uds:theme:${c.p.id || 'site'}`);
   parts.push(`(function(){var root=document.documentElement,key=${themeKey},button=document.querySelector('[data-theme-toggle]'),saved='';try{saved=localStorage.getItem(key)||''}catch(e){}if(saved==='alternate')root.dataset.udsTheme='alternate';if(button){button.setAttribute('aria-pressed',String(root.dataset.udsTheme==='alternate'));button.addEventListener('click',function(){var alternate=root.dataset.udsTheme!=='alternate';if(alternate)root.dataset.udsTheme='alternate';else delete root.dataset.udsTheme;button.setAttribute('aria-pressed',String(alternate));try{localStorage.setItem(key,alternate?'alternate':'default')}catch(e){}})}})()`);
   const reduce = `matchMedia('(prefers-reduced-motion: reduce)').matches`;
@@ -550,6 +551,7 @@ export function renderCss(concept, scene = null, identity = null) {
     vs.effects ? cardEffectCss(vs.effects.card) + heroEffectCss(vs.effects, vs.palette) : '',
     vs.typography2 ? typeStyleCss(vs.typography2.typeStyle) + textAnimationCss(vs.typography2.textAnimation) + buttonAnimationCss(compatibleButtonAnimation(vs)) : '',
     '.ds-button{border-radius:999px!important}',
+    TEXT_FIT_CSS,
   ].join('\n').replace(/\n\s*/g, '');
 }
 

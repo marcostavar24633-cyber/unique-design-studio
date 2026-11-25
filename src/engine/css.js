@@ -76,7 +76,7 @@ const NAV_BASE = `
 .nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px 28px;padding:12px var(--ds-gutter)}
 .nav__brand{font-family:var(--ds-font-display);font-weight:var(--u-dw);font-size:1.3rem;letter-spacing:var(--u-dt);text-transform:var(--u-dc);text-decoration:none;display:inline-flex;align-items:center;min-height:44px;min-width:0;overflow-wrap:anywhere}
 .nav__links{display:flex;gap:4px 22px;margin:0;padding:0;list-style:none;max-width:100%;overflow-x:auto;scrollbar-width:none}
-.nav__links a{display:inline-flex;align-items:center;min-height:44px;font-size:.95rem;white-space:nowrap;text-decoration:none}
+.nav__links a{display:inline-flex;flex:0 0 auto;align-items:center;min-height:44px;font-size:.95rem;white-space:nowrap;text-decoration:none}
 .nav__links a:hover{text-decoration:underline;text-underline-offset:6px}
 .nav .ds-button{width:auto;min-height:44px;padding:8px 18px}
 @media(max-width:760px){.nav__links{order:3;width:100%}}
