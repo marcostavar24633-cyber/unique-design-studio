@@ -834,6 +834,7 @@ function enhanceVisualOptionControls() {
     const selectedOption = () => [...select.options].find(option => option.value === select.value)?.textContent.trim() || 'Авто';
     const group = document.createElement('details');
     group.className = 'visual-option-preview';
+    group.open = false;
     const summary = document.createElement('summary');
     summary.className = 'visual-option-preview__summary';
     summary.textContent = `Варианты оформления · ${selectedOption()}`;

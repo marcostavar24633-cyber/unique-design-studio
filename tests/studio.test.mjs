@@ -89,7 +89,10 @@ test('код веб-редактора синтаксически коррект
 test('визуальные варианты доступны прямо в настройках и переключаются отдельным плавным слоем', () => {
   const source = readFileSync(new URL('../studio/studio.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../studio/studio.css', import.meta.url), 'utf8');
-  assert.match(source, /list\.hidden = false/);
+  assert.match(source, /const group = document\.createElement\('details'\)/);
+  assert.match(source, /group\.className = 'visual-option-preview'/);
+  assert.match(source, /select\.hidden = true/);
+  assert.match(source, /group\.open = false/);
   assert.doesNotMatch(source, /Предпросмотр вариантов/);
   assert.doesNotMatch(source, /type === 'effectPreview'/);
   assert.doesNotMatch(css, /effect-preview-(?:grid|sample)/);
