@@ -655,4 +655,3 @@ test('публичная студия не загружает и не показ
   assert.doesNotMatch(html, /id="examples"|data-filter="examples"|qs-examples|dash-example-chips/);
   assert.doesNotMatch(js, /exampleProjects|data-open-example|\.\.\/examples\//);
 });
-
