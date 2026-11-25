@@ -148,6 +148,13 @@ let state = { raw: { ...EMPTY }, library: [] };
 let result = null;
 let pendingCanvasFrameScroll = null;
 let canvasFrameScroll = { x: 0, y: 0 };
+function readCanvasFrameScroll() {
+  try {
+    const view = $('#frame')?.contentWindow;
+    if (view) return { x: Math.max(0, Number(view.scrollX) || 0), y: Math.max(0, Number(view.scrollY) || 0) };
+  } catch {}
+  return { ...canvasFrameScroll };
+}
 let projectHistoryRenderVersion = 0;
 let aiDesignReview = null;
 let aiDesignReviewLoading = false;
@@ -778,7 +785,7 @@ function visualPreviewCandidate(select, value) {
 }
 
 function showFramePreview(html) {
-  pendingCanvasFrameScroll = { ...canvasFrameScroll };
+  pendingCanvasFrameScroll = readCanvasFrameScroll();
   $('#frame').srcdoc = previewHtml(html);
 }
 
@@ -925,7 +932,7 @@ function run() {
   const previousResult = result;
   const previousRaw = lastRenderedRaw;
   pendingCanvasFrameScroll = previousResult?.project.id === state.raw.id
-    ? { ...canvasFrameScroll }
+    ? readCanvasFrameScroll()
     : null;
   const nextResult = generate(state.raw, { registry: registry() });
   if (previousResult && previousRaw && previousResult.project.id === nextResult.project.id && previousResult.html !== nextResult.html) {
