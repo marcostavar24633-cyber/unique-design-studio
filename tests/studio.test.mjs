@@ -94,9 +94,9 @@ test('визуальные варианты доступны прямо в на�
   assert.match(source, /frame\.className = 'visual-option-preview-frame'/);
   assert.match(source, /frame\.srcdoc = previewHtml\(html\)/);
   assert.match(source, /uds-canvas-restore-scroll/);
-  assert.match(source, /if \\(key === visualPreviewKey\\) return/);
-  assert.match(source, /sequence !== visualPreviewSequence \\|\\| !frame\\.isConnected/);
-  assert.match(source, /frame\\.remove\\(\\);\\s*return;/);
+  assert.match(source, /if \(key === visualPreviewKey\) return/);
+  assert.match(source, /sequence !== visualPreviewSequence \|\| !frame\.isConnected/);
+  assert.match(source, /frame\.remove\(\);\s*return/);
   assert.match(css, /\.visual-option-preview-frame\.is-visible\{opacity:1\}/);
   assert.match(css, /prefers-reduced-motion:reduce\)\{\.visual-option-preview-frame\{transition:none\}\}/);
 });
