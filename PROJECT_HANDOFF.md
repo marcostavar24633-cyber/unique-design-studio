@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T10:46:04.238Z
+Время обновления: 2026-11-25T11:28:38.099Z
 Ветка: main
-Последний commit: dfce12e27b0969621a9833b609762d6d6f36ead7
-Дата коммита: 2026-11-25T14:45:49+04:00
-Сообщение: ci: test staging diagnostics through temporary public route (#263)
+Последний commit: 3eee8839e7f72748327f80e1e9d967ad66fa6664
+Дата коммита: 2026-11-25T15:28:24+04:00
+Сообщение: test: verify staging payload limit without AI inference (#264)
 
 Последние коммиты:
+- 3eee883 · 2026-11-25 · test: verify staging payload limit without AI inference (#264)
+- 25dd80f · 2026-11-25 · docs: refresh project handoff
 - dfce12e · 2026-11-25 · ci: test staging diagnostics through temporary public route (#263)
 - 0f0cb8c · 2026-11-25 · docs: refresh project handoff
 - a2b15e9 · 2026-11-25 · fix: keep statement cards readable on narrow screens (#262)
 - 7b44b70 · 2026-11-25 · docs: refresh project handoff
 - d170e77 · 2026-11-25 · fix: stabilize responsive heading fit after fonts load (#261)
 - ea3827c · 2026-11-25 · docs: refresh project handoff
-- d74732a · 2026-11-25 · test: use stable studio URL for staging browser check
-- 94893e1 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
