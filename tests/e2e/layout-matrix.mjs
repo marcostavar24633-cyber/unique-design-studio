@@ -87,6 +87,7 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
     for (const width of widths) {
       await page.setViewportSize({ width, height: 820 });
       await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
       const found = await page.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);
       for (const f of found) failures.push(`раскладка ${name} @${width}: ${f.kind} — ${f.el} «${f.text}» (${f.detail})`);
@@ -99,6 +100,7 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
     for (const width of widths) {
       await page.setViewportSize({ width, height: 820 });
       await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
       const check = await page.evaluate(() => ({ overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
       if (check.overflow > 1) failures.push(`раскладка ${name} @${width}: горизонтальный выход за экран ${check.overflow}px`);
@@ -115,6 +117,7 @@ export async function runLayoutMatrix(browser, failures, widths = [390, 768, 128
   await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
   for (const { name, html } of layoutPages()) {
     await motionPage.setContent(html, { waitUntil: 'load' });
+    await motionPage.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await motionPage.evaluate(() => document.querySelectorAll('[data-reveal]').forEach(e => e.classList.add('is-in')));
     await motionPage.waitForTimeout(1600); // появление первого экрана и блоков завершилось
     const found = await motionPage.evaluate(`(${LAYOUT_QA_SOURCE})({ limit: 12 })`);

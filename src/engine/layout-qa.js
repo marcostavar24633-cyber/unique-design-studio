@@ -90,7 +90,10 @@ export function layoutQA(opts = {}) {
 
     // Перекрыт: прокручиваем к элементу и смотрим, что сверху в нескольких точках.
     if (!inScroller) {
-      el.scrollIntoView({ block: 'center', inline: 'nearest' });
+      // The generated pages intentionally enable smooth scrolling. The audit samples the
+      // element immediately after scrolling, so force an instant move to avoid reading
+      // stale geometry while the browser is still animating the scroll.
+      el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
       const b = el.getBoundingClientRect();
       const pts = [[b.left + b.width / 2, b.top + b.height / 2], [b.left + Math.min(8, b.width / 4), b.top + b.height / 2], [b.right - Math.min(8, b.width / 4), b.top + b.height / 2]];
       for (const [x, y] of pts) {
@@ -113,7 +116,7 @@ export function layoutQA(opts = {}) {
       if (k < need - 0.05) add('contrast', el, `${k.toFixed(2)}:1, нужно ${need}:1`);
     }
   }
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'instant' });
   return out;
 }
 

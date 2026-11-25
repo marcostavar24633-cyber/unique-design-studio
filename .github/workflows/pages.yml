@@ -1,8 +1,9 @@
 name: Deploy studio to GitHub Pages
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-  workflow_dispatch:
 permissions:
   contents: read
   pages: write
@@ -12,11 +13,14 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       artifact_name: ${{ steps.artifact-name.outputs.value }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
