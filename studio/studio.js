@@ -814,6 +814,17 @@ function enhanceVisualOptionControls() {
     list.hidden = false;
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-label', 'Варианты оформления: наведите для предпросмотра, нажмите для выбора');
+    list.addEventListener('wheel', event => {
+      const panel = list.closest('.panel');
+      if (!panel || !event.deltaY) return;
+      const maxScroll = Math.max(0, list.scrollHeight - list.clientHeight);
+      const atTop = list.scrollTop <= 0;
+      const atBottom = list.scrollTop >= maxScroll - 1;
+      if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
+        panel.scrollTop += event.deltaY;
+        event.preventDefault();
+      }
+    }, { passive: false });
     for (const option of select.options) {
       if (option.disabled) continue;
       const choice = document.createElement('button');
