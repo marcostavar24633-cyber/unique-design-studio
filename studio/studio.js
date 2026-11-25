@@ -650,7 +650,6 @@ const GROUPS = [
     ['@textAnimation', 'Анимация текста', 'textAnimation', 'Сжатие трекинга, проявление из размытия, маркер и подчёркивание при прокрутке, подъём и наклон заголовков, печать надписи. Только без «уменьшить движение»'],
     ['@buttonAnimation', 'Анимация кнопок', 'buttonAnimation', 'Пульс, блик, волна от нажатия, толчок стрелки, обводка, подъём, упругое нажатие, дыхание свечения, желе, подчёркивание. Несовместимые со стилем кнопки сочетания пропускаются'],
     ['@effectMode', 'Режим выбора эффектов', 'effectMode', 'Авто — движок подбирает и обновляет эффекты; вручную — фиксированный выбор; смешанный — можно закрепить карточки или первый экран, остальное подбирается автоматически. Выбор запоминается при повторной генерации'],
-    ['@effectPreview', 'Предпросмотр эффектов', 'effectPreview', 'Миниатюра показывает текущий выбор; наведите курсор, чтобы увидеть реакцию интерактивных эффектов'],
     ['@cardEffect', 'Эффект карточек', 'cardEffect', '24 эффекта: прожектор, объёмный наклон, сатиновая кромка, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
     ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '22 эффекта: аврора, мягкий свет мастерской, проявление из мягкого фокуса, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
     ['@motionStyle', 'Интенсивность движения', 'motionStyle', 'Авто подбирает эффекты по нише и бренду. Люкс — медленные малозаметные появления и сдержанные эффекты. Кинематографичный — выразительное движение. Статичный — автоматические эффекты без постоянной анимации; ручной выбор сохраняется'],
@@ -974,20 +973,6 @@ function buildForm() {
       const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
       control = `<select id="${id}" data-special="effectMode"${d}>${[['auto','Авто'],['manual','Выбрать вручную'],['mixed','Смешанный']].map(([k,v]) => `<option value="${k}"${mode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     }
-    else if (type === 'effectPreview') {
-      const fx = result?.concept?.visualSystem?.effects || {};
-      const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
-      const card = state.raw.effectMode === 'auto' ? fx.card : state.raw.cardEffect || (state.raw.effectMode === 'manual' ? 'layered-shadow' : fx.card);
-      const requestedHero = mode === 'auto' ? fx.heroRequested || fx.hero : state.raw.heroEffect || fx.heroRequested || fx.hero;
-      const hero = mode === 'auto' ? fx.hero : state.raw.heroEffect || (mode === 'manual' ? 'none' : fx.hero);
-      const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw);
-      const photoRequired = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']);
-      const unavailable = (mode === 'auto' && fx.heroUnavailable) || (photoRequired.has(requestedHero) && photoCount < 1) || (requestedHero === 'slideshow' && galleryPhotoCount < 2);
-      const previewHero = unavailable ? 'none' : hero;
-      const cardLabel = card === 'none' ? 'Без эффекта' : CARD_EFFECTS[card] || 'Запустите генерацию для авто-подбора';
-      const heroLabel = unavailable ? (requestedHero === 'slideshow' ? 'Для слайд-шоу нужны 2 фото' : 'Для эффекта нужна фотография') : hero === 'none' ? 'Без эффекта' : HERO_EFFECTS[hero] || 'Запустите генерацию для авто-подбора';
-      control = `<div id="${id}" class="effect-preview-grid" role="group" aria-label="Предпросмотр текущих эффектов"><div class="effect-preview-unit"><div class="effect-preview-sample effect-preview-sample--card" data-card-effect="${esc(card || 'none')}"><span class="effect-preview-spark" aria-hidden="true"></span><b>Образец карточки</b><small>Материал · коллекция</small></div><span class="effect-preview-label">Карточки: ${esc(cardLabel)}</span></div><div class="effect-preview-unit"><div class="effect-preview-sample effect-preview-sample--hero" data-hero-effect="${esc(previewHero || 'none')}"><span class="effect-preview-orb" aria-hidden="true"></span><b>Главный экран</b><small>Свет · композиция</small></div><span class="effect-preview-label">Первый экран: ${esc(heroLabel)}</span></div></div>`;
-    }
     else if (type === 'cardEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); control = `<select id="${id}" data-special="cardEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре и классу'}</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`; }
     else if (type === 'heroEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw); const needsPhoto = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']); control = `<select id="${id}" data-special="heroEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре, классу и фото'}</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => { const unavailable = needsPhoto.has(k) ? photoCount < 1 : k === 'slideshow' ? galleryPhotoCount < 2 : false; return `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${esc(v)}${unavailable ? (k === 'slideshow' ? ' — нужны 2 фото в галерее' : ' — нужно фото') : ''}</option>`; }).join('')}</select>`; }
     else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}><option value=""${!state.raw.motionStyle ? ' selected' : ''}>Авто — по нише и бренду</option><option value="luxury"${state.raw.motionStyle === 'luxury' ? ' selected' : ''}>Люкс — медленно и сдержанно</option><option value="cinematic"${state.raw.motionStyle === 'cinematic' ? ' selected' : ''}>Кинематографичный — выразительный</option><option value="static"${state.raw.motionStyle === 'static' ? ' selected' : ''}>Статичный — минимум движения</option></select>`;
@@ -1008,7 +993,7 @@ function buildForm() {
       const value = path.startsWith('contacts.') ? (get(path) || p.contacts[path.slice('contacts.'.length)]) : get(path);
       control = `<input id="${id}" data-path="${path}" value="${esc(value)}"${d}>`;
     }
-    return `<div class="field">${type === 'effectPreview' ? `<span class="field-label">${label}</span>` : `<label for="${id}">${label}</label>`}${control}${small}</div>`;
+    return `<div class="field"><label for="${id}">${label}</label>${control}${small}</div>`;
   }).join('')}</div></details>`).join('');
   // Раскрытые группы и прокрутка сохраняются: пересборка после перестановки не должна сворачивать панель.
   const openGroups = new Set([...$('#form').querySelectorAll('details.group[open]>summary')].map(n => n.textContent));
