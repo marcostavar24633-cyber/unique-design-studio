@@ -479,17 +479,24 @@ try {
   const editorPanel = page.locator('.panel');
   const panelBox = await editorPanel.boundingBox();
   if (panelBox) {
-    await editorPanel.evaluate(node => { node.scrollTop = 0; });
     const optionList = geometryGroup.locator('[role="listbox"]');
+    await optionList.scrollIntoViewIfNeeded();
     await optionList.evaluate(node => { node.scrollTop = node.scrollHeight; });
     const optionBox = await optionList.boundingBox();
-    const point = optionBox
-      ? { x: optionBox.x + optionBox.width / 2, y: optionBox.y + optionBox.height / 2 }
-      : { x: panelBox.x + Math.min(100, panelBox.width / 2), y: panelBox.y + panelBox.height / 2 };
+    check(Boolean(optionBox), 'список вариантов геометрии не имеет видимой области прокрутки');
+    const point = { x: optionBox.x + optionBox.width / 2, y: optionBox.y + optionBox.height / 2 };
+    const panelScrollBefore = await editorPanel.evaluate(node => node.scrollTop);
     await page.mouse.move(point.x, point.y);
     await page.mouse.wheel(0, 360);
     await page.waitForTimeout(100);
-    check(await editorPanel.evaluate(node => node.scrollTop > 0), 'прокрутка панели настроек перестала работать после выбора геометрии');
+    const scrollState = await editorPanel.evaluate(panel => {
+      const list = panel.querySelector('select[data-special="visualIdentityShape"]')
+        ?.parentElement?.querySelector('[role="listbox"]');
+      return { panelTop: panel.scrollTop, panelHeight: panel.clientHeight, panelScrollHeight: panel.scrollHeight,
+        listTop: list?.scrollTop ?? null, listHeight: list?.clientHeight ?? null, listScrollHeight: list?.scrollHeight ?? null };
+    });
+    check(scrollState.panelTop > panelScrollBefore,
+      `колесо над видимым списком геометрии не прокрутило панель: ${JSON.stringify({ panelScrollBefore, ...scrollState })}`);
   }
   const siteScrollBefore = await preview.locator('html').evaluate(() => {
     const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
