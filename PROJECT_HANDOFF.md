@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T22:24:21.447Z
+Время обновления: 2026-11-25T23:32:51.848Z
 Ветка: main
-Последний commit: 0b9836493c36790de9fb1dac0adf0624805d5ff1
-Дата коммита: 2026-11-26T02:24:05+04:00
-Сообщение: feat: add practical sections and optional quiz (#276)
+Последний commit: 1501cdbf9ff419c03664162dc8a70f2c72799d7c
+Дата коммита: 2026-11-26T03:32:33+04:00
+Сообщение: feat: improve generated site contacts and motion controls
 
 Последние коммиты:
+- 1501cdb · 2026-11-26 · feat: improve generated site contacts and motion controls
+- fb2da61 · 2026-11-25 · docs: refresh project handoff
 - 0b98364 · 2026-11-26 · feat: add practical sections and optional quiz (#276)
 - 59fcbfb · 2026-11-25 · docs: refresh project handoff
 - 970daa2 · 2026-11-25 · Merge pull request #275 from marcostavar24633-cyber/fix/preview-selection-scroll-lock
 - 36eda71 · 2026-11-25 · fix: clip horizontal overflow in generated pages
 - e1331b5 · 2026-11-25 · fix: prevent responsive horizontal page overflow
 - 561ac2e · 2026-11-25 · fix: keep editor responsive and expand gallery motion
-- 1f269a0 · 2026-11-25 · docs: refresh project handoff
-- 9ee746c · 2026-11-25 · Merge pull request #274 from marcostavar24633-cyber/fix/hero-overlay-scroll-performance
 <!-- HANDOFF:AUTO:END -->
