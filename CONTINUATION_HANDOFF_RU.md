@@ -52,7 +52,7 @@
 - `npm run test:e2e:quick` — успешно: кнопка демо-заполнения, новые разделы и квиз проверены в браузере.
 - Полный `npm run test:e2e` перебирает архитектуры и множество комбинаций макета; он остановлен в этой сессии после подтверждения, что идёт тяжёлая матрица. Полный прогон остаётся CI-проверкой перед PR.
 - Chromium установлен в игнорируемую Git папку `node_modules/.cache/pw-browsers`.
-- Добавлены команды `npm run install:e2e-browser`, `npm run test:e2e:quick` и общий runner `scripts/run-e2e.mjs`, чтобы повторно использовать этот браузер и ускорить короткие итерации.
+- GitHub Actions кеширует браузер в `node_modules/.cache/pw-browsers` по ОС и lockfile. Добавлены команды `npm run install:e2e-browser`, `npm run test:e2e:quick` и общий runner `scripts/run-e2e.mjs`, чтобы повторно использовать Chromium и ускорить короткие итерации.
 
 ## Следующие действия
 

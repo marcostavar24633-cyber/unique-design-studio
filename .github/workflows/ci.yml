@@ -42,6 +42,10 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-save playwright
+      - uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/pw-browsers
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npm run install:e2e-browser
       - run: npm run test:e2e
 
