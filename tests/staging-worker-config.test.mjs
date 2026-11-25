@@ -47,6 +47,7 @@ test('fault diagnostics deploy only on manual request and always clean up the te
   assert.match(workflow, /inputs\.operation == 'fault-diagnostics'/);
   assert.match(workflow, /always\(\).*steps\.deploy-fault-test\.outputs\.attempted/);
   assert.match(workflow, /workers\/scripts\/unique-design-studio-ai-fault-test/);
+  assert.match(workflow, /for attempt in \$\(seq 1 12\)/);
   assert.match(workflow, /post-cleanup|route removed|route remains reachable/i);
   assert.match(browserCheck, /fault-503\/api\/generate-landing/);
   assert.match(browserCheck, /fault-timeout\/api\/generate-landing/);
