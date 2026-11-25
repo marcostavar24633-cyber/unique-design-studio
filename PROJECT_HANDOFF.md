@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T12:31:18.477Z
+Время обновления: 2026-11-25T12:48:09.639Z
 Ветка: main
-Последний commit: e1267af0a57b1f2ae177d4a792759e64e91b5c9b
-Дата коммита: 2026-11-25T16:31:06+04:00
-Сообщение: test: verify live diagnostics fault handling
+Последний commit: a286b2a37bfb6e629568c852d6546f2f0d5361b5
+Дата коммита: 2026-11-25T16:47:57+04:00
+Сообщение: fix: safely clean up synthetic fault-test Worker
 
 Последние коммиты:
+- a286b2a · 2026-11-25 · fix: safely clean up synthetic fault-test Worker
+- e5b19df · 2026-11-25 · docs: refresh project handoff
 - e1267af · 2026-11-25 · test: verify live diagnostics fault handling
 - 785df55 · 2026-11-25 · docs: refresh project handoff
 - 0fe8ceb · 2026-11-25 · test: verify live staging rate limit without AI inference (#266)
 - 0f68207 · 2026-11-25 · docs: refresh project handoff
 - 2b6ec53 · 2026-11-25 · fix: avoid asserting hidden CORS response header (#265)
 - e9e1689 · 2026-11-25 · docs: refresh project handoff
-- 3eee883 · 2026-11-25 · test: verify staging payload limit without AI inference (#264)
-- 25dd80f · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
