@@ -43,12 +43,14 @@ test('fault diagnostics deploy only on manual request and always clean up the te
   const workflow = readFileSync(resolve(root, '.github/workflows/deploy-ai-staging.yml'), 'utf8');
   const browserCheck = readFileSync(resolve(root, 'tests/e2e/staging-fault-diagnostics.mjs'), 'utf8');
   assert.match(workflow, /- fault-diagnostics/);
+  assert.match(workflow, /- fault-cleanup/);
   assert.match(workflow, /inputs\.operation == 'fault-diagnostics'/);
   assert.match(workflow, /always\(\).*steps\.deploy-fault-test\.outputs\.attempted/);
-  assert.match(workflow, /wrangler@4 delete --config config\/wrangler\.fault-test\.json/);
+  assert.match(workflow, /workers\/scripts\/unique-design-studio-ai-fault-test/);
   assert.match(workflow, /post-cleanup|route removed|route remains reachable/i);
   assert.match(browserCheck, /fault-503\/api\/generate-landing/);
   assert.match(browserCheck, /fault-timeout\/api\/generate-landing/);
+  assert.match(browserCheck, /#dashboard \[data-dash="create"\]/);
   assert.match(browserCheck, /Synthetic upstream failure/);
   assert.match(browserCheck, /12 секунд/);
   assert.doesNotMatch(browserCheck, /api\/generate-image/);
