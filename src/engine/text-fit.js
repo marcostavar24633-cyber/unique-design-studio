@@ -39,12 +39,23 @@ function fit(){
     var low=Math.min(base,1),high=base;
     for(var i=0;i<14;i++){var mid=(low+high)/2;el.style.fontSize=mid+'px';if(textWidth(el)<=width-6)low=mid;else high=mid}
     el.style.fontSize=Math.max(1,low)+'px';
+    // Browser font metrics can settle one frame after document.fonts.ready. Correct
+    // against the rendered width as well, so a late metric change cannot leave a
+    // heading a few pixels wider than its container.
+    for(var pass=0;pass<4;pass++){
+      var rendered=textWidth(el),contentWidth=Math.max(1,el.clientWidth-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0)-(parseFloat(style.borderLeftWidth)||0)-(parseFloat(style.borderRightWidth)||0));
+      if(rendered<=contentWidth-8)break;
+      var current=parseFloat(getComputedStyle(el).fontSize)||1;
+      el.style.fontSize=Math.max(1,current*Math.max(.5,(contentWidth-10)/rendered))+'px';
+    }
   });
 }
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(fit)}
 window.addEventListener('resize',schedule,{passive:true});document.addEventListener('scroll',schedule,true);
-if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){schedule();requestAnimationFrame(schedule)});
+if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',schedule);
 if('MutationObserver'in window)new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true});
 schedule();
 })();`;
 }
+
