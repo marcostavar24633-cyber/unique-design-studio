@@ -775,6 +775,7 @@ let visualPreviewFrame = null;
 let visualPreviewSequence = 0;
 let visualPreviewTimer = 0;
 let visualPreviewRequest = 0;
+let visualPreviewKey = '';
 
 function enhanceVisualOptionControls() {
   for (const select of $('#form').querySelectorAll('select[data-special]')) {
@@ -863,6 +864,9 @@ function previewRawWithOption(special, value) {
 }
 
 function renderOptionPreview(special, value) {
+  const key = `${special}\\u0000${value}`;
+  if (key === visualPreviewKey) return;
+  visualPreviewKey = key;
   clearTimeout(visualPreviewTimer);
   const request = ++visualPreviewRequest;
   visualPreviewTimer = setTimeout(() => {
@@ -889,6 +893,10 @@ function showPreviewHtml(html) {
   host.append(frame);
   visualPreviewFrame = frame;
   frame.addEventListener('load', () => {
+    if (sequence !== visualPreviewSequence || !frame.isConnected) {
+      frame.remove();
+      return;
+    }
     const scroll = { ...canvasFrameScroll };
     frame.contentWindow?.postMessage({ type: 'uds-canvas-restore-scroll', x: scroll.x, y: scroll.y }, '*');
     requestAnimationFrame(() => { if (sequence === visualPreviewSequence && frame.isConnected) frame.classList.add('is-visible'); });
@@ -901,6 +909,7 @@ function dismissVisualPreview() {
   clearTimeout(visualPreviewTimer);
   ++visualPreviewRequest;
   ++visualPreviewSequence;
+  visualPreviewKey = '';
   const frame = visualPreviewFrame;
   visualPreviewFrame = null;
   if (!frame) return;
