@@ -113,13 +113,20 @@ try {
   await resizeHandle.waitFor({ state: 'visible' });
   const resizeBox = await resizeHandle.boundingBox();
   const resizeRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
+  const scrollRestored = page.evaluate(() => new Promise(resolve => {
+    const done = event => { if (event.data?.type !== 'uds-canvas-scroll-restored') return; window.removeEventListener('message', done); resolve(event.data); };
+    window.addEventListener('message', done);
+    setTimeout(() => { window.removeEventListener('message', done); resolve(null); }, 10000);
+  }));
   await page.mouse.move(resizeBox.x + 9, resizeBox.y + 9);
   await page.mouse.down();
   await page.mouse.move(resizeBox.x + 89, resizeBox.y + 49, { steps: 5 });
   await page.mouse.up();
   await resizeRender;
+  const restoredPosition = await scrollRestored;
   await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
   await page.waitForTimeout(80);
+  check(Boolean(restoredPosition), 'перерисовка не подтвердила восстановление прокрутки');
   const dragWidth = Number.parseFloat(await heroMovedText.evaluate(node => getComputedStyle(node).width));
   check(dragWidth > 100, `изменение размера ручкой не применилось: ${dragWidth}px`);
   const scrollAfterResize = await preview.locator('body').evaluate(() => ({ y: window.scrollY, max: Math.max(0, document.documentElement.scrollHeight - innerHeight) }));
