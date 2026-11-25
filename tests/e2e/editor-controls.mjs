@@ -107,7 +107,8 @@ try {
   await heroMovedText.waitFor({ state: 'visible', timeout: 10000 });
   await heroMovedText.click();
   await page.click('#canvas-options-trigger');
-  await preview.locator('body').evaluate(body => window.scrollTo(0, Math.min(500, document.documentElement.scrollHeight - innerHeight)));
+  await preview.locator('html').evaluate(root => { root.style.scrollBehavior = 'auto'; window.scrollTo({ top: Math.min(500, document.documentElement.scrollHeight - innerHeight), behavior: 'instant' }); });
+  await preview.locator('body').evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const scrollBeforeResize = await preview.locator('body').evaluate(() => window.scrollY);
   const resizeHandle = preview.locator('.uds-resize-handle');
   await resizeHandle.waitFor({ state: 'visible' });
