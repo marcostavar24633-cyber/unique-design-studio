@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T13:02:57.174Z
+Время обновления: 2026-11-25T13:43:47.464Z
 Ветка: main
-Последний commit: 4f739585de245f4a34c258d616675da328205c68
-Дата коммита: 2026-11-25T17:02:44+04:00
-Сообщение: fix: wait for fault-test Worker edge cleanup
+Последний commit: 11e1de58a61ddf9bca641e509087ac5b9ebeb3d7
+Дата коммита: 2026-11-25T17:43:33+04:00
+Сообщение: fix: stabilize live visual option previews
 
 Последние коммиты:
+- 11e1de5 · 2026-11-25 · fix: stabilize live visual option previews
+- 1a0be02 · 2026-11-25 · docs: refresh project handoff
 - 4f73958 · 2026-11-25 · fix: wait for fault-test Worker edge cleanup
 - aab8e67 · 2026-11-25 · docs: refresh project handoff
 - a286b2a · 2026-11-25 · fix: safely clean up synthetic fault-test Worker
 - e5b19df · 2026-11-25 · docs: refresh project handoff
 - e1267af · 2026-11-25 · test: verify live diagnostics fault handling
 - 785df55 · 2026-11-25 · docs: refresh project handoff
-- 0fe8ceb · 2026-11-25 · test: verify live staging rate limit without AI inference (#266)
-- 0f68207 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
