@@ -40,7 +40,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: auto; scroll-snap-type: none; overflow-x: clip; }
-body { margin: 0; background: var(--ds-bg); color: var(--ds-text); font-family: var(--ds-font-body); }
+body { margin: 0; overflow-x: clip; background: var(--ds-bg); color: var(--ds-text); font-family: var(--ds-font-body); }
 :focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
