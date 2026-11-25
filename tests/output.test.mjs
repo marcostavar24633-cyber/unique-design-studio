@@ -25,14 +25,13 @@ test('примеры проходят проверку перед выдачей
 
 test('короткие заголовки и подписи получают однострочную автоподгонку', () => {
   const { html } = generate({ ...full, title: 'Индивидуальные программы тренировок для любого уровня подготовки' });
-  assert.match(html, /\\.uds-fit-text\\{[^}]*white-space:nowrap!important/);
-  assert.match(html, /selector='h1,h2,h3,\\.kicker,\\.nav__cta,\\.ds-button,\\.item__title,\\.price/);
-  assert.match(html, /selectNodeContents\\(el\\)/);
-  assert.match(html, /var style=getComputedStyle\\(el\\)/);
-  assert.match(html, /addEventListener\\('resize',schedule/);
-  assert.match(html, /\\.nav__links a\\{display:inline-flex;flex:0 0 auto/);
+  assert.match(html, /\.uds-fit-text\{[^}]*white-space:nowrap!important/);
+  assert.match(html, /selector='h1,h2,h3,\.kicker,\.nav__cta,\.ds-button,\.item__title,\.price/);
+  assert.match(html, /\.nav__links a\{display:inline-flex;flex:0 0 auto/);
+  assert.match(html, /addEventListener\('resize',schedule/);
+  assert.match(html, /selectNodeContents\(el\)/);
+  assert.match(html, /var style=getComputedStyle\(el\)/);
 });
-
 
 test('ничего не выдумывается: без данных нет цен, контактов, отзывов и лишних секций', () => {
   const r = generate({ brand: 'Тест', niche: 'кофейня' });

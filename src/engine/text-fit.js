@@ -2,7 +2,7 @@
 export const TEXT_FIT_CSS = '.uds-fit-text{min-width:0;white-space:nowrap!important;text-wrap:nowrap!important}';
 
 export function textFitScript() {
-  return \`(function(){
+  return `(function(){
 var selector='h1,h2,h3,.kicker,.nav__cta,.ds-button,.item__title,.price,[data-uds-fit-text]';
 var original=new WeakMap(),scheduled=false;
 function textWidth(el){var range=document.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width}
@@ -40,5 +40,5 @@ window.addEventListener('resize',schedule,{passive:true});document.addEventListe
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
 if('MutationObserver'in window)new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true});
 schedule();
-})();\`;
+})();`;
 }
