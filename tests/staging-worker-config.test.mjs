@@ -53,7 +53,7 @@ test('live browser diagnostics expose staging only for the check and always rest
   assert.doesNotMatch(browserCheck, /api\/generate-image/);
 });
 
-test('live payload-limit diagnostics use an invalid oversized body and never call AI inference', () => {
+test('live request-limit diagnostics use invalid input and never call AI inference', () => {
   const workflow = readFileSync(resolve(root, '.github/workflows/deploy-ai-staging.yml'), 'utf8');
   const payloadCheck = readFileSync(resolve(root, 'tests/e2e/staging-live-payload-limit.mjs'), 'utf8');
   assert.match(workflow, /- live-payload-limit-diagnostics/);
@@ -64,6 +64,9 @@ test('live payload-limit diagnostics use an invalid oversized body and never cal
   assert.match(payloadCheck, /result\.status, 413/);
   assert.match(payloadCheck, /result\.body\.maxBytes, 64_000/);
   assert.match(payloadCheck, /invalid JSON/);
+  assert.match(payloadCheck, /attempt < 20/);
+  assert.match(payloadCheck, /response\.status === 429/);
+  assert.match(payloadCheck, /Некорректный JSON/);
   assert.doesNotMatch(payloadCheck, /api\/generate-image/);
 });
 
