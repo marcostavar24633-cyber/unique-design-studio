@@ -419,7 +419,8 @@ try {
     await page.evaluate(() => {
       window.__udsLastPreviewRestore = null;
       window.__udsPreviewRestoreHandler = event => {
-        if (event.data?.type === 'uds-canvas-scroll-restored') window.__udsLastPreviewRestore = event.data;
+        const overlay = [...document.querySelectorAll('#view-preview iframe.visual-option-preview-frame')].at(-1);
+        if (event.source === overlay?.contentWindow && event.data?.type === 'uds-canvas-scroll-restored') window.__udsLastPreviewRestore = event.data;
       };
       window.addEventListener('message', window.__udsPreviewRestoreHandler);
     });
