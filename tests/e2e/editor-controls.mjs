@@ -394,7 +394,7 @@ try {
 
   await page.click('#ptab-editor');
   // Живой предпросмотр: реальные стили, плавное переключение и сохранение прокрутки.
-  const previewSelect = page.locator('#form select[data-special][data-preview-enhanced="true"]').first();
+  const previewSelect = page.locator('#form select[data-special="navStyle"][data-preview-enhanced="true"]').first();
   const previewControl = await previewSelect.evaluate(select => ({
     special: select.dataset.special,
     current: select.value,

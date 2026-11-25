@@ -896,7 +896,7 @@ function showPreviewHtml(html) {
       frame.remove();
       return;
     }
-    const scroll = { ...canvasFrameScroll };
+    const scroll = readCanvasFrameScroll();
     frame.contentWindow?.postMessage({ type: 'uds-canvas-restore-scroll', x: scroll.x, y: scroll.y }, '*');
     requestAnimationFrame(() => { if (sequence === visualPreviewSequence && frame.isConnected) frame.classList.add('is-visible'); });
     if (previous && previous !== frame) setTimeout(() => previous.remove(), 240);
