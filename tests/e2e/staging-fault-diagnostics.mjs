@@ -9,6 +9,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage();
   await page.goto(studioUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await page.locator('#dashboard [data-dash="create"]').click();
   await page.locator('#ptab-own').click();
   const endpointInput = page.locator('#auto-endpoint');
   const checkButton = page.locator('#ai-connection-check');
