@@ -437,7 +437,7 @@ try {
     });
     check(previewA.differs, 'наведение не меняет визуальный вариант относительно текущего сайта');
     check(previewA.transition.includes('opacity'), `плавное появление предпросмотра не настроено: ${previewA.transition}`);
-    check(Math.abs(Number(previewA.restored.targetY) - stableScroll) < 8, `предпросмотр не восстановил текущую прокрутку: ожидалось ${stableScroll}, получено ${previewA.restored.targetY}`);
+    check(Math.abs(Number(previewA.restored.y) - stableScroll) < 8, `предпросмотр не сохранил видимую позицию после ограничения высотой варианта: ожидалось ${stableScroll}, получено ${previewA.restored.y} (цель ${previewA.restored.targetY})`);
     check(scrollTarget.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
     await secondChoice.scrollIntoViewIfNeeded();
     await secondChoice.hover();
