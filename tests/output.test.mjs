@@ -33,6 +33,9 @@ test('короткие заголовки и подписи получают о�
   assert.match(html, /var style=getComputedStyle\(el\)/);
   assert.match(html, /new ResizeObserver/);
   assert.match(html, /resizeObserver\.observe\(parent\)/);
+  assert.match(html, /\.uds-fit-text--wrap\{[^}]*overflow-wrap:anywhere/);
+  assert.match(html, /if\(available<24\)/);
+  assert.match(html, /textWidth\(el\)<=width-6/);
 });
 
 test('ничего не выдумывается: без данных нет цен, контактов, отзывов и лишних секций', () => {
