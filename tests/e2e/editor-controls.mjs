@@ -408,15 +408,19 @@ try {
     const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
     await firstChoice.scrollIntoViewIfNeeded();
     const mainBeforeHover = await page.locator('#frame').evaluate(frame => frame.srcdoc);
-    const scrollTarget = await preview.locator('html').evaluate(root => {
-      root.style.setProperty('scroll-behavior', 'auto', 'important');
-      const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-      const y = Math.min(360, max);
-      window.scrollTo({ top: y, behavior: 'instant' });
-      return { y, max };
-    });
-    await page.waitForTimeout(140);
-    const stableScroll = await preview.locator('body').evaluate(() => window.scrollY);
+    const scrollState = await preview.locator('html').evaluate(() => new Promise(resolve => {
+      let previous = window.scrollY;
+      let changedAt = performance.now();
+      const sample = () => {
+        const now = performance.now();
+        const current = window.scrollY;
+        if (Math.abs(current - previous) > 1) { previous = current; changedAt = now; }
+        if (now - changedAt >= 250) return resolve({ y: current, max: Math.max(0, document.documentElement.scrollHeight - innerHeight) });
+        requestAnimationFrame(sample);
+      };
+      sample();
+    }));
+    const stableScroll = scrollState.y;
     await page.evaluate(() => {
       window.__udsLastPreviewRestore = null;
       window.__udsPreviewRestoreHandler = event => {
@@ -441,7 +445,7 @@ try {
     await page.waitForTimeout(120);
     const liveMainScroll = await preview.locator('body').evaluate(() => window.scrollY);
     check(Math.abs(Number(previewA.restored.y) - liveMainScroll) < 8, `предпросмотр не сохранил позицию основного холста: текущая прокрутка ${liveMainScroll}, предпросмотр ${previewA.restored.y} (цель ${previewA.restored.targetY}; до наведения ${stableScroll})`);
-    check(scrollTarget.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
+    check(scrollState.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
     await secondChoice.scrollIntoViewIfNeeded();
     await secondChoice.hover();
     await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
