@@ -32,6 +32,14 @@ test("applies the selected Visual Identity palette and geometry to rendered HTML
   assert.match(html, /--ds-radius-md:18px/);
 });
 
+test("keeps the site header transparent over the hero and the theme control unboxed", () => {
+  const html = renderSite(project, buildConcept(project));
+  assert.match(html, /\.site-head\{position:absolute!important/);
+  assert.match(html, /body>main>\.hero\{padding-top:/);
+  assert.match(html, /\.ds-theme-toggle\{[^}]*background:transparent/);
+  assert.match(html, /\.ds-theme-toggle:hover\{[^}]*background:transparent/);
+});
+
 test('каждая палитра Visual Identity в готовой странице проходит WCAG AA, а шрифты запрашиваются только существующими начертаниями', async () => {
   const { listVisualIdentityOptions } = await import('../src/visual-identity.js');
   const { contrast } = await import('../src/engine/color.js');

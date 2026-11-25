@@ -458,6 +458,61 @@ try {
     check(mainAfterSelect !== mainBeforeHover, 'выбранный вариант не обновил основной предпросмотр сайта');
     await page.evaluate(() => window.removeEventListener('message', window.__udsPreviewRestoreHandler));
   }
+
+  // Geometry selection must not leave a temporary preview layer or freeze either editor scroll area.
+  const identityEnabled = page.locator('#form [data-special="visualIdentityEnabled"]');
+  if (!(await identityEnabled.isChecked())) {
+    const identityRender = canvasRender();
+    await identityEnabled.check();
+    await identityRender;
+  }
+  const geometrySelect = page.locator('#form select[data-special="visualIdentityShape"][data-preview-enhanced="true"]');
+  await geometrySelect.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
+  const geometryGroup = geometrySelect.locator('xpath=following-sibling::*[1]');
+  const geometryChoice = geometryGroup.locator('[data-preview-value]').filter({ hasNotText: 'Автоматически' }).first();
+  await geometryChoice.scrollIntoViewIfNeeded();
+  const geometryRender = canvasRender();
+  await geometryChoice.click();
+  await geometryRender;
+  check(await page.locator('#view-preview iframe.visual-option-preview-frame').count() === 0,
+    'выбор геометрии оставил временный слой предпросмотра над сайтом');
+  const editorPanel = page.locator('.panel');
+  const panelBox = await editorPanel.boundingBox();
+  if (panelBox) {
+    const optionList = geometryGroup.locator('[role="listbox"]');
+    await optionList.scrollIntoViewIfNeeded();
+    await optionList.evaluate(node => { node.scrollTop = node.scrollHeight; });
+    const optionBox = await optionList.boundingBox();
+    check(Boolean(optionBox), 'список вариантов геометрии не имеет видимой области прокрутки');
+    const point = { x: optionBox.x + optionBox.width / 2, y: optionBox.y + optionBox.height / 2 };
+    const panelScrollBefore = await editorPanel.evaluate(node => node.scrollTop);
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.wheel(0, 360);
+    await page.waitForTimeout(100);
+    const scrollState = await editorPanel.evaluate(panel => {
+      const list = panel.querySelector('select[data-special="visualIdentityShape"]')
+        ?.parentElement?.querySelector('[role="listbox"]');
+      return { panelTop: panel.scrollTop, panelHeight: panel.clientHeight, panelScrollHeight: panel.scrollHeight,
+        listTop: list?.scrollTop ?? null, listHeight: list?.clientHeight ?? null, listScrollHeight: list?.scrollHeight ?? null };
+    });
+    check(scrollState.panelTop > panelScrollBefore,
+      `колесо над видимым списком геометрии не прокрутило панель: ${JSON.stringify({ panelScrollBefore, ...scrollState })}`);
+  }
+  const siteScrollBefore = await preview.locator('html').evaluate(() => {
+    const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    scrollTo(0, Math.min(max, 420));
+    return { y: scrollY, max };
+  });
+  if (siteScrollBefore.max > siteScrollBefore.y + 80) {
+    const frameBox = await page.locator('#frame').boundingBox();
+    if (frameBox) {
+      await page.mouse.move(frameBox.x + frameBox.width / 2, frameBox.y + Math.min(240, frameBox.height / 2));
+      await page.mouse.wheel(0, 180);
+      await page.waitForTimeout(120);
+      check(await preview.locator('html').evaluate(() => scrollY) > siteScrollBefore.y,
+        'прокрутка страницы предпросмотра остановилась после выбора геометрии');
+    }
+  }
   await page.click('#arrange-toggle');
 
   await page.click('#save');
