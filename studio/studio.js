@@ -775,6 +775,32 @@ let visualPreviewSequence = 0;
 let visualPreviewTimer = 0;
 let visualPreviewRequest = 0;
 let visualPreviewKey = '';
+let visualPreviewWorker = null;
+let visualPreviewWorkerFailed = false;
+
+function getVisualPreviewWorker() {
+  if (visualPreviewWorker || visualPreviewWorkerFailed || typeof Worker === 'undefined') return visualPreviewWorker;
+  try {
+    visualPreviewWorker = new Worker(new URL('./visual-preview-worker.js', import.meta.url), { type: 'module' });
+    visualPreviewWorker.addEventListener('message', event => {
+      const { request, html, error } = event.data || {};
+      if (request !== visualPreviewRequest || !result) return;
+      if (error) { console.warn('Не удалось показать вариант оформления', error); dismissVisualPreview(); return; }
+      if (!html) return;
+      showPreviewHtml(html);
+    });
+    visualPreviewWorker.addEventListener('error', event => {
+      console.warn('Фоновый предпросмотр остановлен', event.message || 'ошибка Worker');
+      visualPreviewWorker?.terminate();
+      visualPreviewWorker = null;
+      visualPreviewWorkerFailed = true;
+    });
+  } catch (error) {
+    console.warn('Фоновый предпросмотр недоступен', error);
+    visualPreviewWorkerFailed = true;
+  }
+  return visualPreviewWorker;
+}
 
 function enhanceVisualOptionControls() {
   for (const select of $('#form').querySelectorAll('select[data-special]')) {
@@ -870,13 +896,21 @@ function renderOptionPreview(special, value) {
   const request = ++visualPreviewRequest;
   visualPreviewTimer = setTimeout(() => {
     if (request !== visualPreviewRequest || !result) return;
-    try {
-      const preview = generate(previewRawWithOption(special, value), { registry: registry() });
-      showPreviewHtml(preview.html);
-    } catch (error) {
-      console.warn('Не удалось показать вариант оформления', error);
-      dismissVisualPreview();
+    const worker = getVisualPreviewWorker();
+    if (worker) {
+      try { worker.postMessage({ request, raw: previewRawWithOption(special, value), registry: registry() }); }
+      catch (error) { console.warn('Не удалось отправить предпросмотр в фоновый процесс', error); dismissVisualPreview(); }
+      return;
     }
+    // Older browsers retain a usable preview; defer its synchronous generation
+    // until the browser is idle so pointer and scroll input stays responsive.
+    const generateFallback = () => {
+      if (request !== visualPreviewRequest || !result) return;
+      try { showPreviewHtml(generate(previewRawWithOption(special, value), { registry: registry() }).html); }
+      catch (error) { console.warn('Не удалось показать вариант оформления', error); dismissVisualPreview(); }
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(generateFallback, { timeout: 700 });
+    else setTimeout(generateFallback, 120);
   }, 70);
 }
 
@@ -913,7 +947,9 @@ function dismissVisualPreview() {
   visualPreviewFrame = null;
   if (!frame) return;
   frame.classList.remove('is-visible');
-  setTimeout(() => frame.remove(), 220);
+  // The temporary page is only a visual overlay. Remove it now when a choice is
+  // committed so it cannot remain above the live canvas while its transition fades.
+  frame.remove();
 }
 
 function buildForm() {
