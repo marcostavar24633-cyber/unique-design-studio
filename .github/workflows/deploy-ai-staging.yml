@@ -166,9 +166,15 @@ jobs:
             cat "$RUNNER_TEMP/fault-worker-delete.json" >&2
             exit 1
           fi
-          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
-            -H 'Origin: https://marcostavar24633-cyber.github.io' \
-            'https://unique-design-studio-ai-fault-test.marcostavar24633.workers.dev/fault-503/api/diagnostics' || true)"
+          echo "Cloudflare delete API returned HTTP ${delete_status}; waiting for edge propagation."
+          status=''
+          for attempt in $(seq 1 12); do
+            status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
+              -H 'Origin: https://marcostavar24633-cyber.github.io' \
+              'https://unique-design-studio-ai-fault-test.marcostavar24633.workers.dev/fault-503/api/diagnostics' || true)"
+            [ "$status" = '404' ] && break
+            sleep 5
+          done
           if [ "$status" != '404' ]; then
             echo "Synthetic fault-test route remains reachable after cleanup (HTTP ${status:-unreachable})." >&2
             exit 1
