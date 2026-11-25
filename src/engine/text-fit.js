@@ -4,7 +4,12 @@ export const TEXT_FIT_CSS = '.uds-fit-text{min-width:0;white-space:nowrap!import
 export function textFitScript() {
   return `(function(){
 var selector='h1,h2,h3,.kicker,.nav__cta,.ds-button,.item__title,.price,[data-uds-fit-text]';
-var original=new WeakMap(),scheduled=false;
+var original=new WeakMap(),scheduled=false,observedParents=new WeakSet(),parentWidths=new WeakMap();
+var resizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(function(entries){
+  var changed=false;
+  entries.forEach(function(entry){var width=entry.contentRect.width,previous=parentWidths.get(entry.target);parentWidths.set(entry.target,width);if(previous!==undefined&&Math.abs(previous-width)>.5)changed=true});
+  if(changed)schedule();
+}):null;
 function textWidth(el){var range=document.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width}
 function fit(){
   scheduled=false;
@@ -16,6 +21,7 @@ function fit(){
     if(rect.right<=0||rect.left>=innerWidth||rect.width<2)return;
     el.classList.add('uds-fit-text');
     var parent=el.parentElement,parentRect=parent&&parent.getBoundingClientRect(),parentStyle=parent&&getComputedStyle(parent);
+    if(parent&&resizeObserver&&!observedParents.has(parent)){observedParents.add(parent);resizeObserver.observe(parent)}
     var padLeft=parseFloat(parentStyle&&parentStyle.paddingLeft)||0,padRight=parseFloat(parentStyle&&parentStyle.paddingRight)||0;
     var parentWidth=parent?Math.max(1,parent.clientWidth-padLeft-padRight):innerWidth-(parentRect?parentRect.left:rect.left)-16;
     var parentLeft=parentRect?parentRect.left+padLeft:rect.left;
