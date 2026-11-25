@@ -94,6 +94,8 @@ try {
   check(!await page.evaluate(() => document.body.classList.contains('dashboard-mode')), 'быстрый старт не открыл рабочую область');
   await page.waitForFunction(() => document.querySelector('#auto-status').textContent.includes('Готово'), null, { timeout: 20000 });
   check((await page.locator('#frame').getAttribute('srcdoc')).includes('LUMEN E2E'), 'генератор не сформировал предпросмотр с тестовым брендом');
+  check(await page.locator('#content-qa-review').isVisible(), 'локальная генерация не показывает проверку контента');
+  check((await page.locator('#content-qa-summary').textContent()).includes('Оценка:'), 'проверка контента не показывает результат');
 
   // Проверяем вкладки результата, размеры предпросмотра и сворачивание панели.
   for (const tab of ['spec', 'concept', 'audit', 'production', 'registry', 'preview']) {

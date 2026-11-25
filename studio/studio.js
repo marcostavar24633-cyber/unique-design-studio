@@ -1736,6 +1736,9 @@ $('#auto').addEventListener('submit', async e => {
     setAutoProgress(52, 'Локальная сборка проекта', 'Формируем структуру и контент');
     const local = autopilot(input, { registry: registry() });
     draft = { project: local.project, analysis: local.analysis };
+    renderContentQaReview(reviewGeneratedContent(local.project, {
+      sectionIds: local.concept.homepage.sections.map(section => section.id),
+    }));
     if (!note) note = 'Готово: сайт собран локальным автопилотом. Тексты — стартовая гипотеза, проверьте вкладку «ТЗ и анализ».';
   }
   note += references.length ? ' Учтены профили библиотеки: ' + references.map(r => '«' + r.name + '»').join(', ') + '.' : '';
