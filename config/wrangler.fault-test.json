@@ -1,0 +1,7 @@
+{
+  "name": "unique-design-studio-ai-fault-test",
+  "main": "../tests/fixtures/staging-fault-worker.mjs",
+  "compatibility_date": "2026-11-16",
+  "workers_dev": true,
+  "preview_urls": false
+}
