@@ -210,15 +210,16 @@ const REVEAL_FROM = {
   'clip-center': 'opacity:.001;clip-path:inset(50% 50% 50% 50%)',
   'fold-open': 'opacity:0;transform:perspective(900px) rotateX(-32deg);transform-origin:top center',
   'soft-pop': 'opacity:0;transform:translateY(10px) scale(.88)',
+  'luxury-reveal': 'opacity:0;transform:translateY(9px);filter:blur(6px)',
 };
 
 /** CSS эффекта появления. Перекрывает базовое появление; при reduced-motion всё сразу видно. */
 export function revealCss(id) {
   const from = REVEAL_FROM[id];
   if (!from) return '';
-  return `html.js-reveal [data-reveal]{${from};transition:opacity var(--ds-duration-slow) var(--ds-ease),transform var(--ds-duration-slow) var(--ds-ease),filter var(--ds-duration-slow) var(--ds-ease),clip-path var(--ds-duration-slow) var(--ds-ease)}`
+  return `html.js-reveal [data-reveal]{${from};transition:opacity var(--ds-duration-slow) var(--ds-ease),transform var(--ds-duration-slow) var(--ds-ease),filter var(--ds-duration-slow) var(--ds-ease),clip-path var(--ds-duration-slow) var(--ds-ease);transition-delay:var(--uds-reveal-delay,0ms)}`
     + 'html.js-reveal [data-reveal].is-in{opacity:1;transform:none;filter:none;clip-path:inset(0 0 0 0)}'
-    + 'html.js-reveal li[data-reveal]:nth-child(2){transition-delay:70ms}html.js-reveal li[data-reveal]:nth-child(3){transition-delay:140ms}html.js-reveal li[data-reveal]:nth-child(n+4){transition-delay:200ms}'
+    + 'html.js-reveal li[data-reveal]:nth-child(2){--uds-reveal-delay:70ms}html.js-reveal li[data-reveal]:nth-child(3){--uds-reveal-delay:140ms}html.js-reveal li[data-reveal]:nth-child(n+4){--uds-reveal-delay:200ms}'
     + '@media(prefers-reduced-motion:reduce){html.js-reveal [data-reveal]{opacity:1;transform:none;filter:none;clip-path:none;transition:none}}';
 }
 
