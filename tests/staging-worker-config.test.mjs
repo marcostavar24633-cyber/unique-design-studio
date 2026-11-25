@@ -37,3 +37,19 @@ test('staging offers a private browser diagnostics operation without deploying o
   assert.equal(staging.workers_dev, false);
   assert.equal(staging.preview_urls, false);
 });
+
+test('live browser diagnostics expose staging only for the check and always restore the private config', () => {
+  const workflow = readFileSync(resolve(root, '.github/workflows/deploy-ai-staging.yml'), 'utf8');
+  const browserCheck = readFileSync(resolve(root, 'tests/e2e/staging-live-browser-diagnostics.mjs'), 'utf8');
+  assert.match(workflow, /- live-browser-diagnostics/);
+  assert.match(workflow, /c\.workers_dev=true/);
+  assert.match(workflow, /preview_urls=false/);
+  assert.match(workflow, /npx --yes wrangler@4 deploy --config config\/wrangler\.ai-staging\.json/);
+  assert.match(workflow, /always\(\).*steps\.expose-staging\.outputs\.attempted/);
+  assert.match(workflow, /post-cleanup HTTP status/);
+  assert.match(browserCheck, /page\.evaluate\(async endpoint/);
+  assert.match(browserCheck, /fetch\(`\$\{endpoint\}\/api\/diagnostics`/);
+  assert.doesNotMatch(browserCheck, /page\.route\(/, 'browser must make its request directly to the temporary staging hostname');
+  assert.doesNotMatch(browserCheck, /api\/generate-image/);
+});
+

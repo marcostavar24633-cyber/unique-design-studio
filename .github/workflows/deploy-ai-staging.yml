@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Validate staging, run private browser diagnostics, deploy, or run one real image probe
+        description: Validate staging, run browser diagnostics, deploy, or run one real image probe
         type: choice
         required: true
         default: validate
         options:
           - validate
           - browser-diagnostics
+          - live-browser-diagnostics
           - deploy
           - probe
   issue_comment:
@@ -76,6 +77,44 @@ jobs:
           STUDIO_URL='https://marcostavar24633-cyber.github.io/unique-design-studio/studio/index.html' \
           STUDIO_ORIGIN='https://marcostavar24633-cyber.github.io' \
             node tests/e2e/staging-browser-diagnostics.mjs
+      - name: Temporarily enable staging workers.dev for direct browser diagnostics
+        id: expose-staging
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'live-browser-diagnostics' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
+          temp_config='config/wrangler.ai-staging-public-test.json'
+          node -e 'const fs=require("node:fs");const p=process.argv[1];const c=JSON.parse(fs.readFileSync("config/wrangler.ai-staging.json","utf8"));c.workers_dev=true;c.preview_urls=false;fs.writeFileSync(p,JSON.stringify(c,null,2)+"\n")' "$temp_config"
+          echo 'attempted=true' >> "$GITHUB_OUTPUT"
+          npx --yes wrangler@4 deploy --config "$temp_config"
+      - name: Verify published Studio can fetch live staging diagnostics
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'live-browser-diagnostics' }}
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+          STAGING_WORKER_PUBLIC_URL='https://unique-design-studio-ai-staging.marcostavar24633.workers.dev' \
+          STUDIO_URL='https://marcostavar24633-cyber.github.io/unique-design-studio/studio/index.html' \
+            node tests/e2e/staging-live-browser-diagnostics.mjs
+      - name: Restore private staging config and disable workers.dev
+        if: ${{ always() && steps.expose-staging.outputs.attempted == 'true' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          trap 'rm -f config/wrangler.ai-staging-public-test.json' EXIT
+          npx --yes wrangler@4 deploy --config config/wrangler.ai-staging.json
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
+            'https://unique-design-studio-ai-staging.marcostavar24633.workers.dev/api/diagnostics' || true)"
+          if [ "$status" = '200' ]; then
+            echo 'Staging diagnostics still returned HTTP 200 after workers.dev disable.' >&2
+            exit 1
+          fi
+          echo "Temporary public staging route disabled (post-cleanup HTTP status: ${status:-unreachable})."
       - name: Deploy private staging Worker
         if: ${{ inputs.operation == 'deploy' }}
         env:
@@ -176,3 +215,4 @@ jobs:
       - name: Remove the staging image response
         if: ${{ always() }}
         run: rm -f "$RUNNER_TEMP/uds-staging-image-response.json"
+
