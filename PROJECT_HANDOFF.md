@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T23:32:51.848Z
+Время обновления: 2026-11-25T23:56:48.135Z
 Ветка: main
-Последний commit: 1501cdbf9ff419c03664162dc8a70f2c72799d7c
-Дата коммита: 2026-11-26T03:32:33+04:00
-Сообщение: feat: improve generated site contacts and motion controls
+Последний commit: 197db9754c5f9b498be0b3ff602d8c1bce2f1062
+Дата коммита: 2026-11-26T03:56:31+04:00
+Сообщение: fix: gate Pages deploy on full CI and stabilize layout audit
 
 Последние коммиты:
+- 197db97 · 2026-11-26 · fix: gate Pages deploy on full CI and stabilize layout audit
+- ddfcb5b · 2026-11-25 · docs: refresh project handoff
 - 1501cdb · 2026-11-26 · feat: improve generated site contacts and motion controls
 - fb2da61 · 2026-11-25 · docs: refresh project handoff
 - 0b98364 · 2026-11-26 · feat: add practical sections and optional quiz (#276)
 - 59fcbfb · 2026-11-25 · docs: refresh project handoff
 - 970daa2 · 2026-11-25 · Merge pull request #275 from marcostavar24633-cyber/fix/preview-selection-scroll-lock
 - 36eda71 · 2026-11-25 · fix: clip horizontal overflow in generated pages
-- e1331b5 · 2026-11-25 · fix: prevent responsive horizontal page overflow
-- 561ac2e · 2026-11-25 · fix: keep editor responsive and expand gallery motion
 <!-- HANDOFF:AUTO:END -->
