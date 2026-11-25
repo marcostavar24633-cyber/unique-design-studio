@@ -377,7 +377,8 @@ try {
   check(await preview.locator('#faq .uds-added-element--card').count() === 1, 'замена статического заголовка не создала карточку в той же секции');
 
   // Пользовательские секционные блоки: добавление, выбор для настройки и размещение.
-  await preview.locator('#about h2').click({ force: true });
+  await preview.locator('#about h2').evaluate(node => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await preview.locator('#about h2').click();
   await page.click('#canvas-options-trigger');
   await page.click('#canvas-add');
   const blockAddRender = canvasRender();
