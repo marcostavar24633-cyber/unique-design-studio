@@ -76,14 +76,18 @@ try {
     await render;
   };
   // Живой предпросмотр: реальные стили, плавное переключение и сохранение прокрутки.
-  const stylePreset = page.locator('#form select[data-special="stylePreset"]');
-  const styleOptions = await stylePreset.evaluate(select => [...select.options].map(option => option.value).filter(value => value && value !== select.value));
-  check(styleOptions.length >= 2, 'для живого предпросмотра доступны менее двух вариантов стиля');
-  if (styleOptions.length >= 2) {
-    await stylePreset.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
-    const choices = page.locator('#form select[data-special="stylePreset"] + .visual-option-preview [data-preview-value]');
-    const firstChoice = choices.locator(`[data-preview-value="${styleOptions[0]}"]`);
-    const secondChoice = choices.locator(`[data-preview-value="${styleOptions[1]}"]`);
+  const previewSelect = page.locator('#form select[data-special][data-preview-enhanced="true"]').first();
+  const previewControl = await previewSelect.evaluate(select => ({
+    special: select.dataset.special,
+    current: select.value,
+    values: [...select.nextElementSibling.querySelectorAll('[data-preview-value]')].map(option => option.dataset.previewValue).filter(value => value && value !== select.value)
+  }));
+  check(previewControl.values.length >= 2, 'для живого предпросмотра доступны менее двух вариантов');
+  if (previewControl.values.length >= 2) {
+    await previewSelect.evaluate(select => { const group = select.closest('details.group'); if (group) group.open = true; });
+    const optionGroup = previewSelect.locator('xpath=following-sibling::*[1]');
+    const firstChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[0]}"]`);
+    const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
     const mainBeforeHover = await page.locator('#frame').evaluate(frame => frame.srcdoc);
     const scrollTarget = await preview.locator('html').evaluate(root => {
       root.style.scrollBehavior = 'auto';
@@ -121,7 +125,7 @@ try {
     const mainRender = canvasRender();
     await secondChoice.click();
     await mainRender;
-    check(await stylePreset.inputValue() === styleOptions[1], 'клик по варианту не выбрал соответствующее значение');
+    check(await previewSelect.inputValue() === previewControl.values[1], 'клик по варианту не выбрал соответствующее значение');
     const mainAfterSelect = await page.locator('#frame').evaluate(frame => frame.srcdoc);
     check(mainAfterSelect !== mainBeforeHover, 'выбранный вариант не обновил основной предпросмотр сайта');
     await page.evaluate(() => window.removeEventListener('message', window.__udsPreviewRestoreHandler));
