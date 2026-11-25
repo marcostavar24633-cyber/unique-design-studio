@@ -266,6 +266,7 @@ export const ADV_CSS = {
   inline: `.adv--inline{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:clamp(20px,3vw,40px)}.adv--inline>li{padding-top:18px;border-top:2px solid var(--ds-accent)}`,
   cards: `.adv--cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(12px,2vw,20px)}.adv--cards>li{padding:clamp(18px,2.4vw,28px);border-radius:var(--ds-radius-lg);background:var(--u-tint)}`,
   statement: `.adv--statement>li{display:grid;gap:6px 48px;padding-block:clamp(18px,3vw,36px);border-top:1px solid var(--ds-border)}.adv--statement h3{margin:0;font-family:var(--ds-font-display);font-size:clamp(1.4rem,1rem + 2.2vw,2.6rem);font-weight:var(--u-dw);letter-spacing:var(--u-dt);line-height:1.1}
+@media(max-width:420px){.adv--statement h3{font-size:clamp(1.05rem,4vw,1.2rem);letter-spacing:0}}
 @media(min-width:800px){.adv--statement>li{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);align-items:baseline}}`,
 };
 
