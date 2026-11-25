@@ -831,11 +831,16 @@ function enhanceVisualOptionControls() {
     const special = select.dataset.special;
     if (!VISUAL_PREVIEW_CONTROLS.has(special) || select.disabled || select.dataset.previewEnhanced) continue;
     select.dataset.previewEnhanced = 'true';
-    const group = document.createElement('div');
+    const selectedOption = () => [...select.options].find(option => option.value === select.value)?.textContent.trim() || 'Авто';
+    const group = document.createElement('details');
     group.className = 'visual-option-preview';
+    const summary = document.createElement('summary');
+    summary.className = 'visual-option-preview__summary';
+    summary.textContent = `Варианты оформления · ${selectedOption()}`;
+    const listWrap = document.createElement('div');
+    listWrap.className = 'visual-option-preview__content';
     const list = document.createElement('div');
     list.className = 'visual-option-preview__list';
-    list.hidden = false;
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-label', 'Варианты оформления: наведите для предпросмотра, нажмите для выбора');
     list.addEventListener('wheel', event => {
@@ -862,10 +867,15 @@ function enhanceVisualOptionControls() {
     }
     const hint = document.createElement('small');
     hint.textContent = 'Наведите или перейдите клавишей Tab для просмотра на холсте; нажмите, чтобы применить.';
-    group.append(list, hint);
-    select.after(group);
+    listWrap.append(list, hint);
+    group.append(summary, listWrap);
+    select.hidden = true;
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+    (select.closest('.field') || select.parentElement).after(group);
     select.addEventListener('change', () => {
       list.querySelectorAll('[role="option"]').forEach(item => item.setAttribute('aria-selected', String(item.dataset.previewValue === select.value)));
+      summary.textContent = `Варианты оформления · ${selectedOption()}`;
       dismissVisualPreview();
     });
     const previewChoice = event => {
@@ -880,13 +890,13 @@ function enhanceVisualOptionControls() {
       const changed = select.value !== choice.dataset.previewValue;
       select.value = choice.dataset.previewValue;
       list.querySelectorAll('[role="option"]').forEach(item => item.setAttribute('aria-selected', String(item === choice)));
-      dismissVisualPreview();
       if (changed) {
         select.dispatchEvent(new Event('input', { bubbles: true }));
         select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      } else dismissVisualPreview();
+      group.open = false;
     });
-    group.addEventListener('pointerleave', dismissVisualPreview);
+    group.addEventListener('pointerleave', event => { if (!group.contains(event.relatedTarget)) dismissVisualPreview(); });
     group.addEventListener('focusout', event => { if (!group.contains(event.relatedTarget)) dismissVisualPreview(); });
   }
 }

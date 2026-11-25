@@ -92,11 +92,14 @@ test('скрытые секции услуг не оставляют битых 
   }
 });
 
-test('горизонтальная фотолента доступна с клавиатуры и имеет видимый фокус', () => {
+test('горизонтальная фотокарусель имеет доступные стрелки и свайп-ленту', () => {
   const gallery = Array.from({ length: 4 }, (_, i) => ({ src: `data:image/webp;base64,AA${i}`, alt: `Кадр ${i + 1}` }));
   const { html } = generate({ ...full, gallery, photoComposition: 'filmstrip' });
-  assert.match(html, /class="gallery gallery--filmstrip" role="list" tabindex="0" aria-label="Галерея фотографий\. Прокручивайте по горизонтали/);
-  assert.match(html, /\.gallery--filmstrip:focus-visible\{outline:3px solid var\(--ds-accent\);outline-offset:4px\}/);
+  assert.match(html, /class="gallery-carousel"><ul class="gallery gallery--filmstrip" role="list" tabindex="0" aria-label="Галерея фотографий\. Листайте или используйте стрелки/);
+  assert.match(html, /data-gallery-prev aria-label="Предыдущие фотографии"/);
+  assert.match(html, /data-gallery-next aria-label="Следующие фотографии"/);
+  assert.match(html, /overflow-x:auto;overflow-y:hidden/);
+  assert.match(html, /track\.scrollBy\(\{left:direction\*/);
 });
 
 test('неизвестная внутренняя цель CTA заменяется рабочим адресом и указывается в отчёте', () => {
