@@ -336,7 +336,7 @@ document.addEventListener('click', event => {
 const PROVIDER_NAMES = { cloudflare: 'Cloudflare', groq: 'Groq', gemini: 'Gemini', openrouter: 'OpenRouter', cerebras: 'Cerebras', mistral: 'Mistral', nvidia: 'NVIDIA' };
 function routeLabel(entry) {
   if (entry.route === 'gateway') return entry.provider && entry.provider !== 'cloudflare' ? 'шлюз → резерв ' + (PROVIDER_NAMES[entry.provider] || entry.provider) : 'через шлюз';
-  if (entry.route === 'direct') return 'напрямую';
+  if (entry.route === 'direct') return entry.provider ? 'напрямую · ' + (PROVIDER_NAMES[entry.provider] || entry.provider) : 'напрямую';
   return '';
 }
 function renderAiJournal() {
@@ -349,7 +349,7 @@ function renderAiJournal() {
   const errors = todays.filter(e => e.status !== 'ok').length;
   const time = iso => new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
   const row = e => '<li data-status="' + (e.status === 'ok' ? 'ok' : 'err') + '"><span>' + time(e.at) + '</span><b>' + esc(e.label) + '</b><small>' +
-    esc([e.status === 'ok' ? 'готово' : 'ошибка: ' + (e.error || ''), routeLabel(e), e.ms ? (e.ms / 1000).toFixed(1) + ' с' : '', e.tokens ? Number(e.tokens).toLocaleString('ru-RU') + ' ток.' : ''].filter(Boolean).join(' · ')) + '</small></li>';
+    esc([e.status === 'ok' ? 'готово' : 'ошибка: ' + (e.error || ''), routeLabel(e), e.ms ? (e.ms / 1000).toFixed(1) + ' с' : '', e.tokens != null ? Number(e.tokens).toLocaleString('ru-RU') + ' ток.' : e.kind === 'image' ? 'токены: нет в ответе' : ''].filter(Boolean).join(' · ')) + '</small></li>';
   box.innerHTML = list.length
     ? '<p class="dash-meter-note">Сегодня: ' + todays.length + ' запросов' + (tokens ? ', ' + tokens.toLocaleString('ru-RU') + ' токенов' : '') + (errors ? ', ошибок: ' + errors : '') + '</p><ol class="dash-journal">' + list.slice(0, 6).map(row).join('') + '</ol>' +
       (list.length > 6 ? '<details class="dash-journal-more"><summary>Все записи (' + list.length + ')</summary><ol class="dash-journal">' + list.slice(6).map(row).join('') + '</ol></details>' : '') +
@@ -2712,7 +2712,7 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
       }
     }
     const ok = Boolean(response?.ok && payload.image);
-    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || '', provider: payload.provider || '' });
+    logAi({ kind: 'image', label: 'Фото: ' + slot.label, status: ok ? 'ok' : 'error', error: ok ? '' : payload.error || (response ? 'HTTP ' + response.status : ''), ms: Date.now() - imageStarted, model: payload.model || '', tokens: payload.usage?.totalTokens ?? null, route: payload.route || (String(payload.model || '').startsWith('@cf/') ? 'direct' : ''), provider: payload.provider || (String(payload.model || '').startsWith('@cf/') ? 'cloudflare' : '') });
     onProgress(++done, targets.length, slot.label);
     if (!ok) return { error: payload.error || 'AI не вернул изображение' + (response ? ' (HTTP ' + response.status + ').' : '.') };
     // Кадры галереи показываются шириной 240–600 px: 1100 px хватает и экономит место для 8 кадров.

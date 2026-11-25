@@ -20,10 +20,13 @@ const imageResponse = imageResponseFile ? JSON.parse(readFileSync(imageResponseF
   route: 'direct',
   provider: 'cloudflare'
 };
+const inferredCloudflare = String(imageResponse.model || '').startsWith('@cf/');
+const expectedRoute = imageResponse.route || (inferredCloudflare ? 'direct' : '');
+const expectedProvider = imageResponse.provider || (inferredCloudflare ? 'cloudflare' : '');
 const matchesImageJournal = entry => entry.status === 'ok'
   && entry.model === imageResponse.model
-  && entry.route === (imageResponse.route || '')
-  && entry.provider === (imageResponse.provider || '')
+  && entry.route === expectedRoute
+  && entry.provider === expectedProvider
   && (entry.tokens ?? null) === (imageResponse.usage?.totalTokens ?? null);
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
@@ -163,6 +166,9 @@ try {
   check([...snapshot.gallerySources, ...snapshot.serviceSources].every(src => typeof src === 'string' && src.startsWith('data:image/')), 'галерея или услуги содержат не встроенный image data URI');
   check(snapshot.imageJournal.length === imageRequests.length, 'журнал AI содержит ' + snapshot.imageJournal.length + ' image-записей при ' + imageRequests.length + ' запросах');
   check(snapshot.imageJournal.every(matchesImageJournal), 'журнал не сохранил model/route/provider/usage из ответа Worker');
+  const journalText = await page.locator('#dash-ai-journal').innerText();
+  if (expectedProvider === 'cloudflare') check(journalText.includes('Cloudflare'), 'реальный ответ Cloudflare не отражён в AI-журнале');
+  if (imageResponse.usage?.totalTokens == null) check(journalText.includes('токены: нет в ответе'), 'неизвестный расход показан неоднозначно вместо явной отметки');
   check(await page.locator('#form .media-preview img').count() > 0, 'главное изображение не отображается в редакторе');
   check(await page.locator('#form [data-gallery-item]').count() > 0, 'галерея не отрисовала сгенерированные изображения');
   check(snapshot.services > 0, 'сгенерированные изображения не сохранены в карточках услуг');
