@@ -131,7 +131,7 @@ try {
   const dragWidth = Number.parseFloat(await heroMovedText.evaluate(node => getComputedStyle(node).width));
   check(dragWidth > 100, `изменение размера ручкой не применилось: ${dragWidth}px`);
   const scrollAfterResize = await preview.locator('body').evaluate(() => ({ y: window.scrollY, max: Math.max(0, document.documentElement.scrollHeight - innerHeight) }));
-  check(Boolean(restoredPosition) && Math.abs(scrollAfterResize.y - Math.min(scrollBeforeResize, scrollAfterResize.max)) < 8, `прокрутка не восстановилась после перерисовки: до=${scrollBeforeResize}, подтверждение=${restoredPosition ? JSON.stringify(restoredPosition) : 'нет'}, после=${scrollAfterResize.y} (max ${scrollAfterResize.max})`);
+  check(Boolean(restoredPosition) && Math.abs(scrollAfterResize.y - Math.min(restoredPosition.targetY, scrollAfterResize.max)) < 8, `прокрутка не восстановилась после перерисовки: до перетаскивания=${scrollBeforeResize}, целевая позиция=${restoredPosition?.targetY ?? 'нет'}, подтверждение=${restoredPosition ? JSON.stringify(restoredPosition) : 'нет'}, после=${scrollAfterResize.y} (max ${scrollAfterResize.max})`);
   const widthRender = page.locator('#frame').evaluate(frame => new Promise(resolve => frame.addEventListener('load', resolve, { once: true })));
   await page.fill('#canvas-width', '420');
   await page.locator('#canvas-width').press('Tab');
