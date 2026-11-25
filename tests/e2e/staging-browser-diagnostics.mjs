@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const studioUrl = new URL(process.env.STUDIO_URL || 'https://marcostavar24633-cyber.github.io/unique-design-studio/');
+const studioUrl = new URL(process.env.STUDIO_URL || 'https://marcostavar24633-cyber.github.io/unique-design-studio/studio/index.html');
 const studioOrigin = process.env.STUDIO_ORIGIN || studioUrl.origin;
 const workerPublicUrl = new URL(process.env.STAGING_WORKER_PUBLIC_URL || 'https://unique-design-studio-ai.marcostavar24633.workers.dev');
 const stagingLocalUrl = new URL(process.env.STAGING_LOCAL_URL || 'http://127.0.0.1:8787');
