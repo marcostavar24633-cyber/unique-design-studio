@@ -37,7 +37,30 @@ try {
   assert.equal(result.status, 413, `oversized staging request returned HTTP ${result.status}`);
   assert.equal(result.body.maxBytes, 64_000, 'Worker must report its configured body limit');
   assert.match(result.body.error, /лимит 64000 байт/);
-  console.log('Live staging payload limit passed: HTTP 413, limit=64000 bytes, CORS valid; invalid JSON ensures no AI inference path.');
+
+  let rateLimited = false;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await page.evaluate(async endpoint => {
+      const result = await fetch(`${endpoint}/api/generate-landing`, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{',
+        signal: AbortSignal.timeout(20_000),
+      });
+      return { status: result.status, body: await result.json() };
+    }, stagingUrl.origin);
+    if (response.status === 429) {
+      assert.match(response.body.error, /Слишком много запросов/);
+      rateLimited = true;
+      break;
+    }
+    assert.equal(response.status, 400, `invalid JSON attempt ${attempt + 1} returned HTTP ${response.status}`);
+    assert.match(response.body.error, /Некорректный JSON/);
+  }
+  assert.equal(rateLimited, true, 'Worker must apply its real per-IP rate limit');
+  console.log('Live staging request guards passed: oversized body HTTP 413, invalid JSON rate limit HTTP 429; no AI inference path was used.');
   await context.close();
 } finally {
   await browser.close();
