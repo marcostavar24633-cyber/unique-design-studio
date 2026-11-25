@@ -408,6 +408,7 @@ try {
     const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
     await firstChoice.scrollIntoViewIfNeeded();
     const mainBeforeHover = await page.locator('#frame').evaluate(frame => frame.srcdoc);
+    await page.evaluate(() => { window.__udsCanvasScrollTrace = []; window.__udsCanvasScrollTraceHandler = event => { if (event.data?.type === 'uds-canvas-scroll') window.__udsCanvasScrollTrace.push({ y: event.data.y, t: performance.now() }); }; window.addEventListener('message', window.__udsCanvasScrollTraceHandler); });
     const scrollTarget = await preview.locator('html').evaluate(root => {
       root.style.scrollBehavior = 'auto';
       const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
@@ -438,7 +439,9 @@ try {
     });
     check(previewA.differs, 'наведение не меняет визуальный вариант относительно текущего сайта');
     check(previewA.transition.includes('opacity'), `плавное появление предпросмотра не настроено: ${previewA.transition}`);
+    await page.waitForTimeout(200);
     const liveMainScroll = await preview.locator('body').evaluate(() => window.scrollY);
+    console.log('Живой предпросмотр прокрутки:', JSON.stringify({ scrollTarget, stableScroll, liveMainScroll, restored: previewA.restored, trace: await page.evaluate(() => window.__udsCanvasScrollTrace) }));
     check(Math.abs(Number(previewA.restored.y) - liveMainScroll) < 8, `предпросмотр не сохранил позицию основного холста: текущая прокрутка ${liveMainScroll}, предпросмотр ${previewA.restored.y} (цель ${previewA.restored.targetY}; до наведения ${stableScroll})`);
     check(scrollTarget.max > 0, 'страница предпросмотра не прокручивается, поэтому позицию нельзя проверить');
     await secondChoice.scrollIntoViewIfNeeded();
