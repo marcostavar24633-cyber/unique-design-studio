@@ -11,6 +11,16 @@ import { buildConcept } from './concept.js';
 // с вуалью цвета палитры (render.js), а не отдельная картинка. Раньше в них фото первого экрана не было вовсе.
 /** Сколько кадров галереи планирует студия (и генерирует автопилот). */
 export const GALLERY_FRAMES = 8;
+const GALLERY_SHOT_TITLES = [
+  'Пространство и атмосфера',
+  'Материалы крупным планом',
+  'Мастер за работой',
+  'Готовый результат',
+  'Интерьер и свет',
+  'Команда проекта',
+  'Инструменты и процесс',
+  'Рабочее место с другого ракурса',
+];
 
 export const HERO_AS_BACKGROUND = new Set(['catalog', 'split-utility', 'brutalist', 'minimal']);
 /** @deprecated Прежнее имя того же набора архитектур: сохранено для совместимости внешнего кода. */
@@ -80,7 +90,7 @@ export function imageSlots(project, concept) {
     for (let n = 0; n < frames; n++) {
       const g = project.gallery[n];
       slots.push({
-        ...base, id: `gallery-${n}`, role: 'gallery', label: `Галерея, кадр ${n + 1}`,
+        ...base, id: `gallery-${n}`, role: 'gallery', label: GALLERY_SHOT_TITLES[n % GALLERY_SHOT_TITLES.length],
         filled: Boolean(g?.src), mobileFilled: Boolean(art.mobileSources?.gallery?.[n]),
         aspect: '4:5', mobileAspect: '4:5', minWidth: 1600,
         subject: `${ideas[n % ideas.length]} — ниша «${niche}»`,

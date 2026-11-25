@@ -6,6 +6,10 @@ import { ARCHETYPES, BRANDS, LEGACY_LABELS, LIBRARY_KEY, TIERS, MECHANICS, MASKS
 
 const STORE = 'uds:studio:v1';
 const PREVIEW_STORE = 'uds:design-preview:v1';
+let pendingDesignPreview = null;
+let storedDesignPreviewChecked = false;
+let storedDesignPreviewAvailable = false;
+let storedDesignPreviewProjectId = '';
 const MAX_SOURCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 1024 * 1024;
 const MAX_IMAGE_DATA = 3_800_000;
@@ -185,9 +189,17 @@ let persistBackupFailed = false;
 let persistRevision = 0;
 let lastPersistAt = 0;
 let backupNoticeShown = false;
+let persistIdleRequest = 0;
+let persistTimeout = 0;
 const PERSIST_PENDING = 'Основное хранилище заполнено. Выполняется резервное сохранение в IndexedDB; не закрывайте вкладку до подтверждения.';
 const PERSIST_ERROR = 'Не удалось сохранить проект: основное и резервное хранилища недоступны. Скачайте JSON немедленно.';
+function cancelScheduledPersist() {
+  if (persistIdleRequest && 'cancelIdleCallback' in window) cancelIdleCallback(persistIdleRequest);
+  if (persistTimeout) clearTimeout(persistTimeout);
+  persistIdleRequest = persistTimeout = 0;
+}
 const persist = () => {
+  cancelScheduledPersist();
   const savedAt = Math.max(Date.now(), localSavedAt + 1, lastPersistAt + 1);
   lastPersistAt = savedAt;
   const revision = ++persistRevision;
@@ -219,6 +231,14 @@ const persist = () => {
     return false;
   }
 };
+function schedulePersist() {
+  cancelScheduledPersist();
+  if ('requestIdleCallback' in window) persistIdleRequest = requestIdleCallback(() => { persistIdleRequest = 0; persist(); }, { timeout: 1200 });
+  else persistTimeout = setTimeout(() => { persistTimeout = 0; persist(); }, 350);
+}
+function flushScheduledPersist() { if (persistIdleRequest || persistTimeout) persist(); }
+window.addEventListener('pagehide', flushScheduledPersist);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushScheduledPersist(); });
 let emergencyRestorePromise;
 function restoreEmergencyBackupIfNewer() {
   if (!emergencyRestorePromise) emergencyRestorePromise = (async () => {
@@ -643,7 +663,7 @@ const GROUPS = [
     ['@artDirectionPreset', 'Сценарий арт-дирекции', 'artDirectionPreset', 'Согласованный комплект: архитектура и положение заголовка, шапка и навигация, стиль CTA, типографика, движение, свет, фактура и переходы. Явные настройки отдельных эффектов имеют приоритет'],
     ['@cinematicLayers', 'Фактура и свет', 'cinematicLayers', 'Зерно, бумага, полутон, сетка или сканлинии и световые слои первого экрана. Авто — по направлению графики. Только декор позади текста: контраст не меняется'],
     ['@transition', 'Переходы между секциями', 'transition', 'Мягкий градиентный ореол на стыке блоков без отдельной полосы и отступа. Цвета «Авто» согласованы с палитрой'],
-    ['@revealEffect', 'Появление блоков', 'revealEffect', 'Как блоки проявляются при прокрутке — 15 эффектов. Ручной выбор включает появление. Без JavaScript и при «уменьшить движение» контент виден сразу'],
+    ['@revealEffect', 'Появление блоков', 'revealEffect', '25 вариантов: выезд с краёв, масштаб, размытие, шторка, поворот и объёмный вход. Ручной выбор включает появление. При «уменьшить движение» контент виден сразу'],
     ['@buttonStyle', 'Стиль кнопок', 'buttonStyle', '15 стилей: капсула, градиент, свечение, объём, выезжающая заливка, стрелка, стекло, неон и другие. Цвета — из палитры, контраст сохраняется'],
     ['@typeStyle', 'Стиль типографики', 'typeStyle', '15 стилей оформления заголовков поверх выбранных шрифтов: плотный, воздушный, прописные с разрядкой, курсив, крупный, капитель, маркер, нумерация и другие. Цвета не меняются'],
     ['@sectionLayout', 'Раскладка секций', 'sectionLayout', '15 раскладок: журнальная, смещённая, рамки, центр, липкий заголовок, чередование сторон, полосы, колонки, панели, рельс, узкая, широкая, номер секции, карточки-секции'],
@@ -1057,38 +1077,48 @@ const registry = () => state.library.map(l => l.entry);
 function updateChangePreviewButton() {
   const button = $('#change-preview');
   if (!button) return;
-  try {
-    const preview = JSON.parse(localStorage.getItem(PREVIEW_STORE) || 'null');
-    const available = Boolean(preview?.beforeHtml && preview?.afterHtml && preview.projectId === state.raw.id);
-    button.disabled = !available;
-    button.title = available ? 'Открыть сравнение в отдельной вкладке' : 'Сначала внесите изменение в текущий проект';
-  } catch { button.disabled = true; }
+  if (!storedDesignPreviewChecked) {
+    storedDesignPreviewChecked = true;
+    try {
+      const preview = JSON.parse(localStorage.getItem(PREVIEW_STORE) || 'null');
+      storedDesignPreviewAvailable = Boolean(preview?.beforeHtml && preview?.afterHtml && preview.projectId === state.raw.id);
+      storedDesignPreviewProjectId = storedDesignPreviewAvailable ? preview.projectId : '';
+    } catch { storedDesignPreviewAvailable = false; }
+  }
+  const available = Boolean(pendingDesignPreview?.projectId === state.raw.id
+    || (storedDesignPreviewAvailable && storedDesignPreviewProjectId === state.raw.id));
+  button.disabled = !available;
+  button.title = available ? 'Открыть сравнение в отдельной вкладке' : 'Сначала внесите изменение в текущий проект';
 }
 function run() {
   const previousResult = result;
   const previousRaw = lastRenderedRaw;
+  let changedPreview = null;
   pendingCanvasFrameScroll = previousResult?.project.id === state.raw.id
     ? readCanvasFrameScroll()
     : null;
   const nextResult = generate(state.raw, { registry: registry() });
   if (previousResult && previousRaw && previousResult.project.id === nextResult.project.id && previousResult.html !== nextResult.html) {
-    try {
-      localStorage.setItem(PREVIEW_STORE, JSON.stringify({
-        version: 1, projectId: nextResult.project.id,
-        projectName: nextResult.project.brand || nextResult.project.niche || 'Проект',
-        changedAt: new Date().toISOString(),
-        beforeHtml: previousResult.html, afterHtml: nextResult.html,
-        beforeRaw: previousRaw, afterRaw: exportProject(normalizeProject(state.raw), nextResult.concept)
-      }));
-    } catch { toast('Не удалось сохранить сравнение: возможно, в браузере закончилось место. Основной проект не затронут.'); }
+    // Keep comparison snapshots in memory while editing. Serializing two complete
+    // HTML documents (often containing embedded photos) into localStorage here
+    // blocks wheel input and the editor's main thread after every visual change.
+    changedPreview = {
+      version: 1, projectId: nextResult.project.id,
+      projectName: nextResult.project.brand || nextResult.project.niche || 'Проект',
+      changedAt: new Date().toISOString(),
+      beforeHtml: previousResult.html, afterHtml: nextResult.html,
+      beforeRaw: previousRaw,
+      concept: nextResult.concept
+    };
   }
   result = nextResult;
   lastRenderedRaw = JSON.parse(JSON.stringify(state.raw));
+  if (changedPreview) pendingDesignPreview = { ...changedPreview, afterRaw: lastRenderedRaw };
   $('#frame').srcdoc = previewHtml(result.html);
   renderSpec(); renderConcept(); renderAudit(); renderProduction(); renderRegistry();
   renderPublishManager();
   updateChangePreviewButton();
-  persist();
+  schedulePersist();
 }
 
 // ---------- Publish Manager: local deployment history only ---------- 
@@ -2886,7 +2916,8 @@ async function generateProjectImages(endpoint, expectedProjectId, onProgress = (
     } else if (slot.role === 'gallery') {
       const items = Array.isArray(state.raw.gallery) ? [...state.raw.gallery] : [];
       const galleryIndex = Number(slot.id.split('-')[1]);
-      items[galleryIndex] = { ...(items[galleryIndex] || {}), src: data, alt, caption: slot.label };
+      const existing = items[galleryIndex] || {};
+      items[galleryIndex] = { ...existing, src: data, alt, caption: String(existing.caption || '').trim() || slot.label };
       state.raw.gallery = items;
     }
     generated++;
@@ -4208,6 +4239,15 @@ document.addEventListener('keydown', event => {
 $('#change-preview')?.addEventListener('click', () => {
   updateChangePreviewButton();
   if ($('#change-preview').disabled) return toast('Сначала внесите изменение в проект — тогда появится сравнение.');
+  if (pendingDesignPreview?.projectId === state.raw.id) {
+    try {
+      const { concept, ...snapshot } = pendingDesignPreview;
+      snapshot.afterRaw = exportProject(normalizeProject(snapshot.afterRaw), concept);
+      localStorage.setItem(PREVIEW_STORE, JSON.stringify(snapshot));
+      storedDesignPreviewAvailable = true;
+      storedDesignPreviewProjectId = snapshot.projectId;
+    } catch { return toast('Не удалось подготовить сравнение: возможно, в браузере закончилось место. Основной проект не затронут.'); }
+  }
   const opened = window.open('preview.html', '_blank');
   if (!opened) toast('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для студии.');
 });

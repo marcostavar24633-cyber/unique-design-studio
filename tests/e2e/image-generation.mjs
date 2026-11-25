@@ -138,6 +138,10 @@ try {
     { timeout: 60000 }
   );
   await page.waitForFunction(() => document.querySelector('#auto-go')?.disabled === false, null, { timeout: 10000 });
+  await page.waitForFunction(() => {
+    const raw = JSON.parse(localStorage.getItem('uds:studio:v1') || 'null')?.raw || {};
+    return raw.images?.hero?.startsWith('data:image/') && (raw.gallery || []).some(item => item?.src?.startsWith('data:image/'));
+  }, null, { timeout: 8000 });
 
   const snapshot = await page.evaluate(() => {
     const saved = JSON.parse(localStorage.getItem('uds:studio:v1') || 'null');
@@ -147,6 +151,7 @@ try {
     return {
       hero: raw.images?.hero || '',
       gallery: (raw.gallery || []).filter(item => item?.src).length,
+      galleryCaptions: (raw.gallery || []).map(item => item?.caption || '').filter(Boolean),
       gallerySources: (raw.gallery || []).map(item => item?.src).filter(Boolean),
       services: services.filter(item => Array.isArray(item) ? Boolean(item[3]) : Boolean(item?.image)).length,
       serviceSources: services.map(item => Array.isArray(item) ? item[3] : item?.image).filter(Boolean),
@@ -163,6 +168,8 @@ try {
   check(imageRequests.every(item => typeof item.prompt === 'string' && item.prompt.length > 0 && item.aspect), 'запрос изображения не содержит prompt или aspect');
   check(snapshot.hero.startsWith('data:image/'), 'сгенерированное главное фото не сохранено в images.hero');
   check(snapshot.gallery > 0, 'сгенерированные изображения не добавлены в галерею');
+  check(snapshot.galleryCaptions.length >= snapshot.gallery && snapshot.galleryCaptions.every(title => !/галерея|кадр\s*\d/i.test(title)),
+    'сгенерированные фото галереи не получили осмысленные названия');
   check([...snapshot.gallerySources, ...snapshot.serviceSources].every(src => typeof src === 'string' && src.startsWith('data:image/')), 'галерея или услуги содержат не встроенный image data URI');
   check(snapshot.imageJournal.length === imageRequests.length, 'журнал AI содержит ' + snapshot.imageJournal.length + ' image-записей при ' + imageRequests.length + ' запросах');
   check(snapshot.imageJournal.every(matchesImageJournal), 'журнал не сохранил model/route/provider/usage из ответа Worker');
