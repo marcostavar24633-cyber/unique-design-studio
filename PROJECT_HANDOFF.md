@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T03:34:34.736Z
+Время обновления: 2026-11-25T07:55:54.947Z
 Ветка: main
-Последний commit: 3c4e1c9545e725a650bb2277bfa1d9127d34cba2
-Дата коммита: 2026-11-25T07:34:16+04:00
-Сообщение: Merge pull request #260 from marcostavar24633-cyber/codex/text-fit-tight-container
+Последний commit: 18c36374b6c3d76f436c8909bf228219f1e3ac95
+Дата коммита: 2026-11-25T11:55:34+04:00
+Сообщение: fix editor resize and smooth visual option previews
 
 Последние коммиты:
+- 18c3637 · 2026-11-25 · fix editor resize and smooth visual option previews
+- 97a8729 · 2026-11-25 · docs: refresh project handoff
 - 3c4e1c9 · 2026-11-25 · Merge pull request #260 from marcostavar24633-cyber/codex/text-fit-tight-container
 - 202a7d4 · 2026-11-25 · test: cover narrow text fit fallback and safety margin
 - 10464f1 · 2026-11-25 · fix: wrap fitted labels in extremely narrow containers
 - 1c38874 · 2026-11-25 · docs: refresh project handoff
 - e9a2615 · 2026-11-25 · Merge pull request #258 from marcostavar24633-cyber/codex/text-fit-container-resize
 - 5d4d3c4 · 2026-11-25 · docs: refresh project handoff
-- 2f0751c · 2026-11-25 · Merge pull request #259 from marcostavar24633-cyber/codex/image-journal-inferred-provider
-- 8a1b3b8 · 2026-11-25 · fix: report inferred provider and unknown image usage
 <!-- HANDOFF:AUTO:END -->
