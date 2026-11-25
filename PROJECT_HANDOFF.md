@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T11:46:13.450Z
+Время обновления: 2026-11-25T12:00:35.837Z
 Ветка: main
-Последний commit: 2b6ec537158883cfc499dcf7f9737c57c0025fe0
-Дата коммита: 2026-11-25T15:45:59+04:00
-Сообщение: fix: avoid asserting hidden CORS response header (#265)
+Последний commit: 0fe8ceb617b473fe750ed7faf99aea3d30304760
+Дата коммита: 2026-11-25T16:00:21+04:00
+Сообщение: test: verify live staging rate limit without AI inference (#266)
 
 Последние коммиты:
+- 0fe8ceb · 2026-11-25 · test: verify live staging rate limit without AI inference (#266)
+- 0f68207 · 2026-11-25 · docs: refresh project handoff
 - 2b6ec53 · 2026-11-25 · fix: avoid asserting hidden CORS response header (#265)
 - e9e1689 · 2026-11-25 · docs: refresh project handoff
 - 3eee883 · 2026-11-25 · test: verify staging payload limit without AI inference (#264)
 - 25dd80f · 2026-11-25 · docs: refresh project handoff
 - dfce12e · 2026-11-25 · ci: test staging diagnostics through temporary public route (#263)
 - 0f0cb8c · 2026-11-25 · docs: refresh project handoff
-- a2b15e9 · 2026-11-25 · fix: keep statement cards readable on narrow screens (#262)
-- 7b44b70 · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
