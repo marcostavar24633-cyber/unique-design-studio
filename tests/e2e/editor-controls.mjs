@@ -75,6 +75,7 @@ try {
     await page.click(`#canvas-menu [data-canvas-menu="${action}"]`);
     await render;
   };
+  await page.click('#ptab-editor');
   // Живой предпросмотр: реальные стили, плавное переключение и сохранение прокрутки.
   const previewSelect = page.locator('#form select[data-special][data-preview-enhanced="true"]').first();
   const previewControl = await previewSelect.evaluate(select => ({
