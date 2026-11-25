@@ -416,6 +416,7 @@ test('расход AI: до сброса лимита (00:00 UTC) и за тек
   assert.match(js, /До сброса Cloudflare/);
   assert.match(js, /Worker не обновлён \(нужна публикация\)/);
   assert.match(js, /const contentBrief = autopilot\(promptInput, \{ registry: registry\(\), forWorker: true \}\);/);
+  assert.match(js, /renderContentQaReview\(reviewGeneratedContent\(local\.project, \{\s*sectionIds: local\.concept\.homepage\.sections\.map\(section => section\.id\),\s*\}\)\);/);
   assert.match(js, /До сброса Cloudflare/);
 });
 
