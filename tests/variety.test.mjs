@@ -7,10 +7,10 @@ import { cardShapeCss, photoCompositionCss, revealCss } from '../src/engine/vari
 const base = { brand: 'Поток', niche: 'студия йоги', title: 'Йога для спины', contacts: { email: 'hello@example.com' },
   services: [['Хатха', 'Спокойная практика'], ['Виньяса', 'Динамичные связки']], advantages: [['Малые группы', 'До 8 человек'], ['Утро и вечер', 'Удобное время']] };
 
-test('формы карточек без арок, 15 эффектов появления и стилей кнопок', () => {
+test('формы карточек без арок, 25 эффектов появления и стилей кнопок', () => {
   assert.equal(CARD_SHAPE_IDS.length, 14);
   assert.equal(CARD_SHAPES.arch, undefined, 'арочные карточки исключены из генератора');
-  assert.equal(REVEAL_IDS.length, 15);
+  assert.equal(REVEAL_IDS.length, 25);
   assert.equal(Object.keys(BUTTONS).length, 15);
   assert.deepEqual(Object.keys(BUTTON_CSS).sort(), Object.keys(BUTTONS).sort(), 'у каждого стиля кнопки есть CSS');
   for (const id of CARD_SHAPE_IDS) assert.ok(cardShapeCss(id), id);
@@ -45,6 +45,14 @@ test('генератор сохраняет округлые карточки, �
   const auto = buildConcept({ ...base, cardShape: 'нет', revealEffect: 'нет', buttonStyle: 'нет' }).visualSystem;
   assert.ok(CARD_SHAPES[auto.variety.cardShape] && REVEALS[auto.variety.reveal] && BUTTONS[auto.button.id]);
   assert.equal(auto.variety.revealForced, false);
+});
+
+test('эффект появления может повторяться в соседних проектах и не входит в отпечаток уникальности', () => {
+  const first = generate({ ...base, id: 'reveal-repeat-a', revealEffect: 'slide-up-long' });
+  const next = generate({ ...base, id: 'reveal-repeat-b', revealEffect: 'slide-up-long' }, { registry: [first.entry] });
+  assert.equal(first.concept.visualSystem.variety.reveal, 'slide-up-long');
+  assert.equal(next.concept.visualSystem.variety.reveal, 'slide-up-long');
+  assert.equal(Object.hasOwn(next.concept.uniquenessCheck.fingerprint, 'reveal'), false);
 });
 
 test('авто-компоновка сохраняет скруглённые карточки для всех архитектур', () => {

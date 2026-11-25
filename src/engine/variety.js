@@ -37,13 +37,23 @@ export const REVEALS = Object.freeze({
   'clip-left': 'Шторка слева направо',
   'skew-in': 'Наклонный вход',
   'rise-scale': 'Подъём с увеличением',
+  'slide-up-long': 'Дальний выезд снизу',
+  'slide-left-deep': 'Выезд слева с глубиной',
+  'slide-right-deep': 'Выезд справа с глубиной',
+  'rotate-right': 'Поворот по часовой стрелке',
+  'flip-diagonal': 'Объёмный диагональный вход',
+  'zoom-blur': 'Резкое проявление из мягкого размытия',
+  'clip-right': 'Шторка справа налево',
+  'clip-center': 'Раскрытие из центра',
+  'fold-open': 'Разворот сверху вниз',
+  'soft-pop': 'Мягкое появление с масштабом',
 });
 export const REVEAL_IDS = Object.keys(REVEALS);
 
 const REVEAL_POOL = {
   calm: ['fade-in', 'fade-up', 'blur-in', 'clip-up'],
-  balanced: ['fade-up', 'slide-left', 'slide-right', 'zoom-in', 'clip-up', 'clip-left', 'rise-scale', 'fade-down', 'zoom-out'],
-  expressive: ['flip-x', 'flip-y', 'rotate-in', 'skew-in', 'rise-scale', 'clip-left', 'zoom-in', 'slide-right'],
+  balanced: ['fade-up', 'slide-left', 'slide-right', 'zoom-in', 'clip-up', 'clip-left', 'rise-scale', 'fade-down', 'zoom-out', 'slide-up-long', 'slide-left-deep', 'slide-right-deep', 'rotate-right', 'flip-diagonal', 'zoom-blur', 'clip-right', 'clip-center', 'fold-open', 'soft-pop'],
+  expressive: ['flip-x', 'flip-y', 'rotate-in', 'skew-in', 'rise-scale', 'clip-left', 'zoom-in', 'slide-right', 'slide-up-long', 'slide-left-deep', 'slide-right-deep', 'rotate-right', 'flip-diagonal', 'zoom-blur', 'clip-right', 'clip-center', 'fold-open', 'soft-pop'],
 };
 
 /** Генерация всегда использует прямоугольные карточки со скруглением; альтернативы остаются в canvas editor. */
@@ -190,6 +200,16 @@ const REVEAL_FROM = {
   'clip-left': 'opacity:.001;clip-path:inset(0 100% 0 0)',
   'skew-in': 'opacity:0;transform:skewY(4deg) translateY(16px)',
   'rise-scale': 'opacity:0;transform:translateY(22px) scale(.96)',
+  'slide-up-long': 'opacity:0;transform:translateY(54px)',
+  'slide-left-deep': 'opacity:0;transform:translateX(-64px) scale(.97)',
+  'slide-right-deep': 'opacity:0;transform:translateX(64px) scale(.97)',
+  'rotate-right': 'opacity:0;transform:rotate(5deg) translateY(18px)',
+  'flip-diagonal': 'opacity:0;transform:perspective(900px) rotate3d(1,1,0,-18deg) scale(.96)',
+  'zoom-blur': 'opacity:0;transform:scale(.84);filter:blur(8px)',
+  'clip-right': 'opacity:.001;clip-path:inset(0 0 0 100%)',
+  'clip-center': 'opacity:.001;clip-path:inset(50% 50% 50% 50%)',
+  'fold-open': 'opacity:0;transform:perspective(900px) rotateX(-32deg);transform-origin:top center',
+  'soft-pop': 'opacity:0;transform:translateY(10px) scale(.88)',
 };
 
 /** CSS эффекта появления. Перекрывает базовое появление; при reduced-motion всё сразу видно. */

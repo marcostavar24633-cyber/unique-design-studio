@@ -456,6 +456,8 @@ try {
     check(await previewSelect.inputValue() === previewControl.values[1], 'клик по варианту не выбрал соответствующее значение');
     const mainAfterSelect = await page.locator('#frame').evaluate(frame => frame.srcdoc);
     check(mainAfterSelect !== mainBeforeHover, 'выбранный вариант не обновил основной предпросмотр сайта');
+    check(await page.evaluate(() => localStorage.getItem('uds:design-preview:v1')) === null,
+      'редактор синхронно сохранил тяжёлое сравнение при выборе визуального варианта');
     await page.evaluate(() => window.removeEventListener('message', window.__udsPreviewRestoreHandler));
   }
 
@@ -548,6 +550,8 @@ try {
   await page.click('.top-more summary'); // «Сравнить до / после» находится в меню «Ещё»
   await page.click('#change-preview');
   const popup = await popupPromise;
+  check(await page.evaluate(() => Boolean(JSON.parse(localStorage.getItem('uds:design-preview:v1') || 'null')?.afterHtml)),
+    'кнопка сравнения не сохранила подготовленные версии перед открытием');
   await popup.waitForLoadState('domcontentloaded');
   await popup.locator('#workspace').waitFor({ state: 'visible' });
   const beforeHtml = await popup.locator('#before-frame').getAttribute('srcdoc');

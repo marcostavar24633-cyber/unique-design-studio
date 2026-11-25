@@ -21,6 +21,9 @@ test('задания есть и до загрузки фото: по одном
   assert.ok(slots.some(s => s.id === 'hero'));
   assert.equal(slots.filter(s => s.role === 'service').length, g.project.services.filter(i => i.title).length, 'по заданию на каждую позицию');
   assert.ok(slots.filter(s => s.role === 'gallery').length >= 4);
+  const galleryTitles = slots.filter(s => s.role === 'gallery').slice(0, 8).map(s => s.label);
+  assert.equal(new Set(galleryTitles).size, 8, 'у кадров свои осмысленные названия');
+  assert.ok(galleryTitles.every(title => !/галерея|кадр\s*\d/i.test(title)), 'не используются заглушки «Галерея, кадр N»');
   for (const s of slots) for (const key of ['subject', 'angle', 'light', 'background', 'composition', 'aspect', 'mobileAspect']) assert.ok(s[key], `${s.id}.${key}`);
 });
 
