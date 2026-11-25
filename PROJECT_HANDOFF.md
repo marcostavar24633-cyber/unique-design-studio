@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-25T18:06:38.534Z
+Время обновления: 2026-11-25T19:19:52.885Z
 Ветка: main
-Последний commit: 9ee746c38fbb9ef363e9aa1b54782148a2e70fef
-Дата коммита: 2026-11-25T22:06:24+04:00
-Сообщение: Merge pull request #274 from marcostavar24633-cyber/fix/hero-overlay-scroll-performance
+Последний commit: 970daa2db6bbcfdf788eed21204bed1dfbb0b580
+Дата коммита: 2026-11-25T23:19:40+04:00
+Сообщение: Merge pull request #275 from marcostavar24633-cyber/fix/preview-selection-scroll-lock
 
 Последние коммиты:
+- 970daa2 · 2026-11-25 · Merge pull request #275 from marcostavar24633-cyber/fix/preview-selection-scroll-lock
+- 36eda71 · 2026-11-25 · fix: clip horizontal overflow in generated pages
+- e1331b5 · 2026-11-25 · fix: prevent responsive horizontal page overflow
+- 561ac2e · 2026-11-25 · fix: keep editor responsive and expand gallery motion
+- 1f269a0 · 2026-11-25 · docs: refresh project handoff
 - 9ee746c · 2026-11-25 · Merge pull request #274 from marcostavar24633-cyber/fix/hero-overlay-scroll-performance
 - b60cc26 · 2026-11-25 · test: exercise geometry panel scrolling while visible
 - 4fa5f75 · 2026-11-25 · fix: pass option list wheel scroll to editor panel
-- d994c3b · 2026-11-25 · fix: skip dragged node during drop hit testing
-- 8879569 · 2026-11-25 · fix: ignore dragged element when resolving drop target
-- ef446db · 2026-11-25 · fix: improve editor scroll responsiveness and header clearance
-- 7907a91 · 2026-11-25 · fix: keep hero content clear beneath overlay navigation
-- 1117683 · 2026-11-25 · fix: keep editor scrolling responsive during style previews
 <!-- HANDOFF:AUTO:END -->
