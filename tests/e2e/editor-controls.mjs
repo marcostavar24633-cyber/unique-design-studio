@@ -406,6 +406,7 @@ try {
     const optionGroup = previewSelect.locator('xpath=following-sibling::*[1]');
     const firstChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[0]}"]`);
     const secondChoice = optionGroup.locator(`[data-preview-value="${previewControl.values[1]}"]`);
+    await firstChoice.scrollIntoViewIfNeeded();
     const mainBeforeHover = await page.locator('#frame').evaluate(frame => frame.srcdoc);
     const scrollTarget = await preview.locator('html').evaluate(root => {
       root.style.scrollBehavior = 'auto';
@@ -424,7 +425,6 @@ try {
       };
       window.addEventListener('message', window.__udsPreviewRestoreHandler);
     });
-    await firstChoice.scrollIntoViewIfNeeded();
     await firstChoice.hover();
     await page.locator('#view-preview iframe.visual-option-preview-frame.is-visible').waitFor({ state: 'visible', timeout: 10000 });
     await page.waitForFunction(() => Boolean(window.__udsLastPreviewRestore), null, { timeout: 10000 });
