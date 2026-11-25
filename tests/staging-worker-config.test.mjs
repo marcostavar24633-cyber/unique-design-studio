@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const stagingPath = resolve(root, 'config/wrangler.ai-staging.json');
 const staging = JSON.parse(readFileSync(stagingPath, 'utf8'));
+const faultPath = resolve(root, 'config/wrangler.fault-test.json');
+const fault = JSON.parse(readFileSync(faultPath, 'utf8'));
 
 test('staging Worker stays private and separate from production', () => {
   assert.equal(staging.name, 'unique-design-studio-ai-staging');
@@ -21,6 +23,35 @@ test('staging Worker uses direct Workers AI without paid fallbacks', () => {
   assert.equal(staging.vars?.NVIDIA_NIM_ENABLED, 'false');
   assert.equal(staging.services, undefined, 'staging must not depend on the production Gateway');
   assert.equal(existsSync(resolve(dirname(stagingPath), staging.main)), true);
+});
+
+test('synthetic fault-test Worker is isolated and cannot invoke AI or the Gateway', () => {
+  assert.equal(fault.name, 'unique-design-studio-ai-fault-test');
+  assert.equal(fault.workers_dev, true);
+  assert.equal(fault.preview_urls, false);
+  assert.equal(fault.ai, undefined);
+  assert.equal(fault.services, undefined);
+  assert.equal(existsSync(resolve(dirname(faultPath), fault.main)), true);
+  const fixture = readFileSync(resolve(root, 'tests/fixtures/staging-fault-worker.mjs'), 'utf8');
+  assert.match(fixture, /fault-503\\\/api\\\/diagnostics/);
+  assert.match(fixture, /fault-timeout\\\/api\\\/diagnostics/);
+  assert.match(fixture, /15_000/);
+  assert.doesNotMatch(fixture, /env\.AI|env\.GATEWAY|generate-image/);
+});
+
+test('fault diagnostics deploy only on manual request and always clean up the temporary Worker', () => {
+  const workflow = readFileSync(resolve(root, '.github/workflows/deploy-ai-staging.yml'), 'utf8');
+  const browserCheck = readFileSync(resolve(root, 'tests/e2e/staging-fault-diagnostics.mjs'), 'utf8');
+  assert.match(workflow, /- fault-diagnostics/);
+  assert.match(workflow, /inputs\.operation == 'fault-diagnostics'/);
+  assert.match(workflow, /always\(\).*steps\.deploy-fault-test\.outputs\.attempted/);
+  assert.match(workflow, /wrangler@4 delete --config config\/wrangler\.fault-test\.json/);
+  assert.match(workflow, /post-cleanup|route removed|route remains reachable/i);
+  assert.match(browserCheck, /fault-503\/api\/generate-landing/);
+  assert.match(browserCheck, /fault-timeout\/api\/generate-landing/);
+  assert.match(browserCheck, /Synthetic upstream failure/);
+  assert.match(browserCheck, /12 секунд/);
+  assert.doesNotMatch(browserCheck, /api\/generate-image/);
 });
 
 test('staging offers a private browser diagnostics operation without deploying or invoking image inference', () => {

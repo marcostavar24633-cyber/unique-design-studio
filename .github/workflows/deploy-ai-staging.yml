@@ -13,6 +13,7 @@ on:
           - browser-diagnostics
           - live-browser-diagnostics
           - live-payload-limit-diagnostics
+          - fault-diagnostics
           - deploy
           - probe
   issue_comment:
@@ -37,6 +38,8 @@ jobs:
           node-version: 22
       - name: Validate staging bundle
         run: npx --yes wrangler@4 deploy --dry-run --config config/wrangler.ai-staging.json
+      - name: Validate isolated fault-test Worker bundle
+        run: npx --yes wrangler@4 deploy --dry-run --config config/wrangler.fault-test.json
       - name: Check browser CORS against temporary staging runtime
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'browser-diagnostics' }}
         env:
@@ -124,6 +127,42 @@ jobs:
             exit 1
           fi
           echo "Temporary public staging route disabled (post-cleanup HTTP status: ${status:-unreachable})."
+      - name: Deploy isolated synthetic fault-test Worker
+        id: deploy-fault-test
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'fault-diagnostics' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${CLOUDFLARE_API_TOKEN:?Missing CLOUDFLARE_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing CLOUDFLARE_ACCOUNT_ID}"
+          echo 'attempted=true' >> "$GITHUB_OUTPUT"
+          npx --yes wrangler@4 deploy --config config/wrangler.fault-test.json
+      - name: Verify published Studio handling of HTTP 503 and timeout
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'fault-diagnostics' }}
+        run: |
+          npm install --no-save playwright
+          npx playwright install chromium
+          STAGING_WORKER_PUBLIC_URL='https://unique-design-studio-ai-fault-test.marcostavar24633.workers.dev' \
+          STUDIO_URL='https://marcostavar24633-cyber.github.io/unique-design-studio/studio/index.html' \
+            node tests/e2e/staging-fault-diagnostics.mjs
+      - name: Delete synthetic fault-test Worker and verify its route is gone
+        if: ${{ always() && steps.deploy-fault-test.outputs.attempted == 'true' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 delete --config config/wrangler.fault-test.json --force
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
+            -H 'Origin: https://marcostavar24633-cyber.github.io' \
+            'https://unique-design-studio-ai-fault-test.marcostavar24633.workers.dev/fault-503/api/diagnostics' || true)"
+          if [ "$status" != '404' ]; then
+            echo "Synthetic fault-test route remains reachable after cleanup (HTTP ${status:-unreachable})." >&2
+            exit 1
+          fi
+          echo "Temporary synthetic Worker route removed (HTTP ${status})."
       - name: Deploy private staging Worker
         if: ${{ inputs.operation == 'deploy' }}
         env:
