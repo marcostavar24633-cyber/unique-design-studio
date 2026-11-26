@@ -703,6 +703,14 @@ const GROUPS = [
     ['processTitle', 'Заголовок этапов работы'], ['process', 'Этапы работы', 'list', LIST_HINT],
     ['pricingTitle', 'Заголовок тарифов и пакетов'], ['pricing', 'Тарифы и пакеты', 'list', 'Название | Описание | Цена | URL картинки (необязательно). Показываются только введённые цены — движок ничего не придумывает.'],
     ['casesTitle', 'Заголовок кейсов'], ['cases', 'Кейсы и результаты', 'list', 'Проект или задача | Что сделали и какой подтверждённый результат получили | (пусто) | URL изображения (необязательно) | ALT-текст. Добавляйте только реальные результаты.'],
+    ['comparisonTitle', 'Заголовок сравнения'], ['comparisons', 'Сравнение вариантов', 'list', 'Параметр | Этот вариант | Альтернатива. Добавляйте только проверенные характеристики; сравнение не заполняется догадками.'],
+    ['comparisonPrimaryLabel', 'Сравнение: название первого варианта'], ['comparisonAlternativeLabel', 'Сравнение: название второго варианта'],
+    ['chartTitle', 'Заголовок графика'], ['metrics', 'График и показатели', 'list', 'Число | Подпись | (необязательно единица измерения). Для шкалы указывайте числовое значение; публикуйте только подтверждённые данные.'],
+    ['beforeAfterTitle', 'Заголовок «До и после»'], ['beforeAfter', 'Фото «До и после»', 'list', 'URL фото ДО | URL фото ПОСЛЕ | Подпись | ALT-текст. Нужны две фотографии одной работы с разрешением на публикацию.'],
+    ['calculatorTitle', 'Заголовок калькулятора'], ['calculator.base', 'Калькулятор: базовая стоимость', 'number', 'Только ваша подтверждённая стартовая ставка. Оставьте пустым, чтобы не показывать калькулятор.'],
+    ['calculator.perUnit', 'Калькулятор: цена за единицу', 'number', 'Число без валюты; единица измерения задаётся ниже. Итог будет помечен как предварительная оценка.'],
+    ['calculator.unitLabel', 'Калькулятор: единица измерения'], ['calculator.max', 'Калькулятор: максимальное количество', 'number', 'Ограничивает ввод посетителя. Не задавайте лимит, если он не нужен.'],
+    ['calculator.currency', 'Калькулятор: валюта', 'currency'],
     ['@quiz', 'Подбор по квизу', 'quiz', 'Необязательный короткий подбор: услуги из каталога + приоритет клиента. Результат можно перенести в заявку; внешние сервисы не нужны. Требуется не менее двух позиций.'],
     ['quizTitle', 'Заголовок квиза'],
     ['faqs', 'Вопросы и ответы', 'list', 'Один вопрос на строку: Вопрос | Ответ'],
@@ -729,6 +737,7 @@ function set(path, value) {
 const rowsToText = (rows, path) => (Array.isArray(rows) ? rows : []).map(r => {
   if (path === 'categories') return String(r);
   if (path === 'gallery') return String(r.src || '').startsWith('data:image/') ? '' : [r.src, r.caption, r.alt].filter((v,i)=>i===0 || v).join(' | ');
+  if (path === 'beforeAfter') return [r.before, r.after, r.title, r.alt].join(' | ');
   const a = Array.isArray(r) ? r.slice(0, 7) : [r.title, r.text, r.price, r.image, r.alt, r.category, r.badge];
   const cells = a.map(x => x ?? '');
   if (path === 'services' && String(cells[3] || '').startsWith('data:image/')) cells[3] = '';
@@ -746,6 +755,15 @@ function textToRows(text, path) {
       return { ...(old?.id ? { id: old.id } : {}), src: r[0], caption: r[1] || '', alt: r[2] || '' };
     }), ...embedded];
   }
+  if (path === 'beforeAfter') {
+    const current = state.raw.beforeAfter || [];
+    return rows.map((row, i) => {
+      const old = current.find(item => (Array.isArray(item) ? item[0] : item.before) === row[0]) || (rows.length === current.length ? current[i] : null);
+      const id = Array.isArray(old) ? old[4] : old?.id;
+      if (id) row[4] = id;
+      return row;
+    });
+  }
   if (path === 'services') return rows.map((row, i) => {
     const current = state.raw.services || [];
     const old = current.find(s => (Array.isArray(s) ? s[0] : s.title) === row[0]) || (rows.length === current.length ? current[i] : null);
@@ -757,7 +775,7 @@ function textToRows(text, path) {
     if (oldId) row[7] = oldId;
     return row;
   });
-  if (['advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'pricing', 'cases'].includes(path)) {
+  if (['advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'pricing', 'cases', 'comparisons', 'metrics'].includes(path)) {
     const current = state.raw[path] || [];
     return rows.map((row, i) => {
       const old = current.find(item => (Array.isArray(item) ? item[0] : item.title) === row[0]) || (rows.length === current.length ? current[i] : null);
@@ -1006,6 +1024,8 @@ function buildForm() {
     const d = hint ? ` aria-describedby="${id}-h"` : '';
     let control;
     if (type === 'area') control = `<textarea id="${id}" data-path="${path}"${d}>${esc(get(path))}</textarea>`;
+    else if (type === 'number') control = `<input id="${id}" type="number" min="0" step="any" data-path="${path}" value="${esc(get(path) ?? '')}"${d}>`;
+    else if (type === 'currency') control = `<select id="${id}" data-path="${path}">${[['RUB','₽ — рубль'],['USD','$ — доллар США'],['EUR','€ — евро'],['KZT','₸ — тенге'],['BYN','Br — белорусский рубль'],['GBP','£ — фунт стерлингов']].map(([code,label]) => `<option value="${code}"${get(path) === code ? ' selected' : ''}>${label}</option>`).join('')}</select>`;
     else if (type === 'hideCTA') control = `<label class="row"><input type="checkbox" data-hide-cta${state.raw.fieldStates?.cta === 'hidden' ? ' checked' : ''}> Не показывать CTA</label>`;
     else if (type === 'quiz') control = `<label class="row"><input type="checkbox" data-special="quizEnabled"${state.raw.quiz?.enabled === true ? ' checked' : ''}> Добавить квиз на страницу</label>`;
     else if (type === 'list') control = `<textarea id="${id}" class="list" data-list="${path}"${d} spellcheck="false">${esc(rowsToText(get(path), path))}</textarea>`;
@@ -3076,9 +3096,9 @@ function moveGalleryImage(from, direction) {
   buildForm(); run(); toast('Порядок фотографий обновлён');
 }
 // ---------- Расположение блоков: перетаскивание и кнопки ↑↓ ----------
-const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', pricing: 'Тарифы и пакеты', cases: 'Кейсы и результаты', quiz: 'Подбор по квизу', faq: 'Вопросы и ответы', testimonials: 'Отзывы', team: 'Команда', stats: 'Факты и цифры' };
-const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle', pricing: 'pricingTitle', cases: 'casesTitle', quiz: 'quizTitle' };
-const ORDER_LISTS = [['services', 'Позиции каталога'], ['pricing', 'Тарифы и пакеты'], ['cases', 'Кейсы и результаты'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['testimonials', 'Отзывы'], ['team', 'Команда'], ['stats', 'Факты и цифры'], ['canvasBlocks', 'Добавленные блоки']];
+const ORDER_SECTION_LABELS = { about: 'О нас', items: 'Каталог', advantages: 'Преимущества', process: 'Этапы работы', gallery: 'Галерея', pricing: 'Тарифы и пакеты', cases: 'Кейсы и результаты', comparisons: 'Сравнение вариантов', metrics: 'Данные и показатели', beforeAfter: 'До и после', calculator: 'Предварительный расчёт', quiz: 'Подбор по квизу', faq: 'Вопросы и ответы', testimonials: 'Отзывы', team: 'Команда', stats: 'Факты и цифры' };
+const ORDER_SECTION_TITLES = { about: 'aboutTitle', items: 'servicesTitle', advantages: 'advantagesTitle', process: 'processTitle', pricing: 'pricingTitle', cases: 'casesTitle', comparisons: 'comparisonTitle', metrics: 'chartTitle', beforeAfter: 'beforeAfterTitle', calculator: 'calculatorTitle', quiz: 'quizTitle' };
+const ORDER_LISTS = [['services', 'Позиции каталога'], ['pricing', 'Тарифы и пакеты'], ['cases', 'Кейсы и результаты'], ['comparisons', 'Сравнение вариантов'], ['metrics', 'Данные и показатели'], ['beforeAfter', 'Фото «До и после»'], ['advantages', 'Преимущества'], ['process', 'Этапы работы'], ['faqs', 'Вопросы и ответы'], ['testimonials', 'Отзывы'], ['team', 'Команда'], ['stats', 'Факты и цифры'], ['canvasBlocks', 'Добавленные блоки']];
 const orderItemTitle = r => String(Array.isArray(r) ? r[0] ?? '' : r?.title ?? r ?? '').trim() || 'Без названия';
 function currentSectionOrder() {
   return (result?.concept?.homepage?.sectionOrder || []).filter(id => id !== 'contact');
@@ -4092,6 +4112,7 @@ $('#form').addEventListener('submit', e => e.preventDefault());
 $('#form').addEventListener('click', e => {
   const demoFill = e.target.closest('[data-demo-fill]');
   if (demoFill) {
+    const demoImage = (label, tone) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="${tone}"/><stop offset="1" stop-color="#171a1e"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><rect x="120" y="110" width="560" height="380" rx="26" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="4"/><text x="400" y="315" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="42">${label}</text><text x="400" y="370" text-anchor="middle" fill="#fff" fill-opacity=".8" font-family="Arial,sans-serif" font-size="22">ИЛЛЮСТРАТИВНЫЙ ПРИМЕР</text></svg>`)}`;
     const sample = {
       brand: 'Демо: студия «Линия»', niche: 'дизайн интерьера', title: 'Интерьеры, в которых удобно жить',
       description: 'Заполненный пример сайта студии интерьера. Все контакты, цены, отзывы и кейсы ниже — демонстрационные данные.',
@@ -4104,6 +4125,15 @@ $('#form').addEventListener('click', e => {
       pricing: [['Планировка', 'Пример наполнения — уточните реальные условия.', '15 000 ₽ · пример'], ['Полный проект', 'Пример расширенного пакета — замените составом своей услуги.', '45 000 ₽ · пример']],
       casesTitle: 'AI-концепты — не реальные выполненные проекты',
       cases: [['AI-концепт: квартира в спокойной палитре', 'Иллюстративная визуализация для макета сайта. Это не реальный объект и не результат выполненного заказа.', '', '', ''], ['AI-концепт: функциональная кухня', 'Иллюстративная визуализация для макета сайта. Замените описанием реального проекта перед публикацией.', '', '', '']],
+      comparisonTitle: 'Сравнение пакетов — демонстрационные условия',
+      comparisonPrimaryLabel: 'Планировка · пример', comparisonAlternativeLabel: 'Полный проект · пример',
+      comparisons: [['Состав работ', 'Планировка и схема · пример', 'Планировка, визуализация и подбор · пример'], ['Сроки', 'Согласовать с исполнителем · пример', 'Согласовать с исполнителем · пример'], ['Сопровождение', 'Отдельная опция · пример', 'Включено по условиям договора · пример']],
+      chartTitle: 'Показатели — заменить подтверждёнными данными',
+      metrics: [['3 · пример', 'Этапа в демонстрационном сценарии'], ['2 · пример', 'Примера пакетов в макете'], ['1 · пример', 'Проектная команда в примере']],
+      beforeAfterTitle: 'Схема «до и после» — заменить реальными фото',
+      beforeAfter: [[demoImage('ДО', '#74675b'), demoImage('ПОСЛЕ', '#9b8061'), 'Иллюстративная схема, не фотография выполненной работы', 'Демо-схема до и после']],
+      calculatorTitle: 'Предварительный расчёт — демонстрационные ставки',
+      calculator: { base: 15000, perUnit: 2500, unitLabel: 'м² · пример', currency: 'RUB', max: 500 },
       testimonialsTitle: 'Отзывы — добавить подтверждённые цитаты',
       testimonials: [['Черновик отзыва — не отзыв клиента', 'Добавьте дословную цитату реального клиента с его разрешения. Не публикуйте этот текст как отзыв.']],
       teamTitle: 'Команда — заменить на реальных специалистов', team: [['Имя специалиста — заменить', 'Укажите подтверждённую должность, опыт и специализацию.']],
@@ -4117,6 +4147,16 @@ $('#form').addEventListener('click', e => {
     for (const [key, value] of Object.entries(sample)) {
       if (key === 'quiz') {
         if (!state.raw.quiz && state.raw.fieldStates?.quiz !== 'hidden' && state.raw.fieldStates?.quiz !== 'manual') { state.raw.quiz = value; added++; }
+        continue;
+      }
+      if (key === 'calculator') {
+        const calculator = { ...(state.raw.calculator || {}) };
+        for (const [part, sampleValue] of Object.entries(value)) {
+          const fieldKey = `calculator.${part}`;
+          if (state.raw.fieldStates?.[fieldKey] === 'hidden' || state.raw.fieldStates?.[fieldKey] === 'manual') continue;
+          if (calculator[part] == null || calculator[part] === '') { calculator[part] = sampleValue; added++; }
+        }
+        state.raw.calculator = calculator;
         continue;
       }
       if (key === 'contacts') continue;

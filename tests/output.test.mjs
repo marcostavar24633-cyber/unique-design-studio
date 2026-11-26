@@ -250,6 +250,32 @@ test('тарифы, кейсы и необязательный квиз стро
   assert.ok(restored.concept.homepage.sectionOrder.includes('quiz'));
 });
 
+test('сравнение, график, блок «до и после» и калькулятор работают только с введёнными данными', () => {
+  const raw = {
+    ...full,
+    comparisonTitle: 'Пакеты', comparisonPrimaryLabel: 'Базовый', comparisonAlternativeLabel: 'Полный',
+    comparisons: [['Состав', 'Планировка', 'Планировка и визуализация']],
+    chartTitle: 'Подтверждённые показатели', metrics: [['4', 'Этапа работы'], ['2', 'Пакета']],
+    beforeAfterTitle: 'Изменение проекта', beforeAfter: [['https://example.com/before.jpg', 'https://example.com/after.jpg', 'Демо-объект · пример', 'Один и тот же интерьер до и после']],
+    calculatorTitle: 'Оценка', calculator: { base: 1000, perUnit: 250, unitLabel: 'м²', currency: 'EUR', max: 80 },
+  };
+  const result = generate(raw);
+  for (const id of ['comparisons', 'metrics', 'beforeAfter', 'calculator']) assert.ok(result.concept.homepage.sectionOrder.includes(id), `${id}: секция доступна`);
+  assert.match(result.html, /class="uds-comparison"/);
+  assert.match(result.html, /scope="col">Базовый/);
+  assert.match(result.html, /role="meter"/);
+  assert.match(result.html, /class="uds-before-after"/);
+  assert.match(result.html, /data-uds-calculator/);
+  assert.match(result.html, /currency:"EUR"/);
+  const restored = generate(JSON.parse(JSON.stringify(exportProject(result.project, result.concept))));
+  for (const id of ['comparisons', 'metrics', 'beforeAfter', 'calculator']) assert.ok(restored.concept.homepage.sectionOrder.includes(id), `${id}: сохраняется при экспорте`);
+  assert.match(restored.html, /Изменение проекта/);
+  const partialCalculator = generate({ ...full, calculator: { base: '', perUnit: 250, unitLabel: 'м²' } });
+  assert.ok(!partialCalculator.concept.homepage.sectionOrder.includes('calculator'), 'частичный калькулятор не показывает фиктивную оценку');
+  const noData = generate({ ...full });
+  for (const id of ['comparisons', 'metrics', 'beforeAfter', 'calculator']) assert.ok(!noData.concept.homepage.sectionOrder.includes(id), `${id}: отсутствует без данных`);
+});
+
 test('переключение темы и выбор стиля навигации попадают в сайт', () => {
   const { html, concept } = generate({ ...full, navStyle: 'framed' });
   assert.equal(concept.visualSystem.nav, 'framed');

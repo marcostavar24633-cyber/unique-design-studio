@@ -57,6 +57,10 @@ function contentSignals(p) {
     stats: p.stats.length,
     pricing: p.pricing.filter(item => item.price).length,
     cases: p.cases.length,
+    comparisons: p.comparisons.length,
+    metrics: p.metrics.length,
+    beforeAfter: p.beforeAfter.length,
+    calculator: p.calculator.base !== null && p.calculator.perUnit !== null && Boolean(p.calculator.unitLabel),
     quiz: p.passthrough?.quiz?.enabled === true && p.services.filter(item => item.title).length >= 2,
     contacts: Boolean(p.contacts.phone || p.contacts.email || p.contacts.address),
   };
@@ -254,16 +258,16 @@ export function similarity(a, b) {
 function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', seed = hash(project.id || project.brand)) {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
-    gallery: s.gallery > 0, pricing: s.pricing > 0, cases: s.cases > 0, quiz: s.quiz, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
+    gallery: s.gallery > 0, pricing: s.pricing > 0, cases: s.cases > 0, comparisons: s.comparisons > 0, metrics: s.metrics > 0, beforeAfter: s.beforeAfter > 0, calculator: s.calculator, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
   };
   // Ведущие секции ниши сохраняют приоритет. Внутри выбранного ритма есть
   // два редакционных маршрута: порядок не сводится к одной схеме на всю нишу.
   const lead = uniq(profile.lead || []).filter(id => id !== 'contact' && has[id]);
-  const base = uniq([...arch.order, 'pricing', 'cases', 'quiz', 'testimonials', 'team', 'stats']).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
+  const base = uniq([...arch.order, 'pricing', 'cases', 'comparisons', 'metrics', 'beforeAfter', 'calculator', 'quiz', 'testimonials', 'team', 'stats']).filter(id => id !== 'contact' && has[id] && !lead.includes(id));
   const preferences = {
     editorial: [
-      ['about', 'gallery', 'items', 'pricing', 'cases', 'quiz', 'testimonials', 'advantages', 'process', 'team', 'stats', 'faq'],
-      ['gallery', 'about', 'advantages', 'items', 'cases', 'pricing', 'testimonials', 'process', 'stats', 'team', 'quiz', 'faq'],
+      ['about', 'gallery', 'items', 'pricing', 'cases', 'comparisons', 'metrics', 'beforeAfter', 'calculator', 'quiz', 'testimonials', 'advantages', 'process', 'team', 'stats', 'faq'],
+      ['gallery', 'about', 'advantages', 'items', 'cases', 'comparisons', 'beforeAfter', 'pricing', 'testimonials', 'process', 'metrics', 'stats', 'team', 'quiz', 'calculator', 'faq'],
     ],
     offset: [
       ['gallery', 'advantages', 'about', 'items', 'pricing', 'cases', 'faq', 'process'],

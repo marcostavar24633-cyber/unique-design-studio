@@ -34,7 +34,7 @@ export function tierOf(value) {
 const TEXT_FIELDS = [
   'brand', 'niche', 'title', 'description', 'cta', 'targetAudience', 'mainOffer', 'brandCharacter', 'visualDirection',
   'primaryGoal', 'strategySummary', 'style', 'aboutTitle', 'aboutText', 'servicesTitle', 'servicesIntro',
-  'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'testimonialsTitle', 'teamTitle', 'statsTitle', 'pricingTitle', 'casesTitle', 'quizTitle', 'contactTitle', 'contactText',
+  'advantagesTitle', 'advantagesIntro', 'processTitle', 'faqTitle', 'galleryTitle', 'testimonialsTitle', 'teamTitle', 'statsTitle', 'pricingTitle', 'casesTitle', 'quizTitle', 'contactTitle', 'contactText', 'comparisonTitle', 'comparisonPrimaryLabel', 'comparisonAlternativeLabel', 'chartTitle', 'beforeAfterTitle', 'calculatorTitle',
   // SEO: необязательные отдельные title и description страницы (иначе берутся заголовок и описание).
   'seoTitle', 'seoDescription',
 ];
@@ -143,6 +143,17 @@ export function normalizeProject(raw = {}) {
   p.stats = items(raw.stats, 'stat');
   p.pricing = items(raw.pricing, 'price');
   p.cases = items(raw.cases, 'case');
+  p.comparisons = items(raw.comparisons, 'comparison');
+  p.metrics = items(raw.metrics, 'metric');
+  p.beforeAfter = (Array.isArray(raw.beforeAfter) ? raw.beforeAfter.slice(0, 12) : []).map((entry, index) => {
+    const row = Array.isArray(entry) ? { title: entry[2], before: entry[0], after: entry[1], alt: entry[3] } : entry || {};
+    return { id: slugify(str(row.id || (Array.isArray(entry) ? entry[4] : '')) || `before-after-${index + 1}`), title: str(row.title), before: safeUrl(row.before, { image: true }), after: safeUrl(row.after, { image: true }), alt: str(row.alt) };
+  }).filter(entry => entry.before && entry.after);
+  const calculatorRaw = raw.calculator && typeof raw.calculator === 'object' ? raw.calculator : {};
+  const calculatorNumber = value => value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value)) && Number(value) >= 0 ? Number(value) : null;
+  const currencies = new Set(['RUB', 'USD', 'EUR', 'KZT', 'BYN', 'GBP']);
+  const requestedCurrency = str(calculatorRaw.currency).toUpperCase();
+  p.calculator = { base: calculatorNumber(calculatorRaw.base), perUnit: calculatorNumber(calculatorRaw.perUnit), unitLabel: str(calculatorRaw.unitLabel).slice(0, 60), currency: currencies.has(requestedCurrency) ? requestedCurrency : (p.lang.startsWith('ru') ? 'RUB' : 'USD'), max: calculatorNumber(calculatorRaw.max) };
   p.categories = [...new Set((Array.isArray(raw.categories) ? raw.categories : typeof raw.categories === 'string' ? raw.categories.split(/[\r\n,;]/) : [])
     .map(value => str(value && typeof value === 'object' ? value.name ?? value.title ?? value.label : value)).filter(Boolean))].slice(0, 50);
   // Каталог с корзиной-заявкой: true — включить, false — выключить, иначе решает движок по нише и ценам.
@@ -207,7 +218,7 @@ export function normalizeProject(raw = {}) {
   p.formAction = fieldStates.formAction === 'hidden' ? '' : /^https:\/\//i.test(formAction) ? formAction : '';
   // Поля, которых движок не знает (marketResearch, researchSources и т.п.), сохраняются для обратного экспорта.
   const known = new Set([...TEXT_FIELDS, 'lang', 'id', 'architecture', 'designArchitecture', 'secondaryArchitecture', 'palette', 'accent', 'fonts', 'brandProfile', 'tier', 'customPrompt', 'customPromptMode',
-    'services', 'items', 'advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'pricing', 'cases', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
+    'services', 'items', 'advantages', 'process', 'faqs', 'testimonials', 'team', 'stats', 'pricing', 'cases', 'comparisons', 'metrics', 'beforeAfter', 'calculator', 'categories', 'commerce', 'assumptions', 'gallery', 'images', 'heroImage', 'contacts',
     'ctaUrl', 'formAction', 'site', 'fieldStates', 'pageContacts', 'inheritedSiteFields', 'formatVersion', 'concept', '__normalized', 'paletteLocked', 'accentLocked', 'architectureMode', 'sectionDivider']);
   p.passthrough = Object.fromEntries(Object.entries(raw).filter(([k]) => !known.has(k)));
   NORMALIZED_PROJECTS.add(p);
@@ -250,6 +261,10 @@ export function exportProject(input, concept) {
   out.stats = p.stats.map(toRow);
   out.pricing = p.pricing.map(toRow);
   out.cases = p.cases.map(toRow);
+  out.comparisons = p.comparisons.map(toRow);
+  out.metrics = p.metrics.map(toRow);
+  out.beforeAfter = p.beforeAfter.map(row => [row.before, row.after, row.title, row.alt, row.id]);
+  out.calculator = { ...p.calculator };
   out.categories = p.categories;
   if (typeof p.commerce === 'boolean') out.commerce = p.commerce;
   out.assumptions = p.assumptions;
