@@ -629,6 +629,10 @@ function openPhotoGroup() {
     const toggle = $('#toggle-settings');
     if (toggle) { toggle.setAttribute('aria-expanded', 'true'); toggle.textContent = 'Скрыть настройки'; }
   }
+  editorSectionFilter = PHOTO_GROUP;
+  const navigation = $('#form [data-editor-category]');
+  if (navigation) navigation.value = editorSectionFilter;
+  applyEditorNavigation();
   const group = [...$('#form').querySelectorAll('.group')].find(item => item.querySelector('summary')?.textContent.trim() === PHOTO_GROUP);
   if (group) group.open = true;
   return group;
@@ -673,8 +677,8 @@ const GROUPS = [
     ['@textAnimation', 'Анимация текста', 'textAnimation', 'Сжатие трекинга, проявление из размытия, маркер и подчёркивание при прокрутке, подъём и наклон заголовков, печать надписи. Только без «уменьшить движение»'],
     ['@buttonAnimation', 'Анимация кнопок', 'buttonAnimation', 'Пульс, блик, волна от нажатия, толчок стрелки, обводка, подъём, упругое нажатие, дыхание свечения, желе, подчёркивание. Несовместимые со стилем кнопки сочетания пропускаются'],
     ['@effectMode', 'Режим выбора эффектов', 'effectMode', 'Авто — движок подбирает и обновляет эффекты; вручную — фиксированный выбор; смешанный — можно закрепить карточки или первый экран, остальное подбирается автоматически. Выбор запоминается при повторной генерации'],
-    ['@cardEffect', 'Эффект карточек', 'cardEffect', '24 эффекта: прожектор, объёмный наклон, сатиновая кромка, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Наведение дублируется фокусом с клавиатуры'],
-    ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '22 эффекта: аврора, мягкий свет мастерской, проявление из мягкого фокуса, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото'],
+    ['@cardEffect', 'Эффект карточек', 'cardEffect', '24 эффекта: прожектор, объёмный наклон, сатиновая кромка, блик, градиентная рамка, стопка, шторка, ч/б → цвет, расфокус соседей, ленты-бейджи (из поля «Бейдж»), счётчики чисел и другие. Выбор эффекта закрепляет его, остальные эффекты остаются автоматическими. Наведение дублируется фокусом с клавиатуры'],
+    ['@heroEffect', 'Эффект первого экрана', 'heroEffect', '22 эффекта: аврора, мягкий свет мастерской, проявление из мягкого фокуса, сетка, туман, боке, звёзды, волны, морфинг, Кен Бёрнс, дуотон, слайд-шоу, градиент в буквах, бегущая строка, печатная машинка, раскрытие строк, параллакс, магнитная кнопка, прожектор. Фотоэффекты — только при наличии фото. Выбор закрепляет эффект первого экрана, остальные эффекты остаются автоматическими'],
     ['@motionStyle', 'Интенсивность движения', 'motionStyle', 'Авто подбирает эффекты по нише и бренду. Люкс — медленные малозаметные появления и сдержанные эффекты. Кинематографичный — выразительное движение. Статичный — автоматические эффекты без постоянной анимации; ручной выбор сохраняется'],
     ['@textEffect', 'Эффект текста', 'textEffect', 'Сменяющиеся фразы под заголовком (из заголовков преимуществ) или текст, проявляющийся при прокрутке. Отключается при «уменьшить движение»'],
     ['@fontPair', 'Пара шрифтов', 'fontPair', 'Работает при «Шрифты: Google Fonts». Авто — пара подбирается под характер типографики'],
@@ -726,6 +730,40 @@ const GROUPS = [
     ['formAction', 'Адрес обработчика формы (https://…)', 'text', 'Если пусто и указан e-mail — форма откроет почтовую программу'],
   ]],
 ];
+
+let editorSectionFilter = 'all';
+let editorFieldQuery = '';
+function applyEditorNavigation(scrollToSelection = false) {
+  const form = $('#form');
+  if (!form) return;
+  const query = editorFieldQuery.trim().toLocaleLowerCase('ru');
+  let visibleGroups = 0;
+  let visibleFields = 0;
+  let selectedGroup = null;
+  for (const group of form.querySelectorAll('details.group')) {
+    const title = group.querySelector('summary')?.textContent.trim() || '';
+    const categoryMatch = Boolean(query) || editorSectionFilter === 'all' || title === editorSectionFilter;
+    let groupHasMatch = false;
+    for (const field of group.querySelectorAll('.field')) {
+      const text = field.textContent.toLocaleLowerCase('ru');
+      const matches = !query || text.includes(query);
+      field.hidden = !matches;
+    if (matches) groupHasMatch = true;
+    }
+    group.hidden = !categoryMatch || (Boolean(query) && !groupHasMatch);
+    if (!group.hidden) {
+      visibleGroups++;
+      visibleFields += [...group.querySelectorAll('.field')].filter(field => !field.hidden).length;
+      if (title === editorSectionFilter) selectedGroup = group;
+      if (query || editorSectionFilter !== 'all') group.open = true;
+    }
+  }
+  const status = form.querySelector('[data-editor-nav-status]');
+  if (status) status.textContent = query
+    ? `Найдено: ${visibleFields} настроек в ${visibleGroups} разделах`
+    : editorSectionFilter === 'all' ? `${GROUPS.length} разделов` : 'Показан один раздел';
+  if (scrollToSelection && selectedGroup) selectedGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 const get = path => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), state.raw);
 function set(path, value) {
@@ -1018,7 +1056,8 @@ function buildForm() {
   const effectMode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
   const autoEffectsAvailable = effectMode === 'auto' || (effectMode === 'mixed' && (!state.raw.cardEffect || !state.raw.heroEffect));
   const quickActions = `<section class="editor-quick-actions" aria-label="Быстрые действия"><strong>Быстрые действия</strong><small>Автозаполнение добавляет примеры только в пустые поля и сохраняет уже созданные фото и кейсы.</small><button type="button" data-demo-fill title="Заполнит только пустые поля явно помеченными примерами">Дополнить пустые поля примерами</button>${state.raw.demoContent ? '<button type="button" data-demo-ack>Я заменил примеры на проверенные данные</button>' : ''}<button type="button" data-refresh-design>Новый вариант дизайна</button><button type="button" data-refresh-effects${autoEffectsAvailable ? '' : ' disabled'} title="${autoEffectsAvailable ? 'Обновить автоматически подобранные эффекты' : 'Переключите режим эффектов на «Авто» или «Смешанный»'}">Новый вариант эффектов</button></section>`;
-  const html = quickActions + GROUPS.map(([title, open, fields]) => `<details class="group"${open ? ' open' : ''}><summary>${title}</summary><div class="fields">${fields.map(([path, label, type = 'text', hint = '']) => {
+  const editorNavigation = `<div class="editor-navigation"><label for="editor-section-select">Раздел редактора</label><div class="editor-navigation__controls"><select id="editor-section-select" data-editor-category aria-label="Раздел редактора"><option value="all"${editorSectionFilter === 'all' ? ' selected' : ''}>Все разделы</option>${GROUPS.map(([title]) => `<option value="${esc(title)}"${editorSectionFilter === title ? ' selected' : ''}>${esc(title)}</option>`).join('')}</select><input type="search" data-editor-search value="${esc(editorFieldQuery)}" placeholder="Найти настройку…" aria-label="Найти настройку"></div><small data-editor-nav-status aria-live="polite"></small></div>`;
+  const html = editorNavigation + quickActions + GROUPS.map(([title, open, fields]) => `<details class="group"${open ? ' open' : ''}><summary>${title}</summary><div class="fields">${fields.map(([path, label, type = 'text', hint = '']) => {
     const id = 'f-' + path.replace(/[^a-z]/gi, '-');
     const small = hint ? `<small id="${id}-h">${hint}</small>` : '';
     const d = hint ? ` aria-describedby="${id}-h"` : '';
@@ -1070,8 +1109,8 @@ function buildForm() {
       const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto');
       control = `<select id="${id}" data-special="effectMode"${d}>${[['auto','Авто'],['manual','Выбрать вручную'],['mixed','Смешанный']].map(([k,v]) => `<option value="${k}"${mode === k ? ' selected' : ''}>${v}</option>`).join('')}</select>`;
     }
-    else if (type === 'cardEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); control = `<select id="${id}" data-special="cardEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре и классу'}</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`; }
-    else if (type === 'heroEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw); const needsPhoto = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']); control = `<select id="${id}" data-special="heroEffect"${d}${mode === 'auto' ? ' disabled' : ''}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре, классу и фото'}</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => { const unavailable = needsPhoto.has(k) ? photoCount < 1 : k === 'slideshow' ? galleryPhotoCount < 2 : false; return `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${esc(v)}${unavailable ? (k === 'slideshow' ? ' — нужны 2 фото в галерее' : ' — нужно фото') : ''}</option>`; }).join('')}</select>`; }
+    else if (type === 'cardEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); control = `<select id="${id}" data-special="cardEffect"${d}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре и классу'}</option><option value="none"${state.raw.cardEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(CARD_EFFECTS).map(([k, v]) => `<option value="${k}"${state.raw.cardEffect === k ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select>`; }
+    else if (type === 'heroEffect') { const mode = state.raw.effectMode || (state.raw.cardEffect || state.raw.heroEffect ? 'mixed' : 'auto'); const { all: photoCount, gallery: galleryPhotoCount } = sourcePhotoCounts(state.raw); const needsPhoto = new Set(['ken-burns', 'double-exposure', 'photo-wipe', 'duotone']); control = `<select id="${id}" data-special="heroEffect"${d}><option value="">${mode === 'manual' ? 'По умолчанию проекта' : 'Авто — по архитектуре, классу и фото'}</option><option value="none"${state.raw.heroEffect === 'none' ? ' selected' : ''}>Без эффекта</option>${Object.entries(HERO_EFFECTS).map(([k, v]) => { const unavailable = needsPhoto.has(k) ? photoCount < 1 : k === 'slideshow' ? galleryPhotoCount < 2 : false; return `<option value="${k}"${state.raw.heroEffect === k ? ' selected' : ''}${unavailable ? ' disabled' : ''}>${esc(v)}${unavailable ? (k === 'slideshow' ? ' — нужны 2 фото в галерее' : ' — нужно фото') : ''}</option>`; }).join('')}</select>`; }
     else if (type === 'motionStyle') control = `<select id="${id}" data-special="motionStyle"${d}><option value=""${!state.raw.motionStyle ? ' selected' : ''}>Авто — по нише и бренду</option><option value="luxury"${state.raw.motionStyle === 'luxury' ? ' selected' : ''}>Люкс — медленно и сдержанно</option><option value="cinematic"${state.raw.motionStyle === 'cinematic' ? ' selected' : ''}>Кинематографичный — выразительный</option><option value="static"${state.raw.motionStyle === 'static' ? ' selected' : ''}>Статичный — минимум движения</option></select>`;
     else if (type === 'artDirectionPreset') control = `<select id="${id}" data-special="artDirectionPreset"${d}><option value=""${!state.raw.artDirectionPreset ? ' selected' : ''}>Авто — под нишу и содержимое</option>${Object.entries(ART_DIRECTION_PRESETS).map(([k, v]) => `<option value="${k}"${state.raw.artDirectionPreset === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}</select>`;
     else if (type === 'layout') control = layoutControl(id);
@@ -1099,6 +1138,8 @@ function buildForm() {
   $('#form').innerHTML = html;
   enhanceVisualOptionControls();
   if (openGroups.size) $('#form').querySelectorAll('details.group').forEach(d => { if (openGroups.has(d.querySelector('summary').textContent)) d.open = true; });
+  $('#form [data-editor-category]').value = editorSectionFilter;
+  applyEditorNavigation();
   $('#form').scrollTop = scrollTop;
 }
 
@@ -2705,6 +2746,11 @@ function download(name, text, type) {
 
 $('#form').addEventListener('input', e => {
   const t = e.target;
+  if (t.matches('[data-editor-search]')) {
+    editorFieldQuery = t.value;
+    applyEditorNavigation();
+    return;
+  }
   if (t.dataset.crop) {
     const role = t.dataset.crop, index = Number(t.dataset.cropIndex), viewport = t.dataset.cropViewport, axis = t.dataset.cropAxis;
     writeCrop(role, index, viewport, axis, t.value);
@@ -2768,7 +2814,7 @@ $('#form').addEventListener('input', e => {
       if (!state.raw.heroEffect) state.raw.heroEffect = 'none';
     }
   }
-  else if (['revealEffect', 'revealSpeed', 'textRevealSpeed', 'buttonStyle', 'cardEffect', 'heroEffect', 'motionStyle', 'artDirectionPreset', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; const output = $('#form').querySelector(`#f-${key}-out`); if (output) output.value = t.value + '%'; }
+  else if (['revealEffect', 'revealSpeed', 'textRevealSpeed', 'buttonStyle', 'cardEffect', 'heroEffect', 'motionStyle', 'artDirectionPreset', 'typeStyle', 'sectionLayout', 'textAnimation', 'buttonAnimation'].includes(t.dataset.special)) { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if ((key === 'cardEffect' || key === 'heroEffect') && t.value) state.raw.effectMode = 'mixed'; const output = $('#form').querySelector(`#f-${key}-out`); if (output) output.value = t.value + '%'; }
   else if (t.dataset.special === 'cinematicLayers') { if (t.value) state.raw.cinematicLayers = t.value; else delete state.raw.cinematicLayers; }
   else if (t.dataset.special === 'graphicDirection') { if (t.value) state.raw.graphicDirection = t.value; else delete state.raw.graphicDirection; }
   else if (t.dataset.special === 'textEffect' || t.dataset.special === 'fontPair') { const key = t.dataset.special; if (t.value) state.raw[key] = t.value; else delete state.raw[key]; if (key === 'fontPair' && t.value) state.raw.fonts = 'web'; }
@@ -3028,6 +3074,11 @@ async function handleImageUpload(input) {
 }
 $('#form').addEventListener('change', e => {
   const input = e.target;
+  if (input.matches('[data-editor-category]')) {
+    editorSectionFilter = input.value;
+    applyEditorNavigation(true);
+    return;
+  }
   if (input.matches('[data-hide-cta]')) {
     const states = { ...(state.raw.fieldStates || {}) };
     if (input.checked) states.cta = 'hidden'; else delete states.cta;
@@ -3303,11 +3354,14 @@ function refreshCanvasOverlapLayers(sectionId = selectedCanvasMeta?.sectionId) {
 }
 function setCanvasSelection(info) {
   if (!info || !/^(?:\d+(?:\.\d+)*|u:[\w-]+:\d+)$/.test(info.key || '')) return;
+  const sameSelection = selectedCanvasKey === info.key;
   selectedCanvasKey = info.key; selectedCanvasMeta = info;
   const edit = canvasEditForBreakpoint(selectedCanvasKey);
   const customElement = info.elementId && info.sectionId
     ? (state.raw.canvasElements?.[info.sectionId] || []).find(item => item.id === info.elementId)
     : null;
+  const customDefault = info.elementId ? state.raw.canvasElementDefaults?.[info.elementId]?.item : null;
+  const customContentChanged = Boolean(customElement && customDefault && JSON.stringify(customElement) !== JSON.stringify(customDefault));
   $('#canvas-inspector').hidden = !canvasInspectorOpen;
   $('#canvas-selected-label').textContent = info.label || info.tag || 'Элемент';
   $('#canvas-breakpoint').value = activeCanvasBreakpoint;
@@ -3318,7 +3372,7 @@ function setCanvasSelection(info) {
   $('#canvas-button-style-field').hidden = !(info.button || customElement?.type === 'button');
   const linkElement = info.tag === 'a' || customElement?.type === 'button';
   $('#canvas-href-field').hidden = !linkElement;
-  $('#canvas-href').value = edit.href ?? customElement?.href ?? info.href ?? '';
+  if (!sameSelection || document.activeElement !== $('#canvas-href')) $('#canvas-href').value = edit.href ?? customElement?.href ?? info.href ?? '';
   const photoElement = ['img','figure'].includes(info.tag) || customElement?.type === 'image';
   $('#canvas-element-style-field').hidden = Boolean(info.button || customElement?.type === 'button');
   const elementStyles = photoElement
@@ -3336,11 +3390,11 @@ function setCanvasSelection(info) {
   shapeControl.value = photoElement ? 'auto' : edit.shape || 'auto';
   $('#canvas-button-style').value = edit.buttonStyle || 'inherit';
   $('#canvas-animation').value = edit.animation || 'none';
-  $('#canvas-text').value = edit.text ?? (customElement
+  if (!sameSelection || document.activeElement !== $('#canvas-text')) $('#canvas-text').value = edit.text ?? (customElement
     ? (customElement.type === 'card' && info.tag !== 'h3' ? customElement.text : customElement.title || customElement.text)
     : info.text) ?? '';
   $('#canvas-alt-field').hidden = info.tag !== 'img' && customElement?.type !== 'image';
-  $('#canvas-alt').value = edit.alt ?? info.alt ?? customElement?.alt ?? '';
+  if (!sameSelection || document.activeElement !== $('#canvas-alt')) $('#canvas-alt').value = edit.alt ?? info.alt ?? customElement?.alt ?? '';
   $('#canvas-color').value = canvasColorHex(edit.color || info.color, '#202329');
   $('#canvas-background').value = canvasColorHex(edit.background || info.background, '#ffffff');
   const size = Number(edit.fontSize || info.fontSize || 24);
@@ -3376,7 +3430,7 @@ function setCanvasSelection(info) {
   refreshCanvasOverlapLayers(info.sectionId);
   $('#canvas-paste-style').disabled = !canvasStyleClipboard;
   $('#canvas-paste-position').disabled = !canvasPositionClipboard;
-  $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey] && !['desktop','tablet','mobile'].some(range => state.raw.canvasResponsiveEdits?.[range]?.[selectedCanvasKey]);
+  $('#canvas-reset-edit').disabled = !state.raw.canvasEdits?.[selectedCanvasKey] && !state.raw.canvasMoves?.[selectedCanvasKey] && !customContentChanged && !['desktop','tablet','mobile'].some(range => state.raw.canvasResponsiveEdits?.[range]?.[selectedCanvasKey]);
   $('#canvas-reset-breakpoint').disabled = activeCanvasBreakpoint === 'all' || !state.raw.canvasResponsiveEdits?.[activeCanvasBreakpoint]?.[selectedCanvasKey];
   const moved = Boolean(state.raw.canvasMoves?.[selectedCanvasKey]);
   $('#canvas-layer-actions').hidden = !moved && !info.sectionId;
@@ -3428,6 +3482,13 @@ function addCanvasBlock(type = 'text') {
   pendingCanvasBlockId = id;
   run(); toast('Блок добавлен перед контактами');
 }
+function saveCanvasElementDefault(sectionId, item) {
+  if (!sectionId || !item?.id) return;
+  state.raw.canvasElementDefaults = {
+    ...(state.raw.canvasElementDefaults || {}),
+    [item.id]: { sectionId, item: structuredClone(item) },
+  };
+}
 function addCanvasElement(type, sectionId, alreadyRemembered = false) {
   if (!sectionId || !['card', 'button', 'image', 'text', 'heading'].includes(type)) { toast('Сначала выберите секцию, куда добавить элемент'); return; }
   const id = `element-${Date.now().toString(36)}`;
@@ -3437,6 +3498,7 @@ function addCanvasElement(type, sectionId, alreadyRemembered = false) {
       ? { id, type, title: 'Новое фото', alt: 'Иллюстрация к секции', src: '' }
       : { id, type: 'card', title: 'Новая карточка', text: 'Добавьте описание карточки.' };
   if (!alreadyRemembered) rememberCanvasChange();
+  saveCanvasElementDefault(sectionId, item);
   state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: [...(state.raw.canvasElements?.[sectionId] || []), item] };
   pendingCanvasElementId = id;
   if (type === 'image') pendingCanvasImageTarget = { sectionId, id };
@@ -3457,6 +3519,7 @@ function executeCanvasCommand() {
       ? { id, type: 'heading', title: value, text: '' }
       : { id, type: 'text', title: '', text: value };
     rememberCanvasChange();
+    saveCanvasElementDefault(sectionId, item);
     state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: [...(state.raw.canvasElements?.[sectionId] || []), item] };
     pendingCanvasElementId = id; run(); input.value = '';
     toast(add[1].toLowerCase() === 'заголовок' ? 'Заголовок добавлен и выделен' : 'Текст добавлен и выделен');
@@ -3495,6 +3558,7 @@ function replaceCanvasElement(type) {
         ? { id: previous.id, type, title, text: '', href: previous.href || '#contact' }
         : { id: previous.id, type, title, text: previous.text || text || 'Добавьте описание карточки.' };
     items[index] = replacement;
+    saveCanvasElementDefault(sectionId, replacement);
     state.raw.canvasElements = { ...(state.raw.canvasElements || {}), [sectionId]: items };
     pendingCanvasElementId = replacement.id;
     if (type === 'image') pendingCanvasImageTarget = { sectionId, id: replacement.id };
@@ -3525,7 +3589,16 @@ const commitCanvasAlt = () => {
 $('#canvas-alt').addEventListener('change', commitCanvasAlt);
 $('#canvas-alt').addEventListener('blur', commitCanvasAlt);
 $('#canvas-href').addEventListener('input', e => canvasPreview({ href: safeCanvasHref(e.target.value) }));
-$('#canvas-href').addEventListener('change', e => commitCanvasEdit({ href: e.target.value }));
+const commitCanvasHref = () => {
+  if (!selectedCanvasKey) return;
+  const custom = selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId
+    ? (state.raw.canvasElements?.[selectedCanvasMeta.sectionId] || []).find(item => item.id === selectedCanvasMeta.elementId)?.href
+    : undefined;
+  const existing = custom ?? canvasEditForBreakpoint(selectedCanvasKey).href ?? selectedCanvasMeta?.href ?? '';
+  if ($('#canvas-href').value !== existing) commitCanvasEdit({ href: $('#canvas-href').value });
+};
+$('#canvas-href').addEventListener('change', commitCanvasHref);
+$('#canvas-href').addEventListener('blur', commitCanvasHref);
 $('#canvas-color').addEventListener('input', e => canvasPreview({ color: e.target.value }));
 $('#canvas-color').addEventListener('change', e => commitCanvasEdit({ color: e.target.value }));
 $('#canvas-background').addEventListener('input', e => canvasPreview({ background: e.target.value }));
@@ -3633,10 +3706,36 @@ $('#canvas-paste-style').addEventListener('click', () => {
 $('#canvas-reset-edit').addEventListener('click', () => {
   if (!selectedCanvasKey) return;
   rememberCanvasChange();
+  const move = state.raw.canvasMoves?.[selectedCanvasKey];
+  const original = selectedCanvasMeta?.elementId ? state.raw.canvasElementDefaults?.[selectedCanvasMeta.elementId] : null;
+  if (selectedCanvasMeta?.elementId && selectedCanvasMeta?.sectionId && (original || move?.originSectionId)) {
+    const fromSection = selectedCanvasMeta.sectionId || move?.sectionId;
+    const toSection = original?.sectionId || move?.originSectionId;
+    if (fromSection && toSection && fromSection !== toSection) {
+      const elements = { ...(state.raw.canvasElements || {}) };
+      const current = [...(elements[fromSection] || [])];
+      const index = current.findIndex(item => item.id === selectedCanvasMeta.elementId);
+      if (index >= 0) {
+        const [item] = current.splice(index, 1);
+        elements[fromSection] = current;
+        const restored = original?.item || item;
+        elements[toSection] = [...(elements[toSection] || []).filter(entry => entry.id !== item.id), restored];
+        state.raw.canvasElements = elements;
+      }
+    } else if (original?.item) {
+      state.raw.canvasElements = {
+        ...(state.raw.canvasElements || {}),
+        [toSection]: (state.raw.canvasElements?.[toSection] || []).map(item => item.id === selectedCanvasMeta.elementId ? structuredClone(original.item) : item),
+      };
+    }
+  }
   const edits = { ...state.raw.canvasEdits };
   delete edits[selectedCanvasKey];
   if (Object.keys(edits).length) state.raw.canvasEdits = edits;
   else delete state.raw.canvasEdits;
+  const moves = { ...(state.raw.canvasMoves || {}) };
+  delete moves[selectedCanvasKey];
+  if (Object.keys(moves).length) state.raw.canvasMoves = moves; else delete state.raw.canvasMoves;
   const responsive = { ...(state.raw.canvasResponsiveEdits || {}) };
   for (const range of ['desktop','tablet','mobile']) {
     const bucket = { ...(responsive[range] || {}) };
@@ -3645,7 +3744,7 @@ $('#canvas-reset-edit').addEventListener('click', () => {
   }
   if (Object.keys(responsive).length) state.raw.canvasResponsiveEdits = responsive; else delete state.raw.canvasResponsiveEdits;
   run();
-  toast('Правки элемента сброшены');
+  toast('Элемент возвращён к исходному оформлению и положению');
 });
 $('#canvas-reset-breakpoint').addEventListener('click', () => {
   if (!selectedCanvasKey || activeCanvasBreakpoint === 'all') return;
@@ -3681,7 +3780,9 @@ $('#canvas-duplicate').addEventListener('click', () => {
     if (!original) return;
     rememberCanvasChange();
     const id = `element-${Date.now().toString(36)}`;
-    state.raw.canvasElements = { ...state.raw.canvasElements, [sectionId]: [...state.raw.canvasElements[sectionId], { ...structuredClone(original), id }] };
+    const duplicate = { ...structuredClone(original), id };
+    saveCanvasElementDefault(sectionId, duplicate);
+    state.raw.canvasElements = { ...state.raw.canvasElements, [sectionId]: [...state.raw.canvasElements[sectionId], duplicate] };
     pendingCanvasElementId = id; run(); toast('Элемент продублирован');
   } else if (selectedCanvasMeta?.blockId) {
     const block = (state.raw.canvasBlocks || []).find(item => item.id === selectedCanvasMeta.blockId);
@@ -3815,7 +3916,9 @@ window.addEventListener('message', e => {
         state.raw.canvasElements = elements;
       }
     }
-    state.raw.canvasMoves = { ...(state.raw.canvasMoves || {}), [key]: { sectionId, x, y } };
+    const previousMove = state.raw.canvasMoves?.[key];
+    const originSectionId = previousMove?.originSectionId || (elementId && /^(?:hero|[\w-]{1,64})$/.test(fromSectionId || '') ? fromSectionId : sectionId);
+    state.raw.canvasMoves = { ...(state.raw.canvasMoves || {}), [key]: { sectionId, x, y, originSectionId } };
     run(); toast('Элемент перемещён в другой блок'); return;
   }
   if (e.data?.type === 'uds-canvas-fan-error') { toast(e.data.message || 'В этой секции найдено меньше пяти фотографий'); return; }
