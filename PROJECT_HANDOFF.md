@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-26T00:15:38.740Z
+Время обновления: 2026-11-26T06:32:22.686Z
 Ветка: main
-Последний commit: bba30ecb9663cb7bcc2b78fb6a3b359c86b8bcde
-Дата коммита: 2026-11-26T04:15:17+04:00
-Сообщение: feat: replay reveal animations on re-entry
+Последний commit: e70f696c71be34495b48ad9a2ed1415280a839fd
+Дата коммита: 2026-11-26T10:31:59+04:00
+Сообщение: fix: keep demo autofill free of fake testimonials
 
 Последние коммиты:
+- e70f696 · 2026-11-26 · fix: keep demo autofill free of fake testimonials
+- 717fc11 · 2026-11-26 · feat: add optional decision support sections
+- b9b9d0d · 2026-11-26 · docs: refresh project handoff
 - bba30ec · 2026-11-26 · feat: replay reveal animations on re-entry
 - 76ca86a · 2026-11-25 · docs: refresh project handoff
 - 197db97 · 2026-11-26 · fix: gate Pages deploy on full CI and stabilize layout audit
 - ddfcb5b · 2026-11-25 · docs: refresh project handoff
 - 1501cdb · 2026-11-26 · feat: improve generated site contacts and motion controls
-- fb2da61 · 2026-11-25 · docs: refresh project handoff
-- 0b98364 · 2026-11-26 · feat: add practical sections and optional quiz (#276)
-- 59fcbfb · 2026-11-25 · docs: refresh project handoff
 <!-- HANDOFF:AUTO:END -->
