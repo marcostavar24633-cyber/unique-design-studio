@@ -97,19 +97,19 @@ UNIQUE DESIGN STUDIO — студия генерации и рестайлинг
 ## Автоматически обновляемые сведения Git
 
 <!-- HANDOFF:AUTO:START -->
-Время обновления: 2026-11-26T06:40:13.449Z
+Время обновления: 2026-11-26T08:05:22.763Z
 Ветка: main
-Последний commit: 10760d5355f5e4fbbad5053d466fd02fde2db599
-Дата коммита: 2026-11-26T10:39:55+04:00
-Сообщение: Add optional decision support sections
+Последний commit: 5019dba8b78c07d6a8858bc745cd3bcb598fd9b4
+Дата коммита: 2026-11-26T12:00:47+04:00
+Сообщение: feat: improve editor actions and generator quality
 
 Последние коммиты:
+- 5019dba · 2026-11-26 · feat: improve editor actions and generator quality
+- 913fa51 · 2026-11-26 · docs: refresh project handoff
 - 10760d5 · 2026-11-26 · Add optional decision support sections
 - cafd702 · 2026-11-26 · docs: refresh project handoff
 - e70f696 · 2026-11-26 · fix: keep demo autofill free of fake testimonials
 - 717fc11 · 2026-11-26 · feat: add optional decision support sections
 - b9b9d0d · 2026-11-26 · docs: refresh project handoff
 - bba30ec · 2026-11-26 · feat: replay reveal animations on re-entry
-- 76ca86a · 2026-11-25 · docs: refresh project handoff
-- 197db97 · 2026-11-26 · fix: gate Pages deploy on full CI and stabilize layout audit
 <!-- HANDOFF:AUTO:END -->
