@@ -186,6 +186,8 @@ test('английская подпись раздела услуг сохран
 test('движение: контент не прячется без JS, скрипт уважает reduced motion', () => {
   const { html } = generate({ ...full, architecture: 'immersive' });
   assert.ok(html.includes("classList.add('js-reveal')"));
+  assert.ok(html.includes("classList.toggle('is-in',e.isIntersecting)"), 'появление сбрасывается при выходе и повторяется при возвращении в область просмотра');
+  assert.ok(!html.includes("io.unobserve(e.target)"), 'элементы остаются под наблюдением после первого появления');
   assert.ok(html.includes('prefers-reduced-motion: reduce'));
   assert.ok(!/\[data-reveal\]\{opacity:0/.test(html.replace(/html\.js-reveal \[data-reveal\]/g, '')), 'скрытие только при наличии JS');
   const staticHtml = generate({ ...full, architecture: 'minimal' }).html;
