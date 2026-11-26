@@ -258,7 +258,7 @@ export function similarity(a, b) {
 function sectionOrder(project, profile, arch, s, sectionLayout = 'editorial', seed = hash(project.id || project.brand)) {
   const has = {
     about: s.about, items: s.items > 0, advantages: s.advantages > 0, process: s.process > 0,
-    gallery: s.gallery > 0, pricing: s.pricing > 0, cases: s.cases > 0, comparisons: s.comparisons > 0, metrics: s.metrics > 0, beforeAfter: s.beforeAfter > 0, calculator: s.calculator, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
+    gallery: s.gallery > 0, pricing: s.pricing > 0, cases: s.cases > 0, comparisons: s.comparisons > 0, metrics: s.metrics > 0, beforeAfter: s.beforeAfter > 0, calculator: s.calculator, quiz: s.quiz, faq: s.faqs > 0, testimonials: s.testimonials > 0, team: s.team > 0, stats: s.stats > 0, contact: true,
   };
   // Ведущие секции ниши сохраняют приоритет. Внутри выбранного ритма есть
   // два редакционных маршрута: порядок не сводится к одной схеме на всю нишу.
